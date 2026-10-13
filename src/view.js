@@ -55,7 +55,7 @@ export class MapView extends ItemView {
       store: this.plugin.store,
       isActive: () => this.app.workspace.getActiveViewOfType(MapView) === this,
       registerDomEvent: (target, type, fn, opts) => events.registerDomEvent(target, type, fn, opts),
-      openNote: (path, newTab) => this.openNote(path, newTab),
+      openNote: (path, newTab, background) => this.openNote(path, newTab, background),
       activePath: () => { const f = this.app.workspace.getActiveFile(); return f ? f.path : null; },
       debug: (this.debug = {}),
     });
@@ -65,7 +65,7 @@ export class MapView extends ItemView {
 
   showStale() { if (this.staleBtn) this.staleBtn.hidden = false; }
 
-  openNote(path, newTab) {
+  openNote(path, newTab, background) {
     const file = this.app.vault.getAbstractFileByPath(path);
     if (!(file instanceof TFile)) return;
     const ws = this.app.workspace;
@@ -74,6 +74,7 @@ export class MapView extends ItemView {
     if (newTab) leaf = ws.getLeaf("tab");
     else if (!leaf) leaf = ws.getLeaf("split", "vertical");
     if (!newTab) this.noteLeaf = leaf;
-    void leaf.openFile(file);
+    if (background && leaf.view && leaf.view.file === file) return;   // already showing it
+    void leaf.openFile(file, background ? { active: false } : undefined);   // in the background the map keeps focus
   }
 }
