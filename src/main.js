@@ -1,4 +1,4 @@
-import { Plugin, Notice, TFile, normalizePath } from "obsidian";
+import { Plugin, TFile, normalizePath } from "obsidian";
 import { MapView, VIEW_TYPE } from "./view.js";
 import { MapsSettingTab, detectDefaults } from "./settings.js";
 import { DEFAULTS, scanVault } from "./scan.js";
@@ -63,7 +63,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
   async rescan() {
     this.graph = null; this.dirty = false;
     const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE);
-    if (!leaves.length) { new Notice("Open the map to scan the vault."); return; }
+    if (!leaves.length) { await this.openMap(); return; }   // no map open yet: opening one runs the scan
     for (const leaf of leaves) if (leaf.view instanceof MapView) await leaf.view.reload();
   }
 
