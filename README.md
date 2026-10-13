@@ -26,7 +26,7 @@ Press ▶ on the timeline to replay your vault by month or by week. New notes ar
 |---|---|---|
 | 5 | Home & hubs | it's a home note, or among the top-scoring notes |
 | 4 | Maps of maps | it's a map linking 3+ other maps, or it scores high |
-| 3 | Higher-order notes | it's a map (in a Maps folder, "MOC" in its title, in a Maps collection, or mostly links), or it scores well |
+| 3 | Maps of content | it's a map (in a Maps folder, "MOC" in its title, in a Maps collection, or mostly links), or it scores well |
 | 2 | Linked notes | it has any link in or out |
 | 1 | Unlinked notes | no links yet |
 
