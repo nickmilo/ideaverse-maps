@@ -7,9 +7,10 @@
 .ivm button:hover{background:none;box-shadow:none}
 .ivm input[type="search"],.ivm input[type="text"]{height:auto;box-shadow:none;margin:0}
 .ivm h1,.ivm h2,.ivm h5,.ivm h6{margin:0;font-variant:normal;letter-spacing:normal}
+.ivm h1,.ivm h2,.ivm h5,.ivm h6{color:var(--ink)}   /* the map's own theme, not the vault theme's heading colors */
 .ivm ul{margin:0;padding:0;list-style:none}
 .ivm-tip{font-family:var(--body);color:var(--ink);z-index:var(--layer-tooltip,60)}
-.ivm,.ivm-tip{--bg:#ffffff; --panel:#f7f7f5; --line:#e2e2de; --ink:#161616; --muted:#5a5a5a;
+.ivm,.ivm-tip{--g5a:#f7c948; --g5b:#e8538a; --g4a:#8a5bd6; --g4b:#3466d6; --g3a:#4fc3ef; --g3b:#5b2e91; --bg:#ffffff; --panel:#f7f7f5; --line:#e2e2de; --ink:#161616; --muted:#5a5a5a;
   --accent:#5b2e91; --accent-soft:rgba(91,46,145,.08);
   --up:#d23f6e; --down:#1f8f6a; --rel:#8a3ff0; --upp:#c99a06; --prop:#6b7c93;
   --band-a:rgba(22,22,22,.018); --band-b:rgba(22,22,22,0);
@@ -42,8 +43,14 @@
   --band-a:color-mix(in srgb,var(--text-normal) 3%,transparent); --band-b:transparent;
   --l2:color-mix(in srgb,var(--graph-node) 70%,transparent); --l1:color-mix(in srgb,var(--graph-node-unresolved) 55%,transparent); --sl2:var(--graph-node); --sl1:var(--graph-node-unresolved); --qa:.08;
   --edge-faint:color-mix(in srgb,var(--graph-line) 45%,transparent);
-  --display:var(--font-interface); --dw:700; color-scheme:inherit;}
+  --display:var(--font-interface); --dw:700; --title:var(--h1-color,var(--text-normal)); color-scheme:inherit;}
 .ivm .ivm-probe{position:absolute;width:0;height:0;overflow:hidden;color:var(--probe);pointer-events:none}
+/* Cybertron: Nick Milo's dark Obsidian theme: charcoal, cyan text, yellow nodes, violet unresolved links */
+.ivm[data-theme="cybertron"],.ivm-tip[data-theme="cybertron"]{--bg:#2f3136; --panel:#222222; --line:#45484e; --ink:#5dbcd2; --muted:#aaaaaa; --title:#c7c400;
+  --accent:#c7c400; --accent-soft:rgba(199,196,0,.13); --up:#d669bc; --down:#5dbcd2; --rel:#9e8aff; --upp:#fcf601; --prop:#aaaaaa;
+  --band-a:rgba(93,188,210,.03); --band-b:rgba(93,188,210,0);
+  --l2:rgba(252,246,1,.68); --l1:rgba(158,138,255,.55); --sl2:rgba(252,246,1,.9); --sl1:rgba(158,138,255,.8); --qa:.06; --edge-faint:rgba(38,121,140,.42);
+  --display:var(--font-interface); --dw:700; color-scheme:dark;}
 .ivm *{box-sizing:border-box}
 .ivm [hidden],.ivm-tip[hidden]{display:none!important}
 .ivm{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;overflow:hidden}
@@ -69,7 +76,7 @@
 .ivm .duo i{width:11px;height:11px;border-radius:50%;display:block}
 .ivm .duo i:first-child{background:linear-gradient(135deg,#5ec8f2,#2fae78)}
 .ivm .duo i:last-child{background:linear-gradient(135deg,#f7c948,#e8538a);border-radius:3px;margin-left:-3px}
-.ivm h1{margin:2px 0 0;font:var(--dw) 26px/1 var(--display);letter-spacing:-.02em;white-space:nowrap}
+.ivm h1{color:var(--title,var(--ink));margin:2px 0 0;font:var(--dw) 26px/1 var(--display);letter-spacing:-.02em;white-space:nowrap}
 .ivm h1 em{font-style:normal;color:var(--accent)}
 .ivm .stats{display:flex;gap:12px;font:500 11.5px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;flex:none}
 .ivm .stats b{color:var(--ink);font-weight:500}
@@ -107,6 +114,7 @@
 .ivm #themeseg button[data-th="softpaper"] i{background:radial-gradient(circle at 50% 50%,#1a7da4 0 2px,transparent 2.5px),#eee6dd;box-shadow:inset 0 0 0 1px #cac1b9}
 .ivm #themeseg button[data-th="dark"] i{background:#111614;box-shadow:inset 0 0 0 1px #2a3530}
 .ivm #themeseg button[data-th="lyt"] i{background:radial-gradient(circle at 50% 50%,hsl(58,86%,66%) 0 2.5px,transparent 3px),hsl(225,12%,20%);box-shadow:inset 0 0 0 1px hsl(196,27%,41%)}
+.ivm #themeseg button[data-th="cybertron"] i{background:radial-gradient(circle at 50% 50%,#fcf601 0 2.5px,transparent 3px),#2f3136;box-shadow:inset 0 0 0 1px #5dbcd2}
 .ivm #themeseg button[data-th="obsidian"] i{background:linear-gradient(135deg,var(--background-primary) 0 50%,var(--interactive-accent) 50%);box-shadow:inset 0 0 0 1px var(--background-modifier-border)}
 .ivm #themeseg button[aria-pressed="true"]{background:none;border:2px solid var(--accent)}
 .ivm .glbl{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-right:-4px}
