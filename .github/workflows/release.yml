@@ -1,13 +1,18 @@
 name: Release Obsidian plugin
 
-# Publish a release on GitHub (tag = the version in manifest.json, e.g. 0.1.0);
-# this builds the plugin and attaches main.js, manifest.json and styles.css to it.
+# Two ways to release:
+# - Automatic: push to main with a new "version" in manifest.json. If there's no release
+#   for that version yet, this builds the plugin and publishes the release (tag = version).
+# - By hand: publish a release on GitHub (tag = the version); this attaches the built files.
 on:
+  push:
+    branches: [main]
+    paths: [manifest.json]
   release:
     types: [published]
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -15,20 +20,38 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@v6
+      - name: Which version
+        id: v
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then v="${{ github.event.release.tag_name }}"; else v=$(node -p "require('./manifest.json').version"); fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "push" ] && gh release view "$v" >/dev/null 2>&1; then echo "skip=true" >> "$GITHUB_OUTPUT"; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/setup-node@v6
+        if: steps.v.outputs.skip == 'false'
         with:
           node-version: 22
       - name: Build plugin
+        if: steps.v.outputs.skip == 'false'
         run: |
           npm install
           npm run build
       - name: Attest build provenance
+        if: steps.v.outputs.skip == 'false'
         uses: actions/attest@v4
         with:
           subject-path: |
             main.js
             styles.css
-      - name: Attach files to the release
+      - name: Publish
+        if: steps.v.outputs.skip == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${{ github.event.release.tag_name }}" main.js manifest.json styles.css --clobber
+        run: |
+          v="${{ steps.v.outputs.version }}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            gh release create "$v" --target "$GITHUB_SHA" --title "$v" --notes "$(git log -1 --pretty=%B | sed '/^Co-Authored-By/d;/^Claude-Session/d')" main.js manifest.json styles.css
+          else
+            gh release upload "$v" main.js manifest.json styles.css --clobber
+          fi
