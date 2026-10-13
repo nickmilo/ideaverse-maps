@@ -25,7 +25,7 @@ jobs:
       - name: Lint
         shell: bash
         run: |
-          set +e; npx eslint . -f unix > lint.log 2>&1; code=$?
+          set +e; npx eslint . > lint.log 2>&1; code=$?
           cat lint.log
           if [ -s lint.log ]; then split -b 3500 lint.log lpart_; for f in lpart_*; do echo "::warning title=lint::$(sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g' "$f")"; done; fi
           exit $code
