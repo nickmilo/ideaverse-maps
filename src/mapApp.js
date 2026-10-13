@@ -1572,7 +1572,7 @@ const end = e => { pts.delete(e.pointerId);
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY);
-  if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && isPhone()) flyTo(i); } } drag = null; } };
+  if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && isPhone()) flyTo(i); } toEditor(i); } drag = null; } };
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0) { hover = -1; draw(); } tip.hidden = true; });
 function zoomAt(px, py, f){ const nk = Math.min(40, Math.max(view === "stars" ? .04 : .15, k*f)); f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
@@ -1613,18 +1613,18 @@ function renderTrail(){
   if (!trail.length && sel < 0) { el.hidden = true; return; }
   const items = [...trail]; if (sel >= 0) items.push(sel);
   el.hidden = false;
-  html(el).v = `<span class="tl">Trail</span>` + items.map((j, idx) => {
+  html(el).v = `<span class="tl">Trail</span>` + items.map((j, idx) => [j, idx]).reverse().map(([j, idx], pos) => {   // newest on the left, older ones to the right
     const now = idx === items.length - 1 && sel >= 0, off = !baseOK(j);
-    return (idx ? `<span class="ar">→</span>` : "") + `<button class="cr${now ? " now" : ""}${off ? " off" : ""}" data-ti="${idx}" title="${esc(N[j].title)}${off ? " (hidden by filters)" : ""}" ${off ? "disabled" : ""}>${lvDot(j)}<span>${esc(N[j].title)}</span></button>`;
+    return (pos ? `<span class="ar">←</span>` : "") + `<button class="cr${now ? " now" : ""}${off ? " off" : ""}" data-ti="${idx}" title="${esc(N[j].title)}${off ? " (hidden by filters)" : ""}" ${off ? "disabled" : ""}>${lvDot(j)}<span>${esc(N[j].title)}</span></button>`;
   }).join("") + `<button class="chip clr" id="trclear">Clear</button>`;
   el.querySelectorAll("[data-ti]").forEach(b => {
     const idx = +b.dataset.ti, j = items[idx];
-    b.onclick = () => { if (idx === items.length - 1 && sel >= 0) { if (focus < 0) flyTo(j); return; } trail = trail.slice(0, idx); navTo(j, true); };
+    b.onclick = () => { if (idx === items.length - 1 && sel >= 0) { if (focus < 0) flyTo(j); return; } trail = trail.slice(0, idx); navTo(j, true); toEditor(j); };
     b.onmouseenter = () => { if (!morphing) { hover = j; draw(); } };
     b.onmouseleave = () => { hover = -1; draw(); };
   });
   $("#trclear").onclick = () => { trail = []; renderTrail(); };
-  el.scrollLeft = el.scrollWidth;
+  el.scrollLeft = 0;
 }
 function select(i, fromTrail){
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
@@ -1654,7 +1654,7 @@ function select(i, fromTrail){
   $("#dcol").onclick = () => setCollapsed(true);
   $("#dopen").onclick = e => host.openNote(d.path, e.metaKey || e.ctrlKey);
   $("#dfocus").onclick = () => { focusArmed = false; setFocus(focus === i ? -1 : i); };
-  drawer.querySelectorAll("[data-go]").forEach(b => b.onclick = () => navTo(+b.dataset.go));
+  drawer.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { navTo(+b.dataset.go); toEditor(+b.dataset.go); });
   renderTrail(); draw();
 }
 onKey(e => {
@@ -1676,7 +1676,7 @@ function runSearch(){
   res.hidden = false;
   res.querySelectorAll("[data-i]").forEach(b => b.onmousedown = ev => { ev.preventDefault(); go(+b.dataset.i); });
 }
-function go(i){ res.hidden = true; q.blur(); navTo(i); }
+function go(i){ res.hidden = true; q.blur(); navTo(i); toEditor(i); }
 q.addEventListener("input", runSearch);
 q.addEventListener("keydown", e => {
   if (res.hidden || !hits.length) return;
@@ -1889,6 +1889,8 @@ let following = pref("iv-follow", false) === true;
 function followPath(path, force){ if (!following || dead || !path) return; const i = PIDX.get(path); if (i == null || (i === sel && !force)) return;
   if (!vis[i] && focus < 0) return;   // filtered off the map: stay put
   navTo(i); }
+// ...and the other way: while following, a note you pick on the map opens in the editor too (the map keeps focus)
+function toEditor(i){ if (following && i >= 0 && host.openNote) host.openNote(N[i].path, false, true); }
 function setFollowing(on){ following = on; save("iv-follow", on); $("#follownote").setAttribute("aria-pressed", String(on)); if (on) followPath(host.activePath && host.activePath(), true); }
 $("#follownote").onclick = () => setFollowing(!following);
 $("#follownote").setAttribute("aria-pressed", String(following));
