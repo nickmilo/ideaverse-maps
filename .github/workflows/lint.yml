@@ -25,7 +25,12 @@ jobs:
       - name: Lint
         shell: bash
         run: |
-          set +e; npx eslint . > lint.log 2>&1; code=$?
-          cat lint.log
-          if [ -s lint.log ]; then split -b 3500 lint.log lpart_; for f in lpart_*; do echo "::warning title=lint::$(sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g' "$f")"; done; fi
+          echo "::remove-matcher owner=eslint-stylish::"; echo "::remove-matcher owner=eslint-compact::"
+          set +e; npx eslint . -f json -o lint.json; code=$?
+          node -e '
+            const r = require("./lint.json"), by = {}; let e = 0, w = 0;
+            for (const f of r) for (const m of f.messages) { const k = (m.severity === 2 ? "E " : "W ") + (m.ruleId || "parse"); (by[k] ||= []).push(f.filePath.split("/").slice(-2).join("/") + ":" + m.line + " " + m.message); m.severity === 2 ? e++ : w++; }
+            const lines = [`${e} errors, ${w} warnings`]; for (const [k, v] of Object.entries(by).sort()) { lines.push(`${k} (${v.length})`); for (const x of v.slice(0, 6)) lines.push("   " + x); }
+            const out = lines.join("\n"); console.log(out);
+            for (let i = 0; i < out.length && i < 30000; i += 3500) console.log("::notice title=lint::" + out.slice(i, i + 3500).replace(/%/g, "%25").replace(/\n/g, "%0A"));'
           exit $code
