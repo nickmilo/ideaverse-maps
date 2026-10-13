@@ -20,10 +20,10 @@ export class MapsSettingTab extends PluginSettingTab {
     containerEl.empty();
     const save = async () => { await p.saveSettings(); p.setDirty(); p.graph = null; };
     const folderList = (name, desc, key) => new Setting(containerEl).setName(name).setDesc(desc).addTextArea(t => t
-      .setPlaceholder("Folder/Path, one per line").setValue((s[key] || []).join("\n"))
+      .setPlaceholder("Folder/path, one per line").setValue((s[key] || []).join("\n"))
       .onChange(async v => { s[key] = list(v); await save(); }));
     const folderOne = (name, desc, key) => new Setting(containerEl).setName(name).setDesc(desc).addText(t => t
-      .setPlaceholder("Folder/Path").setValue(s[key] || "")
+      .setPlaceholder("Folder/path").setValue(s[key] || "")
       .onChange(async v => { s[key] = list(v)[0] || ""; await save(); }));
 
     new Setting(containerEl).setName("Rescan").setDesc("Changes here take effect on the next scan. The map also offers a rescan when notes change.")

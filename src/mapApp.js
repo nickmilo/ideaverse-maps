@@ -34,7 +34,7 @@ const GRAD = {5:["#f7c948","#e8538a"], 4:["#8a5bd6","#3466d6"], 3:["#4fc3ef","#5
 
 // ---------- adjacency ----------
 const out = Array.from({length:n}, () => []), inn = Array.from({length:n}, () => []);
-for (const [a,b,t] of E) { out[a].push(b); inn[b].push(a); }
+for (const [a,b] of E) { out[a].push(b); inn[b].push(a); }
 const REL = new Set(); for (const [a,b,t] of E) if (t === 4) { REL.add(a*n + b); REL.add(b*n + a); }   // links named in a "related" property: drawn purple, up or down
 // a link's kind as written in the ACTIVE note: key a*n + b is the link from a to b, as a wrote it (its up, related or another property);
 // a link only the other note wrote (for example, a note whose up names this one) has no entry here and is placed by emergence
@@ -83,7 +83,7 @@ N.forEach(d => d._cl = (d.collections || []).map(c => c.toLowerCase()));
 const collOK = d => !colls.length || (collMode === "all" ? colls.every(c => d._cl.includes(c)) : colls.some(c => d._cl.includes(c)));
 const vis = new Uint8Array(n);
 // focus: show one note and the notes linked to it (out, in or both; 1 or 2 steps)
-let focus = -1, fDepth = 1, fDir = "both", fset = null, pendingFit = false;
+let focus = -1, fDepth = 1, fDir = "both", fset = null;
 let rec = null;   // a tour being recorded: {notes:[paths], start:{view state}}
 function computeFocus(){
   if (focus < 0) { fset = null; return; }
@@ -630,7 +630,7 @@ const ARCH4 = [ // name, quadrant sign (x, y), soft fill, darker ink for text on
   ["Inner Guide", -1, -1, "#e6c94a", "#9a7708"], ["Creative", 1, -1, "#8f7ae0", "#5f47b8"]];
 const EXPR_COLL = new Set(["works","drafts","newsletters","scripts","posts","videos","projects","courses","products","talks","essays","articles"]);
 const REFL_COLL = new Set(["sources","books","movies","people","quotes","clippings","podcasts","highlights","reviews","journals","statements"]);
-const SENSE_WHY = [];
+
 function senseRules(d, why){   // returns [x, y] in −1…1; `why` collects the reasons (for the note panel)
   const p = d.path, ti = d.title, w = Math.max((d.p && d.p.w) || 0, 1), sf = (d.p && d.p.sf) || [0,0,0,0,0,0];
   const [h, li, cb, fp, q, fl] = sf, c = new Set((d.collections || []).map(x => x.toLowerCase()));
@@ -706,9 +706,6 @@ let senseSpeed = SPEEDS[pref("iv-sspeed", "normal")] ? pref("iv-sspeed", "normal
 const POP = new Float64Array(n), popMs = () => 1100*SPEEDS[senseSpeed][1], stepMs = () => (senseStep === "week" ? 240 : 520)*SPEEDS[senseSpeed][0];   // when each note pops (performance.now ms); 0 = no pop
 let popNow = 0, popEnd = 0, popping = false, popFrozen = false, frozenAt = 0;
 function popLoop(){ if (popFrozen) { popping = false; return; } popNow = performance.now(); render(); if (popNow < popEnd + Math.max(popMs()*1.6, LINGER()) + 30) RAF(popLoop); else { popping = false; popEnd = 0; buildGrid(); draw(); } }
-function senseCentre(t){ let sx_ = 0, sy_ = 0, m = 0; const t0 = t - SENSE_WIN;
-  for (let i=0;i<n;i++) { if (!vis[i] || !(TV[i] <= t) || TV[i] < t0 || !inYears(i)) continue; sx_ += SXY[2*i]; sy_ += SXY[2*i+1]; m++; }
-  return m ? {t, x: sx_/m, y: sy_/m, n: m} : null; }
 function senseGuides(){
   const cx = sx(SC_.x), cy = sy(SC_.y), R = SR0*k*1.08;
   if (senseT != null) drawWatermark(cx, cy - R*.06, R*.42, css.ink, .11);
@@ -947,7 +944,7 @@ function arcStage(d, i){
   if (d.level === 1) return [0, "not linked yet"];
   return [1, d.is_map ? "a map, relating ideas" : "linked: relating ideas"];
 }
-{ const t0 = Date.UTC(SLMIN, 0, 1), span = Math.max(1, T1 - t0);
+{
   for (let i=0;i<n;i++) { const [st, why] = arcStage(N[i], i); ARS[i] = st; ARW[i] = why; } }
 function layoutArc(){
   const t0 = Date.UTC(SLMIN, 0, 1), span = Math.max(1, T1 - t0);
@@ -1137,7 +1134,7 @@ buildGrid();
 
 // ---------- view ----------
 let k = 1, tx = 0, ty = 0, W = 0, H = 0, dpr = 1;
-let hover = -1, sel = -1, showAll = false, drawerW = 0;
+let hover = -1, sel = -1, showAll = false;
 const css = {};
 function readCss(){ const s = win.getComputedStyle(root); for (const v of ["bg","panel","line","ink","muted","accent","accent-soft","up","down","band-a","band-b","l2","l1","sl2","sl1","qa","rel","upp","prop","edge-faint","display","mono","body","dw"]) css[v] = s.getPropertyValue("--"+v).trim(); }
 const isPhone = () => (root.clientWidth || win.innerWidth) <= 760;
@@ -1156,7 +1153,7 @@ function fitTarget(){ const pad = 56;
     return {k:kk, tx: W/2 - GC.x*kk, ty: (H - pb)/2 - GC.y*kk}; }
   return isPhone() ? (kk => ({k:kk, tx: mode === "time" ? W - 20 - WW*kk : W/2 - WW*0.42*kk, ty:pad + 24}))((H - pad*2 - 30)/WH)   // phones: fill the height, start on Atlas, pan sideways
         : (kk => ({k:kk, tx:(W - WW*kk)/2 + 50, ty:pad + 24}))(Math.min((W - pad*2 - 120)/WW, (H - pad*2 - 30)/WH)); }
-function fit(anim){ const t = fitTarget(); anim ? animateTo(t) : (k=t.k, tx=t.tx, ty=t.ty, draw()); }
+function fit(anim){ const t = fitTarget(); if (anim) animateTo(t); else { k = t.k; tx = t.tx; ty = t.ty; draw(); } }
 const sx = x => x*k + tx, sy = y => y*k + ty, wx = x => (x - tx)/k, wy = y => (y - ty)/k;
 
 let raf = 0; function draw(){ if (!raf) raf = RAF(render); }
