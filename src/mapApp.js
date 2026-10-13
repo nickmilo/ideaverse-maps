@@ -2,7 +2,7 @@
    the page's code runs inside the plugin's view, scoped to `root`, with Obsidian handling storage, events and notes. */
 import { sanitizeHTMLToDom } from "obsidian";
 
-export const VIEWS_ON = ["emergence", "gravity", "stars"];   // 0.1 ships these three; Sensemaking, Chord and ARC stay in the lab
+export const VIEWS_ON = ["emergence", "gravity", "stars", "sense"];   // Chord and ARC stay in the lab for now
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -1858,7 +1858,7 @@ $("#vmore").onclick = e => { e.stopPropagation(); const el = $("#vmorepop"), ope
 $("#goarc").onclick = () => { closePops(); setView("arc"); };
 root.querySelectorAll("#vseg button[data-v]").forEach(b => b.onclick = e => {
   if (b.dataset.v === "stars" && view === "stars") { e.stopPropagation(); const el = $("#starpop"), open = el.hidden; closePops("#starpop"); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
-  if (b.dataset.v === "sense" && view === "sense") { e.stopPropagation(); const el = $("#sensepop"), open = el.hidden; closePops("#sensepop"); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
+  if (b.dataset.v === "sense" && view === "sense" && SAI) { e.stopPropagation(); const el = $("#sensepop"), open = el.hidden; closePops("#sensepop"); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
   setView(b.dataset.v); });
 
 // scoring panel
@@ -2119,7 +2119,7 @@ function snapView(name){
 function applySaved(v){
   if (typeof playing !== "undefined" && playing) setPlaying(false);
   closePops(); curView = v.name;
-  view = VIEW_NAME[v.view] ? v.view : "emergence"; save("iv-view", view);
+  view = VIEWS_ON.includes(v.view) ? v.view : "emergence"; save("iv-view", view);
   mode = (v.mode === "time" || v.mode === "ace" || AXES[v.mode]) ? v.mode : "time"; save("iv-x", mode);
   folders = (v.folders || FOLD).filter(f => FOLD.includes(f)); if (!folders.length) folders = [...FOLD]; save("iv-folders", folders); subOff = Array.isArray(v.subsOff) ? new Set(v.subsOff) : defSubs(); save("iv-subsoff", [...subOff]); subCompute();
   showArch = v.arch !== false; save("iv-arch", showArch);
@@ -2215,7 +2215,7 @@ syncS3D();
 function syncSenseSrc(){ root.querySelectorAll('input[name="ssrc"]').forEach(r => { r.checked = r.value === senseSrc; r.disabled = r.value === "ai" && !SAI; });
   $("#saidate").textContent = SAI ? `one-time read of each note${SAI.date ? ` · ${SAI.date}` : ""}` : "not run yet (no ideaverse-sense-ai.js)";
   $("#sainfo").textContent = SAI ? aiCount < n ? `${aiCount.toLocaleString()} of ${n.toLocaleString()} notes have an AI placement; newer notes use the rules until the next pass.` : `All ${n.toLocaleString()} notes have an AI placement. Click Sensemaking again to switch.` : "";
-  sBtn.title = senseSrc === "ai" ? "Sensemaking · placed by AI (click again to switch)" : "Sensemaking · placed by rules (click again to switch)"; }
+  sBtn.title = !SAI ? "Sensemaking: notes placed by what they are and how they're written (no AI)" : senseSrc === "ai" ? "Sensemaking · placed by AI (click again to switch)" : "Sensemaking · placed by rules (click again to switch)"; }
 root.querySelectorAll('input[name="ssrc"]').forEach(r => r.onchange = () => { if (!r.checked || r.value === senseSrc) return;
   senseSrc = r.value; save("iv-ssrc", senseSrc); SXY = senseSrc === "ai" ? SXA : SXR; layoutSense();
   if (senseT != null) { senseTrail = []; senseSet(+$("#tlrange").value, true); }

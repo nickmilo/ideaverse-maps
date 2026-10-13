@@ -1,8 +1,8 @@
 # Maps of the Ideaverse
 
-> **Early preview (0.1).** Three maps for now (Emergence, Gravity, Starfield), with more to come. Expect frequent updates and some rough edges. Issues and ideas are welcome in GitHub issues.
+> **Early preview (0.1).** Four maps for now (Emergence, Gravity, Starfield, Sensemaking), with more to come. Expect frequent updates and some rough edges. Issues and ideas are welcome in GitHub issues.
 
-See your notes as maps. Every note in your vault gets a place on three maps, sorted by how it emerged: from unlinked notes at the bottom up to your maps of maps and home notes at the top. Then press play and watch your vault grow, month by month.
+See your notes as maps. Every note in your vault gets a place on four maps. Three of them sort notes by how they emerged: from unlinked notes at the bottom up to your maps of maps and home notes at the top. Then press play and watch your vault grow, month by month.
 
 Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinking, for anyone with an Obsidian vault (an "ideaverse").
 
@@ -13,6 +13,7 @@ Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinkin
 - **Emergence.** Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders.
 - **Gravity.** The same levels as rings: home notes and hubs at the center, unlinked notes on the rim. Time or folders go around the clock.
 - **Starfield.** Your biggest hubs become galaxy cores. Every note joins the hub it reaches in the fewest links; maps sit in the bulge, linked notes trail out along the arms, and unlinked notes drift in nebulae, one per folder. Switch to 3D to orbit it, or turn on Drift for a slow screensaver.
+- **Sensemaking.** A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), Producer (expression, top-down), Inner Guide (reflection, bottom-up) and Creative (expression, bottom-up). Each note is placed by plain rules about where it lives and how it's written (folders, maps, headings and lists, checkboxes and due dates, first-person writing, questions). No AI. Click a note to see exactly which clues moved it. Choose which years it shows under Layout.
 
 ![Starfield](docs/starfield.png)
 
