@@ -727,7 +727,7 @@ function senseLabels(){
   // archetype names, with the share of notes in view (and, while the timeline runs, the share of the last 90 days)
   const all = [0,0,0,0], recent = [0,0,0,0]; let ta = 0, tr = 0;
   for (let i=0;i<n;i++) { if (!VV(i)) continue; const qd = quadOf(i); all[qd]++; ta++; if (senseT != null && TV[i] > senseT - SENSE_WIN) { recent[qd]++; tr++; } }
-  ARCH4.forEach(([name, qx, qy, col0, colD], j) => { const col = root.dataset.theme === "dark" ? col0 : colD;
+  ARCH4.forEach(([name, qx, qy, col0, colD], j) => { const col = root.dataset.theme === "dark" || root.dataset.theme === "lyt" ? col0 : colD;
     const x = cx + qx*R*.5, y = cy - qy*(R + 42);   // names sit just outside the box, clear of the notes
     put(name, x, y, `${css.dw} ${Math.max(15, Math.min(26, R/18))}px ${css.display}`, css.ink);
     const pc = ta ? Math.round(all[j]*100/ta) : 0;

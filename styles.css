@@ -29,6 +29,12 @@
   --band-a:rgba(236,230,216,.025); --band-b:rgba(236,230,216,0);
   --l2:rgba(95,199,176,.5); --l1:rgba(154,165,157,.33); --sl2:rgba(125,228,203,.9); --sl1:rgba(215,222,218,.7); --qa:.045; --edge-faint:rgba(236,230,216,.05);
   --display:Georgia,serif; --dw:400; color-scheme:dark;}
+/* LYT Mode: Nick Milo's Obsidian theme (dark), after its graph view: yellow nodes, cyan lines, magenta on hover */
+.ivm[data-theme="lyt"],.ivm-tip[data-theme="lyt"]{--bg:hsl(225,12%,20%); --panel:hsl(231,9%,15%); --line:hsl(225,18%,27%); --ink:hsl(225,17%,88%); --muted:hsl(224,17%,68%);
+  --accent:hsl(58,86%,66%); --accent-soft:hsla(58,86%,66%,.13); --up:hsl(317,62%,65%); --down:hsl(191,54%,64%); --rel:hsl(263,46%,61%); --upp:hsl(59,81%,47%); --prop:hsl(224,37%,80%);
+  --band-a:hsla(225,17%,88%,.025); --band-b:hsla(225,17%,88%,0);
+  --l2:hsla(58,86%,66%,.62); --l1:hsla(263,46%,61%,.45); --sl2:hsla(58,86%,66%,.9); --sl1:hsla(263,46%,61%,.75); --qa:.05; --edge-faint:hsla(196,27%,41%,.32);
+  --display:var(--font-interface); --dw:700; color-scheme:dark;}
 .ivm *{box-sizing:border-box}
 .ivm [hidden],.ivm-tip[hidden]{display:none!important}
 .ivm{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;overflow:hidden}
@@ -91,6 +97,7 @@
 .ivm #themeseg button[data-th="paper"] i{background:#ffffff;box-shadow:inset 0 0 0 1px #cfcfc8}
 .ivm #themeseg button[data-th="sepia"] i{background:#e9d3a6;box-shadow:inset 0 0 0 1px #b89a63}
 .ivm #themeseg button[data-th="dark"] i{background:#111614;box-shadow:inset 0 0 0 1px #2a3530}
+.ivm #themeseg button[data-th="lyt"] i{background:radial-gradient(circle at 50% 50%,hsl(58,86%,66%) 0 2.5px,transparent 3px),hsl(225,12%,20%);box-shadow:inset 0 0 0 1px hsl(196,27%,41%)}
 .ivm #themeseg button[aria-pressed="true"]{background:none;border:2px solid var(--accent)}
 .ivm .glbl{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-right:-4px}
 .ivm .mspop .pt{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:2px 6px 0}
