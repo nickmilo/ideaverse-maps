@@ -1877,6 +1877,14 @@ function renderEffList(){
 function closeEff(){ $("#effpanel").hidden = true; $("#effbtn").setAttribute("aria-expanded", "false"); }
 $("#effbtn").onclick = e => { const p = $("#effpanel"); p.hidden = !p.hidden; e.currentTarget.setAttribute("aria-expanded", String(!p.hidden)); if (!p.hidden) { $("#scorepanel").hidden = true; renderEffList(); } };
 $("#efx").onclick = closeEff; $("#effbtn").hidden = !EFF.length;
+// Follow note: the map follows the note that's active in Obsidian, like a local graph linked to the active note
+let following = pref("iv-follow", false) === true;
+function followPath(path, force){ if (!following || dead || !path) return; const i = PIDX.get(path); if (i == null || (i === sel && !force)) return;
+  if (!vis[i] && focus < 0) return;   // filtered off the map: stay put
+  navTo(i); }
+function setFollowing(on){ following = on; save("iv-follow", on); $("#follownote").setAttribute("aria-pressed", String(on)); if (on) followPath(host.activePath && host.activePath(), true); }
+$("#follownote").onclick = () => setFollowing(!following);
+$("#follownote").setAttribute("aria-pressed", String(following));
 $("#focusmode").onclick = () => {
   if (focus >= 0 || focusArmed) { focusArmed = false; $("#focusmode").setAttribute("aria-pressed", "false"); if (focus >= 0) setFocus(-1); return; }
   if (sel >= 0) setFocus(sel); else { focusArmed = true; $("#focusmode").setAttribute("aria-pressed", "true"); }
@@ -2280,10 +2288,14 @@ on(doc, "toggle", e => { if (e.target.classList && e.target.classList.contains("
 const ro = new ResizeObserver(() => { if (dead) return; const first = W === 0; resize(); if (first && W) fit(false); placePlaybar(); fitFocus(); }); ro.observe(cv);
 if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } });
 
+if (following) win.setTimeout(() => followPath(host.activePath && host.activePath(), true), 400);   // opened while following: start on the active note
+
 return {
   destroy(){ dead = true; ro.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
     win.clearTimeout(senseTimer); win.clearTimeout(pTimer); driftStop(); tip.remove(); },
   openNote(path){ const i = PIDX.get(path); if (i != null) navTo(i); },
+  follow(path){ followPath(path); },
+  toggleFollow(){ setFollowing(!following); return following; },
   themeChanged(){ const t = pref("iv-theme", null); if (t == null) setTheme(autoTheme()); else if (t === "obsidian") setTheme("obsidian"); },   // Obsidian's theme or mode changed
 };
 }

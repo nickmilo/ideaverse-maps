@@ -56,8 +56,10 @@ export class MapView extends ItemView {
       isActive: () => this.app.workspace.getActiveViewOfType(MapView) === this,
       registerDomEvent: (target, type, fn, opts) => events.registerDomEvent(target, type, fn, opts),
       openNote: (path, newTab) => this.openNote(path, newTab),
+      activePath: () => { const f = this.app.workspace.getActiveFile(); return f ? f.path : null; },
       debug: (this.debug = {}),
     });
+    if (!this.fileHooked) { this.fileHooked = true; this.registerEvent(this.app.workspace.on("file-open", file => { if (this.map && file) this.map.follow(file.path); })); }
     if (!this.cssHooked) { this.cssHooked = true; this.registerEvent(this.app.workspace.on("css-change", () => { if (this.map) this.map.themeChanged(); })); }
   }
 
