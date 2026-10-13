@@ -184,7 +184,7 @@
 .ivm #startpop .pt{display:none}
 .ivm #startpop .sl{padding:6px 6px 0}
 .ivm .srange{display:flex;justify-content:space-between;padding:0 6px;font:500 10.5px var(--mono);color:var(--muted);margin-top:-4px}
-.ivm #xmore{margin-left:6px;width:84px}
+.ivm #xmore{width:84px}
 .ivm #xmore.on{width:auto}
 .ivm .mspop .sl{flex-wrap:wrap}
 .ivm .mspop .sl input{width:100%}
@@ -196,8 +196,8 @@
 .ivm .grp{display:inline-flex;gap:4px;flex-wrap:wrap}
 .ivm .grp button{border:1px solid var(--line);background:var(--panel);color:var(--muted);font:600 13px var(--body);padding:4px 10px;border-radius:999px;cursor:pointer;min-width:34px}
 .ivm .grp button[aria-pressed="true"]{color:var(--ink);border-color:var(--accent);background:var(--accent-soft)}
-.ivm #xmore{font:500 12px var(--mono);color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 10px}
-.ivm #xmore.on{color:var(--ink);border-color:var(--accent);background:var(--accent-soft)}
+.ivm #xmore{font:500 12px var(--mono);color:var(--muted);background:none;border:0;border-radius:0;padding:6px 8px 6px 11px;box-shadow:none;height:auto;cursor:pointer}   /* sits in the Time | ACE group like a third button */
+.ivm #xmore.on{color:var(--bg);background:var(--ink)}
 .ivm .ms{position:relative}
 .ivm #vsegms{display:flex}
 .ivm #vseg .vburied{display:none}

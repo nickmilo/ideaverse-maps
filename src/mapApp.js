@@ -274,10 +274,6 @@ function layoutTime(){
 
 // ---------- property axes: Rank (top-level) and the "More axes" set ----------
 const AXES = {
-  rank: {name:"Rank", get:d => d.rank, kind:"lin", tick:1, jit:.1},
-  "p:yx":  {name:"Year experienced", get:d => d.p && d.p.yx, kind:"year", anchor:null, jit:.4},
-  "p:im":  {name:"IMDb rating", get:d => d.p && d.p.im, kind:"lin", tick:1, jit:.03},
-  "p:born":{name:"Born", get:d => d.p && d.p.born, kind:"year", anchor:1800, jit:.4},
   "p:w":   {name:"Length (words)", get:d => d.p && d.p.w, kind:"log", jit:.006},
   "p:kb":  {name:"Size (KB)", get:d => d.p && d.p.kb, kind:"log", jit:.006},
   "links": {name:"Links (in + out)", get:d => d.body_in + d.body_out, kind:"log", jit:.01},
