@@ -13,7 +13,12 @@ export default class IdeaverseMapsPlugin extends Plugin {
     this.registerView(VIEW_TYPE, leaf => new MapView(leaf, this));
     this.addRibbonIcon("orbit", "Open Maps of the Ideaverse", () => { void this.openMap(); });
     this.addCommand({ id: "open", name: "Open map", callback: () => { void this.openMap(); } });
-    this.addCommand({ id: "follow", name: "Toggle follow note", callback: () => { for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) if (leaf.view instanceof MapView && leaf.view.map) leaf.view.map.toggleFollow(); } });
+    // only offered while a map is open
+    this.addCommand({ id: "follow", name: "Toggle follow note", checkCallback: checking => {
+      const maps = this.app.workspace.getLeavesOfType(VIEW_TYPE).map(l => l.view).filter(v => v instanceof MapView && v.map);
+      if (!maps.length) return false;
+      if (!checking) for (const v of maps) v.map.toggleFollow();
+      return true; } });
     this.addCommand({ id: "rescan", name: "Rescan the vault", callback: () => { void this.rescan(); } });
     this.addSettingTab(new MapsSettingTab(this.app, this));
 

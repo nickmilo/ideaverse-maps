@@ -1140,7 +1140,12 @@ function readCss(){ const s = win.getComputedStyle(root);
   for (const lv of [5, 4, 3]) for (const [j, ab] of ["a", "b"].entries()) { probe.setCssProps({ "--probe": s.getPropertyValue(`--g${lv}${ab}`).trim() }); GRAD[lv][j] = win.getComputedStyle(probe).color || GRAD[lv][j]; }   // level colors come from the theme
   for (const v of COLORS) { const raw = s.getPropertyValue("--"+v).trim(); probe.setCssProps({ "--probe": raw }); css[v] = win.getComputedStyle(probe).color || raw; } }
 const isPhone = () => (root.clientWidth || win.innerWidth) <= 760;
-function resize(){ const r = cv.getBoundingClientRect(); dpr = Math.min(2, win.devicePixelRatio||1); const cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); draw(); }
+// state classes the stylesheet keys off (instead of :has, which is slow to re-match): panel open, legend open, focus bar shown, a clear-× showing
+function syncCls(){ const m = root.querySelector("main"), hd = root.querySelector("header"), a = root.querySelector("aside"), lg = root.querySelector("#legend"), fb = root.querySelector("#focusbar");
+  if (m) { m.toggleClass("has-drawer", !!a && !a.hidden); m.toggleClass("legend-open", !!lg && !lg.classList.contains("collapsed")); }
+  if (hd && fb) hd.toggleClass("has-fb", !fb.hidden);
+  root.querySelectorAll(".ms").forEach(ms => { const x = ms.querySelector(":scope > .qx"); ms.toggleClass("has-x", !!x && !x.hidden); }); }
+function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(2, win.devicePixelRatio||1); const cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); draw(); }
 function fitTarget(){ const pad = 56;
   if (view === "sense") { const phone = isPhone(), lc = phone ? 0 : 400, tb = phone ? 58 : 16, pb = phone ? 70 : 16, vw = W - sideW() - lc;   // desktop: the bars live in a left column
     const kk = Math.min((vw - pad)/(2*SR0*1.08 + 300), (H - tb - pb - 150)/(2*SR0*1.08));   // 150 px for the archetype names above and below
@@ -1988,7 +1993,7 @@ function pickThread(){
 function playStep(){
   if (tourRun) { if (tourRun.idx >= tourRun.ids.length - 1) { setPlaying(false); syncTour(); return; } tourGo(tourRun.idx + 1); schedule(); return; }
   const j = playMode === "random" ? pickRandom() : pickThread();
-  if (j >= 0) { if (sel >= 0) { runSeen.add(sel); if (playMode === "thread") runStack.push(sel); } runSeen.add(j); navTo(j); }
+  if (j >= 0) { if (sel >= 0) { runSeen.add(sel); if (playMode === "thread") runStack.push(sel); } runSeen.add(j); navTo(j); toEditor(j); }
   schedule();
 }
 function schedule(){
@@ -2267,7 +2272,7 @@ function renderTourList(){
 }
 function tourGo(idx){
   if (!tourRun) return; tourRun.idx = Math.max(0, Math.min(tourRun.ids.length - 1, idx));
-  navTo(tourRun.ids[tourRun.idx]); syncTour();
+  navTo(tourRun.ids[tourRun.idx]); toEditor(tourRun.ids[tourRun.idx]); syncTour();
 }
 function syncTour(){
   const on = !!tourRun; $("#tourctl").hidden = !on; $("#playbar").classList.toggle("touring", on);
@@ -2317,8 +2322,12 @@ if (host.readSaved && host.savedFolder()) void host.readSaved().then(txt => { if
 function placePop(el){ el.setCssProps({ "--popx": "0px" }); const R = root.getBoundingClientRect(), r = el.getBoundingClientRect();
   let dx = 0; if (r.right > R.right - 8) dx = R.right - 8 - r.right; if (r.left + dx < R.left + 8) dx = R.left + 8 - r.left;
   if (dx) el.setCssProps({ "--popx": `${Math.round(dx)}px` }); }
-const popObs = new MutationObserver(ms => { for (const m of ms) if (m.target.classList.contains("mspop") && !m.target.hidden) placePop(m.target); });
-popObs.observe(root, { subtree: true, attributes: true, attributeFilter: ["hidden"] });
+const popObs = new MutationObserver(ms => { let st = false;
+  for (const m of ms) { const t = m.target; if (m.attributeName === "hidden" && t.classList.contains("mspop") && !t.hidden) placePop(t);
+    if (t.id === "drawer" || t.id === "legend" || t.id === "focusbar" || t.classList.contains("qx")) st = true; }
+  if (st) syncCls(); });
+popObs.observe(root, { subtree: true, attributes: true, attributeFilter: ["hidden", "class"] });
+syncCls();
 dbg.__ivTours = { list: () => tours, run: () => tourRun && {name: tourRun.t.name, idx: tourRun.idx, n: tourRun.ids.length, sel: sel >= 0 ? N[sel].title : null} };
 
 // ---------- why a note sits where it does: its level rule and its score, piece by piece ----------

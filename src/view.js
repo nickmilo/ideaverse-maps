@@ -88,7 +88,7 @@ export class MapView extends ItemView {
         const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
         if (dir && !this.app.vault.getAbstractFileByPath(dir)) await this.app.vault.createFolder(dir);
         const f = this.app.vault.getAbstractFileByPath(path);
-        if (f instanceof TFile) await this.app.vault.modify(f, text); else await this.app.vault.create(path, text);
+        if (f instanceof TFile) await this.app.vault.process(f, () => text); else await this.app.vault.create(path, text);
         return path; },
       activePath: () => { const f = this.app.workspace.getActiveFile(); return f ? f.path : null; },
       debug: (this.debug = {}),

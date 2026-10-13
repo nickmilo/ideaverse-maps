@@ -1,0 +1,28 @@
+name: Keep the lockfile current
+
+# Writes package-lock.json from package.json, so every build installs the same versions.
+on:
+  push:
+    branches: [main]
+    paths: [package.json, .github/workflows/lockfile.yml]
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: npm install --package-lock-only --ignore-scripts
+      - name: Commit if changed
+        run: |
+          if [ -n "$(git status --porcelain package-lock.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "Update package-lock.json"
+            git push
+          fi

@@ -1,6 +1,6 @@
-import { PluginSettingTab, Setting, TFolder } from "obsidian";
+import { PluginSettingTab, Setting, TFolder, normalizePath } from "obsidian";
 
-const list = v => String(v || "").split(/[\n,]/).map(s => s.trim().replace(/^\/+|\/+$/g, "")).filter(Boolean);
+const list = v => String(v || "").split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(s => normalizePath(s)).filter(s => s && s !== "/");
 
 /** Sensible first-run settings, read from the vault's folders and note names. */
 export function detectDefaults(app) {
