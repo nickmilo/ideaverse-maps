@@ -22,9 +22,9 @@
   color-scheme:light;}
 /* Soft Paper (light): Nick Milo's Obsidian theme, after Rosé Pine Dawn: warm paper, ink-violet text, sapphire accent */
 .ivm[data-theme="softpaper"],.ivm-tip[data-theme="softpaper"]{--bg:#eee6dd; --panel:#e6dbd1; --line:#d1c9c2; --ink:#575279; --muted:#797593;
-  --accent:#1a7da4; --accent-soft:rgba(26,125,164,.11); --up:#ba7184; --down:#286983; --rel:#9a85ae; --upp:#d19548; --prop:#797593;
+  --accent:#1a7da4; --accent-soft:rgba(26,125,164,.11); --up:#ba7184; --down:#4f9e72; --rel:#9a85ae; --upp:#d19548; --prop:#797593;
   --band-a:rgba(87,82,121,.035); --band-b:rgba(87,82,121,0);
-  --l2:rgba(110,154,141,.62); --l1:rgba(121,117,147,.38); --sl2:rgba(91,165,123,.85); --sl1:rgba(121,117,147,.6); --qa:.12; --edge-faint:rgba(87,82,121,.07);
+  --l2:rgba(40,105,131,.58); --l1:rgba(138,128,118,.36); --sl2:rgba(40,105,131,.85); --sl1:rgba(138,128,118,.6); --qa:.12; --edge-faint:rgba(87,82,121,.07);
   --display:"Source Serif Pro",Georgia,serif; --dw:700; color-scheme:light;}
 .ivm[data-theme="dark"],.ivm-tip[data-theme="dark"]{--bg:#111614; --panel:#18201c; --line:#2a3530; --ink:#ece6d8; --muted:#9aa59d;
   --accent:#d6a55a; --accent-soft:rgba(214,165,90,.16); --up:#ee8a5f; --down:#5fc7b0; --rel:#b48cff; --upp:#f2c94c; --prop:#9aa8bb;
