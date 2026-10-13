@@ -158,10 +158,7 @@
 .ivm .qx{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;border:0;background:none;color:var(--muted);font:500 14px/1 var(--mono);padding:0;cursor:pointer;display:grid;place-items:center}
 .ivm .qx:hover{background:var(--accent);color:var(--bg)}
 .ivm .ms.ms.has-x > .chip{padding-right:26px}
-.ivm #tourpop{width:min(360px,calc(100vw - 32px))}
-.ivm #tourpop .rec{align-self:flex-start;color:#c0392b;border-color:#c0392b55}
-.ivm #tourpop .rec.on{background:#c0392b;color:#fff;border-color:#c0392b}
-.ivm #viewbtn.recording,.ivm #tourbtn.recording{color:#fff;background:#c0392b;border-color:#c0392b}
+.ivm #viewbtn.recording{color:#fff;background:#c0392b;border-color:#c0392b}
 .ivm #viewms{position:relative;display:flex;align-items:center;gap:4px}
 .ivm #tlist{overflow:auto;max-height:min(320px,48vh)}
 .ivm #tlist .vr{display:flex;align-items:center;gap:4px;border-radius:6px;padding:2px 2px 2px 0}
