@@ -161,8 +161,9 @@
 .ivm #tourpop{width:min(360px,calc(100vw - 32px))}
 .ivm #tourpop .rec{align-self:flex-start;color:#c0392b;border-color:#c0392b55}
 .ivm #tourpop .rec.on{background:#c0392b;color:#fff;border-color:#c0392b}
-.ivm #tourbtn.recording{color:#fff;background:#c0392b;border-color:#c0392b}
+.ivm #viewbtn.recording,.ivm #tourbtn.recording{color:#fff;background:#c0392b;border-color:#c0392b}
 .ivm #tourms:has(#recx:not([hidden])) #recx{color:#fff}
+.ivm #viewms{position:relative;display:flex;align-items:center;gap:4px}
 .ivm #tlist{overflow:auto;max-height:min(320px,48vh)}
 .ivm #tlist .vr{display:flex;align-items:center;gap:4px;border-radius:6px;padding:2px 2px 2px 0}
 .ivm #tlist .vr:hover,.ivm #tlist .vr.cur{background:var(--accent-soft)}
@@ -430,7 +431,8 @@
 .ivm #vseg{order:2}
 .ivm #vsegms{order:2}
 .ivm .xaxis{order:3}
-.ivm .yearschip{order:4;margin-left:auto}
+.ivm #viewms{order:4;margin-left:auto}
+.ivm .yearschip{order:4}
 .ivm .search{order:5;flex:1 1 100%!important;max-width:none!important}
 .ivm .range{order:6}
 .ivm .focusbar{order:9}
@@ -452,7 +454,8 @@
 /* collapsing: autoplay to a pill, the top bar to a tab */
 .ivm .playbar .pcol{border:1px solid var(--line);border-radius:999px;padding:2px 8px;font:500 12px var(--mono);color:var(--muted);cursor:pointer}
 .ivm .playbar .pcol:hover{color:var(--ink);border-color:var(--ink)}
-.ivm .playbar.collapsed > :not(.pl):not(.pcol):not(#pplay):not(.pprog){display:none!important}
+.ivm .playbar.collapsed > :not(.pl):not(.pcol):not(#pplay):not(.pprog):not(#tourctl){display:none!important}
+.ivm #viewms > .mspop{left:auto;right:0}
 .ivm .playbar.collapsed{gap:6px}
 .ivm h1 .hcol{margin-left:10px;vertical-align:middle;position:relative;top:-3px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;font:500 12px/1.4 var(--mono);letter-spacing:0;color:var(--muted);cursor:pointer}
 .ivm h1 .hcol:hover{color:var(--ink);border-color:var(--ink)}

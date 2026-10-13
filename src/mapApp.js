@@ -1511,12 +1511,15 @@ function axisLabels(){
         sw = s;
       } else { ctx.strokeText(sym, x0 + 4, y + 3); ctx.fillText(sym, x0 + 4, y + 3); sw = ctx.measureText(sym).width; }
       ctx.font = `500 12px ${css.mono}`; ctx.fillStyle = css.muted;
-      ctx.strokeText(word, x0 + 10 + sw, y); ctx.fillText(word, x0 + 10 + sw, y);
-      nw = sw + 6 + ctx.measureText(word).width;
+      const ww = ctx.measureText(word).width;
+      if (x0 + 10 + sw + ww < x1 - 6) { ctx.strokeText(word, x0 + 10 + sw, y); ctx.fillText(word, x0 + 10 + sw, y); nw = sw + 6 + ww; }   // a narrow column keeps just its symbol
+      else nw = sw;
     } else {
       ctx.font = `${css.dw} 20px ${css.display}`;
-      ctx.strokeText(c.ace, x0 + 4, y); ctx.fillText(c.ace, x0 + 4, y);
-      nw = ctx.measureText(c.ace).width;
+      let nm = c.ace; const room = x1 - x0 - 10;   // a narrow column shortens its name rather than running into the next one
+      if (ctx.measureText(nm).width > room) { while (nm.length > 1 && ctx.measureText(nm + "…").width > room) nm = nm.slice(0, -1); nm += "…"; }
+      ctx.strokeText(nm, x0 + 4, y); ctx.fillText(nm, x0 + 4, y);
+      nw = ctx.measureText(nm).width;
     }
     ctx.font = `500 11px ${css.mono}`; ctx.fillStyle = css.muted;
     const tw = ctx.measureText(String(c.count)).width;
@@ -2156,11 +2159,12 @@ $("#vname").addEventListener("keydown", e => { if (e.key === "Enter") saveCurren
 $("#vname").addEventListener("input", renderViewList);
 $("#vq").addEventListener("input", renderViewList);
 $("#vdone").onclick = () => closePops();
-$("#vexport").onclick = () => {
-  const txt = "// Saved views and recorded tours for the Ideaverse LYT Map. Keep this file beside index.html.\nwindow.IDEAVERSE_VIEWS = " + JSON.stringify(views, null, 1) + ";\nwindow.IDEAVERSE_TOURS = " + JSON.stringify(typeof tours !== "undefined" ? tours : [], null, 1) + ";\n";
-  const a = doc.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], {type:"text/javascript"})); a.download = "ideaverse-views.js"; a.click(); win.setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+$("#vexport").onclick = async () => {   // file over app: views and tours as a plain JSON file in the vault
+  const txt = JSON.stringify({ about: "Saved views and recorded tours from Maps of the Ideaverse", saved: new Date().toISOString().slice(0, 10), views, tours: typeof tours !== "undefined" ? tours : [] }, null, 1);
+  const where = host.saveFile ? await host.saveFile("Maps of the Ideaverse - saved views.json", txt) : null;
+  if (where) { const b = $("#vexport"); b.textContent = "Saved ✓"; b.title = where; win.setTimeout(() => { b.textContent = "Save to vault"; }, 2000); } };
 POPS.push(["#viewbtn", "#viewpop", "#viewms", () => { renderViewList(); $("#vname").focus(); }]);
-$("#viewbtn").onclick = e => { e.stopPropagation(); const el = $("#viewpop"), open = el.hidden; closePops("#viewpop"); closeColl(); el.hidden = !open; $("#viewbtn").setAttribute("aria-expanded", String(open)); if (open) { renderViewList(); $("#vname").focus(); } };
+$("#viewbtn").onclick = e => { e.stopPropagation(); const el = $("#viewpop"), open = el.hidden; closePops("#viewpop"); closeColl(); el.hidden = !open; $("#viewbtn").setAttribute("aria-expanded", String(open)); if (open) { renderViewList(); if (typeof renderTourList === "function") renderTourList(); $("#vname").focus(); } };
 $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
 $("#tlrange").addEventListener("input", e => { senseStop(); senseSet(+e.target.value, true); });
 $("#tlplay").onclick = sensePlay;
@@ -2221,6 +2225,7 @@ let tours = (() => { const base = [], local = pref("iv-tours", null);
 let tourRun = null, pendingTour = null;   // tourRun: {t, ids, idx}; pendingTour: a finished recording waiting for a name
 const saveTours = () => save("iv-tours", tours);
 function syncRec(){
+  { const vb = $("#viewbtn"); vb.textContent = rec ? `● Rec · ${rec.notes.length}` : "★ Saved"; vb.classList.toggle("recording", !!rec); }
   const b = $("#tourbtn"); b.classList.toggle("recording", !!rec);
   b.textContent = rec ? `● Rec · ${rec.notes.length}` : "Tours"; $("#recx").hidden = !rec;
   $("#recbtn").textContent = rec ? `■ Stop recording (${rec.notes.length} note${rec.notes.length === 1 ? "" : "s"})` : "● Record a tour";
@@ -2272,7 +2277,7 @@ function startTour(t, autoplay){
   win.setTimeout(() => { tourGo(0); if (autoplay) setPlaying(true); }, t.start ? 800 : 0);
 }
 function endTour(){ if (!tourRun) return; tourRun = null; if (playing) setPlaying(false); syncTour(); }
-function openTourPop(){ closePops("#tourpop"); closeColl(); $("#tourpop").hidden = false; $("#tourbtn").setAttribute("aria-expanded", "true"); renderTourList(); }
+function openTourPop(){ closePops("#viewpop"); closeColl(); $("#viewpop").hidden = false; $("#viewbtn").setAttribute("aria-expanded", "true"); renderViewList(); renderTourList(); }   // tours live in the Saved popover
 $("#tourbtn").onclick = e => { e.stopPropagation(); if (!$("#tourpop").hidden) { closePops(); return; } openTourPop(); };
 $("#recx").onclick = e => { e.stopPropagation(); stopRec(); };
 $("#recbtn").onclick = () => rec ? stopRec() : startRec();
@@ -2286,6 +2291,12 @@ $("#tend").onclick = endTour;
 onKey(e => { if (!tourRun || /input|textarea|select/i.test(doc.activeElement.tagName)) return;
   if (e.key === "ArrowRight") { e.preventDefault(); $("#tnext").click(); } else if (e.key === "ArrowLeft") { e.preventDefault(); $("#tprev").click(); } });
 POPS.push(["#tourbtn", "#tourpop", "#tourms"]);
+{ const vp = $("#viewpop"), foot = vp.querySelector(".msf");
+  vp.prepend(createDiv({ cls: "pt", text: "Views" }));
+  vp.insertBefore(createDiv({ cls: "pt", text: "Tours" }), foot);
+  for (const id of ["#recbtn", "#tsave", "#trecinfo", "#tlist"]) vp.insertBefore($(id), foot);
+  $("#viewms").insertBefore($("#recx"), vp);
+  const hd = root.querySelector("header"); hd.insertBefore($("#viewms"), $("#yearschip")); }   // Saved sits in the top bar, always in reach (and shows when recording)   // the stop-recording × sits by the Saved button
 syncRec();
 dbg.__ivTours = { list: () => tours, run: () => tourRun && {name: tourRun.t.name, idx: tourRun.idx, n: tourRun.ids.length, sel: sel >= 0 ? N[sel].title : null} };
 
