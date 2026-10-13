@@ -58,6 +58,7 @@
 .ivm button,.ivm input{font:inherit;color:inherit}
 .ivm :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .ivm .app{display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100%}
+.ivm .app > header{grid-row:1}.ivm .app > main{grid-row:2}.ivm .app > nav{grid-row:3}   /* fixed rows, so hiding the top bar gives its space to the map */
 .ivm .trail{display:flex;gap:4px;align-items:center;padding:6px 16px calc(env(safe-area-inset-bottom,0px) + 6px);border-top:1px solid var(--line);background:var(--bg);overflow-x:auto;white-space:nowrap;scrollbar-width:thin;font-size:12.5px}
 .ivm .trail .tl{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:6px;flex:none}
 .ivm .trail button.cr{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;background:none;color:var(--ink);padding:3px 8px;border-radius:999px;cursor:pointer;flex:none;max-width:240px}
@@ -447,3 +448,13 @@
 .ivm-loading-bar div{height:100%;width:calc(var(--p,0)*100%);background:var(--interactive-accent);transition:width .2s}
 .ivm-loading-m{font-size:var(--font-ui-smaller);font-variant-numeric:tabular-nums}
 .ivm .ivm-stale{border-color:var(--accent);color:var(--accent)}
+
+/* collapsing: autoplay to a pill, the top bar to a tab */
+.ivm .playbar .pcol{border:1px solid var(--line);border-radius:999px;padding:2px 8px;font:500 12px var(--mono);color:var(--muted);cursor:pointer}
+.ivm .playbar .pcol:hover{color:var(--ink);border-color:var(--ink)}
+.ivm .playbar.collapsed > :not(.pl):not(.pcol):not(#pplay):not(.pprog){display:none!important}
+.ivm .playbar.collapsed{gap:6px}
+.ivm header .hcol{margin-left:4px;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font:500 12px var(--mono);color:var(--muted);cursor:pointer;flex:none}
+.ivm header .hcol:hover{color:var(--ink);border-color:var(--ink)}
+.ivm .htab{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:5;font:500 11px var(--mono);letter-spacing:.08em;color:var(--muted);background:color-mix(in srgb,var(--bg) 94%,transparent);border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;padding:3px 14px 5px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.ivm .htab:hover{color:var(--accent);border-color:var(--accent)}

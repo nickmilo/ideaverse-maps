@@ -1983,6 +1983,11 @@ $("#pplay").onclick = () => setPlaying(!playing);
 onKey(e => { if (e.key === "Escape" && playing) setPlaying(false); });
 root.querySelectorAll("#playseg button").forEach(b => b.addEventListener("click", () => { if (tourRun) { tourRun = null; syncTour(); } }));   // picking Random/Thread leaves the tour
 syncPlay();
+// Autoplay tucks down to a small pill (its ▶ stays, so a running autoplay can still be stopped)
+{ const pb = $("#playbar"), b = pb.createEl("button", { cls: "pcol" });
+  const set = c => { pb.classList.toggle("collapsed", c); b.setText(c ? "›" : "‹"); b.setAttribute("aria-label", c ? "Show autoplay" : "Tuck autoplay away"); b.title = c ? "Show autoplay" : "Tuck autoplay away"; save("iv-pcol", c); win.setTimeout(placePlaybar, 0); };
+  b.onclick = () => set(!pb.classList.contains("collapsed"));
+  set(pref("iv-pcol", false) === true); }
 
 // ---------- header, legend, theme ----------
 const cnt = {};
@@ -2294,6 +2299,14 @@ function whyBox(i){
 on(doc, "toggle", e => { if (e.target.classList && e.target.classList.contains("whybox")) save("iv-why2", e.target.open); }, true);
 const ro = new ResizeObserver(() => { if (dead) return; const first = W === 0; resize(); if (first && W) fit(false); placePlaybar(); fitFocus(); }); ro.observe(cv);
 if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } });
+
+// the whole top bar (title, maps, filters, options) can tuck away; a small tab brings it back
+{ const hd = root.querySelector("header"), hb = hd.createEl("button", { cls: "hcol", text: "︿", attr: { "aria-label": "Hide the top bar", title: "Hide the top bar" } });
+  const tab = $("#main").createEl("button", { cls: "htab", text: "﹀  Maps of the Ideaverse", attr: { "aria-label": "Show the top bar", title: "Show the top bar" } });
+  const set = c => { hd.hidden = c; tab.hidden = !c; save("iv-hcol", c); };
+  const flip = c => { set(c); win.setTimeout(() => { resize(); if (sel >= 0) flyTo(sel); else fit(true); }, 30); };   // reframe for the new height
+  hb.onclick = () => flip(true); tab.onclick = () => flip(false);
+  set(pref("iv-hcol", false) === true); }
 
 if (following) win.setTimeout(() => followPath(host.activePath && host.activePath(), true), 400);   // opened while following: start on the active note
 
