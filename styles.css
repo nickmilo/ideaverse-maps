@@ -367,6 +367,10 @@
 .ivm main:has(aside:not([hidden])) canvas{width:calc(100% - var(--pw,420px))}}
 .ivm aside{position:absolute;top:0;right:0;bottom:0;width:min(var(--pw,420px),100%);background:var(--bg);border-left:1px solid var(--line);overflow-y:auto;z-index:4;padding:16px 18px 40px;box-shadow:-8px 0 24px rgba(0,0,0,.08)}
 .ivm aside .x{float:right;border:1px solid var(--line);background:none;border-radius:999px;padding:4px 10px;cursor:pointer;color:var(--muted);font:500 12px var(--mono)}
+.ivm aside .dcol{margin-right:6px;padding:4px 9px}
+.ivm aside .x:hover{color:var(--ink);border-color:var(--ink)}
+.ivm .dtab{position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:4;writing-mode:vertical-rl;max-height:70%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:600 12px var(--body);color:var(--ink);background:color-mix(in srgb,var(--bg) 94%,transparent);border:1px solid var(--line);border-right:0;border-radius:8px 0 0 8px;padding:12px 6px;cursor:pointer;box-shadow:-4px 0 14px rgba(0,0,0,.08)}
+.ivm .dtab:hover{border-color:var(--accent);color:var(--accent)}
 .ivm aside h2{font:var(--dw) 28px/1.08 var(--display);letter-spacing:-.015em;margin:28px 0 6px;overflow-wrap:anywhere}
 .ivm aside .path{font:400 11.5px var(--mono);color:var(--muted);overflow-wrap:anywhere}
 .ivm .lvl{display:inline-flex;gap:6px;align-items:center;margin:10px 0 4px;font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}

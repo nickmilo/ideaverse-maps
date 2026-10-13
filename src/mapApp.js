@@ -1591,6 +1591,12 @@ $("#alllinks").onclick = e => { showAll = !showAll; e.currentTarget.setAttribute
 
 // ---------- drawer ----------
 const drawer = $("#drawer");
+// the note panel can tuck away to a tab on the right edge (like the legend); the note stays selected
+let drawerCollapsed = pref("iv-dcol", false) === true;
+const dtab = $("#main").createEl("button", { cls: "dtab", attr: { "aria-label": "Show the note panel", title: "Show the note panel" } }); dtab.hidden = true;
+function syncDtab(){ const on = sel >= 0 && drawerCollapsed; dtab.hidden = !on; if (on) dtab.setText("‹  " + (N[sel].title.length > 40 ? N[sel].title.slice(0, 39) + "…" : N[sel].title)); }
+function setCollapsed(c){ drawerCollapsed = c; save("iv-dcol", c); if (sel >= 0) { drawer.hidden = c; if (!c) drawer.scrollTop = 0; } syncDtab(); resize(); }
+dtab.onclick = () => setCollapsed(false);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function noteList(ids, tag){
   const s = [...new Set(ids)].filter(j => vis[j]).sort((a,b) => (N[b].level-N[a].level) || (N[b].score-N[a].score));
@@ -1625,11 +1631,11 @@ function select(i, fromTrail){
   if (rec && i >= 0 && rec.notes[rec.notes.length - 1] !== N[i].path) { rec.notes.push(N[i].path); syncRec(); }   // recording a tour
   if (!fromTrail && i >= 0 && sel >= 0 && sel !== i) { trail.push(sel); if (trail.length > TRAIL_MAX) trail.shift(); }
   sel = i;
-  if (i < 0) { if (!drawer.hidden) { drawer.hidden = true; resize(); } renderTrail(); draw(); return; }
+  if (i < 0) { if (!drawer.hidden) { drawer.hidden = true; resize(); } syncDtab(); renderTrail(); draw(); return; }
   const d = N[i], up = [], down = [], rel = [], prop = [], upl = [], upTo = new Set();
   for (let q = 0; q < EOUT[i].length; q += 2) if (EOUT[i][q+1] === 1) upTo.add(EOUT[i][q]);   // notes named in this note's up property
   for (const j of new Set([...out[i], ...inn[i]])) if (vis[j]) { const kk = EKIND.get(i*n + j); (kk === 4 ? rel : kk === 5 ? prop : kk === 1 ? upl : N[j].level > d.level || (N[j].level === d.level && Y[j] < Y[i]) ? up : down).push(j); }
-  html(drawer).v = `<button class="x" id="dx">Close</button>
+  html(drawer).v = `<button class="x" id="dx">Close</button><button class="x dcol" id="dcol" title="Tuck the panel away; the note stays selected">›</button>
     <h2>${esc(d.title)}</h2><div class="path">${esc(d.path)}${d.date ? " · " + esc(d.date) : ""}</div>
     <div class="lvl">Level ${d.level} · ${esc(LV[d.level].name)}</div>${axisValue(d) ? `<div class="lvl axv">${esc(axisValue(d))}</div>` : ""}${d.archive ? `<div class="lvl" style="margin-left:6px">Archive</div>` : ""}${view === "arc" ? `<div class="lvl axv" title="${esc(ARW[i])}">ARC · ${ARC_L[ARS[i]].name} · ${esc(ARW[i])}</div>` : ""}${view === "chord" ? `<div class="lvl axv">◯ ${esc(CHCAT[CHC[i]].short)}</div>` : ""}${view === "stars" && BOD[i] >= 0 ? `<div class="lvl axv">✦ ${esc(bodyLabel(i))}</div>` : ""}
     <div class="nums"><div><b>${d.body_in}</b><span>linked from</span></div><div><b>${d.body_out}</b><span>links to</span></div><div><b>${d.up_in}</b><span>link up to it</span></div><div><b>${d.score.toFixed(1)}</b><span>link score</span></div></div>
@@ -1642,9 +1648,10 @@ function select(i, fromTrail){
     ${rel.length ? `<h5><i style="border-color:var(--rel)"></i>Related · ${rel.length}</h5>${noteList(rel)}` : ""}
     ${prop.length ? `<h5><i style="border-color:var(--prop)"></i>Other properties · ${prop.length}</h5>${noteList(prop)}` : ""}
     ${!up.length && !down.length && !rel.length && !prop.length && !upl.length ? `<h5>No links on the map</h5>` : ""}`;
-  const opening = drawer.hidden; drawer.hidden = false; drawer.scrollTop = 0;
+  const opening = drawer.hidden && !drawerCollapsed; drawer.hidden = drawerCollapsed; drawer.scrollTop = 0; syncDtab();
   if (opening) { resize(); if (!morphing) keepInView(i); }
   $("#dx").onclick = () => select(-1);
+  $("#dcol").onclick = () => setCollapsed(true);
   $("#dopen").onclick = e => host.openNote(d.path, e.metaKey || e.ctrlKey);
   $("#dfocus").onclick = () => { focusArmed = false; setFocus(focus === i ? -1 : i); };
   drawer.querySelectorAll("[data-go]").forEach(b => b.onclick = () => navTo(+b.dataset.go));
@@ -1900,7 +1907,7 @@ function navTo(j, fromTrail){
 function setFocus(i, fromTrail){
   focus = i; computeFocus();
   const fb = $("#focusbar"); if (fb.hidden !== (i < 0)) { fb.hidden = i < 0; if (i >= 0 && !fb.hasChildNodes()) html(fb).v = "&nbsp;"; resize(); }
-  const prev = sel; if (i >= 0) { sel = i; if (drawer.hidden && !isPhone()) { drawer.hidden = false; resize(); } }   // open the panel first so the camera plans for the narrower map
+  const prev = sel; if (i >= 0) { sel = i; if (drawer.hidden && !isPhone() && !drawerCollapsed) { drawer.hidden = false; resize(); } }   // open the panel first so the camera plans for the narrower map
   relayout(true, false, i >= 0 ? (xs, ys) => visTarget(xs, ys) : () => fitTarget());
   sel = prev;
   if (i >= 0) select(i, fromTrail || prev === i);   // refresh the drawer with the focused set
@@ -2071,7 +2078,7 @@ function applySaved(v){
   const fi = v.focus && PIDX.has(v.focus) ? PIDX.get(v.focus) : -1, si = v.sel && PIDX.has(v.sel) ? PIDX.get(v.sel) : fi;
   focus = fi; computeFocus();
   const fb = $("#focusbar"); fb.hidden = fi < 0; if (fi >= 0 && !fb.hasChildNodes()) html(fb).v = "&nbsp;";
-  if (si >= 0 && !isPhone() && drawer.hidden) drawer.hidden = false;   // open the panel first, so the saved camera lands on the same map width
+  if (si >= 0 && !isPhone() && drawer.hidden && !drawerCollapsed) drawer.hidden = false;   // open the panel first, so the saved camera lands on the same map width
   if (si < 0 && !drawer.hidden) { drawer.hidden = true; }
   resize();
   root.querySelectorAll("#xseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.x === mode)));
