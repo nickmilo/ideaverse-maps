@@ -1,11 +1,22 @@
-import { Component, FuzzySuggestModal, ItemView, Notice, TFile, TFolder, normalizePath } from "obsidian";
+import { Component, FuzzySuggestModal, ItemView, TFile, TFolder, normalizePath } from "obsidian";
 
-/** Pick a folder in the vault (resolves null if closed without choosing). */
+/** Pick a folder in the vault, or type a new one (resolves null if closed without choosing). */
+const SAVED_NAME = "Maps of the Ideaverse - saved views.json";
+
 class FolderPicker extends FuzzySuggestModal {
-  constructor(app, done) { super(app); this.done = done; this.picked = false; this.setPlaceholder("Pick a folder for your saved views and tours"); }
+  constructor(app, done) {
+    super(app); this.done = done; this.picked = false;
+    this.setPlaceholder("Where should saved views and tours live? Pick a folder or type a new one");
+    this.setInstructions([{ command: "↵", purpose: "choose" }, { command: "esc", purpose: "cancel" }]);
+  }
   getItems() { return this.app.vault.getAllLoadedFiles().filter(f => f instanceof TFolder); }
-  getItemText(f) { return f.isRoot() ? "/ (vault root)" : f.path; }
-  onChooseItem(f) { this.picked = true; this.done(f.isRoot() ? "/" : f.path); }
+  getItemText(f) { return f.create ? `+ New folder: ${f.create}` : f.isRoot() ? "/ (vault root)" : f.path; }
+  getSuggestions(query) {
+    const res = super.getSuggestions(query), q = normalizePath(query.trim()).replace(/^\/+|\/+$/g, "");
+    if (q && q !== "/" && !(this.app.vault.getAbstractFileByPath(q) instanceof TFolder)) res.push({ item: { create: q }, match: { score: 0, matches: [] } });
+    return res;
+  }
+  onChooseItem(f) { this.picked = true; this.done(f.create ? f.create : f.isRoot() ? "/" : f.path); }
   onClose() { super.onClose(); window.setTimeout(() => { if (!this.picked) this.done(null); }, 0); }
 }
 import { UI, buildUI } from "./ui.js";
@@ -65,19 +76,20 @@ export class MapView extends ItemView {
       isActive: () => this.app.workspace.getActiveViewOfType(MapView) === this,
       registerDomEvent: (target, type, fn, opts) => events.registerDomEvent(target, type, fn, opts),
       openNote: (path, newTab, background) => this.openNote(path, newTab, background),
-      saveFile: async (name, text) => {
-        const p = this.plugin, s = p.settings;
-        let dir = s.viewsFolder;
-        if (!dir) {   // first save: the user decides where the file lives
-          dir = await new Promise(res => new FolderPicker(this.app, res).open());
-          if (!dir) return null;
-          s.viewsFolder = dir; await p.saveSettings();
-        }
-        dir = dir === "/" ? "" : normalizePath(dir);
+      // saved views and tours live in one JSON file, in a folder the user picks before the first save
+      savedFolder: () => this.plugin.settings.viewsFolder || null,
+      pickSavedFolder: async () => {
+        const dir = await new Promise(res => new FolderPicker(this.app, res).open());
+        if (!dir) return null;
+        this.plugin.settings.viewsFolder = dir; await this.plugin.saveSettings(); return dir; },
+      readSaved: async () => { const f = this.app.vault.getAbstractFileByPath(this.savedPath()); return f instanceof TFile ? await this.app.vault.read(f) : null; },
+      writeSaved: async text => {
+        const path = this.savedPath(); if (!path) return null;
+        const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
         if (dir && !this.app.vault.getAbstractFileByPath(dir)) await this.app.vault.createFolder(dir);
-        const path = normalizePath(dir ? `${dir}/${name}` : name), f = this.app.vault.getAbstractFileByPath(path);
+        const f = this.app.vault.getAbstractFileByPath(path);
         if (f instanceof TFile) await this.app.vault.modify(f, text); else await this.app.vault.create(path, text);
-        new Notice(`Saved to ${path}`); return path; },
+        return path; },
       activePath: () => { const f = this.app.workspace.getActiveFile(); return f ? f.path : null; },
       debug: (this.debug = {}),
     });
@@ -86,6 +98,13 @@ export class MapView extends ItemView {
   }
 
   showStale() { if (this.staleBtn) this.staleBtn.hidden = false; }
+
+  /** Where the saved views and tours file lives (null until a folder is picked). */
+  savedPath() {
+    const dir = this.plugin.settings.viewsFolder; if (!dir) return null;
+    const d = dir === "/" ? "" : normalizePath(dir);
+    return normalizePath(d ? `${d}/${SAVED_NAME}` : SAVED_NAME);
+  }
 
   openNote(path, newTab, background) {
     const file = this.app.vault.getAbstractFileByPath(path);

@@ -2086,7 +2086,15 @@ const VIEW_NAME = {emergence:"Emergence", gravity:"Gravity", stars:"Starfield", 
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
-const saveViews = () => save("iv-views", views);
+// views and tours are kept in the plugin's data and, once a folder is picked, in a plain JSON file in the vault (the file wins on load)
+let writeT = 0;
+const savedJSON = () => JSON.stringify({ about: "Saved views and recorded tours from Maps of the Ideaverse", saved: new Date().toISOString().slice(0, 10), views, tours: typeof tours !== "undefined" ? tours : [] }, null, 1);
+function writeSaved(){ if (!host.writeSaved || !host.savedFolder()) return; win.clearTimeout(writeT); writeT = win.setTimeout(() => { void host.writeSaved(savedJSON()); }, 300); }
+async function ensureFolder(){ if (!host.savedFolder || host.savedFolder()) return true; const d = await host.pickSavedFolder(); syncFolderBtn(); return !!d; }
+function syncFolderBtn(){ const b = $("#vexport"), d = host.savedFolder ? host.savedFolder() : null;
+  b.textContent = d ? `📁 ${d === "/" ? "Vault root" : d.split("/").pop()}` : "Choose folder";
+  b.title = d ? `Saved in ${d === "/" ? "the vault root" : d} (click to move)` : "Pick where saved views and tours are kept"; }
+const saveViews = () => { save("iv-views", views); writeSaved(); };
 const modeName = m => m === "time" ? "Time" : m === "ace" ? "ACE" : AXES[m] ? AXES[m].name.replace(/ \(.*\)$/, "") : m;
 function viewSummary(v){
   const bits = [VIEW_NAME[v.view] || v.view, modeName(v.mode)];
@@ -2148,7 +2156,8 @@ function renderViewList(){
   });
   const nm = ($("#vname").value || "").trim(); $("#vsave").textContent = nm && views.some(v => v.name === nm) ? "Replace" : "Save";
 }
-function saveCurrent(){
+async function saveCurrent(){
+  if (!await ensureFolder()) return;
   let nm = ($("#vname").value || "").trim(); if (!nm) nm = viewSummary(snapView(""));
   const v = snapView(nm), j = views.findIndex(x => x.name === nm);
   if (j >= 0) views[j] = v; else views.push(v);
@@ -2159,10 +2168,8 @@ $("#vname").addEventListener("keydown", e => { if (e.key === "Enter") saveCurren
 $("#vname").addEventListener("input", renderViewList);
 $("#vq").addEventListener("input", renderViewList);
 $("#vdone").onclick = () => closePops();
-$("#vexport").onclick = async () => {   // file over app: views and tours as a plain JSON file in the vault
-  const txt = JSON.stringify({ about: "Saved views and recorded tours from Maps of the Ideaverse", saved: new Date().toISOString().slice(0, 10), views, tours: typeof tours !== "undefined" ? tours : [] }, null, 1);
-  const where = host.saveFile ? await host.saveFile("Maps of the Ideaverse - saved views.json", txt) : null;
-  if (where) { const b = $("#vexport"); b.textContent = "Saved ✓"; b.title = where; win.setTimeout(() => { b.textContent = "Save to vault"; }, 2000); } };
+$("#vexport").onclick = async e => { e.stopPropagation();   // pick (or move to) the folder that keeps the saved-views file
+  const d = await host.pickSavedFolder(); syncFolderBtn(); if (d) writeSaved(); };
 POPS.push(["#viewbtn", "#viewpop", "#viewms", () => { renderViewList(); $("#vname").focus(); }]);
 $("#viewbtn").onclick = e => { e.stopPropagation(); const el = $("#viewpop"), open = el.hidden; closePops("#viewpop"); closeColl(); el.hidden = !open; $("#viewbtn").setAttribute("aria-expanded", String(open)); if (open) { renderViewList(); if (typeof renderTourList === "function") renderTourList(); $("#vname").focus(); } };
 $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
@@ -2223,7 +2230,7 @@ dbg.__ivViews = { snap: () => snapView("t"), apply: v => applySaved(v), list: ()
 let tours = (() => { const base = [], local = pref("iv-tours", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(t => t.name)); return [...local, ...base.filter(t => !names.has(t.name))]; })();
 let tourRun = null, pendingTour = null;   // tourRun: {t, ids, idx}; pendingTour: a finished recording waiting for a name
-const saveTours = () => save("iv-tours", tours);
+const saveTours = () => { save("iv-tours", tours); writeSaved(); };
 function syncRec(){
   { const vb = $("#viewbtn"); vb.textContent = rec ? `● Rec · ${rec.notes.length}` : "★ Saved"; vb.classList.toggle("recording", !!rec); }
   const b = $("#tourbtn"); b.classList.toggle("recording", !!rec);
@@ -2280,7 +2287,7 @@ function endTour(){ if (!tourRun) return; tourRun = null; if (playing) setPlayin
 function openTourPop(){ closePops("#viewpop"); closeColl(); $("#viewpop").hidden = false; $("#viewbtn").setAttribute("aria-expanded", "true"); renderViewList(); renderTourList(); }   // tours live in the Saved popover
 $("#tourbtn").onclick = e => { e.stopPropagation(); if (!$("#tourpop").hidden) { closePops(); return; } openTourPop(); };
 $("#recx").onclick = e => { e.stopPropagation(); stopRec(); };
-$("#recbtn").onclick = () => rec ? stopRec() : startRec();
+$("#recbtn").onclick = async () => { if (rec) { stopRec(); return; } if (await ensureFolder()) startRec(); };
 $("#tsavebtn").onclick = saveTour;
 $("#tname").addEventListener("keydown", e => { if (e.key === "Enter") saveTour(); });
 $("#tdiscard").onclick = () => { pendingTour = null; $("#tsave").hidden = true; };
@@ -2297,7 +2304,15 @@ POPS.push(["#tourbtn", "#tourpop", "#tourms"]);
   for (const id of ["#recbtn", "#tsave", "#trecinfo", "#tlist"]) vp.insertBefore($(id), foot);
   $("#viewms").insertBefore($("#recx"), vp);
   const hd = root.querySelector("header"); hd.insertBefore($("#viewms"), $("#yearschip")); }   // Saved sits in the top bar, always in reach (and shows when recording)   // the stop-recording × sits by the Saved button
-syncRec();
+syncRec(); syncFolderBtn();
+// load the saved-views file if there is one (it wins over the copy in the plugin's data); write it if there isn't yet
+if (host.readSaved && host.savedFolder()) void host.readSaved().then(txt => { if (dead) return;
+  if (txt == null) { if (views.length || tours.length) writeSaved(); return; }
+  try { const o = JSON.parse(txt), merge = (fromFile, local) => { const names = new Set(fromFile.map(x => x.name)); const extra = local.filter(x => !names.has(x.name)); return [fromFile.concat(extra), extra.length]; };
+    let nv = 0, nt = 0;   // anything saved here but missing from the file (made before the file existed) is kept and written back
+    if (Array.isArray(o.views)) [views, nv] = merge(o.views, views);
+    if (Array.isArray(o.tours)) [tours, nt] = merge(o.tours, tours);
+    save("iv-views", views); save("iv-tours", tours); renderViewList(); renderTourList(); if (nv || nt) writeSaved(); } catch (err) { /* not valid JSON: leave both as they are */ } });
 // every popover stays inside the map: when one opens, nudge it sideways if it would spill past either edge
 function placePop(el){ el.setCssProps({ "--popx": "0px" }); const R = root.getBoundingClientRect(), r = el.getBoundingClientRect();
   let dx = 0; if (r.right > R.right - 8) dx = R.right - 8 - r.right; if (r.left + dx < R.left + 8) dx = R.left + 8 - r.left;

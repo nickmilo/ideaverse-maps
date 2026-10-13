@@ -39,7 +39,7 @@ export class MapsSettingTab extends PluginSettingTab {
       .addToggle(t => t.setValue(s.fileDates !== false).onChange(async v => { s.fileDates = v; await save(); }));
 
     new Setting(containerEl).setName("Saved views and tours").setHeading();
-    new Setting(containerEl).setName("Folder").setDesc("Where Save to vault writes the saved-views file. Left empty, the map asks the first time you save. Use / for the vault root.").addText(t => t
+    new Setting(containerEl).setName("Folder").setDesc("The folder that keeps your saved views and tours (one JSON file, updated as you save). Left empty, the map asks before your first save. Use / for the vault root.").addText(t => t
       .setPlaceholder("Folder/path").setValue(s.viewsFolder || "")
       .onChange(async v => { const x = v.trim(); s.viewsFolder = x === "/" ? "/" : list(x)[0] || ""; await p.saveSettings(); }));
 
