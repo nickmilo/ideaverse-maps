@@ -4,7 +4,7 @@
 .ivm input,.ivm textarea{-webkit-user-select:text;user-select:text}
 /* undo Obsidian's global button and input styling inside the map; the map's own rules (more specific) come after */
 .ivm button{background:none;box-shadow:none;border:0;height:auto;padding:0;margin:0;font:inherit;color:inherit;border-radius:0;cursor:pointer;line-height:inherit;letter-spacing:inherit;text-transform:none;display:inline-block;width:auto;min-height:0}
-.ivm button:hover{background:none;box-shadow:none}
+.ivm button:where(:hover){background:none;box-shadow:none}   /* low specificity: the map's own hover rules win */
 .ivm input[type="search"],.ivm input[type="text"]{height:auto;box-shadow:none;margin:0}
 .ivm h1,.ivm h2,.ivm h5,.ivm h6{margin:0;font-variant:normal;letter-spacing:normal}
 .ivm h1,.ivm h2,.ivm h5,.ivm h6{color:var(--ink)}   /* the map's own theme, not the vault theme's heading colors */
@@ -375,6 +375,7 @@
 .ivm .nums b{display:block;font:500 18px var(--mono);font-variant-numeric:tabular-nums}
 .ivm .nums span{font-size:10.5px;color:var(--muted)}
 .ivm .open{display:inline-block;margin:4px 0 6px;padding:8px 14px;border-radius:8px;background:var(--accent);color:var(--bg);text-decoration:none;font-weight:600}
+.ivm .open:hover{filter:brightness(1.1)}
 .ivm aside h5{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:18px 0 6px;display:flex;gap:8px;align-items:center}
 .ivm aside h5 i{width:16px;border-top:2px solid;display:inline-block}
 .ivm aside .lgrp{font:600 10px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--ink);opacity:.55;margin:22px 0 -8px}
