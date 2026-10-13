@@ -347,6 +347,7 @@
 .ivm main .legend{font-size:10.5px;padding:7px 10px}
 .ivm div main.has-drawer .legend,.ivm div main.has-drawer .legtab{display:none}}
 .ivm .legend{position:absolute;left:14px;bottom:14px;z-index:2;background:color-mix(in srgb,var(--bg) 88%,transparent);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font:500 11px var(--mono);color:var(--muted);display:grid;gap:4px}
+@container ivm (min-width:761px){.ivm[data-view="sense"] .legend{max-width:372px}}
 .ivm .legend div{display:flex;align-items:center;gap:8px}
 .ivm .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
 .ivm .legend .ln{width:18px;height:0;border-top:2px solid;border-radius:0}

@@ -44,6 +44,19 @@ function fmScalar(fm, key) {
 }
 const links = s => { const out = []; LINK.lastIndex = 0; let m; while ((m = LINK.exec(s))) out.push(m[1]); return out; };
 const nonEmptyLines = s => s.split(/\r\n|\r|\n/).filter(l => l.trim());
+const FIRST_PERSON = /\b(I|I'm|I've|I'd|I'll|me|my|mine|myself)\b/g;
+const QUERY = /```(dataview|dataviewjs|base|query)|!\[\[[^\]]+\.base/i;
+/** Structure clues for the Sensemaking map: [headings, list lines, checkboxes, first-person words, questions, flags].
+    flags: 1 = has a status property, 2 = has a due/deadline property, 4 = runs a query (Dataview/Bases). */
+function senseFeatures(fm, rawBody, lines) {
+  const h = lines.filter(l => { const t = l.trimStart(); return t.startsWith("#") && !t.startsWith("#["); }).length;
+  const li = lines.filter(l => /^\s*([-*+]|\d+[.)])\s/.test(l)).length;
+  const cb = lines.filter(l => /^\s*[-*+]\s\[.\]/.test(l)).length;
+  const text = lines.join(" ");
+  const fp = (text.match(FIRST_PERSON) || []).length, q = (text.match(/\?/g) || []).length;
+  const flags = (fmScalar(fm, "status") ? 1 : 0) | (fmScalar(fm, "due") || fmScalar(fm, "deadline") ? 2 : 0) | (QUERY.test(rawBody) ? 4 : 0);
+  return [h, li, cb, fp, q, flags];
+}
 const words = s => { const m = s.match(WORD); return m ? m.length : 0; };
 const kb = s => Math.round(new TextEncoder().encode(s).length / 1024 * 100) / 100;
 const r3 = v => Math.round(v * 1000) / 1000;
@@ -104,7 +117,7 @@ export async function scanVault(adapter, settings, onProgress) {
     for (const [key, short] of [["year", "y"], ["yearXP", "yx"], ["imdbRating", "im"], ["open_rate", "or"]]) {
       const v = fmScalar(fm, key).replace(/%+$/, ""); const f = v === "" ? NaN : Number(v); if (isFinite(f)) props[short] = Math.round(f * 100) / 100; }
     { const m = /^\s*(-?\d{1,4})\b/.exec(fmScalar(fm, "lifespan")); if (m) props.born = parseInt(m[1], 10); }
-    props.w = words(body); props.kb = kb(t);
+    props.w = words(body); props.kb = kb(t); props.sf = senseFeatures(fm, body0, lines);
     let rank = fmScalar(fm, "rank"); rank = rank === "" || !isFinite(Number(rank)) ? null : Number(rank);
     const created = fmScalar(fm, "created").slice(0, 10);
     let date = /^\d{4}-\d{2}-\d{2}$/.test(created) ? created : "";
@@ -182,7 +195,7 @@ export async function scanVault(adapter, settings, onProgress) {
     const aOut = S(), aIn = S(), aInfo = new Map();
     for (const p of arch) { const t = text.get(p), [fm, b0] = p.endsWith(".md") ? splitFm(t) : ["", t], b = b0.replace(FENCE, ""), ls = nonEmptyLines(b), name = stem(p);
       for (const l of links(b)) { const q = aResolve(l); if (q && q !== p) { add(aOut, p, q); if (aSet.has(q)) add(aIn, q, p); } }
-      aInfo.set(p, { title: name, date: aDate(name, fm), w: words(b), kb: kb(t), density: ls.length ? r3(ls.filter(l => l.includes("[[")).length / ls.length) : 0, named_map: /\bMOC\b|\bIndex\b/.test(name) }); }
+      aInfo.set(p, { title: name, date: aDate(name, fm), w: words(b), kb: kb(t), sf: senseFeatures(fm, b0, ls), density: ls.length ? r3(ls.filter(l => l.includes("[[")).length / ls.length) : 0, named_map: /\bMOC\b|\bIndex\b/.test(name) }); }
     const aIdx = new Map(); arch.forEach((p, j) => aIdx.set(p, nodes.length + j));
     const aIsMap = p => { const i = aInfo.get(p); return i.named_map || (get(aOut, p).size >= C.l3MinOut && i.density >= C.l3Density); };
     for (const p of arch) { const i = aInfo.get(p), j = aIdx.get(p), bi = Math.log1p(get(aIn, p).size), bo = Math.log1p(get(aOut, p).size);
@@ -190,7 +203,7 @@ export async function scanVault(adapter, settings, onProgress) {
       let ml = 0; for (const q of get(aOut, p)) if (aInfo.has(q) && aIsMap(q)) ml++;
       const lvl = (mp && ml >= C.l4MapLinks) || sc >= C.promoteL4 ? 4 : mp || sc >= C.promoteL3 ? 3 : get(aIn, p).size || get(aOut, p).size ? 2 : 1;
       const why = lvl === 4 ? (mp && ml >= C.l4MapLinks ? "map linking maps" : "highly linked") : lvl === 3 ? (mp ? "higher-order note" : "highly linked") : lvl === 2 ? "linked" : "no links";
-      nodes.push({ id: j, path: p, title: i.title, ace: ARCHIVE.split("/")[0], sub: ARCHIVE, created: "", date: i.date, rank: null, collections: [], p: { w: i.w, kb: i.kb },
+      nodes.push({ id: j, path: p, title: i.title, ace: ARCHIVE.split("/")[0], sub: ARCHIVE, created: "", date: i.date, rank: null, collections: [], p: { w: i.w, kb: i.kb, sf: i.sf },
         body_in: get(aIn, p).size, body_out: get(aOut, p).size, up_in: 0, coll_in: 0, series: 0, density: i.density, is_map: mp, maps_linked: ml,
         score: sc, level: lvl, why, archive: true, s: [get(aIn, p).size, get(aOut, p).size, 0, 0], home: false, lk: !!(get(aIn, p).size || get(aOut, p).size) });
       for (const q of sorted(get(aOut, p))) { const k = aIdx.has(q) ? aIdx.get(q) : idx.get(q); if (k != null) edges.push([j, k, 3]); } }
