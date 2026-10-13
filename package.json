@@ -1,0 +1,25 @@
+{
+  "name": "ideaverse-maps",
+  "version": "0.1.0",
+  "description": "Maps of the Ideaverse: see your notes as Idea Emergence maps, a Gravity view and a Starfield, with a time-lapse of your vault growing.",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production",
+    "lint": "eslint ."
+  },
+  "keywords": ["obsidian", "linking your thinking", "ideaverse", "graph", "map"],
+  "author": "Nick Milo",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "esbuild": "0.25.5",
+    "eslint": "^9.39.4",
+    "eslint-plugin-obsidianmd": "^0.4.0",
+    "globals": "^17.6.0",
+    "obsidian": "latest",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.59.1"
+  }
+}
