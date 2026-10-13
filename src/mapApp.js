@@ -1244,6 +1244,7 @@ function render(){
   }
   }
 
+  if (view === "emergence" || view === "arc") levelNames();
   // links
   if (focus >= 0 && !showAll) {   // in focus: every link among the focused notes, faint
     ctx.strokeStyle = css.muted; ctx.globalAlpha = .28; ctx.lineWidth = 1; ctx.beginPath();
@@ -1309,6 +1310,18 @@ function render(){
   axisLabels();
   if (GROWV() && senseT != null) drawGrowth();
   if (swap) Object.assign(css, swap);
+}
+// level names, pinned to the left edge: drawn under the links and notes, so they never cover the note you're on
+function levelNames(){
+  ctx.textBaseline = "alphabetic";
+  for (const L of LEVELS) {
+    const b = bandY[L.lv], y0 = sy(b.y0), y1 = sy(b.y1); if (y1 < 0 || y0 > H) continue;
+    const y = Math.min(Math.max(y0 + 16, 66), y1 - 6);
+    ctx.font = `500 11px ${css.mono}`;
+    const t = `${L.lv} · ${L.name.toUpperCase()}`, w = ctx.measureText(t).width;
+    ctx.fillStyle = css.bg; ctx.globalAlpha = .6; ctx.fillRect(6, y-12, w+12, 17); ctx.globalAlpha = .9;
+    ctx.fillStyle = css.accent; ctx.fillText(t, 12, y); ctx.globalAlpha = 1;
+  }
 }
 function gravityGuides(){
   const cx = sx(GC.x), cy = sy(GC.y), R0 = GR*k;
@@ -1509,15 +1522,6 @@ function axisLabels(){
     const tw = ctx.measureText(String(c.count)).width;
     const cx = Math.min(x1 - tw - 4, W - tw - 8);
     if (cx > x0 + 4 + nw + 8) { ctx.strokeText(c.count.toLocaleString(), cx, y); ctx.fillText(c.count.toLocaleString(), cx, y); }
-  }
-  // level names, pinned to the left edge
-  for (const L of LEVELS) {
-    const b = bandY[L.lv], y0 = sy(b.y0), y1 = sy(b.y1); if (y1 < 0 || y0 > H) continue;
-    const y = Math.min(Math.max(y0 + 16, 66), y1 - 6);
-    ctx.font = `500 11px ${css.mono}`;
-    const t = `${L.lv} · ${L.name.toUpperCase()}`, w = ctx.measureText(t).width;
-    ctx.fillStyle = css.bg; ctx.globalAlpha = .85; ctx.fillRect(6, y-12, w+12, 17); ctx.globalAlpha = 1;
-    ctx.fillStyle = css.accent; ctx.fillText(t, 12, y);
   }
 }
 
