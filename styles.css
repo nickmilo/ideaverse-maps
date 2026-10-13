@@ -456,6 +456,7 @@
 .ivm .playbar .pcol:hover{color:var(--ink);border-color:var(--ink)}
 .ivm .playbar.collapsed > :not(.pl):not(.pcol):not(#pplay):not(.pprog):not(#tourctl){display:none!important}
 .ivm #viewms > .mspop{left:auto;right:0}
+.ivm .mspop{translate:var(--popx,0px) 0;max-width:calc(100cqw - 16px)}
 .ivm .playbar.collapsed{gap:6px}
 .ivm h1 .hcol{margin-left:10px;vertical-align:middle;position:relative;top:-3px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;font:500 12px/1.4 var(--mono);letter-spacing:0;color:var(--muted);cursor:pointer}
 .ivm h1 .hcol:hover{color:var(--ink);border-color:var(--ink)}
