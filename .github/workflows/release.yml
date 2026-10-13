@@ -35,7 +35,7 @@ jobs:
       - name: Build plugin
         if: steps.v.outputs.skip == 'false'
         run: |
-          npm install
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
           npm run build
       - name: Attest build provenance
         if: steps.v.outputs.skip == 'false'
