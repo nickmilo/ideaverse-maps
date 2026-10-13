@@ -1631,7 +1631,7 @@ function renderTrail(){
   }).join("") + `<button class="chip clr" id="trclear">Clear</button>`;
   el.querySelectorAll("[data-ti]").forEach(b => {
     const idx = +b.dataset.ti, j = items[idx];
-    b.onclick = () => { if (idx === items.length - 1 && sel >= 0) { if (focus < 0) flyTo(j); return; } trail = trail.slice(0, idx); navTo(j, true); toEditor(j); };
+    b.onclick = () => { if (idx === items.length - 1 && sel >= 0) { if (focus < 0) flyTo(j); return; } navTo(j); toEditor(j);   /* a crumb is just another step: it joins the front, nothing is erased */ };
     b.onmouseenter = () => { if (!morphing) { hover = j; draw(); } };
     b.onmouseleave = () => { hover = -1; draw(); };
   });
