@@ -1198,7 +1198,6 @@ function visTarget(xs, ys){   // camera that frames every visible note, given wh
   const kk = Math.min(4, Math.max(.1, Math.min((vw - pad*2) / Math.max(x1-x0, 40), (vh - pad*2 - 40) / Math.max(y1-y0, 40))));
   return {k:kk, tx: vw/2 - (x0+x1)/2*kk, ty: (vh + 40)/2 - (y0+y1)/2*kk};
 }
-function fitVisible(){ const t = visTarget(X, Y); if (t) animateTo(t); }
 function rad(i){ if (view === "stars") return Math.max(.7, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1), 16)); return Math.max(1.1, Math.min(R[i]*Math.pow(k, .55), 26)); }
 
 function render(){
@@ -1542,7 +1541,7 @@ cv.addEventListener("pointermove", e => {
   if (pts.has(e.pointerId)) {
     const prev = pts.get(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY});
     if (pts.size === 2) { // pinch
-      const [a,b] = [...pts.values()], pa = [...pts.entries()].find(([id]) => id !== e.pointerId)[1];
+      const pa = [...pts.entries()].find(([id]) => id !== e.pointerId)[1];
       const d1 = Math.hypot(prev.x - pa.x, prev.y - pa.y), d2 = Math.hypot(e.offsetX - pa.x, e.offsetY - pa.y);
       if (d1 > 0) zoomAt((e.offsetX+pa.x)/2, (e.offsetY+pa.y)/2, d2/d1);
       moved = true; return;
@@ -1587,7 +1586,6 @@ $("#alllinks").onclick = e => { showAll = !showAll; e.currentTarget.setAttribute
 // ---------- drawer ----------
 const drawer = $("#drawer");
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const obsidian = d => "obsidian://open?vault=" + encodeURIComponent(D.vault || "Ideaverse") + "&file=" + encodeURIComponent(d.path.replace(/\.md$/,""));
 function noteList(ids, tag){
   const s = [...new Set(ids)].filter(j => vis[j]).sort((a,b) => (N[b].level-N[a].level) || (N[b].score-N[a].score));
   const shown = s.slice(0, 80);
@@ -1625,7 +1623,6 @@ function select(i, fromTrail){
   const d = N[i], up = [], down = [], rel = [], prop = [], upl = [], upTo = new Set();
   for (let q = 0; q < EOUT[i].length; q += 2) if (EOUT[i][q+1] === 1) upTo.add(EOUT[i][q]);   // notes named in this note's up property
   for (const j of new Set([...out[i], ...inn[i]])) if (vis[j]) { const kk = EKIND.get(i*n + j); (kk === 4 ? rel : kk === 5 ? prop : kk === 1 ? upl : N[j].level > d.level || (N[j].level === d.level && Y[j] < Y[i]) ? up : down).push(j); }
-  const why = {"home note":"One of your home notes.","top score":"Among the most highly linked notes in the vault.","map linking maps":"A map that links to other maps.","highly linked":"Lifted by its links, not by being a map.","higher-order note":"A map, or a note made mostly of links.","linked":"Linked to at least one other note.","no links":"No links in or out yet."}[d.why] || "";
   html(drawer).v = `<button class="x" id="dx">Close</button>
     <h2>${esc(d.title)}</h2><div class="path">${esc(d.path)}${d.date ? " · " + esc(d.date) : ""}</div>
     <div class="lvl">Level ${d.level} · ${esc(LV[d.level].name)}</div>${axisValue(d) ? `<div class="lvl axv">${esc(axisValue(d))}</div>` : ""}${d.archive ? `<div class="lvl" style="margin-left:6px">Archive</div>` : ""}${view === "arc" ? `<div class="lvl axv" title="${esc(ARW[i])}">ARC · ${ARC_L[ARS[i]].name} · ${esc(ARW[i])}</div>` : ""}${view === "chord" ? `<div class="lvl axv">◯ ${esc(CHCAT[CHC[i]].short)}</div>` : ""}${view === "stars" && BOD[i] >= 0 ? `<div class="lvl axv">✦ ${esc(bodyLabel(i))}</div>` : ""}
@@ -1762,7 +1759,7 @@ $("#foldall").onclick = () => { folders = [...FOLD]; subOff = defSubs(); save("i
 // small popovers on the options row: Folders, Years, Layout (Collections has its own, below)
 const POPS = [["#foldbtn","#foldpop","#foldms", renderFoldList], ["#startbtn","#startpop","#startms"]];
 function closePops(except){ for (const [b,p] of POPS) if (p !== except && !$(p).hidden) { $(p).hidden = true; $(b).setAttribute("aria-expanded", "false"); } }
-for (const [b,p,w,onOpen] of POPS) $(b).onclick = e => { e.stopPropagation(); const el = $(p), open = el.hidden; closePops(p); if (typeof closeColl === "function") closeColl(); el.hidden = !open; $(b).setAttribute("aria-expanded", String(open)); if (open && onOpen) onOpen(); };
+for (const [b,p,,onOpen] of POPS) $(b).onclick = e => { e.stopPropagation(); const el = $(p), open = el.hidden; closePops(p); if (typeof closeColl === "function") closeColl(); el.hidden = !open; $(b).setAttribute("aria-expanded", String(open)); if (open && onOpen) onOpen(); };
 $("#folddone").onclick = () => closePops();
 on(doc, "pointerdown", e => { for (const [b,p,w] of POPS) if (!$(p).hidden && !$(w).contains(e.target)) { $(p).hidden = true; $(b).setAttribute("aria-expanded", "false"); } });
 onKey(e => { if (e.key === "Escape") closePops(); });
