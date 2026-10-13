@@ -1,4 +1,4 @@
-import { Component, ItemView, TFile } from "obsidian";
+import { Component, ItemView, Notice, TFile, normalizePath } from "obsidian";
 import { UI, buildUI } from "./ui.js";
 import { mountMap } from "./mapApp.js";
 
@@ -56,6 +56,9 @@ export class MapView extends ItemView {
       isActive: () => this.app.workspace.getActiveViewOfType(MapView) === this,
       registerDomEvent: (target, type, fn, opts) => events.registerDomEvent(target, type, fn, opts),
       openNote: (path, newTab, background) => this.openNote(path, newTab, background),
+      saveFile: async (name, text) => { const path = normalizePath(name), f = this.app.vault.getAbstractFileByPath(path);
+        if (f instanceof TFile) await this.app.vault.modify(f, text); else await this.app.vault.create(path, text);
+        new Notice(`Saved to ${path}`); return path; },
       activePath: () => { const f = this.app.workspace.getActiveFile(); return f ? f.path : null; },
       debug: (this.debug = {}),
     });
