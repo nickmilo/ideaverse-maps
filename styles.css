@@ -175,6 +175,7 @@
 .ivm #tlist .va.warn{color:#c0392b;border-color:#c0392b}
 .ivm .tourctl{display:flex;align-items:center;gap:4px;max-width:280px}
 .ivm .tourctl button{border:1px solid var(--line);background:var(--bg);border-radius:999px;width:26px;height:26px;cursor:pointer;color:var(--ink);font:500 14px/1 var(--mono);flex:none;padding:0}
+.ivm .tourctl #tend{margin-left:6px}
 .ivm .tourctl button:disabled{opacity:.35;cursor:default}
 .ivm .tourctl #tlabel{font:500 11.5px var(--mono);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;padding:0 4px}
 .ivm .playbar.touring #playseg,.ivm .playbar.touring .pl{display:none}
