@@ -39,7 +39,7 @@ The score counts links in, links out, links both ways, and uplinks (the `up` and
 - Search with `/`. Drag to pan, scroll to zoom. **Focus mode** shows one note and its neighbors. **Autoplay** wanders from note to linked note.
 - Filter by folder (drill into subfolders with ›) or by collection.
 - When notes change, the map offers a rescan.
-- Five themes: Paper, Soft Paper, Dark, LYT Mode, or match your own Obsidian theme (the last swatch), which follows it as you switch.
+- Six themes: Paper, Soft Paper, Dark, LYT Mode, Cybertron, or match your own Obsidian theme (the last swatch), which follows it as you switch.
 
 ## Settings
 

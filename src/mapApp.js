@@ -1141,6 +1141,7 @@ let probe = null;   // colors go through the browser once, so the canvas gets pl
 function readCss(){ const s = win.getComputedStyle(root);
   if (!probe) { probe = root.createSpan({ cls: "ivm-probe" }); }
   for (const v of ["qa","display","mono","body","dw"]) css[v] = s.getPropertyValue("--"+v).trim();
+  for (const lv of [5, 4, 3]) for (const [j, ab] of ["a", "b"].entries()) { probe.setCssProps({ "--probe": s.getPropertyValue(`--g${lv}${ab}`).trim() }); GRAD[lv][j] = win.getComputedStyle(probe).color || GRAD[lv][j]; }   // level colors come from the theme
   for (const v of COLORS) { const raw = s.getPropertyValue("--"+v).trim(); probe.setCssProps({ "--probe": raw }); css[v] = win.getComputedStyle(probe).color || raw; } }
 const isPhone = () => (root.clientWidth || win.innerWidth) <= 760;
 function resize(){ const r = cv.getBoundingClientRect(); dpr = Math.min(2, win.devicePixelRatio||1); const cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); draw(); }
