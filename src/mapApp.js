@@ -2298,6 +2298,12 @@ POPS.push(["#tourbtn", "#tourpop", "#tourms"]);
   $("#viewms").insertBefore($("#recx"), vp);
   const hd = root.querySelector("header"); hd.insertBefore($("#viewms"), $("#yearschip")); }   // Saved sits in the top bar, always in reach (and shows when recording)   // the stop-recording × sits by the Saved button
 syncRec();
+// every popover stays inside the map: when one opens, nudge it sideways if it would spill past either edge
+function placePop(el){ el.setCssProps({ "--popx": "0px" }); const R = root.getBoundingClientRect(), r = el.getBoundingClientRect();
+  let dx = 0; if (r.right > R.right - 8) dx = R.right - 8 - r.right; if (r.left + dx < R.left + 8) dx = R.left + 8 - r.left;
+  if (dx) el.setCssProps({ "--popx": `${Math.round(dx)}px` }); }
+const popObs = new MutationObserver(ms => { for (const m of ms) if (m.target.classList.contains("mspop") && !m.target.hidden) placePop(m.target); });
+popObs.observe(root, { subtree: true, attributes: true, attributeFilter: ["hidden"] });
 dbg.__ivTours = { list: () => tours, run: () => tourRun && {name: tourRun.t.name, idx: tourRun.idx, n: tourRun.ids.length, sel: sel >= 0 ? N[sel].title : null} };
 
 // ---------- why a note sits where it does: its level rule and its score, piece by piece ----------
@@ -2354,7 +2360,7 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
 if (following) win.setTimeout(() => followPath(host.activePath && host.activePath(), true), 400);   // opened while following: start on the active note
 
 return {
-  destroy(){ dead = true; ro.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
+  destroy(){ dead = true; ro.disconnect(); popObs.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
     win.clearTimeout(senseTimer); win.clearTimeout(pTimer); driftStop(); tip.remove(); },
   openNote(path){ const i = PIDX.get(path); if (i != null) navTo(i); },
   follow(path){ followPath(path); },
