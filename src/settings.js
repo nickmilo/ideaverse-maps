@@ -38,6 +38,11 @@ export class MapsSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Dates from files").setDesc("A note with no created property and no date in its name is placed by when its file was made. File dates can change when notes are copied or synced.")
       .addToggle(t => t.setValue(s.fileDates !== false).onChange(async v => { s.fileDates = v; await save(); }));
 
+    new Setting(containerEl).setName("Saved views and tours").setHeading();
+    new Setting(containerEl).setName("Folder").setDesc("Where Save to vault writes the saved-views file. Left empty, the map asks the first time you save. Use / for the vault root.").addText(t => t
+      .setPlaceholder("Folder/path").setValue(s.viewsFolder || "")
+      .onChange(async v => { const x = v.trim(); s.viewsFolder = x === "/" ? "/" : list(x)[0] || ""; await p.saveSettings(); }));
+
     new Setting(containerEl).setName("Idea Emergence levels").setHeading();
     new Setting(containerEl).setName("Home notes").setDesc("Always Level 5. Note names, one per line.").addTextArea(t => t
       .setPlaceholder("Home").setValue((s.homeNotes || []).join("\n")).onChange(async v => { s.homeNotes = list(v); await save(); }));

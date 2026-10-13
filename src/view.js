@@ -1,4 +1,13 @@
-import { Component, ItemView, Notice, TFile, normalizePath } from "obsidian";
+import { Component, FuzzySuggestModal, ItemView, Notice, TFile, TFolder, normalizePath } from "obsidian";
+
+/** Pick a folder in the vault (resolves null if closed without choosing). */
+class FolderPicker extends FuzzySuggestModal {
+  constructor(app, done) { super(app); this.done = done; this.picked = false; this.setPlaceholder("Pick a folder for your saved views and tours"); }
+  getItems() { return this.app.vault.getAllLoadedFiles().filter(f => f instanceof TFolder); }
+  getItemText(f) { return f.isRoot() ? "/ (vault root)" : f.path; }
+  onChooseItem(f) { this.picked = true; this.done(f.isRoot() ? "/" : f.path); }
+  onClose() { super.onClose(); window.setTimeout(() => { if (!this.picked) this.done(null); }, 0); }
+}
 import { UI, buildUI } from "./ui.js";
 import { mountMap } from "./mapApp.js";
 
@@ -56,7 +65,17 @@ export class MapView extends ItemView {
       isActive: () => this.app.workspace.getActiveViewOfType(MapView) === this,
       registerDomEvent: (target, type, fn, opts) => events.registerDomEvent(target, type, fn, opts),
       openNote: (path, newTab, background) => this.openNote(path, newTab, background),
-      saveFile: async (name, text) => { const path = normalizePath(name), f = this.app.vault.getAbstractFileByPath(path);
+      saveFile: async (name, text) => {
+        const p = this.plugin, s = p.settings;
+        let dir = s.viewsFolder;
+        if (!dir) {   // first save: the user decides where the file lives
+          dir = await new Promise(res => new FolderPicker(this.app, res).open());
+          if (!dir) return null;
+          s.viewsFolder = dir; await p.saveSettings();
+        }
+        dir = dir === "/" ? "" : normalizePath(dir);
+        if (dir && !this.app.vault.getAbstractFileByPath(dir)) await this.app.vault.createFolder(dir);
+        const path = normalizePath(dir ? `${dir}/${name}` : name), f = this.app.vault.getAbstractFileByPath(path);
         if (f instanceof TFile) await this.app.vault.modify(f, text); else await this.app.vault.create(path, text);
         new Notice(`Saved to ${path}`); return path; },
       activePath: () => { const f = this.app.workspace.getActiveFile(); return f ? f.path : null; },
