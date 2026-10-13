@@ -1911,6 +1911,7 @@ function setFocus(i, fromTrail){
   relayout(true, false, i >= 0 ? (xs, ys) => visTarget(xs, ys) : () => fitTarget());
   sel = prev;
   if (i >= 0) select(i, fromTrail || prev === i);   // refresh the drawer with the focused set
+  else if (sel >= 0 && vis[sel]) select(sel, true);   // leaving focus: the panel's button goes back to "Focus on its links"
   $("#focusmode").setAttribute("aria-pressed", String(focus >= 0 || focusArmed));
   renderFocusBar(); if (!$("#effpanel").hidden) renderEffList();
 }
@@ -1983,6 +1984,11 @@ $("#pplay").onclick = () => setPlaying(!playing);
 onKey(e => { if (e.key === "Escape" && playing) setPlaying(false); });
 root.querySelectorAll("#playseg button").forEach(b => b.addEventListener("click", () => { if (tourRun) { tourRun = null; syncTour(); } }));   // picking Random/Thread leaves the tour
 syncPlay();
+// the timeline tucks down to its ▶ and date
+{ const tb = $("#timebar"), b = tb.createEl("button", { cls: "tcol" });
+  const set = c => { tb.classList.toggle("collapsed", c); b.setText(c ? "›" : "‹"); b.setAttribute("aria-label", c ? "Show the timeline" : "Tuck the timeline away"); b.title = c ? "Show the timeline" : "Tuck the timeline away"; save("iv-tcol", c); win.setTimeout(placePlaybar, 0); };
+  b.onclick = () => set(!tb.classList.contains("collapsed"));
+  set(pref("iv-tcol", false) === true); }
 // Autoplay tucks down to a small pill (its ▶ stays, so a running autoplay can still be stopped)
 { const pb = $("#playbar"), b = pb.createEl("button", { cls: "pcol" });
   const set = c => { pb.classList.toggle("collapsed", c); b.setText(c ? "›" : "‹"); b.setAttribute("aria-label", c ? "Show autoplay" : "Tuck autoplay away"); b.title = c ? "Show autoplay" : "Tuck autoplay away"; save("iv-pcol", c); win.setTimeout(placePlaybar, 0); };
@@ -2301,7 +2307,7 @@ const ro = new ResizeObserver(() => { if (dead) return; const first = W === 0; r
 if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } });
 
 // the whole top bar (title, maps, filters, options) can tuck away; a small tab brings it back
-{ const hd = root.querySelector("header"), hb = hd.createEl("button", { cls: "hcol", text: "︿", attr: { "aria-label": "Hide the top bar", title: "Hide the top bar" } });
+{ const hd = root.querySelector("header"), hb = hd.querySelector("h1").createEl("button", { cls: "hcol", text: "︿", attr: { "aria-label": "Hide the top bar", title: "Hide the top bar" } });
   const tab = $("#main").createEl("button", { cls: "htab", text: "﹀  Maps of the Ideaverse", attr: { "aria-label": "Show the top bar", title: "Show the top bar" } });
   const set = c => { hd.hidden = c; tab.hidden = !c; save("iv-hcol", c); };
   const flip = c => { set(c); win.setTimeout(() => { resize(); if (sel >= 0) flyTo(sel); else fit(true); }, 30); };   // reframe for the new height
