@@ -19,11 +19,12 @@
   --body:var(--font-interface);
   --mono:var(--font-monospace);
   color-scheme:light;}
-.ivm[data-theme="sepia"],.ivm-tip[data-theme="sepia"]{--bg:#e9d3a6; --panel:#f1e0bb; --line:#b89a63; --ink:#1d1a14; --muted:#5f5440;
-  --accent:#8a4f12; --accent-soft:rgba(138,79,18,.12); --up:#b4471f; --down:#1f7a66; --rel:#7434c4; --upp:#9a7300; --prop:#6a6656;
-  --band-a:rgba(29,26,20,.04); --band-b:rgba(29,26,20,0);
-  --l2:rgba(31,122,102,.55); --l1:rgba(95,84,64,.38); --sl2:rgba(14,96,78,.85); --sl1:rgba(70,56,34,.62); --qa:.16; --edge-faint:rgba(29,26,20,.07);
-  --display:Georgia,serif; --dw:400; color-scheme:light;}
+/* Soft Paper (light): Nick Milo's Obsidian theme, after Rosé Pine Dawn: warm paper, ink-violet text, sapphire accent */
+.ivm[data-theme="softpaper"],.ivm-tip[data-theme="softpaper"]{--bg:#eee6dd; --panel:#e6dbd1; --line:#d1c9c2; --ink:#575279; --muted:#797593;
+  --accent:#1a7da4; --accent-soft:rgba(26,125,164,.11); --up:#ba7184; --down:#286983; --rel:#9a85ae; --upp:#d19548; --prop:#797593;
+  --band-a:rgba(87,82,121,.035); --band-b:rgba(87,82,121,0);
+  --l2:rgba(110,154,141,.62); --l1:rgba(121,117,147,.38); --sl2:rgba(91,165,123,.85); --sl1:rgba(121,117,147,.6); --qa:.12; --edge-faint:rgba(87,82,121,.07);
+  --display:"Source Serif Pro",Georgia,serif; --dw:700; color-scheme:light;}
 .ivm[data-theme="dark"],.ivm-tip[data-theme="dark"]{--bg:#111614; --panel:#18201c; --line:#2a3530; --ink:#ece6d8; --muted:#9aa59d;
   --accent:#d6a55a; --accent-soft:rgba(214,165,90,.16); --up:#ee8a5f; --down:#5fc7b0; --rel:#b48cff; --upp:#f2c94c; --prop:#9aa8bb;
   --band-a:rgba(236,230,216,.025); --band-b:rgba(236,230,216,0);
@@ -35,6 +36,14 @@
   --band-a:hsla(225,17%,88%,.025); --band-b:hsla(225,17%,88%,0);
   --l2:hsla(58,86%,66%,.62); --l1:hsla(263,46%,61%,.45); --sl2:hsla(58,86%,66%,.9); --sl1:hsla(263,46%,61%,.75); --qa:.05; --edge-faint:hsla(196,27%,41%,.32);
   --display:var(--font-interface); --dw:700; color-scheme:dark;}
+/* Obsidian: follows whatever theme the vault uses (its own colors, graph colors and fonts) */
+.ivm[data-theme="obsidian"],.ivm-tip[data-theme="obsidian"]{--bg:var(--background-primary); --panel:var(--background-secondary); --line:var(--background-modifier-border); --ink:var(--text-normal); --muted:var(--text-muted);
+  --accent:var(--text-accent); --accent-soft:color-mix(in srgb,var(--text-accent) 14%,transparent); --up:var(--color-red); --down:var(--color-cyan); --rel:var(--color-purple); --upp:var(--color-yellow); --prop:var(--text-faint);
+  --band-a:color-mix(in srgb,var(--text-normal) 3%,transparent); --band-b:transparent;
+  --l2:color-mix(in srgb,var(--graph-node) 70%,transparent); --l1:color-mix(in srgb,var(--graph-node-unresolved) 55%,transparent); --sl2:var(--graph-node); --sl1:var(--graph-node-unresolved); --qa:.08;
+  --edge-faint:color-mix(in srgb,var(--graph-line) 45%,transparent);
+  --display:var(--font-interface); --dw:700; color-scheme:inherit;}
+.ivm .ivm-probe{position:absolute;width:0;height:0;overflow:hidden;color:var(--probe);pointer-events:none}
 .ivm *{box-sizing:border-box}
 .ivm [hidden],.ivm-tip[hidden]{display:none!important}
 .ivm{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;overflow:hidden}
@@ -95,9 +104,10 @@
 .ivm #themeseg button{width:20px;height:20px;padding:0;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center}
 .ivm #themeseg button i{width:14px;height:14px;border-radius:50%;display:block}
 .ivm #themeseg button[data-th="paper"] i{background:#ffffff;box-shadow:inset 0 0 0 1px #cfcfc8}
-.ivm #themeseg button[data-th="sepia"] i{background:#e9d3a6;box-shadow:inset 0 0 0 1px #b89a63}
+.ivm #themeseg button[data-th="softpaper"] i{background:radial-gradient(circle at 50% 50%,#1a7da4 0 2px,transparent 2.5px),#eee6dd;box-shadow:inset 0 0 0 1px #cac1b9}
 .ivm #themeseg button[data-th="dark"] i{background:#111614;box-shadow:inset 0 0 0 1px #2a3530}
 .ivm #themeseg button[data-th="lyt"] i{background:radial-gradient(circle at 50% 50%,hsl(58,86%,66%) 0 2.5px,transparent 3px),hsl(225,12%,20%);box-shadow:inset 0 0 0 1px hsl(196,27%,41%)}
+.ivm #themeseg button[data-th="obsidian"] i{background:linear-gradient(135deg,var(--background-primary) 0 50%,var(--interactive-accent) 50%);box-shadow:inset 0 0 0 1px var(--background-modifier-border)}
 .ivm #themeseg button[aria-pressed="true"]{background:none;border:2px solid var(--accent)}
 .ivm .glbl{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-right:-4px}
 .ivm .mspop .pt{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:2px 6px 0}
