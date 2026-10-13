@@ -21,7 +21,7 @@ const cv = $("#cv"), ctx = cv.getContext("2d");
 
 const N = D.nodes, E = D.edges, n = N.length;
 const LEVELS = [
-  {lv:5, name:"Home & hubs"}, {lv:4, name:"Maps of maps"}, {lv:3, name:"Higher-order notes"},
+  {lv:5, name:"Home & hubs"}, {lv:4, name:"Maps of maps"}, {lv:3, name:"Maps of content"},
   {lv:2, name:"Linked notes"}, {lv:1, name:"Unlinked notes"}];
 const LV = Object.fromEntries(LEVELS.map(l => [l.lv, l]));
 const ACE = ["+","Atlas","Calendar","Efforts","x"];   // x sits at the far right
@@ -1526,8 +1526,19 @@ function axisLabels(){
 }
 
 // ---------- hit testing ----------
+let linkedOf = -1, linkedSet = null;
+dbg.__ivPickTest = () => { if (sel < 0) return null; let ok = 0, other = 0, tot = 0; for (const j of new Set([...out[sel], ...inn[sel]])) { if (!VV(j)) continue; const px = sx(X[j]) + 4, py = sy(Y[j]) + 3; if (px < 0 || px > W || py < 0 || py > H) continue; tot++; const p = pick(px, py); if (p === j) ok++; else if (p === sel || out[sel].includes(p) || inn[sel].includes(p)) other++; } return [ok, other, tot]; };   // the selected note and the notes it links with, cached per selection
 function pick(px, py){
   if (morphing && senseT == null) return -1;   // the timeline keeps notes gliding; they stay clickable
+  if (sel >= 0) {   // with a note selected, its linked notes win: moving toward one doesn't get hijacked by the notes on the way
+    if (linkedOf !== sel) { linkedOf = sel; linkedSet = new Set([sel, ...out[sel], ...inn[sel]]); }
+    for (let q = LH.length - 1; q >= 0; q--) { const [lx, ly, lw, lh, i] = LH[q]; if (linkedSet.has(i) && px >= lx && px <= lx + lw && py >= ly && py <= ly + lh && vis[i]) return i; }
+    const x = wx(px), y = wy(py), rr = Math.max(14/k, 2);
+    let best = -1, bd = Infinity;
+    const c0 = Math.floor((x-rr-30)/CELL), c1 = Math.floor((x+rr+30)/CELL), r0 = Math.floor((y-rr-30)/CELL), r1 = Math.floor((y+rr+30)/CELL);
+    for (let a=c0;a<=c1;a++) for (let b=r0;b<=r1;b++) { const g = grid.get(a+","+b); if (!g) continue;
+      for (const i of g) { if (!linkedSet.has(i) || !VV(i)) continue; const d = Math.hypot((X[i]-x)*k, (Y[i]-y)*k); if (d < rad(i) + 9 && d < bd) { bd = d; best = i; } } }
+    if (best >= 0) return best; }
   for (let q = LH.length - 1; q >= 0; q--) { const [lx, ly, lw, lh, i] = LH[q]; if (px >= lx && px <= lx + lw && py >= ly && py <= ly + lh && vis[i]) return i; }   // a name wins over the small dots under it
   const x = wx(px), y = wy(py), rr = Math.max(8/k, 2);
   let best = -1, bd = Infinity;
