@@ -31,11 +31,12 @@
   --band-a:rgba(236,230,216,.025); --band-b:rgba(236,230,216,0);
   --l2:rgba(95,199,176,.5); --l1:rgba(154,165,157,.33); --sl2:rgba(125,228,203,.9); --sl1:rgba(215,222,218,.7); --qa:.045; --edge-faint:rgba(236,230,216,.05);
   --display:Georgia,serif; --dw:400; color-scheme:dark;}
-/* LYT Mode: Nick Milo's Obsidian theme (dark), after its graph view: yellow nodes, cyan lines, magenta on hover */
-.ivm[data-theme="lyt"],.ivm-tip[data-theme="lyt"]{--bg:hsl(225,12%,20%); --panel:hsl(231,9%,15%); --line:hsl(225,18%,27%); --ink:hsl(225,17%,88%); --muted:hsl(224,17%,68%);
+/* LYT Mode: after Nick Milo's Obsidian theme (dark). Levels follow its heading ladder: 5 yellow (H1), 4 purple (H2), 3 cyan (H3), 2 green (H4), 1 slate (H5); faded-cyber-cyan text */
+.ivm[data-theme="lyt"],.ivm-tip[data-theme="lyt"]{--g5a:hsl(58,86%,66%); --g5b:hsl(59,81%,47%); --g4a:hsl(260,100%,79%); --g4b:hsl(263,46%,61%); --g3a:hsl(191,90%,50%); --g3b:hsl(194,50%,47%);
+  --bg:hsl(225,12%,20%); --panel:hsl(231,9%,15%); --line:hsl(225,18%,27%); --ink:hsl(191,54%,64%); --muted:hsl(224,17%,68%); --title:hsl(59,81%,47%);
   --accent:hsl(58,86%,66%); --accent-soft:hsla(58,86%,66%,.13); --up:hsl(317,62%,65%); --down:hsl(191,54%,64%); --rel:hsl(263,46%,61%); --upp:hsl(59,81%,47%); --prop:hsl(224,37%,80%);
   --band-a:hsla(225,17%,88%,.025); --band-b:hsla(225,17%,88%,0);
-  --l2:hsla(58,86%,66%,.62); --l1:hsla(263,46%,61%,.45); --sl2:hsla(58,86%,66%,.9); --sl1:hsla(263,46%,61%,.75); --qa:.05; --edge-faint:hsla(196,27%,41%,.32);
+  --l2:hsla(151,54%,64%,.7); --l1:hsla(224,37%,80%,.3); --sl2:hsla(151,54%,64%,.9); --sl1:hsla(224,37%,80%,.6); --qa:.05; --edge-faint:hsla(196,27%,41%,.32);
   --display:var(--font-interface); --dw:700; color-scheme:dark;}
 /* Obsidian: follows whatever theme the vault uses (its own colors, graph colors and fonts) */
 .ivm[data-theme="obsidian"],.ivm-tip[data-theme="obsidian"]{--bg:var(--background-primary); --panel:var(--background-secondary); --line:var(--background-modifier-border); --ink:var(--text-normal); --muted:var(--text-muted);
