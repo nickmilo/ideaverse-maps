@@ -37,6 +37,7 @@ The score counts links in, links out, links both ways, and uplinks (the `up` and
 - Open it from the ribbon (the orbit icon) or the command **Maps of the Ideaverse: Open map**.
 - Click a note to see its links; **Open note** opens it beside the map. Cmd/Ctrl-click opens it in a new tab.
 - Search with `/`. Drag to pan, scroll to zoom. **Focus mode** shows one note and its neighbors. **Autoplay** wanders from note to linked note.
+- **Follow note** (or the command **Toggle follow note**): the map follows whichever note you're editing, like a local graph linked to the active note. Put the map in a split or the sidebar and it keeps up as you move through your notes. In Focus mode it shows just that note and its links.
 - Filter by folder (drill into subfolders with ›) or by collection.
 - When notes change, the map offers a rescan.
 - Six themes: Paper, Soft Paper, Dark, LYT Mode, Cybertron, or match your own Obsidian theme (the last swatch), which follows it as you switch.
