@@ -1,5 +1,7 @@
 # Maps of the Ideaverse
 
+> **Early preview (0.1).** Three maps for now (Emergence, Gravity, Starfield), with more to come. Expect frequent updates and some rough edges. Issues and ideas are welcome in GitHub issues.
+
 See your notes as maps. Every note in your vault gets a place on three maps, sorted by how it emerged: from unlinked notes at the bottom up to your maps of maps and home notes at the top. Then press play and watch your vault grow, month by month.
 
 Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinking, for anyone with an Obsidian vault (an "ideaverse").
