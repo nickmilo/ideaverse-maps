@@ -1885,7 +1885,7 @@ function syncScore(){
 SROWS.forEach((r,j) => { if (r.h) return; $("#s"+j).addEventListener("input", e => { setS(r.key, +e.target.value); save("iv-score", S); relayout(false, true); syncScore(); if (sel >= 0 && !drawer.hidden) select(sel, true); }); });
 $("#scopy").onclick = async e => { const b = e.currentTarget, txt = $("#sline").textContent;
   try { await navigator.clipboard.writeText(txt); b.textContent = "Copied"; }
-  catch (err) { const r = doc.createRange(); r.selectNodeContents($("#sline")); const s = win.getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = "Selected"; }
+  catch { const r = doc.createRange(); r.selectNodeContents($("#sline")); const s = win.getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = "Selected"; }
   win.setTimeout(() => b.textContent = "Copy", 1500); };
 $("#sreset").onclick = () => { S = JSON.parse(JSON.stringify(DEF)); save("iv-score", S); relayout(true, true); syncScore(); if (sel >= 0 && !drawer.hidden) select(sel, true); };
 const sp = $("#scorepanel");
@@ -2238,8 +2238,7 @@ let tourRun = null, pendingTour = null;   // tourRun: {t, ids, idx}; pendingTour
 const saveTours = () => { save("iv-tours", tours); writeSaved(); };
 function syncRec(){
   { const vb = $("#viewbtn"); vb.textContent = rec ? `● Rec · ${rec.notes.length}` : "★ Saved"; vb.classList.toggle("recording", !!rec); }
-  const b = $("#tourbtn"); b.classList.toggle("recording", !!rec);
-  b.textContent = rec ? `● Rec · ${rec.notes.length}` : "Tours"; $("#recx").hidden = !rec;
+  $("#recx").hidden = !rec;
   $("#recbtn").textContent = rec ? `■ Stop recording (${rec.notes.length} note${rec.notes.length === 1 ? "" : "s"})` : "● Record a tour";
   $("#recbtn").classList.toggle("on", !!rec);
   $("#trecinfo").hidden = !rec; $("#trecinfo").textContent = rec ? "Recording: every note you open is added. Search, click, follow links, or run autoplay." : "";
@@ -2290,25 +2289,16 @@ function startTour(t, autoplay){
 }
 function endTour(){ if (!tourRun) return; tourRun = null; if (playing) setPlaying(false); syncTour(); }
 function openTourPop(){ closePops("#viewpop"); closeColl(); $("#viewpop").hidden = false; $("#viewbtn").setAttribute("aria-expanded", "true"); renderViewList(); renderTourList(); }   // tours live in the Saved popover
-$("#tourbtn").onclick = e => { e.stopPropagation(); if (!$("#tourpop").hidden) { closePops(); return; } openTourPop(); };
 $("#recx").onclick = e => { e.stopPropagation(); stopRec(); };
 $("#recbtn").onclick = async () => { if (rec) { stopRec(); return; } if (await ensureFolder()) startRec(); };
 $("#tsavebtn").onclick = saveTour;
 $("#tname").addEventListener("keydown", e => { if (e.key === "Enter") saveTour(); });
 $("#tdiscard").onclick = () => { pendingTour = null; $("#tsave").hidden = true; };
-$("#tdone").onclick = () => closePops();
 $("#tprev").onclick = () => { tourGo(tourRun.idx - 1); if (playing) schedule(); };
 $("#tnext").onclick = () => { tourGo(tourRun.idx + 1); if (playing) schedule(); };
 $("#tend").onclick = endTour;
 onKey(e => { if (!tourRun || /input|textarea|select/i.test(doc.activeElement.tagName)) return;
   if (e.key === "ArrowRight") { e.preventDefault(); $("#tnext").click(); } else if (e.key === "ArrowLeft") { e.preventDefault(); $("#tprev").click(); } });
-POPS.push(["#tourbtn", "#tourpop", "#tourms"]);
-{ const vp = $("#viewpop"), foot = vp.querySelector(".msf");
-  vp.prepend(createDiv({ cls: "pt", text: "Views" }));
-  vp.insertBefore(createDiv({ cls: "pt", text: "Tours" }), foot);
-  for (const id of ["#recbtn", "#tsave", "#trecinfo", "#tlist"]) vp.insertBefore($(id), foot);
-  $("#viewms").insertBefore($("#recx"), vp);
-  const hd = root.querySelector("header"); hd.insertBefore($("#viewms"), $("#yearschip")); }   // Saved sits in the top bar, always in reach (and shows when recording)   // the stop-recording × sits by the Saved button
 syncRec(); syncFolderBtn();
 // load the saved-views file if there is one (it wins over the copy in the plugin's data); write it if there isn't yet
 if (host.readSaved && host.savedFolder()) void host.readSaved().then(txt => { if (dead) return;
@@ -2317,7 +2307,7 @@ if (host.readSaved && host.savedFolder()) void host.readSaved().then(txt => { if
     let nv = 0, nt = 0;   // anything saved here but missing from the file (made before the file existed) is kept and written back
     if (Array.isArray(o.views)) [views, nv] = merge(o.views, views);
     if (Array.isArray(o.tours)) [tours, nt] = merge(o.tours, tours);
-    save("iv-views", views); save("iv-tours", tours); renderViewList(); renderTourList(); if (nv || nt) writeSaved(); } catch (err) { /* not valid JSON: leave both as they are */ } });
+    save("iv-views", views); save("iv-tours", tours); renderViewList(); renderTourList(); if (nv || nt) writeSaved(); } catch { /* not valid JSON: leave both as they are */ } });
 // every popover stays inside the map: when one opens, nudge it sideways if it would spill past either edge
 function placePop(el){ el.setCssProps({ "--popx": "0px" }); const R = root.getBoundingClientRect(), r = el.getBoundingClientRect();
   let dx = 0; if (r.right > R.right - 8) dx = R.right - 8 - r.right; if (r.left + dx < R.left + 8) dx = R.left + 8 - r.left;
