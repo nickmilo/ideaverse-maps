@@ -1604,6 +1604,18 @@ let trail = [];
 const TRAIL_MAX = 40;
 function lvDot(j){ const lv = N[j].level, g = GRAD[lv];
   return `<i class="lv l${lv}" style="background:${g ? `linear-gradient(135deg,${g[0]},${g[1]})` : (lv === 2 ? css.l2 : css.l1)}"></i>`; }
+// the trail's top edge drags up, lifting the crumbs above anything that covers the bottom of the pane (Obsidian's status bar, say)
+let trailPad = Math.max(0, Math.min(140, +pref("iv-tpad", 0) || 0));
+const setTrailPad = v => { trailPad = Math.round(Math.max(0, Math.min(140, v))); root.setCssProps({ "--tpad": trailPad + "px" }); };
+setTrailPad(trailPad);
+function addTrailGrip(el){
+  const g = el.createDiv({ cls: "tgrip", attr: { title: "Drag up to lift the trail · double-click to reset", role: "separator", "aria-orientation": "horizontal", "aria-label": "Trail height" } });
+  let y0 = 0, p0 = 0, on = false;
+  g.addEventListener("pointerdown", e => { on = true; y0 = e.clientY; p0 = trailPad; g.setPointerCapture(e.pointerId); g.classList.add("on"); e.preventDefault(); });
+  g.addEventListener("pointermove", e => { if (on) setTrailPad(p0 + (y0 - e.clientY)); });
+  const stop = () => { if (!on) return; on = false; g.classList.remove("on"); save("iv-tpad", trailPad); };
+  g.addEventListener("pointerup", stop); g.addEventListener("pointercancel", stop);
+  g.addEventListener("dblclick", () => { setTrailPad(0); save("iv-tpad", 0); }); }
 function renderTrail(){
   const el = $("#trail");
   if (!trail.length && sel < 0) { el.hidden = true; return; }
@@ -1621,6 +1633,7 @@ function renderTrail(){
   });
   $("#trclear").onclick = () => { trail = []; renderTrail(); };
   el.scrollLeft = 0;
+  addTrailGrip(el);
 }
 function select(i, fromTrail){
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander

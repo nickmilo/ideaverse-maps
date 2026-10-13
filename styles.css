@@ -59,7 +59,7 @@
 .ivm :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .ivm .app{display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100%}
 .ivm .app > header{grid-row:1}.ivm .app > main{grid-row:2}.ivm .app > nav{grid-row:3}   /* fixed rows, so hiding the top bar gives its space to the map */
-.ivm .trail{display:flex;gap:4px;align-items:center;padding:6px 16px calc(env(safe-area-inset-bottom,0px) + 6px);border-top:1px solid var(--line);background:var(--bg);overflow-x:auto;white-space:nowrap;scrollbar-width:thin;font-size:12.5px}
+.ivm .trail{position:relative;display:flex;gap:4px;align-items:center;padding:6px 16px calc(env(safe-area-inset-bottom,0px) + 6px + var(--tpad,0px));border-top:1px solid var(--line);background:var(--bg);overflow-x:auto;white-space:nowrap;scrollbar-width:thin;font-size:12.5px}
 .ivm .trail .tl{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:6px;flex:none}
 .ivm .trail button.cr{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;background:none;color:var(--ink);padding:3px 8px;border-radius:999px;cursor:pointer;flex:none;max-width:240px}
 .ivm .trail button.cr span{overflow:hidden;text-overflow:ellipsis}
@@ -462,3 +462,5 @@
 .ivm .timebar .tcol:hover{color:var(--ink);border-color:var(--ink)}
 .ivm .timebar.collapsed > :not(#tlplay):not(#tldate):not(.tcol){display:none!important}
 .ivm .timebar.collapsed{width:auto!important;flex-wrap:nowrap!important;gap:8px}
+.ivm .tgrip{position:absolute;left:0;right:0;top:0;height:7px;cursor:ns-resize;z-index:2}
+.ivm .tgrip:hover,.ivm .tgrip.on{background:linear-gradient(var(--accent),var(--accent)) top/100% 2px no-repeat}
