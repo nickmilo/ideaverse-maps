@@ -1,9 +1,10 @@
 name: Release Obsidian plugin
 
+# Publish a release on GitHub (tag = the version in manifest.json, e.g. 0.1.0);
+# this builds the plugin and attaches main.js, manifest.json and styles.css to it.
 on:
-  push:
-    tags:
-      - '*'
+  release:
+    types: [published]
 
 jobs:
   build:
@@ -27,9 +28,7 @@ jobs:
           subject-path: |
             main.js
             styles.css
-      - name: Create release
+      - name: Attach files to the release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          tag="${GITHUB_REF#refs/tags/}"
-          gh release create "$tag" --title="$tag" --draft main.js manifest.json styles.css
+        run: gh release upload "${{ github.event.release.tag_name }}" main.js manifest.json styles.css --clobber
