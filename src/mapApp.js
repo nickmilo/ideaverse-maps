@@ -1136,7 +1136,12 @@ buildGrid();
 let k = 1, tx = 0, ty = 0, W = 0, H = 0, dpr = 1;
 let hover = -1, sel = -1, showAll = false;
 const css = {};
-function readCss(){ const s = win.getComputedStyle(root); for (const v of ["bg","panel","line","ink","muted","accent","accent-soft","up","down","band-a","band-b","l2","l1","sl2","sl1","qa","rel","upp","prop","edge-faint","display","mono","body","dw"]) css[v] = s.getPropertyValue("--"+v).trim(); }
+const COLORS = ["bg","panel","line","ink","muted","accent","accent-soft","up","down","band-a","band-b","l2","l1","sl2","sl1","rel","upp","prop","edge-faint"];
+let probe = null;   // colors go through the browser once, so the canvas gets plain rgb() even when a theme writes color-mix() or Obsidian's own variables
+function readCss(){ const s = win.getComputedStyle(root);
+  if (!probe) { probe = root.createSpan({ cls: "ivm-probe" }); }
+  for (const v of ["qa","display","mono","body","dw"]) css[v] = s.getPropertyValue("--"+v).trim();
+  for (const v of COLORS) { const raw = s.getPropertyValue("--"+v).trim(); probe.setCssProps({ "--probe": raw }); css[v] = win.getComputedStyle(probe).color || raw; } }
 const isPhone = () => (root.clientWidth || win.innerWidth) <= 760;
 function resize(){ const r = cv.getBoundingClientRect(); dpr = Math.min(2, win.devicePixelRatio||1); const cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); draw(); }
 function fitTarget(){ const pad = 56;
@@ -2014,6 +2019,7 @@ function setTheme(t, keep){ root.setAttribute("data-theme", t); if (keep) save("
 root.querySelectorAll("#themeseg button").forEach(b => b.onclick = () => setTheme(b.dataset.th, true));
 setLegend(legendOpen);
 updateCounts();
+{ const t = pref("iv-theme", null); if (t === "sepia") save("iv-theme", "softpaper"); }   // Sepia became Soft Paper (0.1.2)
 setTheme(pref("iv-theme", autoTheme()));
 
 
@@ -2277,6 +2283,6 @@ return {
   destroy(){ dead = true; ro.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
     win.clearTimeout(senseTimer); win.clearTimeout(pTimer); driftStop(); tip.remove(); },
   openNote(path){ const i = PIDX.get(path); if (i != null) navTo(i); },
-  themeChanged(){ if (pref("iv-theme", null) == null) setTheme(autoTheme()); },
+  themeChanged(){ const t = pref("iv-theme", null); if (t == null) setTheme(autoTheme()); else if (t === "obsidian") setTheme("obsidian"); },   // Obsidian's theme or mode changed
 };
 }
