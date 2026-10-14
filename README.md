@@ -20,7 +20,7 @@ Five bands, one per Idea Emergence level. Left to right is time (when each note 
 The same levels as rings: home notes and hubs at the center, unlinked notes on the rim. Time or folders go around the clock.
 
 ![Gravity: levels as rings, years around the clock](docs/gravity.png)
-<sub>Gravity in the Paper theme, with a hub's links and the note panel open.</sub>
+<sub>Gravity in the Play theme, with a hub's links and the note panel open.</sub>
 
 ### Starfield
 
@@ -64,7 +64,7 @@ The score counts links in, links out, links both ways, and uplinks (the `up` and
 - **★ Saved** holds saved views and tours. Name the current view (map, axis, filters, theme) to come back to it. **Record a tour**, click through some notes, stop, and name it; play it back with ‹ › or let it run. Before your first save it asks which folder to keep them in (pick one or type a new one). They live in `Maps of the Ideaverse - saved views.json` there, a plain file you own, updated every time you save. The 📁 button moves it.
 - Filter by folder (drill into subfolders with ›) or by collection. Folder views use your top folders, whatever they're called; ACE folders (Atlas, Calendar, Efforts) get their symbols.
 - When notes change, the map offers a rescan.
-- Six themes: Paper, Soft Paper, Dark, LYT Mode, Cybertron, or match your own Obsidian theme (the last swatch), which follows it as you switch.
+- Six themes: Play, Soft Paper, Dark, LYT Mode, Cybertron, or match your own Obsidian theme (the last swatch), which follows it as you switch.
 
 ![Follow note: the map beside the editor, each following the other](docs/follow.png)
 <sub>Follow note: pick a note on the map and it opens in the editor beside it; switch notes in the editor and the map follows.</sub>
