@@ -5,7 +5,9 @@ module.exports = async ({ page, sleep, shot }) => {
   if (await q('.htab').isVisible()) await q('.htab').click();
   await q('#xseg button[data-x="ace"]').click(); await sleep(1200);
   await q('#viewbtn').click(); await sleep(300);
-  await q('#vname').fill('Atlas by folder'); await q('#vsave').click(); await sleep(300);
+  await q('#vname').fill('Atlas by folder'); await q('#vsave').click(); await sleep(600);
+  if (await page.locator('.prompt').isVisible().catch(() => false)) { await page.keyboard.type('Atlas/Map Views'); await sleep(300); await page.keyboard.press('Enter'); await sleep(800); }   // first save asks for a folder
+  if (!(await q('#recbtn').isVisible())) { await q('#viewbtn').click(); await sleep(300); }
   await q('#recbtn').click(); await sleep(300);
   for (const k of [0, 1, 2]) { const lh = await page.evaluate(() => app.workspace.getLeavesOfType('ideaverse-maps')[0].view.debug.__ivLHall()); await page.mouse.click(lh[k][0] + 5, lh[k][1] + 6); await sleep(700); }
   console.log('chip while recording:', await q('#viewbtn').textContent());
