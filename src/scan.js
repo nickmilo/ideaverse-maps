@@ -64,6 +64,13 @@ const r3 = v => Math.round(v * 1000) / 1000;
 export async function scanVault(adapter, settings, onProgress) {
   const C = Object.assign({}, DEFAULTS, settings || {});
   const W = Object.assign({}, DEFAULTS.weights, C.weights || {});
+  { // folder settings match the vault's folders whatever their capitals ("x/packs" finds "x/Packs")
+    const real = new Map();
+    for (const f of adapter.files) { let d = f.path; for (let i = d.lastIndexOf("/"); i > 0; i = d.lastIndexOf("/")) { d = d.slice(0, i); if (real.has(d.toLowerCase())) break; real.set(d.toLowerCase(), d); } }
+    const canon = v => v ? real.get(String(v).toLowerCase()) || v : v;
+    for (const k of ["exclude", "privateFolders", "mapFolders"]) C[k] = (C[k] || []).map(canon);
+    C.packs = canon(C.packs); C.archive = canon(C.archive);
+  }
   const PACKS = C.packs || "", ARCHIVE = C.archive || "";
   const isPack = p => !!PACKS && (p === PACKS || p.startsWith(PACKS + "/"));
   const skip = [...C.exclude, ARCHIVE].filter(Boolean);
