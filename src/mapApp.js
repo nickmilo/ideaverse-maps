@@ -2118,6 +2118,7 @@ function snapView(name){
   return {name, view, mode, folders:[...folders], subsOff:[...subOff], arch:showArch, from:fromY, full:fullY, colls:[...colls], collMode, lanes, subOrder, links:showAll,
     focus: focus >= 0 ? N[focus].path : null, fDir, fDepth, sel: sel >= 0 ? N[sel].path : null,
     tl: senseT != null ? {t: senseStepStart, step: senseStep} : null,   // where the time-lapse stands (null = all time)
+    s3d: view === "stars" ? {on: S3D, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
     cam: {cx: +((W/2 - tx)/k).toFixed(1), cy: +((H/2 - ty)/k).toFixed(1), k: +k.toFixed(4)}, saved: new Date().toISOString().slice(0,10)};
 }
 function applySaved(v){
@@ -2125,7 +2126,7 @@ function applySaved(v){
   closePops(); curView = v.name;
   { const nv = VIEWS_ON.includes(v.view) ? v.view : "emergence";
     if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
-    if (nv !== view) ungrow();
+    ungrow();   // back to today's levels; a saved time-lapse point re-grows them below
     view = nv; save("iv-view", view); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
     root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === view)));
     root.dataset.view = view; syncTimebar(); }   // the map's buttons and layout follow the view
@@ -2145,16 +2146,17 @@ function applySaved(v){
   resize();
   root.querySelectorAll("#xseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.x === mode)));
   syncRange(); legend();
+  if (view === "stars" && v.s3d) { S3D = !!v.s3d.on; save("iv-s3d", S3D); if (isFinite(+v.s3d.yaw)) yaw3 = +v.s3d.yaw; if (isFinite(+v.s3d.pitch)) pitch3 = +v.s3d.pitch; save("iv-cam3", [yaw3, pitch3]);
+    root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = (r.value === "3d") === S3D); placePlaybar(); }
+  // the time-lapse, at the step it was saved on (or all time); set before the camera move below, so that move has the last word
+  if (v.tl && isFinite(+v.tl.t)) { senseStep = v.tl.step === "week" ? "week" : "month"; save("iv-sstep", senseStep);
+    SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1;
+    let j = 0; for (let q = 0; q < SSTEPS.length; q++) if (SSTEPS[q] <= +v.tl.t) j = q;
+    senseSet(j, true); syncTimebar(); }
   const cam = v.cam && v.cam.k ? () => ({k: v.cam.k, tx: W/2 - v.cam.cx*v.cam.k, ty: H/2 - v.cam.cy*v.cam.k}) : () => fitTarget();
   relayout(true, false, cam);
   if (si >= 0) select(si, true); else select(-1);
   $("#focusmode").setAttribute("aria-pressed", String(focus >= 0)); renderFocusBar();
-  // the time-lapse, at the step it was saved on (or all time)
-  if (v.tl && isFinite(+v.tl.t)) { senseStop(); senseStep = v.tl.step === "week" ? "week" : "month"; save("iv-sstep", senseStep);
-    SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1;
-    let j = 0; for (let k = 0; k < SSTEPS.length; k++) if (SSTEPS[k] <= +v.tl.t) j = k;
-    senseSet(j, true); syncTimebar(); }
-  else if (senseT != null) senseClear();
   renderViewList();
 }
 function renderViewList(){
