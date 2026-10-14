@@ -1584,7 +1584,8 @@ cv.addEventListener("pointermove", e => {
     if (chPin >= 0 && (CHCAT[chPin])) { showArcTip(chPin); return; } }   // a held arc keeps its details showing
   else if (chArc >= 0) { chArc = -1; draw(); }
   tip.classList.remove("arc");
-  if (i >= 0) { const d = N[i]; const av = axisValue(d); html(tip).v = `<b>${esc(d.title)}</b>${av ? `<em class="tav">${esc(av)}</em>` : ""}<span>${d.archive ? "archive" : esc(d.sub)} · ${d.date ? esc(d.date) : "no date"} · (Level ${d.level})(${d.body_in} in)(${d.body_out} out)${RANK[i] ? ` (#${RANK[i].toLocaleString()} in ${d.archive ? "the archive" : "the ideaverse"})` : ""}</span>${view === "sense" ? `<em class="tav">${esc(senseTip(i))}</em>` : ""}${view === "stars" && BOD[i] >= 0 ? `<em class="tav">✦ ${esc(bodyLabel(i))}</em>` : ""}`; tip.hidden = false;
+  if (i >= 0) { const d = N[i]; const av = axisValue(d); const named = LH.some(b => b[4] === i), lvShown = view === "emergence" || view === "gravity";   // the map already shows its name (and, here, its level)
+    html(tip).v = `${named ? "" : `<b>${esc(d.title)}</b>`}${av ? `<em class="tav">${esc(av)}</em>` : ""}<span>${d.archive ? "archive" : esc(d.sub)} · ${d.date ? esc(d.date) : "no date"} · ${lvShown ? "" : `(Level ${d.level})`}(${d.body_in} in)(${d.body_out} out)${RANK[i] ? ` (#${RANK[i].toLocaleString()} in ${d.archive ? "the archive" : "the ideaverse"})` : ""}</span>${view === "sense" ? `<em class="tav">${esc(senseTip(i))}</em>` : ""}${view === "stars" && BOD[i] >= 0 ? `<em class="tav">✦ ${esc(bodyLabel(i))}</em>` : ""}`; tip.hidden = false;
     const tw = tip.offsetWidth; tip.style.left = Math.min(e.clientX + 14, win.innerWidth - tw - 8) + "px"; tip.style.top = (e.clientY + 14) + "px"; }
   else tip.hidden = true;
 });

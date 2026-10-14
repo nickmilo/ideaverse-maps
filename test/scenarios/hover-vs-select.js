@@ -4,6 +4,6 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.waitForSelector('.ivm canvas', { timeout: 120000 }); await sleep(1500);
   const lh = await page.evaluate(() => app.workspace.getLeavesOfType('ideaverse-maps')[0].view.debug.__ivLHall());
   const t = lh[1]; await page.mouse.move(t[0] + 5, t[1] + 6); await sleep(800); await shot('hover');
-  console.log('tip:', await page.evaluate(() => document.querySelector('.ivm-tip').textContent));
+  console.log('tip:', await page.evaluate(() => document.querySelector('.ivm-tip').innerText));
   await page.mouse.click(t[0] + 5, t[1] + 6); await sleep(1500); await page.mouse.move(t[0] + 5, t[1] + 6); await sleep(600); await shot('selected');
 };
