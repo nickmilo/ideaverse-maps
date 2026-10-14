@@ -6,20 +6,42 @@ See your notes as maps. Every note in your vault gets a place on four maps. Thre
 
 Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinking, for anyone with an Obsidian vault (an "ideaverse").
 
-![Emergence map](docs/emergence.png)
+![Emergence: one hub's links fanning out across ten years of notes](docs/emergence.png)
+<sub>Emergence in the LYT Mode theme: a Level 5 hub's links fan out across ten years. All screenshots use a made-up vault of 2,500 notes.</sub>
 
 ## The maps
 
-- **Emergence.** Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders.
-- **Gravity.** The same levels as rings: home notes and hubs at the center, unlinked notes on the rim. Time or folders go around the clock.
-- **Starfield.** Your biggest hubs become galaxy cores. Every note joins the hub it reaches in the fewest links; maps sit in the bulge, linked notes trail out along the arms, and unlinked notes drift in nebulae, one per folder. Switch to 3D to orbit it, or turn on Drift for a slow screensaver.
-- **Sensemaking.** A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), Producer (expression, top-down), Inner Guide (reflection, bottom-up) and Creative (expression, bottom-up). Each note is placed by plain rules about where it lives and how it's written (folders, maps, headings and lists, checkboxes and due dates, first-person writing, questions). No AI. Click a note to see exactly which clues moved it. Choose which years it shows under Layout.
+### Emergence
 
-![Starfield](docs/starfield.png)
+Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders. Click any note to light up its links: up to the maps above it, down to the notes it gathers.
+
+### Gravity
+
+The same levels as rings: home notes and hubs at the center, unlinked notes on the rim. Time or folders go around the clock.
+
+![Gravity: levels as rings, years around the clock](docs/gravity.png)
+<sub>Gravity in the Paper theme, with a hub's links and the note panel open.</sub>
+
+### Starfield
+
+Your biggest hubs become galaxy cores. Every note joins the hub it reaches in the fewest links; maps sit in the bulge, linked notes trail out along the arms, and unlinked notes drift in nebulae, one per folder. Switch to 3D to orbit it, or turn on Drift for a slow screensaver.
+
+![Starfield in 3D: galaxies of notes around their hubs](docs/starfield.png)
+<sub>Starfield in 3D, Dark theme. Each galaxy is a hub and the notes that reach it first.</sub>
+
+### Sensemaking
+
+A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), Producer (expression, top-down), Inner Guide (reflection, bottom-up) and Creative (expression, bottom-up). Each note is placed by plain rules about where it lives and how it's written (folders, maps, headings and lists, checkboxes and due dates, first-person writing, questions). No AI. Click a note to see exactly which clues moved it. Choose which years it shows under Layout.
+
+![Sensemaking: the four quadrants, with a note's reasons in the panel](docs/sensemaking.png)
+<sub>Sensemaking in the Soft Paper theme. The panel shows why this note is a Synthesizer.</sub>
 
 ## The time-lapse
 
 Press ▶ on the timeline to replay your vault by month or by week. New notes arrive (popcorn, comets, rain, or a swirl), and notes move up a level as their links arrive. Click a note at any point to pause and look around; Resume carries on.
+
+![The time-lapse playing on Gravity, November 2023](docs/timelapse.png)
+<sub>The time-lapse mid-play on Gravity, Cybertron theme: November 2023's new notes burst in around the clock.</sub>
 
 ## How notes get their level
 
@@ -43,6 +65,9 @@ The score counts links in, links out, links both ways, and uplinks (the `up` and
 - Filter by folder (drill into subfolders with ›) or by collection. Folder views use your top folders, whatever they're called; ACE folders (Atlas, Calendar, Efforts) get their symbols.
 - When notes change, the map offers a rescan.
 - Six themes: Paper, Soft Paper, Dark, LYT Mode, Cybertron, or match your own Obsidian theme (the last swatch), which follows it as you switch.
+
+![Follow note: the map beside the editor, each following the other](docs/follow.png)
+<sub>Follow note: pick a note on the map and it opens in the editor beside it; switch notes in the editor and the map follows.</sub>
 
 ## Settings
 
