@@ -19,12 +19,17 @@ export class MapsSettingTab extends PluginSettingTab {
     const { containerEl } = this, p = this.plugin, s = p.settings;
     containerEl.empty();
     const save = async () => { await p.saveSettings(); p.setDirty(); p.graph = null; };
-    const folderList = (name, desc, key) => new Setting(containerEl).setName(name).setDesc(desc).addTextArea(t => t
+    // a line under folder fields naming any folder that isn't in the vault (capitals don't matter)
+    const folders = new Set(this.app.vault.getAllLoadedFiles().filter(f => f instanceof TFolder).map(f => f.path.toLowerCase()));
+    const check = (setting, vals) => { const miss = vals.filter(v => !folders.has(v.toLowerCase()));
+      let el = setting.descEl.querySelector(".ivm-miss"); if (!el) el = setting.descEl.createDiv({ cls: "ivm-miss mod-warning" });
+      el.setText(miss.length ? `Not found in this vault: ${miss.join(", ")}` : ""); };
+    const folderList = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addTextArea(t => t
       .setPlaceholder("Folder/path, one per line").setValue((s[key] || []).join("\n"))
-      .onChange(async v => { s[key] = list(v); await save(); }));
-    const folderOne = (name, desc, key) => new Setting(containerEl).setName(name).setDesc(desc).addText(t => t
+      .onChange(async v => { s[key] = list(v); check(st, s[key]); await save(); })); check(st, s[key] || []); return st; };
+    const folderOne = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addText(t => t
       .setPlaceholder("Folder/path").setValue(s[key] || "")
-      .onChange(async v => { s[key] = list(v)[0] || ""; await save(); }));
+      .onChange(async v => { s[key] = list(v)[0] || ""; check(st, s[key] ? [s[key]] : []); await save(); })); check(st, s[key] ? [s[key]] : []); return st; };
 
     new Setting(containerEl).setName("Rescan").setDesc("Changes here take effect on the next scan. The map also offers a rescan when notes change.")
       .addButton(b => b.setButtonText("Rescan now").setCta().onClick(() => { void p.rescan(); }));
