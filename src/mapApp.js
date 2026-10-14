@@ -579,7 +579,7 @@ function starsNotes(lit, dim){
     ctx.fill(); }
   bright.sort((a,b) => N[a].level - N[b].level);
   for (const i of bright) { const lv = N[i].level, x = sx(X[i]), y = sy(Y[i]), r = rad(i), col = SPAL[SC[i]];
-    const a = (lit && !lit.has(i) && dim < 1 ? .2 : 1);
+    const a = (lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .2 : .7) : 1);
     ctx.globalAlpha = a * (lv === 3 ? .55 : lv === 4 ? .75 : .9); const s = r*(lv === 5 ? 9 : 7); ctx.drawImage(sprite(col), x - s/2, y - s/2, s, s);
     if (lv >= 4) { const sl = r*(lv === 5 ? 11 : 6.5); ctx.globalAlpha = a*.5; ctx.strokeStyle = col; ctx.lineWidth = lv === 5 ? 1.1 : .8;
       ctx.beginPath(); ctx.moveTo(x - sl, y); ctx.lineTo(x + sl, y); ctx.moveTo(x, y - sl); ctx.lineTo(x, y + sl); ctx.stroke();
@@ -1283,7 +1283,8 @@ function render(){
     drawWatermark(cen ? sx(cen.x) : vw/2, cen ? sy(cen.y) - Math.min(vw, H)*.06 : H*.5, Math.min(vw, H)*.3, css.ink, .07); }
   // notes: bottom levels first, batched
   const vx0 = -30, vx1 = W+30, vy0 = -30, vy1 = H+30;
-  const dim = lit && !(focus >= 0 && (sel === focus || sel < 0) && hover < 0) ? .25 : 1;
+  // hovering fades the rest gently; a click (selection) fades it fully, like the link lines
+  const dim = lit && !(focus >= 0 && (sel === focus || sel < 0) && hover < 0) ? (sel >= 0 ? .25 : .7) : 1;
   if (view === "stars") starsNotes(lit, dim); else {
   for (const lv of [1,2]) for (const ar of [1,0]) {   // archive notes as rings, vault notes as dots
     ctx.globalAlpha = dim; ctx.beginPath();
@@ -1297,7 +1298,7 @@ function render(){
       const x = sx(X[i]), y = sy(Y[i]); if (x<vx0||x>vx1||y<vy0||y>vy1) continue;
       const r = rad(i), g = ctx.createLinearGradient(x-r,y-r,x+r,y+r);
       g.addColorStop(0, GRAD[lv][0]); g.addColorStop(1, GRAD[lv][1]);
-      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? .3 : 1;
+      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .3 : .75) : 1;
       ctx.beginPath(); shape(lv, x, y, r);
       if (ARCH[i]) { ctx.fillStyle = css.bg; ctx.fill(); ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.stroke(); }
       else { ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = css.bg; ctx.stroke(); }
@@ -1583,7 +1584,7 @@ cv.addEventListener("pointermove", e => {
     if (chPin >= 0 && (CHCAT[chPin])) { showArcTip(chPin); return; } }   // a held arc keeps its details showing
   else if (chArc >= 0) { chArc = -1; draw(); }
   tip.classList.remove("arc");
-  if (i >= 0) { const d = N[i]; const av = axisValue(d); html(tip).v = `<b>${esc(d.title)}</b>${av ? `<em class="tav">${esc(av)}</em>` : ""}<span>${d.archive ? "archive" : esc(d.sub)} · ${d.date ? esc(d.date) : "no date"} · (Level ${d.level})(${d.body_in} in)(${d.body_out} out)${RANK[i] ? ` (#${RANK[i].toLocaleString()} in ${d.archive ? "the archive" : "the vault"})` : ""}</span>${view === "sense" ? `<em class="tav">${esc(senseTip(i))}</em>` : ""}${view === "stars" && BOD[i] >= 0 ? `<em class="tav">✦ ${esc(bodyLabel(i))}</em>` : ""}`; tip.hidden = false;
+  if (i >= 0) { const d = N[i]; const av = axisValue(d); html(tip).v = `<b>${esc(d.title)}</b>${av ? `<em class="tav">${esc(av)}</em>` : ""}<span>${d.archive ? "archive" : esc(d.sub)} · ${d.date ? esc(d.date) : "no date"} · (Level ${d.level})(${d.body_in} in)(${d.body_out} out)${RANK[i] ? ` (#${RANK[i].toLocaleString()} in ${d.archive ? "the archive" : "the ideaverse"})` : ""}</span>${view === "sense" ? `<em class="tav">${esc(senseTip(i))}</em>` : ""}${view === "stars" && BOD[i] >= 0 ? `<em class="tav">✦ ${esc(bodyLabel(i))}</em>` : ""}`; tip.hidden = false;
     const tw = tip.offsetWidth; tip.style.left = Math.min(e.clientX + 14, win.innerWidth - tw - 8) + "px"; tip.style.top = (e.clientY + 14) + "px"; }
   else tip.hidden = true;
 });
@@ -2345,7 +2346,7 @@ function whyBox(i){
   else if (d.level === 2) rule = `It has links, but it isn't a map and its score ${f2(d.score)} is under the Level 3 cut-off (${(+S.l3).toFixed(1)}).`;
   else rule = "No links in or out yet.";
   if (ar && d.level >= 2) rule += " (Archive notes are scored on their own links only.)";
-  const where = ar ? "the archive" : "the vault";   // always say where its score ranks
+  const where = ar ? "the archive" : "the ideaverse";   // always say where its score ranks
   rule += ` (#${scoreRank(i).toLocaleString()} in ${where})`;
   const open = pref("iv-why2", false) ? " open" : "";
   let sense = "";

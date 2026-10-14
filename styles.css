@@ -355,7 +355,7 @@
 .ivm-tip .trow{display:flex;justify-content:space-between;gap:14px}
 .ivm-tip .trow i{font-style:normal}
 .ivm-tip .trow b{font-weight:600}
-.ivm-tip{position:fixed;z-index:20;pointer-events:none;max-width:320px;background:var(--bg);border:1px solid var(--accent);border-radius:6px;padding:7px 10px;font-size:12.5px;line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.ivm-tip{position:fixed;z-index:20;pointer-events:none;max-width:320px;background:color-mix(in srgb,var(--bg) 78%,transparent);border:1px solid var(--accent);border-radius:6px;padding:7px 10px;font-size:12.5px;line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .ivm-tip b{display:block;font-weight:600}
 .ivm-tip .tav{display:block;font:600 11px var(--mono);font-style:normal;color:var(--accent);margin:2px 0 1px}
 .ivm .lvl.axv{margin-left:6px;background:none;border:1px solid var(--accent)}
