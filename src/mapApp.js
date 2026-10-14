@@ -2109,6 +2109,7 @@ function viewSummary(v){
   else if (v.sel && PIDX.has(v.sel)) bits.push(N[PIDX.get(v.sel)].title);
   if (v.folders && v.folders.length < FOLD.length) bits.push(v.folders.join(", "));
   if (v.colls && v.colls.length) bits.push(v.colls.map(c => COLLNAME[c] || c).join(", "));
+  if (v.tl && isFinite(+v.tl.t)) bits.push("time-lapse at " + senseDateLabel(+v.tl.t));
   if (v.from > minYear) bits.push("from " + v.from);
   if (v.arch === false) bits.push("no archive");
   return bits.join(" · ");
@@ -2116,12 +2117,18 @@ function viewSummary(v){
 function snapView(name){
   return {name, view, mode, folders:[...folders], subsOff:[...subOff], arch:showArch, from:fromY, full:fullY, colls:[...colls], collMode, lanes, subOrder, links:showAll,
     focus: focus >= 0 ? N[focus].path : null, fDir, fDepth, sel: sel >= 0 ? N[sel].path : null,
+    tl: senseT != null ? {t: senseStepStart, step: senseStep} : null,   // where the time-lapse stands (null = all time)
     cam: {cx: +((W/2 - tx)/k).toFixed(1), cy: +((H/2 - ty)/k).toFixed(1), k: +k.toFixed(4)}, saved: new Date().toISOString().slice(0,10)};
 }
 function applySaved(v){
   if (typeof playing !== "undefined" && playing) setPlaying(false);
   closePops(); curView = v.name;
-  view = VIEWS_ON.includes(v.view) ? v.view : "emergence"; save("iv-view", view);
+  { const nv = VIEWS_ON.includes(v.view) ? v.view : "emergence";
+    if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
+    if (nv !== view) ungrow();
+    view = nv; save("iv-view", view); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
+    root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === view)));
+    root.dataset.view = view; syncTimebar(); }   // the map's buttons and layout follow the view
   mode = (v.mode === "time" || v.mode === "ace" || AXES[v.mode]) ? v.mode : "time"; save("iv-x", mode);
   folders = (v.folders || FOLD).filter(f => FOLD.includes(f)); if (!folders.length) folders = [...FOLD]; save("iv-folders", folders); subOff = Array.isArray(v.subsOff) ? new Set(v.subsOff) : defSubs(); save("iv-subsoff", [...subOff]); subCompute();
   showArch = v.arch !== false; save("iv-arch", showArch);
@@ -2142,6 +2149,12 @@ function applySaved(v){
   relayout(true, false, cam);
   if (si >= 0) select(si, true); else select(-1);
   $("#focusmode").setAttribute("aria-pressed", String(focus >= 0)); renderFocusBar();
+  // the time-lapse, at the step it was saved on (or all time)
+  if (v.tl && isFinite(+v.tl.t)) { senseStop(); senseStep = v.tl.step === "week" ? "week" : "month"; save("iv-sstep", senseStep);
+    SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1;
+    let j = 0; for (let k = 0; k < SSTEPS.length; k++) if (SSTEPS[k] <= +v.tl.t) j = k;
+    senseSet(j, true); syncTimebar(); }
+  else if (senseT != null) senseClear();
   renderViewList();
 }
 function renderViewList(){
