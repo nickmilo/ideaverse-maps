@@ -2,7 +2,7 @@
    the page's code runs inside the plugin's view, scoped to `root`, with Obsidian handling storage, events and notes. */
 import { sanitizeHTMLToDom } from "obsidian";
 
-export const VIEWS_ON = ["emergence", "gravity", "stars", "sense"];   // Chord and ARC stay in the lab for now
+export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense"];   // Chord and ARC stay in the lab for now
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -322,6 +322,21 @@ function axisValue(d){   // "Rank 4.5", "Released 1972", … for the active Rank
 }
 const curX = () => mode === "ace" ? XA : mode === "time" ? XT : XP;
 
+// ---------- Space-Time: time left to right, one row per top folder (ACE first); inside each row, a small Emergence (higher levels higher) ----------
+const YST = new Float32Array(n); let ROWS = [];
+const STH = WH*.74;
+const rowKey = i => ARCH[i] ? "\u0000arch" : FOLD.includes(N[i].ace) ? N[i].ace : "\u0000root";
+function layoutSpace(){
+  const cnt = new Map(); for (let i=0;i<n;i++) if (vis[i]) { const r = rowKey(i); cnt.set(r, (cnt.get(r) || 0) + 1); }
+  const keys = [...FOLD.filter(f => cnt.has(f)), ...["\u0000root", "\u0000arch"].filter(r => cnt.has(r))];
+  const wt = keys.map(r => Math.sqrt(cnt.get(r)) + 6), tot = wt.reduce((a, b) => a + b, 0) || 1, G = 24, avail = WH - G*Math.max(0, keys.length - 1);
+  let y = 0; ROWS = keys.map((r, j) => { const h = Math.max(avail*.05, avail*wt[j]/tot), row = {key: r, y0: y, y1: y + h, n: cnt.get(r)}; y += h + G; return row; });
+  const sc = y > G ? STH/(y - G) : 1; for (const r of ROWS) { r.y0 *= sc; r.y1 *= sc; }   // rows fill the top of the map; the bottom stays clear for the legend and timeline (desktop)
+  const at = new Map(ROWS.map(r => [r.key, r]));
+  for (let i=0;i<n;i++) { const r = at.get(rowKey(i)) || ROWS[0]; YST[i] = r ? r.y0 + (YE[i]/WH)*(r.y1 - r.y0) : YE[i]; }
+}
+const rowName = k => k === "\u0000arch" ? "Archive" : k === "\u0000root" ? "Top level" : ACE_SYM[k] ? ACE_SYM[k][0] + " " + ACE_SYM[k][1].replace(/[()]/g, "") : k;
+
 // ---------- hit-test grid ----------
 const CELL = 24; let grid = new Map();
 function buildGrid(){ grid = new Map(); for (let i=0;i<n;i++) { if (!vis[i]) continue; const c = Math.floor(X[i]/CELL)+","+Math.floor(Y[i]/CELL); (grid.get(c) || grid.set(c, []).get(c)).push(i); } }
@@ -329,6 +344,8 @@ let mode = "time"; { const m = pref("iv-x", "time"); if (m === "ace" || m === "t
 computeVis(); layoutACE(); layoutTime(); layoutProp();
 // ---------- Gravity view: emergence as rings (Level 5 at the center), Time or ACE goes around ----------
 let view = pref("iv-view", "emergence"); if (!VIEWS_ON.includes(view)) view = "emergence";
+let modeKeep = null;   // Space-Time is always by time: the Emergence axis you had comes back when you leave it
+if (view === "spacetime" && mode !== "time") { modeKeep = mode; mode = "time"; }
 const GC = {x: WW/2, y: WH/2}, GR = 880;
 const RING = {5:[0,.12], 4:[.15,.31], 3:[.34,.52], 2:[.55,.77], 1:[.80,1]};
 const ANG0 = Math.PI/2 + .03*Math.PI, ANGS = Math.PI*2 - ANG0;   // Rank and More axes: clockwise from 6:00, ending at 3:00; the open quarter (3:00–6:00) holds the ring numbers
@@ -762,7 +779,7 @@ function arrivalLabels(taken, fly){
   ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 function drawGrowth(){
   const now = popNow, D_ = popMs(), taken = LH.map(b => b.slice(0, 4)), named = new Set(LH.map(b => b[4]));   // the map's own labels are already there: don't write over them
-  if (view === "emergence" && mode === "time") { const x = sx(xTime(Math.min(senseT, T1))); ctx.strokeStyle = css.accent; ctx.globalAlpha = .55; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);   // the "now" line sweeping across the years
+  if ((view === "emergence" || view === "spacetime") && mode === "time") { const x = sx(xTime(Math.min(senseT, T1))); ctx.strokeStyle = css.accent; ctx.globalAlpha = .55; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);   // the "now" line sweeping across the years
     ctx.beginPath(); ctx.moveTo(x, sy(0) - 20); ctx.lineTo(x, H); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; }
   ctx.textAlign = "center"; ctx.textBaseline = "bottom";
   const ups = []; for (let i=0;i<n;i++) if (LVUP[i] && now - LVUP[i] < D_*1.6 && VV(i)) ups.push(i);
@@ -830,7 +847,7 @@ function drawPops(){
 const senseDateLabel = t => { const d = new Date(t); return senseStep === "week" ? `${MON[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}` : `${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
 // ---- the timeline bar: ▶ / ❚❚, Month | Week, a scrubber, the date, and × to show everything ----
 let senseStep = pref("iv-sstep", "month") === "week" ? "week" : "month", senseFx = ["pop","comet","rain","swirl","swirlin"].includes(pref("iv-sfx", "pop")) ? pref("iv-sfx", "pop") : "pop", sensePlaying = false, senseTimer = 0;
-function GROWV(){ return view === "emergence" || view === "gravity" || view === "arc" || view === "chord"; }   // maps where the time-lapse regrows levels
+function GROWV(){ return view === "emergence" || view === "spacetime" || view === "gravity" || view === "arc" || view === "chord"; }   // maps where the time-lapse regrows levels
 function senseSteps(){ const out = [], grow = GROWV(); let t = Date.UTC(grow ? fromY : SY0, 0, 1); const T_END = grow ? T1 : Math.min(T1, syT1());
   while (t <= T_END) { out.push(t); if (senseStep === "week") t += 7*DAY; else { const d = new Date(t); t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1); } }
   return out; }
@@ -877,8 +894,8 @@ let morphing = false;
 // notes will land, and camera and notes move in the same frames (one motion, not two).
 let morphId = 0;
 function morph(animate, cam){
-  if (view === "gravity") layoutGravity(); else if (view === "stars") layoutStars(); else if (view === "sense") layoutSense(); else if (view === "arc") layoutArc(); else if (view === "chord") layoutChord();
-  const tX = view === "gravity" ? GX : view === "stars" ? (S3D ? (project3D(), P3X) : SX) : view === "sense" ? SNX : view === "arc" ? ARX : view === "chord" ? CHX : curX(), tY = view === "gravity" ? GY : view === "stars" ? (S3D ? P3Y : SY) : view === "sense" ? SNY : view === "arc" ? ARY : view === "chord" ? CHY : YE;
+  if (view === "gravity") layoutGravity(); else if (view === "stars") layoutStars(); else if (view === "sense") layoutSense(); else if (view === "arc") layoutArc(); else if (view === "chord") layoutChord(); else if (view === "spacetime") layoutSpace();
+  const tX = view === "spacetime" ? XT : view === "gravity" ? GX : view === "stars" ? (S3D ? (project3D(), P3X) : SX) : view === "sense" ? SNX : view === "arc" ? ARX : view === "chord" ? CHX : curX(), tY = view === "gravity" ? GY : view === "stars" ? (S3D ? P3Y : SY) : view === "sense" ? SNY : view === "arc" ? ARY : view === "chord" ? CHY : view === "spacetime" ? YST : YE;
   const c1 = cam ? cam(tX, tY) : null;
   if (!animate || win.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     X.set(tX); Y.set(tY); buildGrid(); if (c1) { k = c1.k; tx = c1.tx; ty = c1.ty; } draw(); return; }
@@ -902,6 +919,9 @@ function setView(v){
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
+  if (v === "spacetime" && mode !== "time") { modeKeep = mode; mode = "time"; }
+  else if (view === "spacetime" && v !== "spacetime" && modeKeep) { mode = modeKeep; modeKeep = null; }
+  root.querySelectorAll("#xseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.x === mode)));
   ungrow(); view = v; save("iv-view", v); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
   root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === view)));
   root.dataset.view = view; syncTimebar();
@@ -909,7 +929,7 @@ function setView(v){
   { const bb = root.querySelector(`#vseg button[data-v="${view}"]`); if (bb && isPhone()) bb.scrollIntoView({inline:"nearest", block:"nearest"}); }
 }
 function setMode(m){
-  if (m === mode) return;
+  if (m === mode || view === "spacetime") return;   // Space-Time is always by time
   win.setTimeout(() => { if (sel >= 0) select(sel, true); }, 0); mode = m; save("iv-x", m);
   root.querySelectorAll("#xseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.x === mode)));
   syncRange(); layoutProp(); legend(); morph(true);
@@ -1126,6 +1146,7 @@ else if (view === "chord") { layoutChord(); X.set(CHX); Y.set(CHY); }
 else if (view === "gravity") { layoutGravity(); X.set(GX); Y.set(GY); }
 else if (view === "stars") { layoutStars(); if (S3D) { project3D(); X.set(P3X); Y.set(P3Y); } else { X.set(SX); Y.set(SY); } }
 else if (view === "sense") { layoutSense(); X.set(SNX); Y.set(SNY); }
+else if (view === "spacetime") { layoutSpace(); X.set(XT); Y.set(YST); }
 buildGrid();
 
 // ---------- view ----------
@@ -1220,8 +1241,13 @@ function render(){
   else if (view === "gravity") gravityGuides();
   else if (view === "chord") chordGuides();
   else {
+  if (view === "spacetime") ROWS.forEach((r, idx) => {   // folder rows
+    const y0 = sy(r.y0), y1 = sy(r.y1);
+    ctx.fillStyle = idx % 2 ? css["band-b"] : css["band-a"]; ctx.fillRect(0, y0, W, y1 - y0);
+    ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, Math.round(y1 + 12*k)+.5); ctx.lineTo(W, Math.round(y1 + 12*k)+.5); ctx.stroke();
+  });
   // level bands
-  LEVELS.forEach((L, idx) => {
+  else LEVELS.forEach((L, idx) => {
     const b = bandY[L.lv], y0 = sy(b.y0), y1 = sy(b.y1);
     ctx.fillStyle = idx % 2 ? css["band-b"] : css["band-a"]; ctx.fillRect(0, y0, W, y1 - y0);
     ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, Math.round(y1 + GAP_Y*k/2)+.5); ctx.lineTo(W, Math.round(y1 + GAP_Y*k/2)+.5); ctx.stroke();
@@ -1249,7 +1275,7 @@ function render(){
   }
   }
 
-  if (view === "emergence" || view === "arc") levelNames();
+  if (view === "emergence" || view === "arc") levelNames(); else if (view === "spacetime") rowNames();
   // links
   if (focus >= 0 && !showAll) {   // in focus: every link among the focused notes, faint
     ctx.strokeStyle = css.muted; ctx.globalAlpha = .28; ctx.lineWidth = 1; ctx.beginPath();
@@ -1318,6 +1344,16 @@ function render(){
   if (swap) Object.assign(css, swap);
 }
 // level names, pinned to the left edge: drawn under the links and notes, so they never cover the note you're on
+function rowNames(){   // Space-Time: each folder's name at the left of its row
+  ctx.textBaseline = "alphabetic";
+  for (const r of ROWS) { const y0 = sy(r.y0), y1 = sy(r.y1); if (y1 < 0 || y0 > H) continue;
+    const y = Math.min(Math.max(y0 + 22, 70), y1 - 6), nm = rowName(r.key);
+    ctx.font = `${css.dw} 17px ${css.display}`; const w = ctx.measureText(nm).width;
+    ctx.font = `500 10.5px ${css.mono}`; const c = r.n.toLocaleString(), cw = ctx.measureText(c).width;
+    ctx.fillStyle = css.bg; ctx.globalAlpha = .7; ctx.fillRect(6, y - 17, w + cw + 26, 23); ctx.globalAlpha = 1;
+    ctx.font = `${css.dw} 17px ${css.display}`; ctx.fillStyle = css.ink; ctx.fillText(nm, 12, y);
+    ctx.font = `500 10.5px ${css.mono}`; ctx.fillStyle = css.muted; ctx.fillText(c, 20 + w, y); }
+}
 function levelNames(){
   ctx.textBaseline = "alphabetic";
   for (const L of LEVELS) {
@@ -1393,7 +1429,7 @@ function propLabels(yTop){
   put(PA.ax.name.toUpperCase() + (PA.ax.kind === "log" ? " · log scale" : "") + (PA.ax.kind === "year" && PA.ax.anchor != null && PA.umin < 0 ? ` · before ${PA.ax.anchor} compressed` : ""), Math.max(sx(ND[0]), 8), `500 10.5px ${css.mono}`, css.accent, Math.max(yTop - 24, 14));
 }
 function timeGuides(){
-  const v = x => Math.round(sx(x))+.5, top = sy(0)-6, bot = sy(WH);
+  const v = x => Math.round(sx(x))+.5, top = sy(0)-6, bot = sy(view === "spacetime" ? STH : WH);
   if (fullY > fromY) { // shade the compressed years
     const a = sx(xTime(TF)), b = sx(xTime(TS));
     ctx.fillStyle = css["accent-soft"] || "rgba(0,0,0,.03)"; ctx.globalAlpha = .55; ctx.fillRect(a, top, b - a, bot - top); ctx.globalAlpha = 1;
@@ -2070,10 +2106,11 @@ function legend(){
     + `<div><i style="background:${css.sl2}"></i>2 · Linked notes</div><div><i style="background:${css.sl1}"></i>1 · Unlinked notes</div>`
     + `<div style="margin-top:4px;color:var(--ink)">${senseSrc === "ai" ? `Placed by a one-time AI pass${SAI && SAI.date ? ` (${esc(SAI.date)})` : ""}` : "Placed by rules, no AI"}${syFull() ? "" : ` · ${SY0}–${SY1}`}</div><div style="opacity:.85">Left–right: reflection → expression</div><div style="opacity:.85">Up–down: bottom-up → top-down</div>`
     + `<div style="margin-top:4px;opacity:.85">▶ plays by month or week: each new note pops, streaks, drops or spirals to its spot</div>`; return; }
-  html($("#legend")).v = `<div class="lh"><span>Legend</span><span class="lc" id="legclose" aria-hidden="true" title="Click anywhere to collapse">‹</span></div>` + LEVELS.map(L => {
+  html($("#legend")).v = `<div class="lh"><span>${view === "spacetime" ? "Legend · Space-Time" : "Legend"}</span><span class="lc" id="legclose" aria-hidden="true" title="Click anywhere to collapse">‹</span></div>` + LEVELS.map(L => {
     const sw = L.lv >= 3 ? `background:linear-gradient(135deg,${GRAD[L.lv][0]},${GRAD[L.lv][1]});${L.lv===5?"border-radius:3px;":L.lv===4?"border-radius:1px;transform:rotate(45deg) scale(.8);":""}` : `background:${L.lv===2?css.l2:css.l1}`;
     return `<div><i style="${sw}"></i>${L.lv} · ${L.name} <span style="margin-left:auto;padding-left:10px">${(cnt[L.lv]||0).toLocaleString()}</span></div>`;
   }).join("") + (showArch && hasArch ? `<div><i style="background:none;border:1.5px solid ${css.muted}"></i>Archive (rings)</div>` : "") + `<div style="margin-top:4px"><i class="ln" style="border-color:${css.up}"></i>links above</div><div><i class="ln" style="border-color:${css.down}"></i>links below</div>` + (linkCol === "props" ? `<div><i class="ln" style="border-color:${css.rel}"></i>from a property (up, related, any other)</div>` : linkCol === "each" ? `<div><i class="ln" style="border-color:${css.upp}"></i>up property</div><div><i class="ln" style="border-color:${css.rel}"></i>related property</div><div><i class="ln" style="border-color:${css.prop}"></i>other properties (actors, director, by, next…)</div>` : REL.size ? `<div><i class="ln" style="border-color:${css.rel}"></i>related (from the related property)</div>` : "") + (focus >= 0 ? `<div><i class="ln" style="border-color:${css.muted};opacity:.5;border-top-width:1px"></i>links between the other notes in focus</div>` : "");
+  if (view === "spacetime") $("#legend").createDiv({ text: "Rows: your top folders. In each row, higher levels sit higher.", attr: { style: "margin-top:4px;opacity:.85" } });
 }
 $("#legend").addEventListener("click", () => setLegend(false));   // a click anywhere on the legend tucks it away
 const autoTheme = () => doc.body.classList.contains("theme-dark") ? "dark" : "paper";   // until a theme is picked, follow Obsidian's
@@ -2089,7 +2126,7 @@ setTheme(pref("iv-theme", autoTheme()));
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
 const PIDX = new Map(N.map((d,i) => [d.path, i]));
-const VIEW_NAME = {emergence:"Emergence", gravity:"Gravity", stars:"Starfield", sense:"Sensemaking", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemaking", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
@@ -2130,7 +2167,7 @@ function applySaved(v){
     view = nv; save("iv-view", view); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
     root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === view)));
     root.dataset.view = view; syncTimebar(); }   // the map's buttons and layout follow the view
-  mode = (v.mode === "time" || v.mode === "ace" || AXES[v.mode]) ? v.mode : "time"; save("iv-x", mode);
+  modeKeep = null; mode = (v.mode === "time" || v.mode === "ace" || AXES[v.mode]) ? v.mode : "time"; if (view === "spacetime") mode = "time"; else save("iv-x", mode);
   folders = (v.folders || FOLD).filter(f => FOLD.includes(f)); if (!folders.length) folders = [...FOLD]; save("iv-folders", folders); subOff = Array.isArray(v.subsOff) ? new Set(v.subsOff) : defSubs(); save("iv-subsoff", [...subOff]); subCompute();
   showArch = v.arch !== false; save("iv-arch", showArch);
   { const f = +v.from || fromY, u = +v.full || 0; fromY = Math.max(SLMIN, Math.min(NOW_Y, u > f && u <= NOW_Y ? u : f)); fullY = fromY; save("iv-from", fromY); }   // older views: their full-scale year becomes the start
