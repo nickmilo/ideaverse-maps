@@ -359,6 +359,32 @@ function layoutGravity(){
     const ang = angOf(src[i]);
     GX[i] = GC.x + rr*Math.cos(ang); GY[i] = GC.y + rr*Math.sin(ang); }
 }
+
+// ---------- Domes (experimental): stand at the center of a hollow sphere with the notes all around you, like a planetarium ----------
+// Space-Time Dome: time runs around the horizon (a small gap where the start meets today), folder rows stack up the sky.
+// Gravity Dome: Home and the hubs overhead at the zenith, the level rings dropping toward the horizon, time or folders around you.
+const DOME = Object.assign({spacetime: false, gravity: false}, pref("iv-dome", {}) || {});
+const domeOn = () => (view === "spacetime" || view === "gravity") && !!DOME[view];
+const DOMECAM = Object.assign({spacetime: [0, .5], gravity: [0, .95]}, pref("iv-domecam", {}) || {});
+let domeYaw = 0, domePitch = .5;
+const DF_ = 1000, STGAP = .35;   // world units from the eye to the picture; the seam's width (radians)
+const DTH = new Float32Array(n), DPH = new Float32Array(n), DX = new Float32Array(n), DY = new Float32Array(n), DFR = new Uint8Array(n);
+const stTheta = x => -Math.PI + STGAP/2 + (x - ND[0])/(WW - ND[0])*(2*Math.PI - STGAP);
+const stPhi = y => (80 - Math.max(0, Math.min(1, y/STH))*72)*Math.PI/180;
+const grPhi = r => (90 - Math.max(0, Math.min(1, r))*80)*Math.PI/180;
+function domeAngles(bx, by){
+  if (view === "spacetime") for (let i=0;i<n;i++) { DTH[i] = stTheta(bx[i]); DPH[i] = stPhi(by[i]); }
+  else for (let i=0;i<n;i++) { const dx = bx[i] - GC.x, dy = by[i] - GC.y; DTH[i] = Math.atan2(dy, dx); DPH[i] = grPhi(Math.hypot(dx, dy)/GR); }
+}
+function domeCam(th, ph){   // a direction on the sphere → world point on the picture, or null when it's behind you
+  const c = Math.cos(ph), x = c*Math.sin(th), y = Math.sin(ph), z = c*Math.cos(th);
+  const cy = Math.cos(domeYaw), sy_ = Math.sin(domeYaw), cp = Math.cos(domePitch), sp = Math.sin(domePitch);
+  const x1 = x*cy - z*sy_, z1 = x*sy_ + z*cy, y2 = y*cp - z1*sp, z2 = y*sp + z1*cp;
+  return z2 > .06 ? [x1/z2*DF_, -y2/z2*DF_] : null;
+}
+function domeProject(){ for (let i=0;i<n;i++) { const p = domeCam(DTH[i], DPH[i]); if (p) { DX[i] = p[0]; DY[i] = p[1]; DFR[i] = 1; } else { DX[i] = DY[i] = -1e7; DFR[i] = 0; } } }
+function domeUse(){ [domeYaw, domePitch] = DOMECAM[view] || [0, .5]; }
+function domeKeep(){ DOMECAM[view] = [+domeYaw.toFixed(3), +domePitch.toFixed(3)]; save("iv-domecam", DOMECAM); }
 // ACE around the clock: + (Inbox) centered at 8:00, Atlas starting at 9:30, then Calendar, Efforts and x clockwise.
 // The gap between + and Atlas (about 9:00) holds the ring names. Time and the other axes start at 12:00, gap at the top.
 const DEG = Math.PI/180, PLUS_AT = 150, ATLAS_AT = 195, ACE_GAP = 12;   // degrees clockwise from 3:00 (8:00 = 150°, 9:30 = 195°)
@@ -712,7 +738,7 @@ const syT0 = () => SY0 <= SLMIN ? -Infinity : Date.UTC(SY0, 0, 1), syT1 = () => 
 const inYears = i => syFull() || (TV[i] >= syT0() && TV[i] <= syT1());
 const born = i => senseT == null || (TV[i] <= senseT && !(POP[i] > popNow));   // on the timeline, a note shows once its date has passed (and its pop has started)
 const shownAt = i => view === "sense" ? inYears(i) && born(i) : born(i);   // scheduled pops stay hidden until they burst
-const VV = i => vis[i] && shownAt(i);
+const VV = i => vis[i] && shownAt(i) && (!domeOn() || DFR[i] === 1);
 let senseTrail = [];                              // (kept empty: the averaged trail was replaced by popcorn)
 const SPEEDS = {xslow: [12, 6000/1100], slow: [6, 4000/1100], normal: [2.6, 1.6], fast: [1, 1]};   // shifted one notch slower (Nick, Oct 11)   // [step ×, flight ×]: slow spaces the arrivals out more than it slows each flight, so fewer overlap and more names show
 let senseSpeed = SPEEDS[pref("iv-sspeed", "normal")] ? pref("iv-sspeed", "normal") : "normal";
@@ -779,7 +805,7 @@ function arrivalLabels(taken, fly){
   ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 function drawGrowth(){
   const now = popNow, D_ = popMs(), taken = LH.map(b => b.slice(0, 4)), named = new Set(LH.map(b => b[4]));   // the map's own labels are already there: don't write over them
-  if ((view === "emergence" || view === "spacetime") && mode === "time") { const x = sx(xTime(Math.min(senseT, T1))); ctx.strokeStyle = css.accent; ctx.globalAlpha = .55; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);   // the "now" line sweeping across the years
+  if ((view === "emergence" || view === "spacetime") && mode === "time" && !domeOn()) { const x = sx(xTime(Math.min(senseT, T1))); ctx.strokeStyle = css.accent; ctx.globalAlpha = .55; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);   // the "now" line sweeping across the years
     ctx.beginPath(); ctx.moveTo(x, sy(0) - 20); ctx.lineTo(x, H); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; }
   ctx.textAlign = "center"; ctx.textBaseline = "bottom";
   const ups = []; for (let i=0;i<n;i++) if (LVUP[i] && now - LVUP[i] < D_*1.6 && VV(i)) ups.push(i);
@@ -895,7 +921,8 @@ let morphing = false;
 let morphId = 0;
 function morph(animate, cam){
   if (view === "gravity") layoutGravity(); else if (view === "stars") layoutStars(); else if (view === "sense") layoutSense(); else if (view === "arc") layoutArc(); else if (view === "chord") layoutChord(); else if (view === "spacetime") layoutSpace();
-  const tX = view === "spacetime" ? XT : view === "gravity" ? GX : view === "stars" ? (S3D ? (project3D(), P3X) : SX) : view === "sense" ? SNX : view === "arc" ? ARX : view === "chord" ? CHX : curX(), tY = view === "gravity" ? GY : view === "stars" ? (S3D ? P3Y : SY) : view === "sense" ? SNY : view === "arc" ? ARY : view === "chord" ? CHY : view === "spacetime" ? YST : YE;
+  let tX = view === "spacetime" ? XT : view === "gravity" ? GX : view === "stars" ? (S3D ? (project3D(), P3X) : SX) : view === "sense" ? SNX : view === "arc" ? ARX : view === "chord" ? CHX : curX(), tY = view === "gravity" ? GY : view === "stars" ? (S3D ? P3Y : SY) : view === "sense" ? SNY : view === "arc" ? ARY : view === "chord" ? CHY : view === "spacetime" ? YST : YE;
+  if (domeOn()) { domeUse(); domeAngles(tX, tY); domeProject(); tX = DX; tY = DY; }
   const c1 = cam ? cam(tX, tY) : null;
   if (!animate || win.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     X.set(tX); Y.set(tY); buildGrid(); if (c1) { k = c1.k; tx = c1.tx; ty = c1.ty; } draw(); return; }
@@ -924,7 +951,7 @@ function setView(v){
   root.querySelectorAll("#xseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.x === mode)));
   ungrow(); view = v; save("iv-view", v); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
   root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === view)));
-  root.dataset.view = view; syncTimebar();
+  root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() ? "1" : "";
   syncRange(); legend(); morph(true, () => fitTarget());
   { const bb = root.querySelector(`#vseg button[data-v="${view}"]`); if (bb && isPhone()) bb.scrollIntoView({inline:"nearest", block:"nearest"}); }
 }
@@ -1147,6 +1174,7 @@ else if (view === "gravity") { layoutGravity(); X.set(GX); Y.set(GY); }
 else if (view === "stars") { layoutStars(); if (S3D) { project3D(); X.set(P3X); Y.set(P3Y); } else { X.set(SX); Y.set(SY); } }
 else if (view === "sense") { layoutSense(); X.set(SNX); Y.set(SNY); }
 else if (view === "spacetime") { layoutSpace(); X.set(XT); Y.set(YST); }
+if (domeOn()) { domeUse(); domeAngles(Float32Array.from(X), Float32Array.from(Y)); domeProject(); X.set(DX); Y.set(DY); }
 buildGrid();
 
 // ---------- view ----------
@@ -1168,6 +1196,7 @@ function syncCls(){ const m = root.querySelector("main"), hd = root.querySelecto
   root.querySelectorAll(".ms").forEach(ms => { const x = ms.querySelector(":scope > .qx"); ms.toggleClass("has-x", !!x && !x.hidden); }); }
 function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(2, win.devicePixelRatio||1); const cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); draw(); }
 function fitTarget(){ const pad = 56;
+  if (domeOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: Math.max(vw, H*1.2)/2/(DF_*Math.tan(52*Math.PI/180)), tx: vw/2, ty: H/2}; }   // about a 104° view
   if (view === "sense") { const phone = isPhone(), lc = phone ? 0 : 400, tb = phone ? 58 : 16, pb = phone ? 70 : 16, vw = W - sideW() - lc;   // desktop: the bars live in a left column
     const kk = Math.min((vw - pad)/(2*SR0*1.08 + 300), (H - tb - pb - 150)/(2*SR0*1.08));   // 150 px for the archetype names above and below
     return {k:kk, tx: lc + vw/2 - SC_.x*kk, ty: (tb + H - pb)/2 - SC_.y*kk}; }
@@ -1190,6 +1219,7 @@ function animateTo(t){ const k0=k, x0=tx, y0=ty, t0=performance.now(), dur=420, 
     k = k0 + (t.k-k0)*e; tx = x0 + (t.tx-x0)*e; ty = y0 + (t.ty-y0)*e; render(); if (p<1) RAF(step); };
   RAF(step); }
 function flyTo(i){
+  if (domeOn()) { domeYaw = DTH[i]; domePitch = Math.max(-.2, Math.min(1.45, DPH[i] - .08)); domeKeep(); const kk = k; morph(true, () => ({k: kk, tx: (W - (isPhone() ? 0 : sideW()))/2, ty: H/2})); return; }   // in a dome: turn to face it
   const phone = isPhone(), dw = phone ? 0 : sideW(), lc = !phone && (view === "sense" || view === "stars") ? 400 : 0, vw = W - dw - lc, vh = phone ? H*.48 : H, pad = phone ? 36 : 70;   // Sensemaking keeps its bars in a left column
   let x0 = X[i], x1 = X[i], y0 = Y[i], y1 = Y[i];
   for (const j of [...out[i], ...inn[i]]) { x0 = Math.min(x0, X[j]); x1 = Math.max(x1, X[j]); y0 = Math.min(y0, Y[j]); y1 = Math.max(y1, Y[j]); }
@@ -1208,6 +1238,7 @@ setPanelW(panelW);
   g.addEventListener("dblclick", () => setPanelW(420, true));
   g.tabIndex = 0; g.addEventListener("keydown", e => { if (e.key === "ArrowLeft") setPanelW(panelW + 24, true); if (e.key === "ArrowRight") setPanelW(panelW - 24, true); }); }
 function keepInView(i){   // after the map narrows, slide it so the selected note isn't left past the edge
+  if (domeOn()) return;
   const x = sx(X[i]), y = sy(Y[i]), m = 60; let dx = 0, dy = 0;
   if (x > W - m) dx = (W*0.62) - x; else if (x < m) dx = W*0.38 - x;
   if (y > H - m) dy = H*0.6 - y; else if (y < m) dy = H*0.4 - y;
@@ -1237,6 +1268,7 @@ function render(){
   ctx.fillStyle = css.bg; ctx.fillRect(0,0,W,H);
 
   if (view === "stars") starsBg();
+  else if (domeOn()) domeGuides();
   else if (view === "sense") senseGuides();
   else if (view === "gravity") gravityGuides();
   else if (view === "chord") chordGuides();
@@ -1275,7 +1307,7 @@ function render(){
   }
   }
 
-  if (view === "emergence" || view === "arc") levelNames(); else if (view === "spacetime") rowNames();
+  if (view === "emergence" || view === "arc") levelNames(); else if (view === "spacetime" && !domeOn()) rowNames();
   // links
   if (focus >= 0 && !showAll) {   // in focus: every link among the focused notes, faint
     ctx.strokeStyle = css.muted; ctx.globalAlpha = .28; ctx.lineWidth = 1; ctx.beginPath();
@@ -1305,7 +1337,7 @@ function render(){
     ctx.globalAlpha = 1;
   }
 
-  if (GROWV() && senseT != null) { const vw = W - (isPhone() ? 0 : sideW()), cen = view === "gravity" ? GC : view === "chord" ? CH_C : null;
+  if (GROWV() && senseT != null) { const vw = W - (isPhone() ? 0 : sideW()), cen = domeOn() ? null : view === "gravity" ? GC : view === "chord" ? CH_C : null;
     drawWatermark(cen ? sx(cen.x) : vw/2, cen ? sy(cen.y) - Math.min(vw, H)*.06 : H*.5, Math.min(vw, H)*.3, css.ink, .07); }
   // notes: bottom levels first, batched
   const vx0 = -30, vx1 = W+30, vy0 = -30, vy1 = H+30;
@@ -1344,6 +1376,47 @@ function render(){
   if (swap) Object.assign(css, swap);
 }
 // level names, pinned to the left edge: drawn under the links and notes, so they never cover the note you're on
+// ---- the domes' guides: the horizon, the bands of sky, the years (or folders) around you; drawn as lines that break where they pass behind you
+function domePath(pts){ let on = false; for (const [th, ph] of pts) { const p = domeCam(th, ph); if (!p) { on = false; continue; } const x = sx(p[0]), y = sy(p[1]); if (on) ctx.lineTo(x, y); else { ctx.moveTo(x, y); on = true; } } }
+const domeCircle = (ph, a0 = -Math.PI, a1 = Math.PI) => { const o = []; for (let t = a0; t <= a1 + 1e-6; t += Math.PI/90) o.push([t, ph]); return o; };
+const domeMeridian = (th, p0, p1) => { const o = []; for (let p = p0; p <= p1 + 1e-6; p += Math.PI/90) o.push([th, p]); return o; };
+function domeGuides(){
+  ctx.lineWidth = 1; ctx.strokeStyle = css.line; ctx.beginPath(); domePath(domeCircle(0)); ctx.stroke();   // the horizon
+  if (view === "spacetime") {
+    const a0 = -Math.PI + STGAP/2, a1 = Math.PI - STGAP/2;
+    ctx.beginPath(); ROWS.forEach((r, j) => { if (j) domePath(domeCircle(stPhi(r.y0 - 12), a0, a1)); }); ctx.stroke();
+    ctx.setLineDash([2, 4]); ctx.beginPath();
+    for (let yr = fromY; yr <= NOW_Y; yr++) { if (yr < fullY && yr % 5 && yr !== fromY) continue; domePath(domeMeridian(stTheta(xTime(Date.UTC(yr, 0, 1))), 0, stPhi(0))); }
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = css.accent; ctx.globalAlpha = .55; ctx.beginPath(); for (const th of [a0, a1]) domePath(domeMeridian(th, 0, stPhi(0))); ctx.stroke();   // the seam: start | today
+    if (senseT != null) { ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5; ctx.beginPath(); domePath(domeMeridian(stTheta(xTime(Math.min(senseT, T1))), 0, stPhi(0))); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1; }
+    ctx.globalAlpha = 1;
+  } else {
+    ctx.beginPath(); for (const L of LEVELS) { const a = RING[L.lv][0]; if (a > 0) domePath(domeCircle(grPhi(a - .015))); } domePath(domeCircle(grPhi(1))); ctx.stroke();
+    ctx.setLineDash([2, 4]); ctx.beginPath();
+    if (mode === "time") { for (let yr = fromY; yr <= NOW_Y; yr++) { if (yr < fullY && yr % 5 && yr !== fromY) continue; domePath(domeMeridian(angOf(xTime(Date.UTC(yr, 0, 1))), grPhi(1), grPhi(.15))); } }
+    else for (const c of cols) domePath(domeMeridian(angOf(c.x0), grPhi(1), grPhi(.15)));
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+function domeLabels(){   // band names ride along the left of your view; years (or folders) sit just above the horizon
+  const vw = W - (isPhone() ? 0 : sideW()), half = Math.atan((vw/2)/(k*DF_)), thL = domeYaw - half*.8;
+  ctx.textBaseline = "middle"; ctx.lineWidth = 5; ctx.strokeStyle = css.bg;
+  const put = (txt, th, ph, font, color, align) => { const p = domeCam(th, ph); if (!p) return; const x = sx(p[0]), y = sy(p[1]);
+    if (x < -80 || x > W + 80 || y < -20 || y > H + 20) return; ctx.font = font; ctx.textAlign = align || "center"; ctx.fillStyle = color; ctx.strokeText(txt, x, y); ctx.fillText(txt, x, y); };
+  const big = `${css.dw} 16px ${css.display}`, small = `500 11px ${css.mono}`, DG = Math.PI/180;
+  if (view === "spacetime") {
+    for (const r of ROWS) put(rowName(r.key), thL, stPhi(r.y0) - 2.5*DG, big, css.ink, "left");
+    for (let yr = fromY; yr <= NOW_Y; yr++) { const comp = yr < fullY; if (comp && yr % 5 && yr !== fromY) continue;
+      put(String(yr), stTheta(xTime(Date.UTC(yr, comp ? 0 : 6, 1))), 3*DG, comp ? small : big, comp ? css.muted : css.ink); }
+    put("start", -Math.PI + STGAP/2 + 2*DG, 9*DG, small, css.accent, "left"); put("today", Math.PI - STGAP/2 - 2*DG, 9*DG, small, css.accent, "right");
+  } else {
+    for (const L of LEVELS) { const [a, b] = RING[L.lv]; put(`${L.lv} · ${L.name.toUpperCase()}`, thL, grPhi((a + b)/2), small, css.accent, "left"); }
+    if (mode === "time") { for (let yr = fromY; yr <= NOW_Y; yr++) { const comp = yr < fullY; if (comp && yr % 5 && yr !== fromY) continue; put(String(yr), angOf(xTime(Date.UTC(yr, comp ? 0 : 6, 1))), 4*DG, comp ? small : big, comp ? css.muted : css.ink); } }
+    else for (const c of cols) put(rowName(c.ace), angOf((c.x0 + c.x1)/2), 4*DG, big, css.ink);
+  }
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+}
 function rowNames(){   // Space-Time: each folder's name at the left of its row
   ctx.textBaseline = "alphabetic";
   for (const r of ROWS) { const y0 = sy(r.y0), y1 = sy(r.y1); if (y1 < 0 || y0 > H) continue;
@@ -1493,6 +1566,7 @@ function labels(lit){
 }
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function axisLabels(){
+  if (domeOn()) { domeLabels(); return; }
   if (view === "stars") { starLabels(); drawPops(); return; }
   if (view === "sense") { senseLabels(); return; }
   if (view === "gravity") { gravityLabels(); return; }
@@ -1597,7 +1671,7 @@ function pick(px, py){
 // ---------- interaction ----------
 const tip = $("#tip"); tip.addClass("ivm-tip"); doc.body.appendChild(tip);
 let drag = null, moved = false; const pts = new Map();
-cv.addEventListener("pointerdown", e => { driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, orbit: s3dOn() && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
+cv.addEventListener("pointerdown", e => { driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, orbit: (s3dOn() || domeOn()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
 cv.addEventListener("contextmenu", e => e.preventDefault());   // right-drag pans (as in Miro); no menu on the map
 cv.addEventListener("pointermove", e => {
   if (pts.has(e.pointerId)) {
@@ -1609,6 +1683,8 @@ cv.addEventListener("pointermove", e => {
       moved = true; return;
     }
     if (drag) { const dx = e.offsetX - drag.x, dy = e.offsetY - drag.y; if (Math.abs(dx)+Math.abs(dy) > 3) { moved = true; cv.classList.add("drag"); }
+      if (drag.orbit && domeOn()) { if (!moved) return; const u = 1/(k*DF_); domeYaw = drag.dyaw - dx*u; domePitch = Math.max(-.35, Math.min(1.53, drag.dpitch + dy*u));   // drag the sky
+        domeProject(); X.set(DX); Y.set(DY); tip.hidden = true; draw(); return; }
       if (drag.orbit) { if (!moved) return; yaw3 = drag.yaw + dx*.006; pitch3 = Math.max(-1.45, Math.min(1.45, drag.pitch + dy*.006)); project3D(); X.set(P3X); Y.set(P3Y); tip.hidden = true; draw(); return; }
       tx = drag.tx + dx; ty = drag.ty + dy; tip.hidden = true; draw(); return; }
   }
@@ -1628,17 +1704,20 @@ cv.addEventListener("pointermove", e => {
 const end = e => { pts.delete(e.pointerId);
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
-  if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY);
+  if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY);
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && isPhone()) flyTo(i); } toEditor(i); } drag = null; } };
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0) { hover = -1; draw(); } tip.hidden = true; });
-function zoomAt(px, py, f){ const nk = Math.min(40, Math.max(view === "stars" ? .04 : .15, k*f)); f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
+function zoomAt(px, py, f){ if (domeOn()) { px = tx; py = ty; }   // a dome zooms about where you're looking
+  const nk = Math.min(40, Math.max(view === "stars" ? .04 : domeOn() ? .3 : .15, k*f)); f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
 cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
   if (!e.ctrlKey && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {   // shift + wheel (or a sideways swipe) pans left and right
-    const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY; tx -= dx * (e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }
+    const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (domeOn()) { domeYaw += dx*(e.deltaMode === 1 ? 16 : 1)/(k*DF_); domeProject(); X.set(DX); Y.set(DY); buildGrid(); domeKeep(); tip.hidden = true; draw(); return; }   // in a dome a sideways swipe turns you
+    tx -= dx * (e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }
   const f = Math.min(1.35, Math.max(.74, Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)))); zoomAt(e.offsetX, e.offsetY, f); }, {passive:false});
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
-$("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoomAt(W/2, H/2, 1/1.6); $("#zfit").onclick = () => fit(true);
+$("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoomAt(W/2, H/2, 1/1.6); $("#zfit").onclick = () => { if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, .5]; domeKeep(); morph(true, () => fitTarget()); return; } fit(true); };   // in a dome: face forward again
 root.querySelectorAll("#xseg button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.x === mode)); b.onclick = () => setMode(b.dataset.x); });
 $("#xmore").onchange = e => setMode(e.target.value || "time");
 root.querySelectorAll("#xmore option").forEach(o => { if (o.value && !axisHas(o.value)) o.remove(); });   // only axes some note has
@@ -1893,10 +1972,16 @@ root.querySelectorAll("#subseg button").forEach(b => b.onclick = () => { if (sub
 root.querySelectorAll("#laneseg button").forEach(b => b.onclick = () => { if (lanes === b.dataset.l) return; lanes = b.dataset.l; save("iv-lanes", lanes); syncRange(); relayout(true); });
 POPS.push(["#vmore", "#vmorepop", "#vsegms"]);
 $("#vmore").onclick = e => { e.stopPropagation(); const el = $("#vmorepop"), open = el.hidden; closePops("#vmorepop"); el.hidden = !open; $("#vmore").setAttribute("aria-expanded", String(open)); };
-$("#gost").onclick = () => { closePops(); setView("spacetime"); };   // Space-Time: experimental, tucked under ⋯ → Experimental for now
+// experimental maps, tucked under ⋯ → Experimental for now: Space-Time (flat), and the two domes
+function goMap(v, dome){ closePops(); DOME[v] = dome; save("iv-dome", DOME); if (view !== v) setView(v); else { morph(true, () => fitTarget()); syncDome(); } }
+function syncDome(){ root.dataset.dome = domeOn() ? "1" : ""; legend(); placePlaybar(); }
+$("#gost").onclick = () => goMap("spacetime", false);
+$("#gostd").onclick = () => goMap("spacetime", true);
+$("#gogrd").onclick = () => goMap("gravity", true);
 root.querySelectorAll("#vseg button[data-v]").forEach(b => b.onclick = e => {
   if (b.dataset.v === "stars" && view === "stars") { e.stopPropagation(); const el = $("#starpop"), open = el.hidden; closePops("#starpop"); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
   if (b.dataset.v === "sense" && view === "sense" && SAI) { e.stopPropagation(); const el = $("#sensepop"), open = el.hidden; closePops("#sensepop"); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
+  if (DOME[b.dataset.v]) { DOME[b.dataset.v] = false; save("iv-dome", DOME); if (b.dataset.v === view) { morph(true, () => fitTarget()); syncDome(); return; } }   // the tab itself is always the flat map
   setView(b.dataset.v); });
 
 // scoring panel
@@ -2013,7 +2098,7 @@ function fitFocus(){
 }
 on(win, "resize", () => fitFocus());
 
-dbg.__ivCam = () => ({k, tx, ty, morphing});   // read-only hook for automated checks
+dbg.__ivCam = () => ({k, tx, ty, morphing, dome: domeOn(), yaw: domeYaw, pitch: domePitch, sel, selXY: sel >= 0 ? [sx(X[sel]), sy(Y[sel]), DTH[sel], DPH[sel], DFR[sel]] : null});   // read-only hook for automated checks
 // ---------- autoplay: Random (any note) or Thread (note to linked note) ----------
 let playMode = pref("iv-pmode", "thread"), playSec = Math.max(2, Math.min(30, +pref("iv-psec", 6))), playing = false, pTimer = 0;
 let runSeen = new Set(), runStack = [];
@@ -2110,7 +2195,8 @@ function legend(){
     const sw = L.lv >= 3 ? `background:linear-gradient(135deg,${GRAD[L.lv][0]},${GRAD[L.lv][1]});${L.lv===5?"border-radius:3px;":L.lv===4?"border-radius:1px;transform:rotate(45deg) scale(.8);":""}` : `background:${L.lv===2?css.l2:css.l1}`;
     return `<div><i style="${sw}"></i>${L.lv} · ${L.name} <span style="margin-left:auto;padding-left:10px">${(cnt[L.lv]||0).toLocaleString()}</span></div>`;
   }).join("") + (showArch && hasArch ? `<div><i style="background:none;border:1.5px solid ${css.muted}"></i>Archive (rings)</div>` : "") + `<div style="margin-top:4px"><i class="ln" style="border-color:${css.up}"></i>links above</div><div><i class="ln" style="border-color:${css.down}"></i>links below</div>` + (linkCol === "props" ? `<div><i class="ln" style="border-color:${css.rel}"></i>from a property (up, related, any other)</div>` : linkCol === "each" ? `<div><i class="ln" style="border-color:${css.upp}"></i>up property</div><div><i class="ln" style="border-color:${css.rel}"></i>related property</div><div><i class="ln" style="border-color:${css.prop}"></i>other properties (actors, director, by, next…)</div>` : REL.size ? `<div><i class="ln" style="border-color:${css.rel}"></i>related (from the related property)</div>` : "") + (focus >= 0 ? `<div><i class="ln" style="border-color:${css.muted};opacity:.5;border-top-width:1px"></i>links between the other notes in focus</div>` : "");
-  if (view === "spacetime") $("#legend").createDiv({ text: "Rows: your top folders. In each row, higher levels sit higher.", attr: { style: "margin-top:4px;opacity:.85" } });
+  if (view === "spacetime" && !domeOn()) $("#legend").createDiv({ text: "Rows: your top folders. In each row, higher levels sit higher.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
+  if (domeOn()) $("#legend").createDiv({ text: view === "gravity" ? "Dome: you stand at the center. Home and the hubs are overhead; the levels drop toward the horizon. Drag to look around, scroll to zoom, ⤢ to face forward." : "Dome: you stand at the center. Time runs around you, folders stack up the sky. Drag to look around, scroll to zoom, ⤢ to face forward.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
 }
 $("#legend").addEventListener("click", () => setLegend(false));   // a click anywhere on the legend tucks it away
 const autoTheme = () => doc.body.classList.contains("theme-dark") ? "dark" : "paper";   // until a theme is picked, follow Obsidian's
@@ -2155,6 +2241,7 @@ function snapView(name){
   return {name, view, mode, folders:[...folders], subsOff:[...subOff], arch:showArch, from:fromY, full:fullY, colls:[...colls], collMode, lanes, subOrder, links:showAll,
     focus: focus >= 0 ? N[focus].path : null, fDir, fDepth, sel: sel >= 0 ? N[sel].path : null,
     tl: senseT != null ? {t: senseStepStart, step: senseStep} : null,   // where the time-lapse stands (null = all time)
+    dome: domeOn() ? {yaw: +domeYaw.toFixed(3), pitch: +domePitch.toFixed(3)} : null,
     s3d: view === "stars" ? {on: S3D, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
     cam: {cx: +((W/2 - tx)/k).toFixed(1), cy: +((H/2 - ty)/k).toFixed(1), k: +k.toFixed(4)}, saved: new Date().toISOString().slice(0,10)};
 }
@@ -2183,6 +2270,7 @@ function applySaved(v){
   resize();
   root.querySelectorAll("#xseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.x === mode)));
   syncRange(); legend();
+  if (view === "spacetime" || view === "gravity") { DOME[view] = !!v.dome; save("iv-dome", DOME); if (v.dome) { DOMECAM[view] = [+v.dome.yaw || 0, +v.dome.pitch || .5]; save("iv-domecam", DOMECAM); } root.dataset.dome = domeOn() ? "1" : ""; }
   if (view === "stars" && v.s3d) { S3D = !!v.s3d.on; save("iv-s3d", S3D); if (isFinite(+v.s3d.yaw)) yaw3 = +v.s3d.yaw; if (isFinite(+v.s3d.pitch)) pitch3 = +v.s3d.pitch; save("iv-cam3", [yaw3, pitch3]);
     root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = (r.value === "3d") === S3D); placePlaybar(); }
   // the time-lapse, at the step it was saved on (or all time); set before the camera move below, so that move has the last word
@@ -2276,7 +2364,7 @@ root.querySelectorAll('input[name="ssrc"]').forEach(r => r.onchange = () => { if
   syncSenseSrc(); legend(); morph(true); if (sel >= 0) win.setTimeout(() => select(sel, true), 0); });
 syncSenseSrc();
 $("#tlall").onclick = senseClear;
-root.dataset.view = view; syncTimebar();
+root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() ? "1" : "";
 win.setTimeout(() => { const b = root.querySelector(`#vseg button[data-v="${view}"]`); if (b && isPhone()) b.scrollIntoView({inline:"nearest", block:"nearest"}); }, 50);
 dbg.__ivArc = nm => { const c = CHCAT.find(c => c.short === nm); if (!c) return null; const a = (c.a0 + c.a1)/2, r = $("#cv").getBoundingClientRect(); return [r.left + sx(CH_C.x) + Math.cos(a)*CH_R*k*1.07, r.top + sy(CH_C.y) + Math.sin(a)*CH_R*k*1.07]; };
 dbg.__ivLHall = () => { const r = $("#cv").getBoundingClientRect(); return LH.map(b => [b[0] + r.left, b[1] + r.top, b[2], b[3], N[b[4]].title]); };

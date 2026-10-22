@@ -207,7 +207,8 @@
 .ivm #vmorepop .mexp summary::before{content:"› ";display:inline-block;transition:transform .15s}
 .ivm #vmorepop .mexp[open] summary::before{transform:rotate(90deg)}
 .ivm #vmorepop .mexp .chip{margin-top:4px}
-.ivm[data-view="spacetime"] #vseg .vmore{background:var(--ink);color:var(--bg)}
+.ivm[data-view="spacetime"] #vseg .vmore,.ivm[data-dome="1"] #vseg .vmore{background:var(--ink);color:var(--bg)}
+.ivm[data-dome="1"] canvas{cursor:grab}
 @container ivm (min-width:761px){.ivm.ivm.ivm.ivm[data-view="gravity"] .timebar,.ivm.ivm.ivm.ivm[data-view="chord"] .timebar{top:14px;bottom:auto;left:14px}
 .ivm.ivm[data-view="gravity"] .playbar,.ivm.ivm[data-view="chord"] .playbar{left:14px;transform:none;bottom:auto}}
 @container ivm (max-width:760px){.ivm #vsegms{max-width:calc(100vw - 32px);min-width:0}
