@@ -1,8 +1,8 @@
 # Maps of the Ideaverse
 
-> **Early preview (0.1).** Five maps for now (Emergence, Space-Time, Gravity, Starfield, Sensemaking), with more to come. Expect frequent updates and some rough edges. Issues and ideas are welcome in GitHub issues.
+> **Early preview (0.1).** Four maps for now (Emergence, Gravity, Starfield, Sensemaking), with more to come. Expect frequent updates and some rough edges. Issues and ideas are welcome in GitHub issues.
 
-See your notes as maps. Every note in your vault gets a place on five maps. Most of them sort notes by how they emerged: from unlinked notes at the bottom up to your maps of maps and home notes at the top. Then press play and watch your vault grow, month by month.
+See your notes as maps. Every note in your vault gets a place on four maps. Three of them sort notes by how they emerged: from unlinked notes at the bottom up to your maps of maps and home notes at the top. Then press play and watch your vault grow, month by month.
 
 Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinking, for anyone with an Obsidian vault (an "ideaverse").
 
@@ -14,10 +14,6 @@ Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinkin
 ### Emergence
 
 Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders. Click any note to light up its links: up to the maps above it, down to the notes it gathers.
-
-### Space-Time
-
-Time left to right, your top folders top to bottom (ACE first: Inbox, Atlas, Calendar, Efforts, Xtras). Each folder's row is a small Emergence map: higher levels sit higher in the row. See where and when your thinking happened, and play the time-lapse to watch each folder fill in.
 
 ### Gravity
 
