@@ -221,12 +221,12 @@
 .ivm .dual input::-moz-range-thumb{pointer-events:auto;width:14px;height:14px;border-radius:50%;background:var(--accent);border:3px solid var(--panel);box-shadow:0 0 0 1px var(--accent);cursor:grab}
 .ivm .tlopts{display:none}
 .ivm #tlplay.resume{width:auto;padding:0 12px;border-radius:999px;font:600 12px var(--mono);white-space:nowrap}
-@container ivm (min-width:761px){.ivm[data-view="emergence"] .timebar,.ivm[data-view="gravity"] .timebar,.ivm[data-view="arc"] .timebar,.ivm[data-view="chord"] .timebar{left:34px;right:auto;top:auto;bottom:14px;transform:none;flex-wrap:wrap;width:372px;border-radius:20px;padding:6px 10px 8px 6px}
-.ivm[data-view="emergence"] .timebar input,.ivm[data-view="gravity"] .timebar input,.ivm[data-view="arc"] .timebar input,.ivm[data-view="chord"] .timebar input{width:auto;flex:1;min-width:0}
-.ivm[data-view="emergence"] .tlopts,.ivm[data-view="gravity"] .tlopts,.ivm[data-view="arc"] .tlopts,.ivm[data-view="chord"] .tlopts{display:flex;flex-wrap:wrap;gap:6px 8px;width:100%;padding-left:4px}
-.ivm[data-view="emergence"] #tlfx,.ivm[data-view="gravity"] #tlfx,.ivm[data-view="arc"] #tlfx,.ivm[data-view="chord"] #tlfx{display:none}
-.ivm[data-view="emergence"] .app main.legend-open .timebar,.ivm[data-view="gravity"] .app main.legend-open .timebar,.ivm[data-view="arc"] .app main.legend-open .timebar,.ivm[data-view="chord"] .app main.legend-open .timebar{left:390px;bottom:70px}}
-@container ivm (max-width:760px){.ivm[data-view="emergence"] .timebar,.ivm[data-view="gravity"] .timebar,.ivm[data-view="arc"] .timebar,.ivm[data-view="chord"] .timebar{display:none}}
+@container ivm (min-width:761px){.ivm[data-view="emergence"] .timebar, .ivm[data-view="spacetime"] .timebar,.ivm[data-view="gravity"] .timebar,.ivm[data-view="arc"] .timebar,.ivm[data-view="chord"] .timebar{left:34px;right:auto;top:auto;bottom:14px;transform:none;flex-wrap:wrap;width:372px;border-radius:20px;padding:6px 10px 8px 6px}
+.ivm[data-view="emergence"] .timebar input, .ivm[data-view="spacetime"] .timebar input,.ivm[data-view="gravity"] .timebar input,.ivm[data-view="arc"] .timebar input,.ivm[data-view="chord"] .timebar input{width:auto;flex:1;min-width:0}
+.ivm[data-view="emergence"] .tlopts, .ivm[data-view="spacetime"] .tlopts,.ivm[data-view="gravity"] .tlopts,.ivm[data-view="arc"] .tlopts,.ivm[data-view="chord"] .tlopts{display:flex;flex-wrap:wrap;gap:6px 8px;width:100%;padding-left:4px}
+.ivm[data-view="emergence"] #tlfx, .ivm[data-view="spacetime"] #tlfx,.ivm[data-view="gravity"] #tlfx,.ivm[data-view="arc"] #tlfx,.ivm[data-view="chord"] #tlfx{display:none}
+.ivm[data-view="emergence"] .app main.legend-open .timebar, .ivm[data-view="spacetime"] .app main.legend-open .timebar,.ivm[data-view="gravity"] .app main.legend-open .timebar,.ivm[data-view="arc"] .app main.legend-open .timebar,.ivm[data-view="chord"] .app main.legend-open .timebar{left:390px;bottom:70px}}
+@container ivm (max-width:760px){.ivm[data-view="emergence"] .timebar, .ivm[data-view="spacetime"] .timebar,.ivm[data-view="gravity"] .timebar,.ivm[data-view="arc"] .timebar,.ivm[data-view="chord"] .timebar{display:none}}
 @container ivm (min-width:761px){.ivm[data-view="stars"] .timebar{left:14px;transform:none;flex-wrap:wrap;width:372px;border-radius:20px;padding:6px 10px 8px 6px}
 .ivm[data-view="stars"] .timebar input{width:auto;flex:1;min-width:0}
 .ivm.ivm[data-view="stars"] .playbar{left:14px;transform:none;bottom:auto}
@@ -399,7 +399,7 @@
 @container ivm (max-width:760px){.ivm .timebar{left:8px;right:8px;transform:none}
 .ivm .timebar .seg{display:none}
 .ivm .timebar input{width:auto;flex:1;min-width:0}}
-.ivm[data-view="sense"] .xaxis,.ivm[data-view="arc"] .xaxis,.ivm[data-view="chord"] .xaxis{opacity:.4}
+.ivm[data-view="spacetime"] .xaxis,.ivm[data-view="sense"] .xaxis,.ivm[data-view="arc"] .xaxis,.ivm[data-view="chord"] .xaxis{opacity:.4}
 .ivm .sfoot{position:sticky;bottom:-14px;margin:10px -14px -14px;padding:10px 14px;background:var(--bg);border-top:1px solid var(--line);border-radius:0 0 12px 12px}
 .ivm .whybox{margin:4px 0 10px;border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:var(--panel)}
 .ivm .whybox summary{cursor:pointer;font:500 11.5px var(--mono);color:var(--ink);letter-spacing:.02em}
