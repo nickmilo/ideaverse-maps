@@ -1893,7 +1893,7 @@ root.querySelectorAll("#subseg button").forEach(b => b.onclick = () => { if (sub
 root.querySelectorAll("#laneseg button").forEach(b => b.onclick = () => { if (lanes === b.dataset.l) return; lanes = b.dataset.l; save("iv-lanes", lanes); syncRange(); relayout(true); });
 POPS.push(["#vmore", "#vmorepop", "#vsegms"]);
 $("#vmore").onclick = e => { e.stopPropagation(); const el = $("#vmorepop"), open = el.hidden; closePops("#vmorepop"); el.hidden = !open; $("#vmore").setAttribute("aria-expanded", String(open)); };
-$("#goarc").onclick = () => { closePops(); setView("arc"); };
+$("#gost").onclick = () => { closePops(); setView("spacetime"); };   // Space-Time: experimental, tucked under ⋯ → Experimental for now
 root.querySelectorAll("#vseg button[data-v]").forEach(b => b.onclick = e => {
   if (b.dataset.v === "stars" && view === "stars") { e.stopPropagation(); const el = $("#starpop"), open = el.hidden; closePops("#starpop"); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
   if (b.dataset.v === "sense" && view === "sense" && SAI) { e.stopPropagation(); const el = $("#sensepop"), open = el.hidden; closePops("#sensepop"); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
