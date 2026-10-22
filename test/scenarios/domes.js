@@ -1,11 +1,13 @@
-// the two domes (experimental, under ⋯ → Experimental): stand inside Space-Time and Gravity, look around, pick a note, play the time-lapse
+// the two domes (experimental, under ⋯ → Experimental → Sketches → Unfinished): stand inside Space-Time and Gravity, look around, pick a note, play the time-lapse
 module.exports = async ({ page, sleep, shot }) => {
   await page.evaluate(() => app.commands.executeCommandById('ideaverse-maps:open'));
   await page.waitForSelector('.ivm canvas', { timeout: 120000 }); await sleep(1500);
   const q = s => page.locator('.ivm ' + s).first();
   const D = 'app.workspace.getLeavesOfType("ideaverse-maps")[0].view.debug';
   const run = js => page.evaluate(new Function(js));
-  const menu = async id => { await q('#vmore').click(); await sleep(300); if (!(await q(id).isVisible())) await q('#mexp summary').click(); await sleep(200); await q(id).click(); await sleep(2200); };
+  const menu = async id => { await q('#vmore').click(); await sleep(300);   // ⋯ → Experimental → Sketches → Unfinished
+    for (const d of await page.locator('.ivm #vmorepop details').all()) if (!(await d.evaluate(e => e.open))) { await d.locator(':scope > summary').click(); await sleep(150); }
+    await shot('menu-open'); await q(id).click(); await sleep(2200); };
   const drag = async (dx, dy) => { const b = await q('canvas').boundingBox(); const x = b.x + b.width*.5, y = b.y + b.height*.6; await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + dx, y + dy, { steps: 10 }); await page.mouse.up(); await sleep(600); };
   await menu('#gostd'); await shot('dome-st');
   console.log('dome attr', await page.evaluate(() => document.querySelector('.ivm').dataset.dome), 'labels', (await run(`return ${D}.__ivLHall()`)).length);
