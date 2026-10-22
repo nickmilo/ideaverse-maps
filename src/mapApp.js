@@ -323,17 +323,21 @@ function axisValue(d){   // "Rank 4.5", "Released 1972", … for the active Rank
 const curX = () => mode === "ace" ? XA : mode === "time" ? XT : XP;
 
 // ---------- Space-Time: time left to right, one row per top folder (ACE first); inside each row, a small Emergence (higher levels higher) ----------
-const YST = new Float32Array(n); let ROWS = [];
+const YST = new Float32Array(n), YSC = new Float32Array(n); let ROWS = [];   // YSC: how far down the vault a note sits (0 = top, 1 = bottom), by note count
 const STH = WH*.74;
 const rowKey = i => ARCH[i] ? "\u0000arch" : FOLD.includes(N[i].ace) ? N[i].ace : "\u0000root";
 function layoutSpace(){
   const cnt = new Map(); for (let i=0;i<n;i++) if (vis[i]) { const r = rowKey(i); cnt.set(r, (cnt.get(r) || 0) + 1); }
-  const keys = [...FOLD.filter(f => cnt.has(f)), ...["\u0000root", "\u0000arch"].filter(r => cnt.has(r))];
+  // + first and x last (in the Dome, + is the North Pole and x the South Pole)
+  const keys = [...FOLD.filter(f => f !== "x" && cnt.has(f)), ...["\u0000root", "\u0000arch"].filter(r => cnt.has(r)), ...(cnt.has("x") ? ["x"] : [])];
   const wt = keys.map(r => Math.sqrt(cnt.get(r)) + 6), tot = wt.reduce((a, b) => a + b, 0) || 1, G = 24, avail = WH - G*Math.max(0, keys.length - 1);
   let y = 0; ROWS = keys.map((r, j) => { const h = Math.max(avail*.05, avail*wt[j]/tot), row = {key: r, y0: y, y1: y + h, n: cnt.get(r)}; y += h + G; return row; });
   const sc = y > G ? STH/(y - G) : 1; for (const r of ROWS) { r.y0 *= sc; r.y1 *= sc; }   // rows fill the top of the map; the bottom stays clear for the legend and timeline (desktop)
   const at = new Map(ROWS.map(r => [r.key, r]));
-  for (let i=0;i<n;i++) { const r = at.get(rowKey(i)) || ROWS[0]; YST[i] = r ? r.y0 + (YE[i]/WH)*(r.y1 - r.y0) : YE[i]; }
+  // the Dome's bands: each folder's share of the notes, so the equator falls halfway through them
+  const total = ROWS.reduce((a, r) => a + r.n, 0) || 1, g = .004; let c = 0;
+  for (const r of ROWS) { r.c0 = c + (c ? g : 0); c += r.n/total; r.c1 = c - (c < .999 ? g : 0); }
+  for (let i=0;i<n;i++) { const r = at.get(rowKey(i)) || ROWS[0]; YST[i] = r ? r.y0 + (YE[i]/WH)*(r.y1 - r.y0) : YE[i]; YSC[i] = r ? r.c0 + (YE[i]/WH)*(r.c1 - r.c0) : .5; }
 }
 const rowName = k => k === "\u0000arch" ? "Archive" : k === "\u0000root" ? "Top level" : ACE_SYM[k] ? ACE_SYM[k][0] + " " + ACE_SYM[k][1].replace(/[()]/g, "") : k;
 
@@ -365,15 +369,15 @@ function layoutGravity(){
 // Gravity Dome: Home and the hubs overhead at the zenith, the level rings dropping toward the horizon, time or folders around you.
 const DOME = Object.assign({spacetime: false, gravity: false}, pref("iv-dome", {}) || {});
 const domeOn = () => (view === "spacetime" || view === "gravity") && !!DOME[view];
-const DOMECAM = Object.assign({spacetime: [0, .5], gravity: [0, .95]}, pref("iv-domecam", {}) || {});
+const DOMECAM = Object.assign({spacetime: [0, 0], gravity: [0, .95]}, pref("iv-domecam", {}) || {});
 let domeYaw = 0, domePitch = .5;
 const DF_ = 1000, STGAP = .35;   // world units from the eye to the picture; the seam's width (radians)
 const DTH = new Float32Array(n), DPH = new Float32Array(n), DX = new Float32Array(n), DY = new Float32Array(n), DFR = new Uint8Array(n);
 const stTheta = x => -Math.PI + STGAP/2 + (x - ND[0])/(WW - ND[0])*(2*Math.PI - STGAP);
-const stPhi = y => (80 - Math.max(0, Math.min(1, y/STH))*72)*Math.PI/180;
+const stPhiC = c => Math.asin(Math.max(-1, Math.min(1, 1 - 2*c)));   // 0 → North Pole, ½ → equator, 1 → South Pole (equal areas: notes spread evenly over the sky)
 const grPhi = r => (90 - Math.max(0, Math.min(1, r))*80)*Math.PI/180;
 function domeAngles(bx, by){
-  if (view === "spacetime") for (let i=0;i<n;i++) { DTH[i] = stTheta(bx[i]); DPH[i] = stPhi(by[i]); }
+  if (view === "spacetime") for (let i=0;i<n;i++) { DTH[i] = stTheta(bx[i]); DPH[i] = stPhiC(YSC[i]); }
   else for (let i=0;i<n;i++) { const dx = bx[i] - GC.x, dy = by[i] - GC.y; DTH[i] = Math.atan2(dy, dx); DPH[i] = grPhi(Math.hypot(dx, dy)/GR); }
 }
 function domeCam(th, ph){   // a direction on the sphere → world point on the picture, or null when it's behind you
@@ -383,7 +387,7 @@ function domeCam(th, ph){   // a direction on the sphere → world point on the 
   return z2 > .06 ? [x1/z2*DF_, -y2/z2*DF_] : null;
 }
 function domeProject(){ for (let i=0;i<n;i++) { const p = domeCam(DTH[i], DPH[i]); if (p) { DX[i] = p[0]; DY[i] = p[1]; DFR[i] = 1; } else { DX[i] = DY[i] = -1e7; DFR[i] = 0; } } }
-function domeUse(){ [domeYaw, domePitch] = DOMECAM[view] || [0, .5]; }
+function domeUse(){ [domeYaw, domePitch] = DOMECAM[view] || [0, 0]; }
 function domeKeep(){ DOMECAM[view] = [+domeYaw.toFixed(3), +domePitch.toFixed(3)]; save("iv-domecam", DOMECAM); }
 // ACE around the clock: + (Inbox) centered at 8:00, Atlas starting at 9:30, then Calendar, Efforts and x clockwise.
 // The gap between + and Atlas (about 9:00) holds the ring names. Time and the other axes start at 12:00, gap at the top.
@@ -1219,7 +1223,7 @@ function animateTo(t){ const k0=k, x0=tx, y0=ty, t0=performance.now(), dur=420, 
     k = k0 + (t.k-k0)*e; tx = x0 + (t.tx-x0)*e; ty = y0 + (t.ty-y0)*e; render(); if (p<1) RAF(step); };
   RAF(step); }
 function flyTo(i){
-  if (domeOn()) { domeYaw = DTH[i]; domePitch = Math.max(-.2, Math.min(1.45, DPH[i] - .08)); domeKeep(); const kk = k; morph(true, () => ({k: kk, tx: (W - (isPhone() ? 0 : sideW()))/2, ty: H/2})); return; }   // in a dome: turn to face it
+  if (domeOn()) { domeYaw = DTH[i]; domePitch = Math.max(view === "spacetime" ? -1.45 : -.2, Math.min(1.45, DPH[i] - .08)); domeKeep(); const kk = k; morph(true, () => ({k: kk, tx: (W - (isPhone() ? 0 : sideW()))/2, ty: H/2})); return; }   // in a dome: turn to face it
   const phone = isPhone(), dw = phone ? 0 : sideW(), lc = !phone && (view === "sense" || view === "stars") ? 400 : 0, vw = W - dw - lc, vh = phone ? H*.48 : H, pad = phone ? 36 : 70;   // Sensemaking keeps its bars in a left column
   let x0 = X[i], x1 = X[i], y0 = Y[i], y1 = Y[i];
   for (const j of [...out[i], ...inn[i]]) { x0 = Math.min(x0, X[j]); x1 = Math.max(x1, X[j]); y0 = Math.min(y0, Y[j]); y1 = Math.max(y1, Y[j]); }
@@ -1383,14 +1387,16 @@ const domeMeridian = (th, p0, p1) => { const o = []; for (let p = p0; p <= p1 + 
 function domeGuides(){
   ctx.lineWidth = 1; ctx.strokeStyle = css.line; ctx.beginPath(); domePath(domeCircle(0)); ctx.stroke();   // the horizon
   if (view === "spacetime") {
-    const a0 = -Math.PI + STGAP/2, a1 = Math.PI - STGAP/2;
-    ctx.beginPath(); ROWS.forEach((r, j) => { if (j) domePath(domeCircle(stPhi(r.y0 - 12), a0, a1)); }); ctx.stroke();
+    const a0 = -Math.PI + STGAP/2, a1 = Math.PI - STGAP/2, P = Math.PI/2 - .01;
+    ctx.beginPath(); ROWS.forEach((r, j) => { if (j) domePath(domeCircle(stPhiC(r.c0 - .004), a0, a1)); }); ctx.stroke();
     ctx.setLineDash([2, 4]); ctx.beginPath();
-    for (let yr = fromY; yr <= NOW_Y; yr++) { if (yr < fullY && yr % 5 && yr !== fromY) continue; domePath(domeMeridian(stTheta(xTime(Date.UTC(yr, 0, 1))), 0, stPhi(0))); }
+    for (let yr = fromY; yr <= NOW_Y; yr++) { if (yr < fullY && yr % 5 && yr !== fromY) continue; domePath(domeMeridian(stTheta(xTime(Date.UTC(yr, 0, 1))), -P, P)); }
     ctx.stroke(); ctx.setLineDash([]);
-    ctx.strokeStyle = css.accent; ctx.globalAlpha = .55; ctx.beginPath(); for (const th of [a0, a1]) domePath(domeMeridian(th, 0, stPhi(0))); ctx.stroke();   // the seam: start | today
-    if (senseT != null) { ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5; ctx.beginPath(); domePath(domeMeridian(stTheta(xTime(Math.min(senseT, T1))), 0, stPhi(0))); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1; }
+    ctx.strokeStyle = css.accent; ctx.globalAlpha = .55; ctx.beginPath(); for (const th of [a0, a1]) domePath(domeMeridian(th, -P, P)); ctx.stroke();   // the seam: start | today
+    if (senseT != null) { ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5; ctx.beginPath(); domePath(domeMeridian(stTheta(xTime(Math.min(senseT, T1))), -P, P)); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1; }
     ctx.globalAlpha = 1;
+    if (senseT == null && Math.abs(domePitch) < 1.15) { const yr = domeYearAhead(), vw = W - (isPhone() ? 0 : sideW()), sz = Math.min(vw, H)*.3;   // always say which year you're facing
+      if (yr) { ctx.save(); ctx.globalAlpha = .07; ctx.fillStyle = css.ink; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = `${css.dw} ${Math.round(sz)}px ${css.display}`; ctx.fillText(yr, vw/2, H/2); ctx.restore(); } }
   } else {
     ctx.beginPath(); for (const L of LEVELS) { const a = RING[L.lv][0]; if (a > 0) domePath(domeCircle(grPhi(a - .015))); } domePath(domeCircle(grPhi(1))); ctx.stroke();
     ctx.setLineDash([2, 4]); ctx.beginPath();
@@ -1399,6 +1405,13 @@ function domeGuides(){
     ctx.stroke(); ctx.setLineDash([]);
   }
 }
+function domeYearAhead(){   // the year straight ahead of you in the Space-Time Dome ("" in the seam)
+  let a = domeYaw; while (a > Math.PI) a -= 2*Math.PI; while (a < -Math.PI) a += 2*Math.PI;
+  const f = (a - (-Math.PI + STGAP/2))/(2*Math.PI - STGAP); if (f < 0 || f > 1) return "";
+  const x = ND[0] + f*(WW - ND[0]); if (x < X0T) return ER && x >= ER[0] ? `Before ${fromY}` : x < ND[1] + 30 ? "No date" : "";
+  const u = (x - X0T)/(WW - X0T)*UT, uc = (TS - TF)/YEAR*COMP, t = u <= uc ? TF + u/COMP*YEAR : TS + (u - uc)*YEAR;
+  return String(new Date(Math.min(t, T1)).getUTCFullYear());
+}
 function domeLabels(){   // band names ride along the left of your view; years (or folders) sit just above the horizon
   const vw = W - (isPhone() ? 0 : sideW()), half = Math.atan((vw/2)/(k*DF_)), thL = domeYaw - half*.8;
   ctx.textBaseline = "middle"; ctx.lineWidth = 5; ctx.strokeStyle = css.bg;
@@ -1406,10 +1419,11 @@ function domeLabels(){   // band names ride along the left of your view; years (
     if (x < -80 || x > W + 80 || y < -20 || y > H + 20) return; ctx.font = font; ctx.textAlign = align || "center"; ctx.fillStyle = color; ctx.strokeText(txt, x, y); ctx.fillText(txt, x, y); };
   const big = `${css.dw} 16px ${css.display}`, small = `500 11px ${css.mono}`, DG = Math.PI/180;
   if (view === "spacetime") {
-    for (const r of ROWS) put(rowName(r.key), thL, stPhi(r.y0) - 2.5*DG, big, css.ink, "left");
+    for (const r of ROWS) put(rowName(r.key), thL, Math.min(88*DG, stPhiC(r.c0) - 2*DG), big, css.ink, "left");
+    const ph = Math.abs(domePitch) > 1.15 ? Math.sign(domePitch)*68*DG : domePitch - 6*DG;   // year names run across the middle of your view; at a pole they ring it like a clock
     for (let yr = fromY; yr <= NOW_Y; yr++) { const comp = yr < fullY; if (comp && yr % 5 && yr !== fromY) continue;
-      put(String(yr), stTheta(xTime(Date.UTC(yr, comp ? 0 : 6, 1))), 3*DG, comp ? small : big, comp ? css.muted : css.ink); }
-    put("start", -Math.PI + STGAP/2 + 2*DG, 9*DG, small, css.accent, "left"); put("today", Math.PI - STGAP/2 - 2*DG, 9*DG, small, css.accent, "right");
+      put(String(yr), stTheta(xTime(Date.UTC(yr, comp ? 0 : 6, 1))), ph, comp ? small : `${css.dw} 15px ${css.display}`, css.muted); }
+    put("start", -Math.PI + STGAP/2 + 2*DG, ph + 4*DG, small, css.accent, "left"); put("today", Math.PI - STGAP/2 - 2*DG, ph + 4*DG, small, css.accent, "right");
   } else {
     for (const L of LEVELS) { const [a, b] = RING[L.lv]; put(`${L.lv} · ${L.name.toUpperCase()}`, thL, grPhi((a + b)/2), small, css.accent, "left"); }
     if (mode === "time") { for (let yr = fromY; yr <= NOW_Y; yr++) { const comp = yr < fullY; if (comp && yr % 5 && yr !== fromY) continue; put(String(yr), angOf(xTime(Date.UTC(yr, comp ? 0 : 6, 1))), 4*DG, comp ? small : big, comp ? css.muted : css.ink); } }
@@ -1683,7 +1697,7 @@ cv.addEventListener("pointermove", e => {
       moved = true; return;
     }
     if (drag) { const dx = e.offsetX - drag.x, dy = e.offsetY - drag.y; if (Math.abs(dx)+Math.abs(dy) > 3) { moved = true; cv.classList.add("drag"); }
-      if (drag.orbit && domeOn()) { if (!moved) return; const u = 1/(k*DF_); domeYaw = drag.dyaw - dx*u; domePitch = Math.max(-.35, Math.min(1.53, drag.dpitch + dy*u));   // drag the sky
+      if (drag.orbit && domeOn()) { if (!moved) return; const u = 1/(k*DF_); domeYaw = drag.dyaw - dx*u; domePitch = Math.max(view === "spacetime" ? -1.53 : -.35, Math.min(1.53, drag.dpitch + dy*u));   // drag the sky
         domeProject(); X.set(DX); Y.set(DY); tip.hidden = true; draw(); return; }
       if (drag.orbit) { if (!moved) return; yaw3 = drag.yaw + dx*.006; pitch3 = Math.max(-1.45, Math.min(1.45, drag.pitch + dy*.006)); project3D(); X.set(P3X); Y.set(P3Y); tip.hidden = true; draw(); return; }
       tx = drag.tx + dx; ty = drag.ty + dy; tip.hidden = true; draw(); return; }
@@ -1717,7 +1731,7 @@ cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
     tx -= dx * (e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }
   const f = Math.min(1.35, Math.max(.74, Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)))); zoomAt(e.offsetX, e.offsetY, f); }, {passive:false});
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
-$("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoomAt(W/2, H/2, 1/1.6); $("#zfit").onclick = () => { if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, .5]; domeKeep(); morph(true, () => fitTarget()); return; } fit(true); };   // in a dome: face forward again
+$("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoomAt(W/2, H/2, 1/1.6); $("#zfit").onclick = () => { if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, 0]; domeKeep(); morph(true, () => fitTarget()); return; } fit(true); };   // in a dome: face forward again
 root.querySelectorAll("#xseg button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.x === mode)); b.onclick = () => setMode(b.dataset.x); });
 $("#xmore").onchange = e => setMode(e.target.value || "time");
 root.querySelectorAll("#xmore option").forEach(o => { if (o.value && !axisHas(o.value)) o.remove(); });   // only axes some note has
@@ -2196,7 +2210,7 @@ function legend(){
     return `<div><i style="${sw}"></i>${L.lv} · ${L.name} <span style="margin-left:auto;padding-left:10px">${(cnt[L.lv]||0).toLocaleString()}</span></div>`;
   }).join("") + (showArch && hasArch ? `<div><i style="background:none;border:1.5px solid ${css.muted}"></i>Archive (rings)</div>` : "") + `<div style="margin-top:4px"><i class="ln" style="border-color:${css.up}"></i>links above</div><div><i class="ln" style="border-color:${css.down}"></i>links below</div>` + (linkCol === "props" ? `<div><i class="ln" style="border-color:${css.rel}"></i>from a property (up, related, any other)</div>` : linkCol === "each" ? `<div><i class="ln" style="border-color:${css.upp}"></i>up property</div><div><i class="ln" style="border-color:${css.rel}"></i>related property</div><div><i class="ln" style="border-color:${css.prop}"></i>other properties (actors, director, by, next…)</div>` : REL.size ? `<div><i class="ln" style="border-color:${css.rel}"></i>related (from the related property)</div>` : "") + (focus >= 0 ? `<div><i class="ln" style="border-color:${css.muted};opacity:.5;border-top-width:1px"></i>links between the other notes in focus</div>` : "");
   if (view === "spacetime" && !domeOn()) $("#legend").createDiv({ text: "Rows: your top folders. In each row, higher levels sit higher.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
-  if (domeOn()) $("#legend").createDiv({ text: view === "gravity" ? "Dome: you stand at the center. Home and the hubs are overhead; the levels drop toward the horizon. Drag to look around, scroll to zoom, ⤢ to face forward." : "Dome: you stand at the center. Time runs around you, folders stack up the sky. Drag to look around, scroll to zoom, ⤢ to face forward.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
+  if (domeOn()) $("#legend").createDiv({ text: view === "gravity" ? "Dome: you stand at the center. Home and the hubs are overhead; the levels drop toward the horizon. Drag to look around, scroll to zoom, ⤢ to face forward." : "Dome: you stand at the center. Time runs around you; folders run from the North Pole (+) to the South Pole (x), with the equator halfway through your notes. Drag to look around, scroll to zoom, ⤢ to face forward.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
 }
 $("#legend").addEventListener("click", () => setLegend(false));   // a click anywhere on the legend tucks it away
 const autoTheme = () => doc.body.classList.contains("theme-dark") ? "dark" : "paper";   // until a theme is picked, follow Obsidian's
