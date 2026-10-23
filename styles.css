@@ -494,3 +494,9 @@
 .ivm #calllist .lv{width:9px;height:9px;flex:none;border-radius:50%}
 .ivm #calllist .lv.l5{border-radius:2px}
 .ivm #calllist .lv.l4{border-radius:1px;transform:rotate(45deg) scale(.85)}
+.ivm #callsum{font:500 11.5px var(--mono);color:var(--muted);margin:2px 0 6px}
+.ivm #callsum b{color:var(--ink);font-weight:600}
+.ivm #callwhy{margin:0 0 6px;font-size:12.5px;line-height:1.45;color:var(--muted)}
+.ivm #callwhy summary{cursor:pointer;color:var(--ink);font-size:12.5px}
+.ivm #callwhy p{margin:6px 0}
+.ivm #callwhy b{color:var(--ink)}
