@@ -1178,7 +1178,7 @@ function mapGroups(ok){
 // Three shapes: Square (#2–5 in the corners), Hexagon (#2–7 on the six corners, the same triangle splitting) and
 // Mandala (#2–7 on an inner ring, #8–25 on an outer ring, three petals to each inner note).
 const QS = 800; let QPTS = [], QTRI = [], QTOP = [], QRC = [], QPAR = [];
-let GEO = ["square", "hex", "mandala", "octa"].includes(pref("iv-geo", "square")) ? pref("iv-geo", "square") : "square";
+let GEO = ["square", "hex", "mandala", "octa", "shells"].includes(pref("iv-geo", "square")) ? pref("iv-geo", "square") : "square";
 const hexAt = j => [Math.cos(-Math.PI/2 + j*Math.PI/3)*QS, Math.sin(-Math.PI/2 + j*Math.PI/3)*QS];
 function mandalaSeeds(m){   // #1 in the center; 6 petals; 18 outer petals, three around each inner one
   const pts = [[0, 0]], par = [-1], r1 = QS*.48, r2 = QS;
@@ -1203,7 +1203,7 @@ function quinSeeds(m){
 // ---------- Geometric · Octahedron (3D): the same rule in space ----------
 // #1 at the core, #2–7 on the six points; then each tetrahedron (a face of the octahedron and the core) gets a note
 // at its center, the emptiest first, which splits it in four. Other notes gather in a small cloud around their top note.
-const geo3On = () => view === "quincunx" && GEO === "octa";
+const geo3On = () => view === "quincunx" && (GEO === "octa" || GEO === "shells");
 let g3Yaw = .55, g3Pitch = .42; { const c = pref("iv-g3cam", null); if (Array.isArray(c)) { g3Yaw = +c[0] || g3Yaw; g3Pitch = +c[1] || g3Pitch; } }
 const G3 = new Float32Array(3*n); let G3P = [], G3E = [];
 const g3Keep = () => save("iv-g3cam", [+g3Yaw.toFixed(3), +g3Pitch.toFixed(3)]);
@@ -1223,9 +1223,17 @@ function octaSeeds(m){
     const next = []; tets.forEach((t, j) => { if (!take.has(j)) { next.push(t); return; } const k_ = pts.length; pts.push(cen[j]); for (const v of t) ed(v, k_);
       next.push([t[0], t[1], t[2], k_], [t[0], t[1], k_, t[3]], [t[0], k_, t[2], t[3]], [k_, t[1], t[2], t[3]]); }); tets = next; }
   return {pts, edges: [...edges].map(e => e.split(",").map(Number)).filter(([a, b]) => a < pts.length && b < pts.length)}; }
+function shellSeeds(m){   // #1 the core; #2–7 on an inner shell (the six directions); #8–25 on the outer shell, three petals around each inner note
+  const r1 = QS*.5, r2 = QS, pts = [[0, 0, 0]], par = [-1], dirs = [[0, -1, 0], [1, 0, 0], [0, 0, 1], [-1, 0, 0], [0, 0, -1], [0, 1, 0]];
+  for (let j = 0; j < 6 && pts.length < m; j++) { pts.push(dirs[j].map(v => v*r1)); par.push(0); }
+  const norm = v => { const L = Math.hypot(...v) || 1; return v.map(x => x/L); }, cross = (a, b) => [a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]];
+  for (let ring = 0; ring < 3; ring++) for (let j = 0; j < 6 && pts.length < m; j++) {
+    const d = dirs[j], u = norm(cross(d, Math.abs(d[1]) > .9 ? [1, 0, 0] : [0, 1, 0])), v = cross(d, u), ph = ring*2*Math.PI/3 + j*.5, a = .55;
+    const c = norm([0, 1, 2].map(t => d[t]*Math.cos(a) + (u[t]*Math.cos(ph) + v[t]*Math.sin(ph))*Math.sin(a))); pts.push(c.map(x => x*r2)); par.push(1 + j); }
+  return {pts, edges: par.map((p_, i) => [p_, i]).filter(([p_]) => p_ >= 0), par}; }
 function layoutOcta(){
   const cand = []; for (let i=0;i<n;i++) if (vis[i] && !ARCH[i]) cand.push(i); cand.sort(byRank);
-  QTOP = cand.slice(0, Math.min(25, cand.length)); const {pts, edges} = octaSeeds(QTOP.length); G3P = pts; G3E = edges; QPTS = []; QTRI = []; QPAR = [];
+  QTOP = cand.slice(0, Math.min(25, cand.length)); const {pts, edges} = GEO === "shells" ? shellSeeds(QTOP.length) : octaSeeds(QTOP.length); G3P = pts; G3E = edges; QPTS = []; QTRI = []; QPAR = [];
   const rc = pts.map((p, a) => { let d = Infinity; pts.forEach((q, b) => { if (a !== b) d = Math.min(d, Math.hypot(p[0]-q[0], p[1]-q[1], p[2]-q[2])); }); return Math.min(isFinite(d) ? d*.42 : QS*.5, QS*.45); }); QRC = rc;
   const seedOf = new Map(QTOP.map((i, a) => [i, a])), B = bfsMulti(QTOP, j => vis[j]);
   for (let i=0;i<n;i++) { RW[i] = RH[i] = 0; const a = seedOf.get(i), h1 = hash(N[i].path, 31), h2 = hash(N[i].path, 37), h3 = hash(N[i].path, 41);
@@ -1237,7 +1245,7 @@ function layoutOcta(){
     G3[3*i] = p[0]; G3[3*i+1] = p[1]; G3[3*i+2] = p[2]; }
   geoProj(); expBox = {x0: -QS*1.45, y0: -QS*1.45, x1: QS*1.45, y1: QS*1.45}; }
 function layoutQuin(){
-  if (GEO === "octa") { layoutOcta(); return; }
+  if (GEO === "octa" || GEO === "shells") { layoutOcta(); return; }
   const cand = []; for (let i=0;i<n;i++) if (vis[i] && !ARCH[i]) cand.push(i); cand.sort(byRank);
   QTOP = cand.slice(0, Math.min(25, cand.length)); const {pts, tris, par} = quinSeeds(QTOP.length); QPTS = pts; QTRI = tris; QPAR = par;
   QRC = pts.map((p, a) => { let d = Infinity; pts.forEach((q, b) => { if (a !== b) d = Math.min(d, Math.hypot(p[0]-q[0], p[1]-q[1])); }); return Math.min(isFinite(d) ? d*.46 : QS*.6, QS*.5); });
@@ -1256,6 +1264,14 @@ function layoutQuin(){
 EXP.quincunx = {
   layout: layoutQuin,
   guides(){
+    if (geo3On() && GEO === "shells") {   // two glass shells, and a petal from each note to the one it grows from
+      const Q = G3P.map(p => g3Cam(p[0], p[1], p[2]));
+      for (const [r, al] of [[QS*.5, .22], [QS, .16]]) { ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.globalAlpha = al;
+        for (const ax of [0, 1, 2]) { ctx.beginPath(); for (let t = 0; t <= 64; t++) { const a = t/64*2*Math.PI, p = ax === 0 ? [0, Math.cos(a)*r, Math.sin(a)*r] : ax === 1 ? [Math.cos(a)*r, 0, Math.sin(a)*r] : [Math.cos(a)*r, Math.sin(a)*r, 0], q = g3Cam(...p); t ? ctx.lineTo(sx(q[0]), sy(q[1])) : ctx.moveTo(sx(q[0]), sy(q[1])); } ctx.stroke(); } }
+      for (const [a, b] of G3E) { const A = Q[a], B = Q[b], inner = a === 0, z = (A[2] + B[2])/2, mx = (A[0] + B[0])/2, my = (A[1] + B[1])/2, dx = B[0] - A[0], dy = B[1] - A[1], w = inner ? .22 : .3;
+        ctx.globalAlpha = Math.max(.15, Math.min(.85, .6 - z/(QS*2.2))); ctx.strokeStyle = css.accent; ctx.lineWidth = inner ? 1.6 : 1.1; ctx.beginPath();
+        ctx.moveTo(sx(A[0]), sy(A[1])); ctx.quadraticCurveTo(sx(mx - dy*w), sy(my + dx*w), sx(B[0]), sy(B[1])); ctx.quadraticCurveTo(sx(mx + dy*w), sy(my - dx*w), sx(A[0]), sy(A[1])); ctx.stroke(); }
+      ctx.globalAlpha = 1; return; }
     if (geo3On()) {   // the octahedron's struts, fainter toward the back
       const Q = G3P.map(p => g3Cam(p[0], p[1], p[2])); ctx.strokeStyle = css.line; ctx.lineWidth = 1;
       for (const [a, b] of G3E) { const z = (Q[a][2] + Q[b][2])/2, hull = a >= 1 && a <= 6 && b >= 1 && b <= 6;   // the octahedron's own twelve edges stand out; the splits inside stay faint
@@ -1274,7 +1290,8 @@ EXP.quincunx = {
     QTOP.forEach((i, a) => { if (!VV(i)) return; const x = sx(EX[i]), y = sy(EY[i]) + rad(i) + 5, t = "#" + (a + 1); ctx.fillStyle = a === 0 ? css.accent : css.muted; ctx.strokeText(t, x, y); ctx.fillText(t, x, y); });
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
   mustLabel: () => QTOP.filter(i => VV(i)).slice(0, geo3On() ? 7 : 25),
-  get legend(){ return GEO === "octa" ? "Geometric · Octahedron (3D): your top 25 notes by score. #1 sits at the core and #2–7 on the six points; then each pyramid between a face and the core gets a note at its center, which splits it in four. Every other note gathers in a small cloud around the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach make a faint shell around everything. Drag to turn it."
+  get legend(){ return GEO === "shells" ? "Geometric · Shells (3D): your top 25 notes by score. #1 sits at the core, #2–7 on an inner shell, and #8–25 on the outer shell, three petals around each inner note. Every other note gathers in a small cloud around the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach make a faint shell around everything. Drag to turn it."
+    : GEO === "octa" ? "Geometric · Octahedron (3D): your top 25 notes by score. #1 sits at the core and #2–7 on the six points; then each pyramid between a face and the core gets a note at its center, which splits it in four. Every other note gathers in a small cloud around the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach make a faint shell around everything. Drag to turn it."
     : GEO === "mandala" ? "Geometric · Mandala: your top 25 notes by score. #1 sits in the center, #2–7 on the inner ring, and #8–25 on the outer ring, three petals around each inner note. Every other note joins the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach ring the outside."
     : GEO === "hex" ? "Geometric · Hexagon: your top 25 notes by score. #1 sits in the center and #2–7 on the six corners; then each triangle gets a note at its center, which splits it in three. Every other note joins the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach ring the outside."
     : "Geometric · Square: your top 25 notes by score. #1 sits in the center and #2–5 in the corners; then each triangle gets a note at its center, which splits it in three. Every other note joins the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach line the frame."; },
@@ -2797,7 +2814,7 @@ $("#tmsubs").onclick = () => { tmSubs = !tmSubs; save("iv-tmsubs", tmSubs); $("#
 const syncSS = () => root.querySelectorAll("#shelfsort button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ss === shelfSort)));
 root.querySelectorAll("#shelfsort button").forEach(b => b.onclick = () => { shelfSort = b.dataset.ss; save("iv-ssort", shelfSort); syncSS(); if (view === "shelf") morph(true, () => fitTarget()); });
 syncSS();
-for (const g of ["square", "hex", "mandala", "octa"]) { const b = root.querySelector("#gogeo" + g); if (b) b.onclick = () => { closePops(); driftStop(); GEO = g; save("iv-geo", g); if (view === "quincunx") { morph(true, () => fitTarget()); legend(); } else setView("quincunx"); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : ""; placePlaybar(); }; }
+for (const g of ["square", "hex", "mandala", "octa", "shells"]) { const b = root.querySelector("#gogeo" + g); if (b) b.onclick = () => { closePops(); driftStop(); GEO = g; save("iv-geo", g); if (view === "quincunx") { morph(true, () => fitTarget()); legend(); } else setView("quincunx"); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : ""; placePlaybar(); }; }
 for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline", "planet"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
 $("#gocso").onclick = () => goChord("out");
 $("#gocsi").onclick = () => goChord("in");
@@ -2986,7 +3003,7 @@ const HOPS = [
   ["planetarium", () => { if (view !== "emergence" && view !== "spacetime") hopTab("emergence"); hopRadio("emd", "dome"); }],
   ["gravity", () => hopTab("gravity")], ["stars2d", () => { hopTab("stars"); hopRadio("s3d", "2d"); }], ["stars3d", () => { hopTab("stars"); hopRadio("s3d", "3d"); }], ["sense", () => hopTab("sense")],
   ["chord", () => hopBtn("#gochord")], ["corona", () => hopBtn("#gocso")], ["tesla", () => hopBtn("#gocsi")], ["treemap", () => hopBtn("#gotreemap")], ["shelf", () => hopBtn("#goshelf")],
-  ["geo-square", () => hopBtn("#gogeosquare")], ["geo-hex", () => hopBtn("#gogeohex")], ["geo-mandala", () => hopBtn("#gogeomandala")], ["geo-octa", () => hopBtn("#gogeoocta")],
+  ["geo-square", () => hopBtn("#gogeosquare")], ["geo-hex", () => hopBtn("#gogeohex")], ["geo-mandala", () => hopBtn("#gogeomandala")], ["geo-octa", () => hopBtn("#gogeoocta")], ["geo-shells", () => hopBtn("#gogeoshells")],
   ["planet-flat", () => hopBtn("#goplflat")], ["planet-table", () => hopBtn("#gopltable")], ["planet-globe", () => hopBtn("#goplglobe")], ["tree", () => hopBtn("#gotree")], ["skyline", () => hopBtn("#goskyline")]];
 function hopNow(){ return view === "emergence" ? (DOME.emergence ? "planetarium" : "emergence") : view === "stars" ? (S3D ? "stars3d" : "stars2d") : view === "chord" ? (CSPH === "out" ? "corona" : CSPH === "in" ? "tesla" : "chord")
   : view === "quincunx" ? "geo-" + GEO : view === "planet" ? "planet-" + PMODE : view; }
@@ -3163,7 +3180,7 @@ function snapView(name){
 function applySaved(v){
   if (typeof playing !== "undefined" && playing) setPlaying(false);
   closePops(); curView = v.name;
-  if (["square", "hex", "mandala", "octa"].includes(v.geo)) { GEO = v.geo; save("iv-geo", GEO); }
+  if (["square", "hex", "mandala", "octa", "shells"].includes(v.geo)) { GEO = v.geo; save("iv-geo", GEO); }
   { const nv = VIEWS_ON.includes(v.view) ? v.view : "emergence";
     if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
     ungrow();   // back to today's levels; a saved time-lapse point re-grows them below
