@@ -1597,7 +1597,8 @@ function creatorMatch(i){   // → [landmark index, by title?] or null
 let CREATOR = {img: null, src: "", groups: []};
 const PU = new Float32Array(n), PV = new Float32Array(n), PSIDE = new Uint8Array(n);   // where each note sits on its map (0 the PKM side, 1 the Creator side)
 const P_RR = .4086;   // the PKM map's circle, as a fraction of its image (the frame around it stays off the globe)
-function globeAngles(){ for (let i=0;i<n;i++) { const back = PSIDE[i] === 1, rr = back ? .5 : P_RR, dx = (PU[i] - .5)/rr, dy = (PV[i] - .5)/rr, rho = Math.min(1, Math.hypot(dx, dy)), th = rho*Math.PI/2, al = Math.atan2(dy, dx), st = Math.sin(th);
+const CR_RR = 1;   // the Creator's Continent at half the PKM map's size: the dessert, not the main course (open sea fills the rest of its side)
+function globeAngles(){ for (let i=0;i<n;i++) { const back = PSIDE[i] === 1, rr = back ? CR_RR : P_RR, dx = (PU[i] - .5)/rr, dy = (PV[i] - .5)/rr, rho = Math.min(1, Math.hypot(dx, dy)), th = rho*Math.PI/2, al = Math.atan2(dy, dx), st = Math.sin(th);
     const px = (back ? -1 : 1)*st*Math.cos(al), py = -st*Math.sin(al), pz = (back ? -1 : 1)*Math.cos(th); DTH[i] = Math.atan2(-pz, px); DPH[i] = Math.asin(Math.max(-1, Math.min(1, py))); } }
 function planetImg(){ const src = host.planetSrc ? host.planetSrc() : ""; if (!src) return null;
   if (PLANET.src !== src) { PLANET.src = src; const im = new Image(); im.onload = () => { if (!dead) draw(); }; im.src = src; PLANET.img = im; }
@@ -1616,7 +1617,11 @@ function glReady(){ if (GL.gl || !GL.ok) return GL.gl;
       uniform vec2 uOff, uSize; uniform vec3 uCam; uniform vec4 uRot; uniform float uR, uD, uRF, uRB, uPx, uHasB, uHasF; uniform sampler2D uF, uB;
       const float HP = 1.5707963;
       vec3 side(sampler2D t, float has, vec3 p, float rr, float sgn){ float th = acos(clamp(sgn*p.z, -1., 1.)), rho = min(th/HP, 1.); float al = atan(-p.y, sgn*p.x);
-        vec2 uv = vec2(.5) + rr*rho*vec2(cos(al), sin(al)); return has > .5 ? texture2D(t, uv).rgb : vec3(.66, .76, .76); }
+        if (has < .5) return vec3(.66, .76, .76);
+        float r = rr*rho; vec3 c = texture2D(t, vec2(.5) + min(r, .47)*vec2(cos(al), sin(al))).rgb;
+        if (r > .43) { float e = r - .43, a2 = al + e*3.;   // past the map's own edge: soft open sea, drawn from the sea along its rim
+          vec3 sea = texture2D(t, vec2(.5) + (.478 + .016*sin(e*31. + al*5.))*vec2(cos(a2), sin(a2)), 3.).rgb; c = mix(c, sea, smoothstep(.43, .48, r)); }
+        return c; }
       void main(){ vec2 w = (uOff + vUV*uSize - uCam.yz)/uCam.x; vec3 o = vec3(0., 0., uD), d = vec3(w.x, -w.y, -uD);
         float a = dot(d, d), b = 2.*dot(o, d), c = dot(o, o) - uR*uR, disc = b*b - 4.*a*c;
         float rs = uR*uD/sqrt(uD*uD - uR*uR), al = clamp((rs - length(w))/uPx + .5, 0., 1.); if (al <= 0.) { gl_FragColor = vec4(0.); return; }
@@ -1655,7 +1660,7 @@ function globeDraw(){
   if (GL.cv.width !== w || GL.cv.height !== h) { GL.cv.width = w; GL.cv.height = h; } gl.viewport(0, 0, w, h); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
   const U = GL.u; gl.uniform2f(U.uOff, x0, y0); gl.uniform2f(U.uSize, x1 - x0, y1 - y0); gl.uniform3f(U.uCam, k, tx, ty);
   gl.uniform4f(U.uRot, Math.cos(csYaw), Math.sin(csYaw), Math.cos(csPitch), Math.sin(csPitch)); gl.uniform1f(U.uR, CS_R); gl.uniform1f(U.uD, CS_D);
-  gl.uniform1f(U.uRF, P_RR); gl.uniform1f(U.uRB, .5); gl.uniform1f(U.uPx, 1/(k*sc)); gl.uniform1f(U.uHasF, hasF ? 1 : 0); gl.uniform1f(U.uHasB, hasB ? 1 : 0);
+  gl.uniform1f(U.uRF, P_RR); gl.uniform1f(U.uRB, CR_RR); gl.uniform1f(U.uPx, 1/(k*sc)); gl.uniform1f(U.uHasF, hasF ? 1 : 0); gl.uniform1f(U.uHasB, hasB ? 1 : 0);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, GL.tex[0]); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, GL.tex[1]);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); ctx.drawImage(GL.cv, x0, y0, x1 - x0, y1 - y0); }
 dbg.__ivTopVis = () => { let b = -1; for (let i=0;i<n;i++) if (VV(i) && N[i].level >= 3 && (b < 0 || N[i].score > N[b].score)) { const x = sx(X[i]), y = sy(Y[i]); if (x > 450 && x < W - 60 && y > 60 && y < H - 60) b = i; } return b < 0 ? null : [sx(X[b]), sy(Y[b]), N[b].title]; };
