@@ -1242,7 +1242,7 @@ function shelfHiMap(){ if (hiCache) return hiCache; const m = new Map();
   return hiCache = m; }
 let shelfSort = ["call", "az", "created", "modified", "folder"].includes(pref("iv-ssort", "call")) ? pref("iv-ssort", "call") : "call";
 function layoutShelf(){
-  const rows = [], secs = [], calls = [], ghosts = [], tapes = []; for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
+  const rows = [], secs = [], calls = [], ghosts = [], tapes = [], index = []; for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
   const right = i => ARCH[i] || ["Calendar", "Efforts", "x"].includes(N[i].ace);
   const topOf = i => N[i].ace === "(root)" || N[i].ace === "+" ? "Root / +" : N[i].ace;   // the vault's top level and + share one shelf, above Atlas
   const width = i => (N[i].level >= 3 ? 3 : 0) + 2 + 2.6*Math.log10(1 + ((N[i].p && N[i].p.w) || 0)/40);
@@ -1278,7 +1278,9 @@ function layoutShelf(){
         let lastMap = -2, hubN = 0, mapN = 0, noteN = 0, lastHub = -2;
         for (const i of shelved) { const m = G.map[i], hb = G.hub[i];
           if (hb !== lastHub) { lastHub = hb; hubN++; mapN = 0; }
-          if (m !== lastMap) { lastMap = m; mapN++; noteN = 0; x += 4;
+          if (m !== lastMap) { lastMap = m; mapN++; noteN = 0; x += 4; index.push({sec: top, call: `${hubN}.${mapN}`, hubN, hub: hb, m, n: 0}); }
+          index[index.length - 1].n++;
+          if (index[index.length - 1].n === 1) {   // the run's first book
             if (m !== i) { const gw = width(m), gh = height(m); if (x + gw > x0 + SB.W) { row++; x = x0; } ghosts.push({m, x, w: gw, h: gh, by: baseY(row)}); calls.push({x, y: baseY(row), t: `${hubN}.${mapN}`, i: m}); x += gw + .6; used = true; put(i); continue; }   // the map lives on another shelf: a ghost of it starts the run
             put(i); calls.push({x: RX[i], y: RY[i] + RH[i], t: `${hubN}.${mapN}`, i}); continue; }
           noteN++; put(i); }
@@ -1293,7 +1295,7 @@ function layoutShelf(){
     rows.push({bay, x0, n: row + 1, baseY});
   }
   for (const t of tapes) { const by = new Map(); for (const i of t.ids) { const b = Math.round(RY[i] + Math.abs(RH[i])), sg = by.get(b); if (sg) { sg.x0 = Math.min(sg.x0, RX[i]); sg.x1 = Math.max(sg.x1, RX[i] + RW[i]); sg.top = Math.min(sg.top, RY[i]); } else by.set(b, {x0: RX[i], x1: RX[i] + RW[i], top: RY[i], by: b}); } t.segs = [...by.values()]; }   // one stretch of tape per shelf the group spans
-  shTape = -1; SHELF = {rows, secs, calls, ghosts, tapes}; expBounds(40); }
+  shTape = -1; SHELF = {rows, secs, calls, ghosts, tapes, index}; if (!$("#callpanel").hidden) renderCallIndex(); expBounds(40); }
 let shTape = -1;   // the subfolder tape under the pointer
 dbg.__ivShelfMaps = () => { const r = []; for (let i=0;i<n;i++) if (RW[i] && VV(i) && N[i].level >= 3 && out[i].length + inn[i].length > 4) r.push([sx(RX[i] + RW[i]/2), sy(RY[i] + Math.abs(RH[i])*.6), out[i].length + inn[i].length]); return r; };
 dbg.__ivTapes = () => (SHELF.tapes || []).map(t => ({label: t.label, n: t.ids.length, at: t.segs.map(g => [sx((g.x0 + g.x1)/2), sy(g.by) + 2])}));
@@ -1779,7 +1781,7 @@ function keepInView(i){   // after the map narrows, slide it so the selected not
 }
 function sideW(){ // width covered on the right by the note panel and any open side panel (desktop)
   if (isPhone()) return 0; let w = 0;
-  if (!$("#effpanel").hidden || !$("#scorepanel").hidden) w += 352;
+  if (!$("#effpanel").hidden || !$("#scorepanel").hidden || !$("#callpanel").hidden) w += 352;
   return Math.min(w, W - 240);
 }
 function visTarget(xs, ys){   // camera that frames every visible note, given where the notes are (or will be)
@@ -2403,7 +2405,7 @@ function syncRange(){
   $("#subctl").hidden = mode !== "ace";
   const sv = view === "sense", shv = view === "shelf", lay = sv || shv || mode === "time" || mode === "ace";   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); $("#laygrp").previousElementSibling.hidden = !lay;
-  if (lay) { $("#startms").hidden = sv || shv || mode !== "time"; $("#subctl").hidden = sv || shv || mode !== "ace"; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; }
+  if (lay) { $("#startms").hidden = sv || shv || mode !== "time"; $("#subctl").hidden = sv || shv || mode !== "ace"; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; if (!shv && !$("#callpanel").hidden) closeCall(); }
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -2584,7 +2586,7 @@ $("#scopy").onclick = async e => { const b = e.currentTarget, txt = $("#sline").
   win.setTimeout(() => b.textContent = "Copy", 1500); };
 $("#sreset").onclick = () => { S = JSON.parse(JSON.stringify(DEF)); save("iv-score", S); relayout(true, true); syncScore(); if (sel >= 0 && !drawer.hidden) select(sel, true); };
 const sp = $("#scorepanel");
-$("#scorebtn").onclick = e => { $("#effpanel").hidden = true; sp.hidden = !sp.hidden; e.currentTarget.setAttribute("aria-expanded", String(!sp.hidden)); if (!sp.hidden) syncScore(); };
+$("#scorebtn").onclick = e => { $("#effpanel").hidden = true; $("#callpanel").hidden = true; sp.hidden = !sp.hidden; e.currentTarget.setAttribute("aria-expanded", String(!sp.hidden)); if (!sp.hidden) syncScore(); };
 $("#spx").onclick = () => { sp.hidden = true; $("#scorebtn").setAttribute("aria-expanded", "false"); };
 syncRange();
 
@@ -2613,8 +2615,33 @@ function renderEffList(){
   const pn = $("#effpanel").querySelector(".pn"); if (pn) pn.textContent = view === "shelf" ? "Bookshelf: pick areas and projects to light up their notes on the shelves, each in its own color. Pick again to turn one off." : "Pick an area or project to see only the notes it's linked to.";
 }
 function closeEff(){ $("#effpanel").hidden = true; $("#effbtn").setAttribute("aria-expanded", "false"); }
-$("#effbtn").onclick = e => { const p = $("#effpanel"); p.hidden = !p.hidden; e.currentTarget.setAttribute("aria-expanded", String(!p.hidden)); if (!p.hidden) { $("#scorepanel").hidden = true; renderEffList(); } };
+$("#effbtn").onclick = e => { const p = $("#effpanel"); p.hidden = !p.hidden; e.currentTarget.setAttribute("aria-expanded", String(!p.hidden)); if (!p.hidden) { $("#scorepanel").hidden = true; $("#callpanel").hidden = true; renderEffList(); } };
 $("#efx").onclick = closeEff; $("#effbtn").hidden = !EFF.length;
+// Bookshelf: an index of every call number (hub.map), with a button to copy it as a Markdown list
+const wl = i => { const b = N[i].path.split("/").pop().replace(/\.md$/i, ""); return b === N[i].title ? `[[${b}]]` : `[[${b}|${N[i].title}]]`; };
+function callGroups(){ const out_ = []; let sec = null, hub = null;
+  for (const r of SHELF.index || []) { if (!sec || sec.name !== r.sec) { sec = {name: r.sec, hubs: []}; out_.push(sec); hub = null; }
+    if (!hub || hub.n !== r.hubN) { hub = {n: r.hubN, i: r.hub, maps: []}; sec.hubs.push(hub); } hub.maps.push(r); }
+  return out_; }
+function renderCallIndex(){
+  const s_ = ($("#callq").value || "").trim().toLowerCase(), G = callGroups(), match = r => !s_ || N[r.m].title.toLowerCase().includes(s_) || r.call.startsWith(s_);
+  $("#callcopy").hidden = shelfSort !== "call"; $("#callq").hidden = shelfSort !== "call";
+  if (shelfSort !== "call") { html($("#calllist")).v = `<p class="pn">Call numbers are given when Shelve by is set to Call no.</p><button class="chip" id="callgo">Shelve by Call no.</button>`; $("#callgo").onclick = () => root.querySelector('#shelfsort button[data-ss="call"]').click(); return; }
+  html($("#calllist")).v = G.map(sec => { const hubs = sec.hubs.map(h => { const ms = h.maps.filter(match); if (!ms.length) return "";
+      return `<h6><span>${h.n} · ${h.i >= 0 ? esc(N[h.i].title) : "No hub"}</span><span>${ms.length}</span></h6><ul>${ms.map(r => `<li><button data-cm="${r.m}"><span class="cn">${r.call}</span>${lvDot(r.m)}<span class="t">${esc(N[r.m].title)}</span><span class="m">${r.n}</span></button></li>`).join("")}</ul>`; }).join("");
+    return hubs ? `<h5>${esc(sec.name)}</h5>${hubs}` : ""; }).join("") || `<p class="pn">No match.</p>`;
+  $("#calllist").querySelectorAll("[data-cm]").forEach(b => b.onclick = () => { const i = +b.dataset.cm; select(i); flyTo(i); });
+}
+function callMarkdown(){ const lines = [];
+  for (const sec of callGroups()) { lines.push(`- ${sec.name}`);
+    for (const h of sec.hubs) { lines.push(`\t- ${h.n} ${h.i >= 0 ? wl(h.i) : "No hub"}`); for (const r of h.maps) lines.push(`\t\t- ${r.call} ${wl(r.m)}`); } }
+  return lines.join("\n"); }
+function closeCall(){ $("#callpanel").hidden = true; $("#callbtn").setAttribute("aria-expanded", "false"); }
+$("#callbtn").onclick = e => { const p_ = $("#callpanel"); p_.hidden = !p_.hidden; e.currentTarget.setAttribute("aria-expanded", String(!p_.hidden)); if (!p_.hidden) { $("#scorepanel").hidden = true; closeEff(); renderCallIndex(); } draw(); };
+$("#cpx").onclick = () => { closeCall(); draw(); };
+$("#callq").oninput = () => renderCallIndex();
+$("#callcopy").onclick = async () => { const b = $("#callcopy"); try { await navigator.clipboard.writeText(callMarkdown()); b.textContent = "Copied"; } catch (e_) { b.textContent = "Couldn't copy"; } setTimeout(() => { b.textContent = "Copy as Markdown list"; }, 1600); };
+dbg.__ivCallMd = () => callMarkdown();
 // Follow note: the map follows the note that's active in Obsidian, like a local graph linked to the active note
 let following = pref("iv-follow", false) === true;
 function followPath(path, force){ if (!following || dead || !path) return; const i = PIDX.get(path); if (i == null || (i === sel && !force)) return;
