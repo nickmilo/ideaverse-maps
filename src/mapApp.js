@@ -2432,7 +2432,7 @@ cv.addEventListener("pointermove", e => {
       moved = true; return;
     }
     if (drag) { const dx = e.offsetX - drag.x, dy = e.offsetY - drag.y; if (Math.abs(dx)+Math.abs(dy) > 3) { moved = true; cv.classList.add("drag"); }
-      if (drag.orbit && sphOn()) { if (!moved) return; csYaw = drag.cyaw + (globeOn() ? -dx : dx)*.006; csPitch = Math.max(-1.5, Math.min(1.5, drag.cpitch + dy*.006));   // turn the globe in your hand (the planet follows your hand left and right)
+      if (drag.orbit && sphOn()) { if (!moved) return; csYaw = drag.cyaw - dx*.006; csPitch = Math.max(-1.5, Math.min(1.5, drag.cpitch + dy*.006));   // turn the globe in your hand: every globe follows your hand left and right
         csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } tip.hidden = true; draw(); return; }
       if (drag.orbit && domeOn()) { if (!moved) return; const u = 1/(k*DF_); domeYaw = drag.dyaw - dx*u; domePitch = Math.max(domeSphere() ? -1.53 : -.35, Math.min(1.53, drag.dpitch + dy*u));   // drag the sky
         domeProject(); X.set(DX); Y.set(DY); tip.hidden = true; draw(); return; }
