@@ -1030,12 +1030,16 @@ const CHCAT = (() => {
   const cats = new Map(); N.forEach((d,i) => { const nm = name(d); if (!cats.has(nm)) cats.set(nm, {name:nm, ace: d.archive ? "x" : d.ace, ids:[]}); cats.get(nm).ids.push(i); });
   const order = ["+","Atlas","Calendar","Efforts","x"], list = [...cats.values()].sort((a,b) => order.indexOf(a.ace) - order.indexOf(b.ace) || (a.name.endsWith("· other") - b.name.endsWith("· other")) || b.ids.length - a.ids.length);
   list.forEach((c, j) => { c.id = j; c.short = c.name === "x/z archive" ? c.name : c.name === "+" ? "+" : c.name === "+ · other" ? "+ · other" : c.name.includes(" · other") ? c.name : c.name.split("/").pop(); for (const i of c.ids) CHC[i] = j; });
-  // angles: share by count^0.6 so the big folders don't swallow the ring; small gaps between kinds, bigger between ACE folders
-  const gapIn = .012, gapAce = .05; let tot = 0; list.forEach(c => tot += Math.pow(c.ids.length, .6));
-  let gaps = 0; list.forEach((c, j) => gaps += j && list[j-1].ace !== c.ace ? gapAce : j ? gapIn : 0); gaps += gapAce;
-  let a = Math.PI + gapAce/2; const room = 2*Math.PI - gaps;
-  list.forEach((c, j) => { if (j) a += list[j-1].ace !== c.ace ? gapAce : gapIn; c.a0 = a; a += room*Math.pow(c.ids.length, .6)/tot; c.a1 = a; });
   return list; })();
+// angles: share by count^0.6 so the big folders don't swallow the ring; small gaps between kinds, bigger between ACE folders.
+// Only the kinds with notes showing get a share: switch folders off and the rest close up to fill the whole ring.
+function chAngles(){
+  const m = CHCAT.map(c => { let v = 0; for (const i of c.ids) if (vis[i]) v++; return v; }), on = CHCAT.filter((c, j) => m[j] > 0);
+  const gapIn = .012, gapAce = .05; let tot = 0; on.forEach(c => tot += Math.pow(m[c.id], .6));
+  let gaps = 0; on.forEach((c, j) => gaps += j && on[j-1].ace !== c.ace ? gapAce : j ? gapIn : 0); gaps += gapAce;
+  let a = Math.PI + gapAce/2; const room = 2*Math.PI - gaps;
+  for (const c of CHCAT) { if (m[c.id] === 0) { c.a0 = c.a1 = a; continue; } const j = on.indexOf(c); if (j) a += on[j-1].ace !== c.ace ? gapAce : gapIn; c.a0 = a; a += room*Math.pow(m[c.id], .6)/tot; c.a1 = a; }
+}
 // bundled ribbons between kinds (body, up and related links): drawn faintly as the default picture
 let ribKey = null, CH_RIB = [];
 function chRibbons(){   // counted among the notes shown (and, on the timeline, born by then), so the ribbons grow with the vault
@@ -1045,6 +1049,7 @@ function chRibbons(){   // counted among the notes shown (and, on the timeline, 
   for (const [a,b,t] of E) { if (t === 2 || t === 3 || t === 5 || !on(a) || !on(b)) continue; const p = CHC[a], q = CHC[b]; if (p === q) continue; const kk = p < q ? p*1000 + q : q*1000 + p; m.set(kk, (m.get(kk) || 0) + 1); }
   CH_RIB = [...m].map(([kk, c]) => ({p: Math.floor(kk/1000), q: kk % 1000, c})).filter(r => r.c >= 3).sort((a,b) => a.c - b.c); return CH_RIB; }
 function layoutChord(){
+  chAngles();
   for (const c of CHCAT) { const ids = c.ids.slice().sort((a,b) => (isNaN(TV[a]) ? -1 : TV[a]) - (isNaN(TV[b]) ? -1 : TV[b])), m = ids.length;
     ids.forEach((i, j) => { const a = c.a0 + (c.a1 - c.a0)*((j + .5)/m), lv = N[i].level, h = hash(N[i].path, 23);
       const r = CH_R*(lv >= 3 ? 1.0 + .012*(lv - 3) : lv === 2 ? .955 + .03*h : .91 + .035*h);   // higher levels sit on the outer edge of the band
@@ -1061,7 +1066,7 @@ let csYaw = .4, csPitch = .35; { const c = pref("iv-cscam", null); if (Array.isA
 const CS_R = 600, CS_D = 2400;   // the globe's radius; how far away you stand
 const CSC = [];   // each kind's heart on the globe (the average direction of its notes): where its ribbons leave from
 function csAngles(){ for (let i=0;i<n;i++) { DTH[i] = Math.atan2(CHY[i] - CH_C.y, CHX[i] - CH_C.x); DPH[i] = Math.asin(Math.max(-1, Math.min(1, 1 - 2*YE[i]/WH)))*.92; }
-  for (const c of CHCAT) { let x = 0, y = 0, z = 0; for (const i of c.ids) { const q = Math.cos(DPH[i]); x += q*Math.cos(DTH[i]); y += Math.sin(DPH[i]); z += q*Math.sin(DTH[i]); }
+  for (const c of CHCAT) { let x = 0, y = 0, z = 0; for (const i of c.ids) { if (!vis[i]) continue; const q = Math.cos(DPH[i]); x += q*Math.cos(DTH[i]); y += Math.sin(DPH[i]); z += q*Math.sin(DTH[i]); }
     CSC[c.id] = [Math.atan2(z, x), Math.atan2(y, Math.hypot(x, z))]; } }   // (in the notes' own angles; csCam does the mirroring)
 function csCam(th, ph, r){   // a point on (or off) the globe → [world x, world y, hidden?]
   const c = Math.cos(ph); let x = c*Math.cos(th)*r, y = Math.sin(ph)*r, z = -c*Math.sin(th)*r;   // z mirrored: from outside, near the equator, the kinds read left to right (+, Atlas, Calendar, Efforts, x)
@@ -1093,7 +1098,7 @@ function csGuides(){
   ctx.globalAlpha = .6; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
   // each kind's wedge: its colored belt along the equator, and its edge from pole to pole
   ctx.lineCap = "butt";
-  for (const c of CHCAT) { const pts = []; for (let a = c.a0; a <= c.a1 + 1e-6; a += Math.max(.01, (c.a1 - c.a0)/16)) pts.push(csCam(a, 0, CS_R*1.04));
+  for (const c of CHCAT) { if (c.a1 <= c.a0) continue; const pts = []; for (let a = c.a0; a <= c.a1 + 1e-6; a += Math.max(.01, (c.a1 - c.a0)/16)) pts.push(csCam(a, 0, CS_R*1.04));
     ctx.strokeStyle = chHue(c); ctx.globalAlpha = .8; ctx.lineWidth = Math.max(2.5, rs*.025); ctx.beginPath(); csStroke(pts); ctx.stroke();
     const mer = []; for (let ph = -1.45; ph <= 1.45; ph += .05) mer.push(csCam(c.a0, ph, CS_R)); ctx.globalAlpha = .18; ctx.lineWidth = 1; ctx.beginPath(); csStroke(mer); ctx.stroke(); }
   ctx.globalAlpha = 1;
@@ -1106,7 +1111,7 @@ function csGuides(){
 }
 function csLabels(){
   ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.textAlign = "center"; ctx.textBaseline = "middle"; const taken = [];
-  for (const c of [...CHCAT].sort((p_, q_) => q_.ids.length - p_.ids.length)) { const p = csCam((c.a0 + c.a1)/2, 0, CS_R*1.14); if (p[2]) continue;
+  for (const c of [...CHCAT].sort((p_, q_) => q_.ids.length - p_.ids.length)) { if (c.a1 <= c.a0) continue; const p = csCam((c.a0 + c.a1)/2, 0, CS_R*1.14); if (p[2]) continue;
     const x = sx(p[0]), y = sy(p[1]), t = c.short.toUpperCase(); ctx.font = `600 10.5px ${css.mono}`; const tw = ctx.measureText(t).width + 6, bx = [x - tw/2, y - 9, tw, 18];
     if (taken.some(q => bx[0] < q[0]+q[2] && bx[0]+bx[2] > q[0] && bx[1] < q[1]+q[3] && bx[1]+bx[3] > q[1])) continue; taken.push(bx);
     ctx.fillStyle = chHue(c); ctx.strokeText(t, x, y); ctx.fillText(t, x, y); }   // folder names: small caps in their folder's color, so they never read as note titles
@@ -1130,7 +1135,7 @@ function chordArcAt(px, py){ const cx = sx(CH_C.x), cy = sy(CH_C.y), R0 = CH_R*k
 function chordGuides(){
   const cx = sx(CH_C.x), cy = sy(CH_C.y), R0 = CH_R*k;
   ctx.lineCap = "butt";
-  for (const c of CHCAT) { ctx.strokeStyle = chHue(c); ctx.globalAlpha = .75; ctx.lineWidth = Math.max(3, R0*.03); ctx.beginPath(); ctx.arc(cx, cy, R0*1.07, c.a0, c.a1); ctx.stroke();
+  for (const c of CHCAT) { if (c.a1 <= c.a0) continue; ctx.strokeStyle = chHue(c); ctx.globalAlpha = .75; ctx.lineWidth = Math.max(3, R0*.03); ctx.beginPath(); ctx.arc(cx, cy, R0*1.07, c.a0, c.a1); ctx.stroke();
     ctx.globalAlpha = .05; ctx.lineWidth = R0*.12; ctx.beginPath(); ctx.arc(cx, cy, R0*.955, c.a0, c.a1); ctx.stroke(); }
   ctx.globalAlpha = 1;
   // ribbons: one curve per pair of kinds, through the middle, width by how many links join them
