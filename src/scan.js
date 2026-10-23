@@ -119,7 +119,7 @@ export async function scanVault(adapter, settings, onProgress) {
     }
     const keys = new Set(); KEYS.lastIndex = 0; let km; while ((km = KEYS.exec(fm))) keys.add(km[1]);
     for (const key of keys) { if (key === "up" || key === "related" || key === "collections") continue;
-      for (const l of links(fmField(fm, key))) { const q = resolve(l, p); if (q && q !== p) { add(propOut, p, q); add(propIn, q, p); } } }   // any property's links (topics, source, people…) count as links
+      for (const l of links(fmField(fm, key))) { const q = resolve(l, p); if (q && q !== p) { add(propOut, p, q); add(propIn, q, p); } } }   // any property's links (topics, source, people…) make both notes linked
     for (const l of links(fmField(fm, "collections"))) { const q = resolve(l, p); if (q && q !== p && (!isPack(p) || isPack(q))) { add(collIn, q, p); add(collOut, p, q); } }
     const props = {};
     for (const [key, short] of [["year", "y"], ["yearXP", "yx"], ["imdbRating", "im"], ["open_rate", "or"]]) {
@@ -146,11 +146,10 @@ export async function scanVault(adapter, settings, onProgress) {
   for (const p of paths) { effIn.set(p, [...get(bodyIn, p)].filter(q => !nav.has(NK(q, p))).length); effOut.set(p, [...get(bodyOut, p)].filter(q => !nav.has(NK(p, q))).length); }
   for (const k of nav) { const a = k.split("\u0000")[0]; series.set(a, (series.get(a) || 0) + 1); }
 
-  // links from the up and related properties, and from any other property, all lift a note as uplinks do
-  const upAll = p => { const a = get(upIn, p), b = get(propIn, p); if (!b.size) return a; const u = new Set(a); for (const x of b) u.add(x); return u; };
+  // links in any property make a note linked; only up and related lift its score
   const anyLink = p => get(bodyIn, p).size || get(bodyOut, p).size || get(upIn, p).size || get(upOut, p).size || get(propIn, p).size || get(propOut, p).size || get(collIn, p).size || get(collOut, p).size;
   const score = p => { const bi = Math.log1p(effIn.get(p)), bo = Math.log1p(effOut.get(p));
-    return W.body_in * bi + W.body_out * bo + W.up_in * Math.log1p(upAll(p).size) + W.both * Math.sqrt(bi * bo) + W.coll_in * Math.log1p(get(collIn, p).size); };
+    return W.body_in * bi + W.body_out * bo + W.up_in * Math.log1p(get(upIn, p).size) + W.both * Math.sqrt(bi * bo) + W.coll_in * Math.log1p(get(collIn, p).size); };
   for (const [p, i] of info) i.score = r3(score(p));
 
   const isMap = p => { const i = info.get(p); return i.named_map || (get(bodyOut, p).size >= C.l3MinOut && i.density >= C.l3Density); };
@@ -186,9 +185,9 @@ export async function scanVault(adapter, settings, onProgress) {
   const nodes = keep.map(p => { const i = info.get(p), parts = p.split("/");
     return { id: idx.get(p), path: p, mt: mtime.get(p) || 0, title: i.title, ace: p.includes("/") ? parts[0] : "(root)", sub: parts.length > 2 ? parts.slice(0, 2).join("/") : parts[0],
       created: i.created, date: i.date, rank: i.rank, collections: i.collections, p: i.props,
-      body_in: cnt(get(bodyIn, p)), body_out: cnt(get(bodyOut, p)), up_in: cnt(upAll(p)), coll_in: cnt(get(collIn, p)),
+      body_in: cnt(get(bodyIn, p)), body_out: cnt(get(bodyOut, p)), up_in: cnt(get(upIn, p)), coll_in: cnt(get(collIn, p)),
       series: series.get(p) || 0, density: i.density, is_map: i.is_map, maps_linked: i.maps_linked, score: i.score, level: i.level, why: i.why,
-      s: [effIn.get(p), effOut.get(p), upAll(p).size, get(collIn, p).size], home: homes.has(p),
+      s: [effIn.get(p), effOut.get(p), get(upIn, p).size, get(collIn, p).size], home: homes.has(p),
       lk: !!anyLink(p) }; });
 
   // the archive: its own layer, scored on its own links

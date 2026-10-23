@@ -219,7 +219,7 @@ function growAt(t){
   for (let i=0;i<n;i++) { const d = N[i]; if (!d.s || !alive(i)) continue;
     let bi = 0, bt = 0, ui = 0, ut = 0, ai = 0, at = 0, bo = 0, bot = 0;
     for (let q = 0; q < EIN[i].length; q += 2) { const j = EIN[i][q], k_ = EIN[i][q+1], on = alive(j);
-      at++; if (on) ai++; if (k_ === 1 || k_ === 4 || k_ === 5) { ut++; if (on) ui++; } if (k_ !== 1 && k_ !== 5) { bt++; if (on) bi++; } }
+      at++; if (on) ai++; if (k_ === 1 || k_ === 4) { ut++; if (on) ui++; } if (k_ !== 1 && k_ !== 5) { bt++; if (on) bi++; } }
     for (let q = 0; q < EOUT[i].length; q += 2) { const j = EOUT[i][q], k_ = EOUT[i][q+1]; if (k_ === 1 || k_ === 5) continue; bot++; if (alive(j)) bo++; }
     const f = (num, tot) => tot ? num/tot : 1;
     const a = Math.round(d.s[0]*f(bi, bt)), b = Math.round(d.s[1]*f(bo, bot)), u = Math.round(d.s[2]*f(ui, ut)), c = Math.round(d.s[3]*f(ai, at));
@@ -277,7 +277,7 @@ const AXES = {
   "p:w":   {name:"Length (words)", get:d => d.p && d.p.w, kind:"log", jit:.006},
   "p:kb":  {name:"Size (KB)", get:d => d.p && d.p.kb, kind:"log", jit:.006},
   "links": {name:"Links (in + out)", get:d => d.body_in + d.body_out, kind:"log", jit:.01},
-  "upin":  {name:"Uplinks (notes that link to it from a property)", get:d => d.up_in, kind:"log", jit:.01}};
+  "upin":  {name:"Uplinks (notes that link up to it)", get:d => d.up_in, kind:"log", jit:.01}};
 const axisHas = m => !!AXES[m] && N.some(d => { const v = AXES[m].get(d); return v != null && isFinite(v); });
 const XP = new Float32Array(n), X0P = 170;
 let PA = null;   // the active property axis: {ax, umin, umax}
@@ -2710,7 +2710,7 @@ function select(i, fromTrail){
   html(drawer).v = `<button class="x" id="dx">Close</button><button class="x dcol" id="dcol" title="Tuck the panel away; the note stays selected">›</button>
     <h2>${esc(d.title)}</h2><div class="path">${esc(d.path)}${d.date ? " · " + esc(d.date) : ""}</div>
     <div class="lvl">Level ${d.level} · ${esc(LV[d.level].name)}</div>${axisValue(d) ? `<div class="lvl axv">${esc(axisValue(d))}</div>` : ""}${d.archive ? `<div class="lvl" style="margin-left:6px">Archive</div>` : ""}${view === "arc" ? `<div class="lvl axv" title="${esc(ARW[i])}">ARC · ${ARC_L[ARS[i]].name} · ${esc(ARW[i])}</div>` : ""}${view === "chord" ? `<div class="lvl axv">◯ ${esc(CHCAT[CHC[i]].short)}</div>` : ""}${view === "stars" && BOD[i] >= 0 ? `<div class="lvl axv">✦ ${esc(bodyLabel(i))}</div>` : ""}
-    <div class="nums"><div><b>${d.body_in}</b><span>linked from</span></div><div><b>${d.body_out}</b><span>links to</span></div><div><b>${d.up_in}</b><span>via properties</span></div><div><b>${d.score.toFixed(1)}</b><span>link score</span></div></div>
+    <div class="nums"><div><b>${d.body_in}</b><span>linked from</span></div><div><b>${d.body_out}</b><span>links to</span></div><div><b>${d.up_in}</b><span>link up to it</span></div><div><b>${d.score.toFixed(1)}</b><span>link score</span></div></div>
     ${whyBox(i)}<button class="open" id="dopen" title="Open the note (Cmd/Ctrl-click: in a new tab)">Open note</button><button class="focusbtn" id="dfocus">${focus === i ? "Exit focus" : "Focus on its links"}</button>
     ${up.length || down.length ? `<div class="lgrp" title="Links in the body of the note, placed by emergence level">Emergence</div>` : ""}
     ${up.length ? `<h5><i style="border-color:var(--up)"></i>Above · ${up.length}</h5>${noteList(up)}` : ""}
@@ -2944,7 +2944,7 @@ const SROWS = [
   {key:"w.in", label:"Links in", hint:"Other notes link to it in their text. The clearest sign of a hub: other notes point here.", min:0, max:2, step:.05},
   {key:"w.out", label:"Links out", hint:"It links out in its own text. Lifts maps and indexes, and also busy notes like monthly reviews that link every daily note.", min:0, max:2, step:.05},
   {key:"w.both", label:"Links both in and out", hint:"A bonus only when a note has links in AND out (zero if either side is zero). Rewards notes woven into the web over pure lists or pure targets.", min:0, max:2, step:.05},
-  {key:"w.up", label:"Notes that link to it from a property", hint:"Uplinks: notes that name it in a property (up, related, or any other). Lifts the parent of a series: a year above its months, a project above its notes.", min:0, max:2, step:.05},
+  {key:"w.up", label:"Notes that link up to it", hint:"Uplinks: notes that name it in their up or related property. Lifts the parent of a series: a year above its months, a project above its notes.", min:0, max:2, step:.05},
   {key:"w.coll", label:"Notes in its collection", hint:"Notes that list it in their collections, which makes it a collection note (Maps, People, Reviews…). Off by default: big collections are named by hundreds of notes and would swamp everything.", min:0, max:2, step:.05},
   {h:"Where the levels start"},
   {key:"top", label:"Level 5: top notes by score", hint:"The highest-scoring notes join the home notes at the top. Raising it fills Level 5 from Level 4 down.", min:0, max:100, step:1},
