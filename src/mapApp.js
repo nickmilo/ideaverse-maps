@@ -1276,6 +1276,164 @@ EXP.shelf = {
   ownLabels: true,
   legend: "Bookshelf: left bay, knowledge, shelved by your own call numbers (hub.map): each map is a bookend holding the notes it reaches first; unlinked notes lean at the end. Right bay: Calendar by year, then Efforts, +, x. Spine width is words, height is level; maps and hubs wear their level colors.",
 };
+
+// ---------- Tree: Home is the trunk, the hubs and maps branch from it, notes are leaves ----------
+// Every note hangs from the path it reaches Home by in the fewest links. Leaves are colored by age: new growth green,
+// older notes turning to autumn. Notes Home never reaches are fallen leaves on the ground.
+const TR = {trunk: 380, step: 110, span: [-Math.PI*.93, -Math.PI*.07]};
+let TREE = {root: -1, par: null, kids: null, w: null, depth: null};
+function layoutTree(){
+  for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
+  let root = -1, best = -1; for (let i=0;i<n;i++) if (vis[i] && N[i].home && !ARCH[i]) { const s_ = out[i].length + inn[i].length; if (s_ > best) { best = s_; root = i; } }
+  if (root < 0) { const c = []; for (let i=0;i<n;i++) if (vis[i] && !ARCH[i]) c.push(i); c.sort(byRank); root = c.length ? c[0] : -1; }
+  if (root < 0) { expBounds(10); return; }
+  // breadth-first from Home, preferring higher levels first so maps carry the branches
+  const par = new Int32Array(n).fill(-2), depth = new Int32Array(n).fill(-1); par[root] = -1; depth[root] = 0; let q = [root];
+  while (q.length) { const nq = []; q.sort(byRank); for (const i of q) for (const j of UND(i)) { if (par[j] !== -2 || !vis[j] || ARCH[j]) continue; par[j] = i; depth[j] = depth[i] + 1; nq.push(j); } q = nq; }
+  const kids = Array.from({length: n}, () => []); for (let i=0;i<n;i++) if (par[i] >= 0) kids[par[i]].push(i);
+  for (const ks of kids) ks.sort((a, b) => (TV[a] || 0) - (TV[b] || 0));
+  const w = new Float64Array(n); const post = []; { const st = [root]; while (st.length) { const i = st.pop(); post.push(i); for (const j of kids[i]) st.push(j); } }
+  for (let p = post.length - 1; p >= 0; p--) { const i = post[p]; w[i] = kids[i].length ? kids[i].reduce((s_, j) => s_ + w[j], 0) + .4 : 1; }
+  // angles: each subtree gets a share of the canopy by its weight
+  const A0 = new Float64Array(n), A1 = new Float64Array(n); A0[root] = TR.span[0]; A1[root] = TR.span[1];
+  for (const i of post) { let a = A0[i]; const tot = kids[i].reduce((s_, j) => s_ + w[j], 0) || 1; for (const j of kids[i]) { A0[j] = a; a += (A1[i] - A0[i])*w[j]/tot; A1[j] = a; } }
+  const maxD = Math.max(1, ...post.map(i => depth[i]));
+  for (let i=0;i<n;i++) {
+    if (i === root) { EX[i] = 0; EY[i] = -TR.trunk; continue; }
+    if (par[i] >= 0) { const a = (A0[i] + A1[i])/2, r = TR.step*Math.pow(depth[i], .85)*(5/Math.max(5, maxD))*1.6 + 60*hash(N[i].path, 43)*(kids[i].length ? 0 : 1);
+      EX[i] = Math.cos(a)*r*1.25; EY[i] = -TR.trunk + Math.sin(a)*r; continue; }
+    const h1 = hash(N[i].path, 47), h2 = hash(N[i].path, 53);   // fallen leaves
+    EX[i] = (h1 - .5)*TR.step*9; EY[i] = 30 + h2*90; }
+  TREE = {root, par, kids, w, depth}; expBounds(60); }
+const leafCol = i => { const t = TV[i]; if (isNaN(t)) return "hsl(40,25%,45%)"; const y = (T1 - t)/YEAR; const hue = y < 1 ? 110 : y < 2 ? 90 : y < 4 ? 55 : y < 7 ? 32 : 18, l = y < 1 ? 52 : y < 4 ? 50 : 42; return `hsl(${hue},${y > 7 ? 35 : 55}%,${l}%)`; };
+EXP.tree = {
+  layout: layoutTree,
+  guides(){ const {root, par, w} = TREE; if (root < 0) return;
+    ctx.fillStyle = css["band-a"] || css.panel; ctx.fillRect(0, sy(0), W, H - sy(0));   // the ground
+    ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, sy(0)); ctx.lineTo(W, sy(0)); ctx.stroke();
+    const bark = css.muted; ctx.strokeStyle = bark; ctx.lineCap = "round";
+    // the trunk
+    const tw = Math.max(2, Math.min(26, Math.sqrt(w[root])*.5*k)); ctx.lineWidth = tw; ctx.globalAlpha = .75; ctx.beginPath(); ctx.moveTo(sx(0), sy(0)); ctx.quadraticCurveTo(sx(-20), sy(-TR.trunk*.5), sx(0), sy(-TR.trunk)); ctx.stroke();
+    for (let i=0;i<n;i++) { const p = par[i]; if (p < 0 || !VV(i)) continue; const x1 = sx(EX[p]), y1 = sy(EY[p]), x2 = sx(EX[i]), y2 = sy(EY[i]);
+      if ((x1 < -50 && x2 < -50) || (x1 > W + 50 && x2 > W + 50) || (y1 < -50 && y2 < -50) || (y1 > H + 50 && y2 > H + 50)) continue;
+      ctx.lineWidth = Math.max(.5, Math.min(tw*.8, Math.sqrt(w[i])*.6*k)); ctx.globalAlpha = TREE.kids[i].length ? .5 : .22;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(x1 + (x2 - x1)*.15, y1 + (y2 - y1)*.75, x2, y2); ctx.stroke(); }
+    ctx.globalAlpha = 1; ctx.lineCap = "butt"; },
+  notes(lit, dim){ const r0 = Math.max(1.2, 2.2*Math.pow(k, .55));
+    for (let i=0;i<n;i++) { if (!VV(i)) continue; const x = sx(EX[i]), y = sy(EY[i]); if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
+      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .2 : .65) : 1; const lv = N[i].level;
+      if (lv >= 3) { const r = rad(i); ctx.fillStyle = lvFill(i, x, y, r); ctx.beginPath(); shape(lv, x, y, r); ctx.fill(); continue; }
+      const fallen = TREE.par[i] === -2, a = hash(N[i].path, 59)*Math.PI; ctx.fillStyle = fallen ? "hsl(28,30%,38%)" : leafCol(i);
+      ctx.beginPath(); ctx.ellipse(x, y, r0*1.5, r0*.8, fallen ? 0 : a, 0, 6.2832); ctx.fill(); }
+    ctx.globalAlpha = 1; },
+  mustLabel: () => TREE.root >= 0 && VV(TREE.root) ? [TREE.root] : [],
+  legend: "Tree: Home is the trunk; every note hangs from the path it reaches Home by in the fewest links, so hubs and maps carry the branches. Leaves show age: new growth green, older notes turning to autumn. Notes Home never reaches lie fallen on the ground.",
+};
+
+// ---------- Treemap: every folder and note as a rectangle, sized by its score (after GrandPerspective) ----------
+const TM = {W: 3200, H: 1800, pad: 6};
+let TMBOX = [];   // folder and subfolder boxes, for their names
+function squarify(items, x, y, w, h, place){   // items: [{v, …}] sorted by v desc; place(item, x, y, w, h)
+  const tot = items.reduce((s_, it) => s_ + it.v, 0); if (!tot || w <= 0 || h <= 0) return;
+  const sc = w*h/tot; let i0 = 0;
+  while (i0 < items.length) { const short = Math.min(w, h); let row = [], rs = 0, worst = Infinity;
+    for (let j = i0; j < items.length; j++) { const a = items[j].v*sc, nrs = rs + a, mx = Math.max(...row.map(it => it.v*sc), a), mn = Math.min(...row.map(it => it.v*sc), a);
+      const wst = Math.max(short*short*mx/(nrs*nrs), nrs*nrs/(short*short*mn)); if (wst > worst && row.length) break; row.push(items[j]); rs = nrs; worst = wst; }
+    const thick = rs/short; let off = 0;
+    for (const it of row) { const len = it.v*sc/thick; if (w >= h) place(it, x, y + off, thick, len); else place(it, x + off, y, len, thick); off += len; }
+    if (w >= h) { x += thick; w -= thick; } else { y += thick; h -= thick; } i0 += row.length; } }
+function layoutTreemap(){
+  for (let i=0;i<n;i++) RW[i] = RH[i] = 0; TMBOX = [];
+  const val = i => .35 + N[i].score;
+  const tops = new Map(); for (let i=0;i<n;i++) { if (!vis[i]) continue; const t = ARCH[i] ? "Archive" : N[i].ace === "(root)" ? "Root" : N[i].ace, s_ = ARCH[i] ? "Archive" : N[i].sub || t;
+    if (!tops.has(t)) tops.set(t, new Map()); const m = tops.get(t); if (!m.has(s_)) m.set(s_, []); m.get(s_).push(i); }
+  const T = [...tops].map(([t, subs]) => ({t, subs, v: [...subs.values()].flat().reduce((s_, i) => s_ + val(i), 0)})).sort((a, b) => b.v - a.v);
+  squarify(T, 0, 0, TM.W, TM.H, (tt, x, y, w, h) => { TMBOX.push({name: tt.t, x, y, w, h, lv: 0});
+    const p = TM.pad, S = [...tt.subs].map(([s_, ids]) => ({s: s_, ids, v: ids.reduce((a, i) => a + val(i), 0)})).sort((a, b) => b.v - a.v);
+    squarify(S, x + p, y + p + 14, w - 2*p, h - 2*p - 14, (ss, x2, y2, w2, h2) => { if (S.length > 1) TMBOX.push({name: ss.s.split("/").pop(), x: x2, y: y2, w: w2, h: h2, lv: 1});
+      const q = S.length > 1 ? 2 : 0, items = ss.ids.map(i => ({i, v: val(i)})).sort((a, b) => b.v - a.v);
+      squarify(items, x2 + q, y2 + q, w2 - 2*q, h2 - 2*q, (it, x3, y3, w3, h3) => { const i = it.i; RX[i] = x3; RY[i] = y3; RW[i] = w3; RH[i] = h3; EX[i] = x3 + w3/2; EY[i] = y3 + h3/2; }); }); });
+  expBounds(20); }
+EXP.treemap = {
+  layout: layoutTreemap, pick: (x, y) => rectPick(x, y),
+  notes(lit, dim){
+    for (let i=0;i<n;i++) { if (!RW[i] || !VV(i)) continue; const x = sx(RX[i]), y = sy(RY[i]), w = RW[i]*k, h = RH[i]*k; if (x > W || y > H || x + w < 0 || y + h < 0) continue;
+      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .25 : .7) : 1; const d = N[i];
+      if (w < 2.5 || h < 2.5) { ctx.fillStyle = d.level >= 3 ? GRAD[d.level][0] : hexHsl(aceHue(d), -.05, 0); ctx.fillRect(x, y, Math.max(.6, w), Math.max(.6, h)); continue; }
+      const g = ctx.createLinearGradient(x, y, x + w, y + h);   // the GrandPerspective cushion: light top-left, dark bottom-right
+      if (d.level >= 3) { g.addColorStop(0, GRAD[d.level][0]); g.addColorStop(1, GRAD[d.level][1]); }
+      else { const base = aceHue(d), sh = (hash(d.path, 61) - .5)*.12; g.addColorStop(0, hexHsl(base, .18 + sh, 0)); g.addColorStop(1, hexHsl(base, -.22 + sh, d.level === 1 ? -.35 : 0)); }
+      ctx.fillStyle = g; ctx.fillRect(x + .5, y + .5, w - 1, h - 1);
+      if (w > 70 && h > 16) { ctx.fillStyle = d.level >= 3 ? "#111" : "rgba(0,0,0,.72)"; ctx.font = `500 ${Math.min(13, h*.45)}px ${css.body}`; ctx.textBaseline = "top"; let t = d.title; while (t.length > 3 && ctx.measureText(t).width > w - 8) t = t.slice(0, -2); if (t !== d.title) t += "…"; ctx.fillText(t, x + 4, y + 3); } }
+    ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; },
+  labels(){ ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.textBaseline = "top";
+    for (const b of TMBOX) { const x = sx(b.x), y = sy(b.y), w = b.w*k; if (w < 50 || x > W || y > H) continue;
+      if (b.lv === 0) { ctx.strokeStyle = css.ink; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, b.h*k); ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.font = `600 12px ${css.mono}`; ctx.fillStyle = css.ink; }
+      else { if (k < .5) continue; ctx.strokeStyle = css.bg; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, b.h*k); ctx.lineWidth = 4; ctx.font = `600 10px ${css.mono}`; ctx.fillStyle = css.ink; }
+      const t = b.name.toUpperCase(); ctx.strokeText(t, x + 5, y + 3); ctx.fillText(t, x + 5, y + 3); }
+    ctx.textBaseline = "alphabetic"; },
+  ownLabels: true,
+  legend: "Treemap: every top folder, subfolder and note as a rectangle, its area set by its link score, after GrandPerspective. Maps and hubs wear their level colors; unlinked notes are the dull slivers.",
+};
+
+// ---------- Skyline: your vault as a city. Each top folder is a district, each map a tower ----------
+// A tower's height is its score; its footprint is how many notes it gathers. Its notes are its windows (lit if recent).
+// Notes no map reaches are low houses on the district's edge; unlinked notes are empty lots.
+const ISO = {c: Math.cos(Math.PI/6), s: Math.sin(Math.PI/6)};
+const iso = (gx, gy, z) => [(gx - gy)*ISO.c, (gx + gy)*ISO.s - z];
+let CITY = {blds: [], districts: []};
+function layoutSkyline(){
+  for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
+  const G = mapGroups(() => true), members = new Map(G.maps.map(m => [m, []]));
+  for (let i=0;i<n;i++) if (vis[i] && G.map[i] >= 0 && G.map[i] !== i) members.get(G.map[i]).push(i);
+  const dist = new Map(); const dkey = i => ARCH[i] ? "Archive" : N[i].ace === "(root)" ? "Root" : N[i].ace;
+  for (const m of G.maps) { const d = dkey(m); if (!dist.has(d)) dist.set(d, {name: d, blds: [], lots: [], houses: []}); dist.get(d).blds.push(m); }
+  for (let i=0;i<n;i++) { if (!vis[i] || G.map[i] >= 0) continue; const d = dkey(i); if (!dist.has(d)) dist.set(d, {name: d, blds: [], lots: [], houses: []}); (N[i].level === 1 ? dist.get(d).lots : dist.get(d).houses).push(i); }
+  const order = ["+", "Atlas", "Calendar", "Efforts", "x"], D_ = [...dist.values()].sort((a, b) => ((order.indexOf(a.name) + 1) || 9) - ((order.indexOf(b.name) + 1) || 9) || a.name.localeCompare(b.name));
+  const blds = []; let gx0 = 0;
+  for (const d of D_) {
+    const items = d.blds.map(m => ({m, f: 16 + 5*Math.sqrt(members.get(m).length), h: 30 + Math.pow(N[m].score, 1.25)*22*(N[m].level === 5 ? 1.5 : 1)})).sort((a, b) => b.h - a.h);
+    const area = items.reduce((s_, it) => s_ + (it.f + 10)**2, 0) + (d.houses.length + d.lots.length)*36, side = Math.max(160, Math.sqrt(area)*1.15);
+    // the tallest towers downtown (the middle of the district), the rest spiral out
+    const cells = []; const step = 6; for (let a = 0; a < side; a += step) for (let b = 0; b < side; b += step) cells.push([a, b, Math.hypot(a - side/2, b - side/2)]); cells.sort((p, q) => p[2] - q[2]);
+    const occ = new Set(), free = (a, b, f) => { for (let u = a; u < a + f + 6; u += step) for (let v = b; v < b + f + 6; v += step) if (occ.has(Math.round(u/step) + "," + Math.round(v/step)) || u >= side || v >= side) return false; return true; },
+      take = (a, b, f) => { for (let u = a; u < a + f + 6; u += step) for (let v = b; v < b + f + 6; v += step) occ.add(Math.round(u/step) + "," + Math.round(v/step)); };
+    let ci = 0; const placeAt = f => { for (let t = ci; t < cells.length; t++) { const [a, b] = cells[t]; if (free(a, b, f)) { take(a, b, f); return [a, b]; } } return [side, 0]; };
+    for (const it of items) { const [a, b] = placeAt(it.f); blds.push({m: it.m, gx: gx0 + a, gy: b, f: it.f, h: it.h}); }
+    const smalls = [...d.houses.map(i => [i, 8, 10]), ...d.lots.map(i => [i, 7, 0])];
+    for (const [i, f, h] of smalls) { const [a, b] = placeAt(f); if (h) blds.push({m: i, gx: gx0 + a, gy: b, f, h, house: true}); else { const [x, y] = iso(gx0 + a + f/2, b + f/2, 0); EX[i] = x; EY[i] = y; RX[i] = gx0 + a; RY[i] = b; RW[i] = f; RH[i] = -1; } }
+    d.gx = gx0; d.side = side; gx0 += side + 70; }
+  for (const B of blds) { const [x, y] = iso(B.gx + B.f/2, B.gy + B.f/2, B.h); EX[B.m] = x; EY[B.m] = y;
+    const ms = B.house ? [] : members.get(B.m), cols = Math.max(2, Math.round(B.f/7)), rows = Math.max(1, Math.ceil(ms.length/(cols*2)));
+    ms.forEach((i, j) => { const face = j % 2, idx = j >> 1, c = idx % cols, r = Math.floor(idx/cols), zz = B.h*(1 - (r + .7)/(rows + .4)), u = (c + .5)/cols*B.f;
+      const [wx_, wy_] = face ? iso(B.gx + B.f, B.gy + u, zz) : iso(B.gx + u, B.gy + B.f, zz); EX[i] = wx_; EY[i] = wy_; }); }
+  blds.sort((a, b) => (a.gx + a.gy + a.f) - (b.gx + b.gy + b.f));
+  CITY = {blds, districts: D_, isB: new Set(blds.map(B => B.m))}; expBounds(60); }
+EXP.skyline = {
+  layout: layoutSkyline,
+  guides(){ for (const d of CITY.districts) { const P = [iso(d.gx, 0, 0), iso(d.gx + d.side, 0, 0), iso(d.gx + d.side, d.side, 0), iso(d.gx, d.side, 0)];
+      ctx.fillStyle = css.panel; ctx.globalAlpha = .7; ctx.beginPath(); P.forEach((p, j) => j ? ctx.lineTo(sx(p[0]), sy(p[1])) : ctx.moveTo(sx(p[0]), sy(p[1]))); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = css.line; ctx.stroke(); } },
+  notes(lit, dim){
+    const fade = i => lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .25 : .75) : 1;
+    for (let i=0;i<n;i++) { if (RH[i] !== -1 || !VV(i)) continue; const P = [iso(RX[i], RY[i], 0), iso(RX[i] + RW[i], RY[i], 0), iso(RX[i] + RW[i], RY[i] + RW[i], 0), iso(RX[i], RY[i] + RW[i], 0)];   // empty lots
+      ctx.globalAlpha = fade(i)*.6; ctx.strokeStyle = css.muted; ctx.setLineDash([2, 2]); ctx.beginPath(); P.forEach((p, j) => j ? ctx.lineTo(sx(p[0]), sy(p[1])) : ctx.moveTo(sx(p[0]), sy(p[1]))); ctx.closePath(); ctx.stroke(); ctx.setLineDash([]); }
+    for (const B of CITY.blds) { const i = B.m; if (!VV(i)) continue; const d = N[i], hue = aceHue(d), {gx, gy, f, h} = B;
+      const p = (a, b, z) => { const q = iso(a, b, z); return [sx(q[0]), sy(q[1])]; }, poly = pts => { ctx.beginPath(); pts.forEach((q, j) => j ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.closePath(); ctx.fill(); };
+      const top = p(gx + f/2, gy + f/2, h); if (top[0] < -200 || top[0] > W + 200 || top[1] > H + 200 || top[1] < -H) continue;
+      ctx.globalAlpha = fade(i);
+      ctx.fillStyle = hexHsl(hue, -.12, -.1); poly([p(gx, gy + f, 0), p(gx + f, gy + f, 0), p(gx + f, gy + f, h), p(gx, gy + f, h)]);   // left face
+      ctx.fillStyle = hexHsl(hue, -.24, -.15); poly([p(gx + f, gy, 0), p(gx + f, gy + f, 0), p(gx + f, gy + f, h), p(gx + f, gy, h)]);   // right face
+      ctx.fillStyle = d.level >= 3 ? GRAD[d.level][0] : hexHsl(hue, .1, 0); poly([p(gx, gy, h), p(gx + f, gy, h), p(gx + f, gy + f, h), p(gx, gy + f, h)]); }   // the roof wears its level color
+    const now = T1, wz = Math.max(.8, 1.6*Math.pow(k, .5));
+    for (let i=0;i<n;i++) { if (RW[i] || !VV(i) || N[i].level >= 3) continue; if (CITY.isB.has(i)) continue;
+      const x = sx(EX[i]), y = sy(EY[i]); if (x < -5 || x > W + 5 || y < -5 || y > H + 5) continue; const recent = !isNaN(TV[i]) && now - TV[i] < 1.2*YEAR;
+      ctx.globalAlpha = fade(i); ctx.fillStyle = recent ? "#ffd27a" : "rgba(255,240,200,.28)"; ctx.fillRect(x - wz/2, y - wz/2, wz, wz*1.3); }
+    ctx.globalAlpha = 1; },
+  labels(){ ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.textAlign = "center"; ctx.font = `600 13px ${css.mono}`; ctx.fillStyle = css.accent;
+    for (const d of CITY.districts) { const q = iso(d.gx + d.side/2, d.side + 30, 0), x = sx(q[0]), y = sy(q[1]) + 16, t = rowName(d.name === "Root" ? "\u0000root" : d.name === "Archive" ? "\u0000arch" : d.name).toUpperCase(); ctx.strokeText(t, x, y); ctx.fillText(t, x, y); }
+    ctx.textAlign = "left"; },
+  legend: "Skyline: each top folder is a district, each map a tower. Height is its link score, footprint how many notes it gathers, and its notes are the windows (lit if from the last year). Notes no map reaches are low houses; unlinked notes are empty lots.",
+};
 let chArc = -1, chPin = -1;   // the arc under the cursor, and the one clicked to hold its ribbons
 const chOn = () => chArc >= 0 ? chArc : chPin;
 function showArcTip(a){   // the arc tooltip, set beside the ring on the arc's own side, never over the ribbons
