@@ -1209,7 +1209,7 @@ const G3 = new Float32Array(3*n); let G3P = [], G3E = [];
 const g3Keep = () => save("iv-g3cam", [+g3Yaw.toFixed(3), +g3Pitch.toFixed(3)]);
 function g3Cam(x, y, z){ const cy = Math.cos(g3Yaw), sy_ = Math.sin(g3Yaw), cp = Math.cos(g3Pitch), sp = Math.sin(g3Pitch);
   const x1 = x*cy + z*sy_, z1 = -x*sy_ + z*cy, y2 = y*cp - z1*sp, z2 = y*sp + z1*cp, f = QS*4.5, sc = f/(f + z2); return [x1*sc, y2*sc, z2, sc]; }
-function geoProj(){ for (let i=0;i<n;i++) { const q = g3Cam(G3[3*i], G3[3*i+1], G3[3*i+2]); EX[i] = q[0]; EY[i] = q[1]; DS3[i] = Math.max(.5, Math.min(1.8, q[3])); } }
+function geoProj(){ for (let i=0;i<n;i++) { const q = g3Cam(G3[3*i], G3[3*i+1], G3[3*i+2]); EX[i] = q[0]; EY[i] = q[1]; DS3[i] = Math.max(.45, Math.min(2.2, q[3]*q[3])); } }
 function octaSeeds(m){
   const P = [[0, 0, 0], [0, -QS, 0], [QS, 0, 0], [0, 0, QS], [-QS, 0, 0], [0, 0, -QS], [0, QS, 0]], pts = P.slice(0, Math.min(m, 7));
   let tets = []; for (const a of [1, 6]) for (const [b, c] of [[2, 3], [3, 4], [4, 5], [5, 2]]) tets.push([a, b, c, 0]);
@@ -1241,7 +1241,7 @@ function layoutOcta(){
     let p;
     if (a !== undefined) p = pts[a];
     else { const s_ = B.src[i]; if (s_ < 0) { const R_ = QS*(1.35 + .12*h3); p = dir.map(v => v*R_); }   // never reached: a faint shell around everything
-      else { const a2 = seedOf.get(s_), lv = N[i].level, fr = lv >= 4 ? .18 + .1*h3 : lv === 3 ? .32 + .12*h3 : lv === 2 ? .48 + .38*Math.sqrt(h3) : .9 + .1*h3; p = pts[a2].map((v, c) => v + dir[c]*rc[a2]*fr); } }
+      else { const a2 = seedOf.get(s_), lv = N[i].level, fr = lv >= 4 ? .18 + .1*h3 : lv === 3 ? .32 + .12*h3 : lv === 2 ? .48 + .38*Math.sqrt(h3) : .9 + .1*h3; p = pts[a2].map((v, c) => v + dir[c]*rc[a2]*fr*(a2 === 0 ? 1.7 : 1)); } }   // #1's cloud spreads wider, so the core isn't a knot
     G3[3*i] = p[0]; G3[3*i+1] = p[1]; G3[3*i+2] = p[2]; }
   geoProj(); expBox = {x0: -QS*1.45, y0: -QS*1.45, x1: QS*1.45, y1: QS*1.45}; }
 function layoutQuin(){
@@ -1391,6 +1391,12 @@ EXP.shelf = {
       ctx.fillStyle = hc ? hc : d.level >= 3 ? lvFill(i, x, by - h, Math.max(w, h)) : hexHsl(aceHue(d), (hash(d.sub || d.ace, 3) - .5)*.2 + (hash(d.path, 5) - .5)*.12 - (d.level === 1 ? .08 : 0), d.level === 1 ? -.25 : 0);
       if (RH[i] < 0) { ctx.save(); ctx.translate(x, by); ctx.rotate(.22); ctx.fillRect(0, -h, w, h); ctx.restore(); continue; }   // unlinked: leaning
       ctx.fillRect(x, by - h, w, h);
+      if (w >= 3) { const ga = ctx.globalAlpha;   // dust on books untouched for two years; worn spines on books you keep coming back to
+        const idle = d.mt ? (Date.now() - d.mt)/YEAR : 0, used = inn[i].length;
+        if (idle > 2) { ctx.globalAlpha = ga*Math.min(.55, .15 + .1*(idle - 2)); ctx.fillStyle = "#cfc6b4"; ctx.fillRect(x, by - h, w, Math.max(1.2, Math.min(4, h*.035)));
+          for (let q = 0; q < 3; q++) { const hx = hash(d.path, 131 + q); ctx.fillRect(x + hx*(w - 1), by - h + h*(.05 + .25*hash(d.path, 137 + q)), 1, 1); } }
+        if (used >= 8) { ctx.globalAlpha = ga*Math.min(.45, .12 + used/120); ctx.fillStyle = "#fff"; ctx.fillRect(x + w*.15, by - h*.55, Math.max(.8, w*.12), h*.22); ctx.fillRect(x + w*.72, by - h*.3, Math.max(.8, w*.08), h*.12); }
+        ctx.globalAlpha = ga; }
       if (d.level >= 3 && w > 1.5) { ctx.fillStyle = css.ink; ctx.globalAlpha *= .8; ctx.fillRect(x - 2*k, by - h*.55, Math.max(1, 1.6*k), h*.55); }   // the bookend
       if (w >= 9 && h > 40) { ctx.save(); ctx.translate(x + w/2, by - 4); ctx.rotate(-Math.PI/2); ctx.fillStyle = d.level >= 3 ? "#1a1a1a" : css.ink; ctx.globalAlpha = .9;
         ctx.font = `500 ${Math.min(11, w*.7)}px ${css.body}`; ctx.textBaseline = "middle"; let t = d.title; const mw = h - 10; while (t.length > 3 && ctx.measureText(t).width > mw) t = t.slice(0, -2); if (t !== d.title) t += "…"; ctx.fillText(t, 0, 0); ctx.restore(); } }
@@ -1417,6 +1423,7 @@ EXP.shelf = {
     "Sections. Each top folder has its own section: Root and + on the top shelf, then Atlas and the rest on the left; Calendar, Efforts and x on the right.",
     "Shelve by (under Layout): Call no., A–Z, Created, Modified or Subfolder. The others ignore maps and mark each new letter or year. Subfolder runs a label tape along the shelf edge under each group; hover the tape to outline the group.",
     "Light up areas and projects: open Efforts and pick any. Each one and every note linked to it glows in its own color; the rest of the shelf dims.",
+    "Dust and wear. Books you haven't changed in over two years gather dust along the top; books that many notes link to show worn patches on the spine.",
   ],
   legend: "Bookshelf: every note as a book, shelved by your own call numbers. Tall spines are maps and hubs; unlinked notes lean.",
 };
@@ -2047,7 +2054,7 @@ function visTarget(xs, ys){   // camera that frames every visible note, given wh
   const kk = Math.min(4, Math.max(.1, Math.min((vw - pad*2) / Math.max(x1-x0, 40), (vh - pad*2 - 40) / Math.max(y1-y0, 40))));
   return {k:kk, tx: vw/2 - (x0+x1)/2*kk, ty: (vh + 40)/2 - (y0+y1)/2*kk};
 }
-function rad(i){ if (view === "stars") return Math.max(.7, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1), 16)); return Math.max(1.1, Math.min(R[i]*Math.pow(k, .55), 26)); }
+function rad(i){ if (view === "stars") return Math.max(.7, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1), 16)); return Math.max(1.1, Math.min(R[i]*Math.pow(k, .55)*(geo3On() ? DS3[i] : 1), 30)); }   // 3D Geometric: nearer notes are bigger
 
 function render(){
   raf = 0;
@@ -2660,9 +2667,9 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", pgv = view === "planet", csv = csphOn(), lay = sv || shv || tmv || pgv || csv || mode === "time" || mode === "ace";   // the Layout section shows only where there are layout settings
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", pgv = view === "planet", csv = csphOn(), lay = sv || shv || tmv || pgv || csv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); $("#laygrp").previousElementSibling.hidden = !lay;
-  if (lay) { $("#startms").hidden = sv || shv || tmv || pgv || csv || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || pgv || csv || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); }
+  if (lay) { $("#startms").hidden = sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || pgv || csv || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); }
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -3010,8 +3017,7 @@ function hopNow(){ return view === "emergence" ? (DOME.emergence ? "planetarium"
 function hopMap(){ const cur = hopNow(), opts = HOPS.filter(([id]) => id !== cur && !hopLast.includes(id)), pick = opts[Math.floor(Math.random()*opts.length)]; if (!pick) return;
   hopLast = [cur, ...hopLast].slice(0, 5); const keep = sel; hopSlow = true; pick[1](); hopSlow = false; if (keep >= 0) { if (sel !== keep) select(keep); win.setTimeout(() => { if (sel === keep && !dead) flyTo(keep); }, 2000); } }
 function playStep(){
-  if (!tourRun && playMode === "map" && playTrail) win.setTimeout(() => { win.clearTimeout(trTimer); trTimer = win.setTimeout(trailStep, playSec*1000*2/3); }, 0);
-  if (!tourRun && playMode === "map") { if (sel < 0) { const top = []; for (let i=0;i<n;i++) if (baseOK(i) && N[i].level >= 3) top.push(i); const j = top.length ? top[Math.floor(Math.random()*top.length)] : pickRandom(); if (j >= 0) navTo(j); } else hopMap(); schedule(); return; }   // Map: the same note, a new map each step
+  if (!tourRun && playMode === "map") { if (sel < 0) { const top = []; for (let i=0;i<n;i++) if (baseOK(i) && N[i].level >= 3) top.push(i); const j = top.length ? top[Math.floor(Math.random()*top.length)] : pickRandom(); if (j >= 0) navTo(j); } else hopMap(); schedule(); if (playTrail) { win.clearTimeout(trTimer); trTimer = win.setTimeout(trailStep, playSec*1000*2/3); } return; }   // Map: the same note, a new map each step (the trail timer starts once the new map is laid out)
   if (!tourRun && playMaps && ++hopIn >= 3) { hopIn = 0; hopMap(); schedule(); return; }   // every third step: a new map, same note
   if (tourRun) { if (tourRun.idx >= tourRun.ids.length - 1) { setPlaying(false); syncTour(); return; } tourGo(tourRun.idx + 1); schedule(); return; }
   const j = playMode === "random" ? pickRandom() : pickThread();
