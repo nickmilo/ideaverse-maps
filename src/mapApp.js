@@ -329,7 +329,7 @@ const rowKey = i => ARCH[i] ? "\u0000arch" : FOLD.includes(N[i].ace) ? N[i].ace 
 function layoutSpace(){
   const cnt = new Map(); for (let i=0;i<n;i++) if (vis[i]) { const r = rowKey(i); cnt.set(r, (cnt.get(r) || 0) + 1); }
   // + first and x last (in the Dome, + is the North Pole and x the South Pole)
-  const keys = [...FOLD.filter(f => f !== "x" && cnt.has(f)), ...["\u0000root", "\u0000arch"].filter(r => cnt.has(r)), ...(cnt.has("x") ? ["x"] : [])];
+  const keys = [...(cnt.has("\u0000root") ? ["\u0000root"] : []), ...FOLD.filter(f => f !== "x" && cnt.has(f)), ...(cnt.has("\u0000arch") ? ["\u0000arch"] : []), ...(cnt.has("x") ? ["x"] : [])];   // top-level notes first, above + Inbox
   const wt = keys.map(r => Math.sqrt(cnt.get(r)) + 6), tot = wt.reduce((a, b) => a + b, 0) || 1, G = 24, avail = WH - G*Math.max(0, keys.length - 1);
   let y = 0; ROWS = keys.map((r, j) => { const h = Math.max(avail*.05, avail*wt[j]/tot), row = {key: r, y0: y, y1: y + h, n: cnt.get(r)}; y += h + G; return row; });
   const sc = y > G ? STH/(y - G) : 1; for (const r of ROWS) { r.y0 *= sc; r.y1 *= sc; }   // rows fill the top of the map; the bottom stays clear for the legend and timeline (desktop)
@@ -368,7 +368,7 @@ function layoutGravity(){
 // Space-Time Dome: time runs around the horizon (a small gap where the start meets today), folder rows stack up the sky.
 // Gravity Dome: Home and the hubs overhead at the zenith, the level rings dropping toward the horizon, time or folders around you.
 const DOME = Object.assign({spacetime: false, gravity: false, emergence: false}, pref("iv-dome", {}) || {});
-const domeOn = () => (view === "spacetime" || view === "gravity" || view === "emergence") && !!DOME[view];
+const domeOn = () => view === "emergence" && !!DOME.emergence;   // only the Emergence Dome is offered now (the Space-Time and Gravity domes were cut, Oct 23)
 const domeSphere = () => view !== "gravity";   // Space-Time and Emergence domes are whole spheres; Gravity is a sky overhead
 const DOMECAM = Object.assign({spacetime: [0, 0], gravity: [0, .95], emergence: [0, 0]}, pref("iv-domecam", {}) || {});
 let domeYaw = 0, domePitch = .5;
@@ -2073,15 +2073,13 @@ $("#vmore").onclick = e => { e.stopPropagation(); const el = $("#vmorepop"), ope
 function goMap(v, dome){ closePops(); DOME[v] = dome; save("iv-dome", DOME); if (view !== v) setView(v); else { morph(true, () => fitTarget()); syncDome(); } }
 function syncDome(){ root.dataset.dome = domeOn() ? "1" : ""; legend(); placePlaybar(); }
 $("#gost").onclick = () => goMap("spacetime", false);
-$("#gostd").onclick = () => goMap("spacetime", true);
-$("#gogrd").onclick = () => goMap("gravity", true);
 function goEmDome(m){ closePops(); DOME.emergence = true; save("iv-dome", DOME); if (view !== "emergence") setView("emergence"); if (mode !== m) setMode(m); syncDome(); morph(true, () => fitTarget()); }
 $("#goemt").onclick = () => goEmDome("time");
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); }
 $("#gochord").onclick = () => goChord("");
 $("#gocso").onclick = () => goChord("out");
 $("#gocsi").onclick = () => goChord("in");
-$("#goema").onclick = () => goEmDome("ace");
+
 root.querySelectorAll("#vseg button[data-v]").forEach(b => b.onclick = e => {
   if (b.dataset.v === "stars" && view === "stars") { e.stopPropagation(); const el = $("#starpop"), open = el.hidden; closePops("#starpop"); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
   if (b.dataset.v === "sense" && view === "sense" && SAI) { e.stopPropagation(); const el = $("#sensepop"), open = el.hidden; closePops("#sensepop"); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
@@ -2300,7 +2298,7 @@ function legend(){
     return `<div><i style="${sw}"></i>${L.lv} · ${L.name} <span style="margin-left:auto;padding-left:10px">${(cnt[L.lv]||0).toLocaleString()}</span></div>`;
   }).join("") + (showArch && hasArch ? `<div><i style="background:none;border:1.5px solid ${css.muted}"></i>Archive (rings)</div>` : "") + `<div style="margin-top:4px"><i class="ln" style="border-color:${css.up}"></i>links above</div><div><i class="ln" style="border-color:${css.down}"></i>links below</div>` + (linkCol === "props" ? `<div><i class="ln" style="border-color:${css.rel}"></i>from a property (up, related, any other)</div>` : linkCol === "each" ? `<div><i class="ln" style="border-color:${css.upp}"></i>up property</div><div><i class="ln" style="border-color:${css.rel}"></i>related property</div><div><i class="ln" style="border-color:${css.prop}"></i>other properties (actors, director, by, next…)</div>` : REL.size ? `<div><i class="ln" style="border-color:${css.rel}"></i>related (from the related property)</div>` : "") + (focus >= 0 ? `<div><i class="ln" style="border-color:${css.muted};opacity:.5;border-top-width:1px"></i>links between the other notes in focus</div>` : "");
   if (view === "spacetime" && !domeOn()) $("#legend").createDiv({ text: "Rows: your top folders. In each row, higher levels sit higher.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
-  if (csphOn()) $("#legend").createDiv({ text: CSPH === "out" ? "Chord Sphere: every kind is a wedge of the globe (Level 5 toward the North Pole); the links between kinds arc out over the surface. Drag to turn it, scroll to zoom." : "Chord Sphere: every kind is a wedge of a glass globe (Level 5 toward the North Pole); the links between kinds cross through the inside. Drag to turn it, scroll to zoom.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
+  if (csphOn()) $("#legend").createDiv({ text: CSPH === "out" ? "Corona: every kind is a wedge of the globe (Level 5 toward the North Pole); the links between kinds arc out over the surface. Drag to turn it, scroll to zoom." : "Tesla: every kind is a wedge of a glass globe (Level 5 toward the North Pole); the links between kinds cross through the inside. Drag to turn it, scroll to zoom.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
   if (domeOn()) $("#legend").createDiv({ text: view === "emergence" ? "Dome: you stand at the center. Level 5 is the North Pole, Level 1 the South Pole; " + (mode === "ace" ? "your folders" : "time") + " runs around you. Drag to look around, scroll to zoom, ⤢ to face forward." : view === "gravity" ? "Dome: you stand at the center. Home and the hubs are overhead; the levels drop toward the horizon. Drag to look around, scroll to zoom, ⤢ to face forward." : "Dome: you stand at the center. Time runs around you; folders run from the North Pole (+) to the South Pole (x), with the equator halfway through your notes. Drag to look around, scroll to zoom, ⤢ to face forward.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
 }
 $("#legend").addEventListener("click", () => setLegend(false));   // a click anywhere on the legend tucks it away
