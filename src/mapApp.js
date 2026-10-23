@@ -1263,7 +1263,7 @@ function layoutShelf(){
   }
   SHELF = {rows, secs, calls}; expBounds(40); }
 EXP.shelf = {
-  layout: layoutShelf, pick: (x, y) => rectPick(x, y),
+  layout: layoutShelf, pick: (x, y) => rectPick(x, y), spinePick: true,
   guides(){ ctx.fillStyle = css.panel; ctx.strokeStyle = css.line;
     for (const r of SHELF.rows) { const top = sy(0) - 6*k, x0 = sx(r.x0 - 10), w = (SB.W + 20)*k, bot = sy(r.baseY(r.n - 1) + SB.board);
       ctx.globalAlpha = .55; ctx.fillRect(x0, top, w, bot - top); ctx.globalAlpha = 1; ctx.lineWidth = 1; ctx.strokeRect(x0, top, w, bot - top);
@@ -2139,7 +2139,8 @@ function axisLabels(){
 let linkedOf = -1, linkedSet = null;
 dbg.__ivPickTest = () => { if (sel < 0) return null; let ok = 0, other = 0, tot = 0; for (const j of new Set([...out[sel], ...inn[sel]])) { if (!VV(j)) continue; const px = sx(X[j]) + 4, py = sy(Y[j]) + 3; if (px < 0 || px > W || py < 0 || py > H) continue; tot++; const p = pick(px, py); if (p === j) ok++; else if (p === sel || out[sel].includes(p) || inn[sel].includes(p)) other++; } return [ok, other, tot]; };   // the selected note and the notes it links with, cached per selection
 function pick(px, py){
-  if (expOn() && EXP[view].pick && !(morphing && senseT == null)) { for (let q = LH.length - 1; q >= 0; q--) { const [lx, ly, lw, lh, i] = LH[q]; if (px >= lx && px <= lx + lw && py >= ly && py <= ly + lh && vis[i]) return i; } return EXP[view].pick(wx(px), wy(py)); }
+  if (expOn() && EXP[view].pick && !(morphing && senseT == null)) { if (EXP[view].spinePick) return EXP[view].pick(wx(px), wy(py));   // Bookshelf: names never block the books, so a finger can glide along the shelf either way
+    for (let q = LH.length - 1; q >= 0; q--) { const [lx, ly, lw, lh, i] = LH[q]; if (px >= lx && px <= lx + lw && py >= ly && py <= ly + lh && vis[i]) return i; } return EXP[view].pick(wx(px), wy(py)); }
   if (morphing && senseT == null) return -1;   // the timeline keeps notes gliding; they stay clickable
   if (sel >= 0) {   // with a note selected, its linked notes win: moving toward one doesn't get hijacked by the notes on the way
     if (linkedOf !== sel) { linkedOf = sel; linkedSet = new Set([sel, ...out[sel], ...inn[sel]]); }
