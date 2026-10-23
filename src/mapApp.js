@@ -1080,7 +1080,7 @@ function csCam(th, ph, r){   // a point on (or off) the globe → [world x, worl
   return [x1*CS_D/dpt, -y2*CS_D/dpt, hid];
 }
 function csProject(){ const see = CSPH === "in";   // inside arcs: the globe is glass, so its far side shows too
-  for (let i=0;i<n;i++) { const p = csCam(DTH[i], DPH[i], CS_R); DX[i] = p[0]; DY[i] = p[1]; DFR[i] = see || !p[2] ? 1 : 0; if (!DFR[i]) { DX[i] = DY[i] = -1e7; } } }
+  for (let i=0;i<n;i++) { const p = csCam(DTH[i], DPH[i], CS_R); DX[i] = p[0]; DY[i] = p[1]; DFR[i] = see || !p[2] ? 1 : 0; } }   // far-side notes keep their projected spot (for their links), but aren't drawn or clickable
 function csKeep(){ save("iv-cscam", [+csYaw.toFixed(3), +csPitch.toFixed(3)]); }
 function csArc(th1, ph1, th2, ph2, steps){   // the path between two points: over the outside, or through the inside
   const u = [Math.cos(ph1)*Math.cos(th1), Math.sin(ph1), Math.cos(ph1)*Math.sin(th1)], v = [Math.cos(ph2)*Math.cos(th2), Math.sin(ph2), Math.cos(ph2)*Math.sin(th2)];
@@ -1724,7 +1724,7 @@ function render(){
   let lit = null;
   if (hl >= 0) {
     lit = new Set([hl]);
-    const nb = new Set([...out[hl], ...inn[hl]].filter(j => VV(j)));
+    const nb = new Set([...out[hl], ...inn[hl]].filter(j => VV(j) || (csphOn() && vis[j] && shownAt(j))));   // Corona: links to the far side of the globe still draw
     for (const j of nb) {
       lit.add(j);
       const upward = N[j].level > N[hl].level || (N[j].level === N[hl].level && Y[j] < Y[hl]);
@@ -1732,7 +1732,12 @@ function render(){
       const x1 = sx(X[hl]), y1 = sy(Y[hl]), x2 = sx(X[j]), y2 = sy(Y[j]);
       let mx = (x1+x2)/2, my = (y1+y2)/2 - Math.abs(x2-x1)*.12;
       if (view === "chord") { const cx = sx(CH_C.x), cy = sy(CH_C.y); mx = cx + ((x1+x2)/2 - cx)*.25; my = cy + ((y1+y2)/2 - cy)*.25; }
-      if (csphOn()) { ctx.beginPath(); csStroke(csArc(DTH[hl], DPH[hl], DTH[j], DPH[j], 22)); ctx.stroke(); continue; }
+      if (csphOn()) { const pts = csArc(DTH[hl], DPH[hl], DTH[j], DPH[j], 26); ctx.beginPath(); csStroke(pts); ctx.stroke();
+        if (CSPH === "out") { const ga = ctx.globalAlpha; ctx.globalAlpha = ga*.45; ctx.setLineDash([3, 4]); ctx.beginPath(); let on = false;   // the part behind the globe: dashed, so every link shows
+          for (const q of pts) { if (!q[2]) { on = false; continue; } const x = sx(q[0]), y = sy(q[1]); if (on) ctx.lineTo(x, y); else { ctx.moveTo(x, y); on = true; } } ctx.stroke(); ctx.setLineDash([]);
+          if (!DFR[j]) { ctx.beginPath(); ctx.arc(sx(DX[j]), sy(DY[j]), 3, 0, 6.2832); ctx.stroke(); }   // and a ring where the far note sits
+          ctx.globalAlpha = ga; }
+        continue; }
       ctx.beginPath(); ctx.moveTo(x1,y1); ctx.quadraticCurveTo(mx,my,x2,y2); ctx.stroke();
     }
     ctx.globalAlpha = 1;
