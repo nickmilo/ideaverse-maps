@@ -79,7 +79,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
     const app = this.app, s = this.settings;
     const files = app.vault.getFiles()
       .filter(f => f.extension === "md" || (f.extension === "txt" && s.archive && f.path.startsWith(normalizePath(s.archive) + "/")))
-      .map(f => ({ path: f.path, ctime: f.stat.ctime, read: () => app.vault.cachedRead(f) }));
+      .map(f => ({ path: f.path, ctime: f.stat.ctime, mtime: f.stat.mtime, read: () => app.vault.cachedRead(f) }));
     const resolve = (link, from) => { const f = app.metadataCache.getFirstLinkpathDest(link.replace(/\.md$/i, ""), from); return f ? f.path : null; };
     this.graph = await scanVault({ files, resolve, vaultName: app.vault.getName() }, s, onProgress);
     this.dirty = false;
