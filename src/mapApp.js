@@ -1407,6 +1407,7 @@ EXP.tree = {
 // ---------- Treemap: every folder and note as a rectangle, sized by its score (after GrandPerspective) ----------
 const TM = {W: 3200, H: 1800, pad: 6};
 let TMBOX = [];   // folder and subfolder boxes, for their names
+let tmSubs = pref("iv-tmsubs", false) === true;   // Treemap: show subfolder boxes and names
 function squarify(items, x, y, w, h, place){   // items: [{v, …}] sorted by v desc; place(item, x, y, w, h)
   const tot = items.reduce((s_, it) => s_ + it.v, 0); if (!tot || w <= 0 || h <= 0) return;
   const sc = w*h/tot; let i0 = 0;
@@ -1440,14 +1441,25 @@ EXP.treemap = {
       ctx.fillStyle = g; ctx.fillRect(x + .5, y + .5, w - 1, h - 1);
       if (w > 70 && h > 16) { ctx.fillStyle = d.level >= 3 ? "#111" : "rgba(0,0,0,.72)"; ctx.font = `500 ${Math.min(13, h*.45)}px ${css.body}`; ctx.textBaseline = "top"; let t = d.title; while (t.length > 3 && ctx.measureText(t).width > w - 8) t = t.slice(0, -2); if (t !== d.title) t += "…"; ctx.fillText(t, x + 4, y + 3); } }
     ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; },
-  labels(){ ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.textBaseline = "top";
-    for (const b of TMBOX) { const x = sx(b.x), y = sy(b.y), w = b.w*k; if (w < 50 || x > W || y > H) continue;
-      if (b.lv === 0) { ctx.strokeStyle = css.ink; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, b.h*k); ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.font = `600 12px ${css.mono}`; ctx.fillStyle = css.ink; }
-      else { if (k < .5) continue; ctx.strokeStyle = css.bg; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, b.h*k); ctx.lineWidth = 4; ctx.font = `600 10px ${css.mono}`; ctx.fillStyle = css.ink; }
-      const t = b.name.toUpperCase(); ctx.strokeText(t, x + 5, y + 3); ctx.fillText(t, x + 5, y + 3); }
+  labels(){ ctx.textBaseline = "top";
+    const tag = (t, x, y, f, th, bold) => { ctx.font = f; const tw = ctx.measureText(t).width; ctx.globalAlpha = .82; ctx.fillStyle = css.bg; ctx.fillRect(x, y, tw + 8, th); ctx.globalAlpha = bold ? 1 : .92; ctx.fillStyle = css.ink; ctx.fillText(t, x + 4, y + (th - parseFloat(f.split(" ")[1]))/2); ctx.globalAlpha = 1; };
+    const tops = TMBOX.filter(b => b.lv === 0);
+    if (tmSubs) for (const b of TMBOX) { if (b.lv !== 1) continue;   // subfolders: a thin outline and a small name tag, quieter than the top folders
+      const x = sx(b.x), y = sy(b.y), w = b.w*k, h = b.h*k; if (x > W || y > H || x + w < 0 || y + h < 0) continue;
+      ctx.strokeStyle = css.bg; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
+      const fs = k > 1.2 ? 11 : 9.5, th = fs + 4, f = `500 ${fs}px ${css.body}`; ctx.font = f;
+      const top = tops.find(t => b.x >= t.x - 1 && b.x <= t.x + t.w && b.y >= t.y - 1 && b.y <= t.y + t.h);
+      const tx_ = Math.max(x, 2), ty_ = Math.max(y, 2) + (top && Math.abs(sy(top.y) - y) < 22 && Math.abs(sx(top.x) - x) < 140 ? 18 : 0);   // stay in view; step below the top folder's name
+      const room = Math.min(x + w, W) - tx_ - 12; if (room < 24 || Math.min(y + h, H) - ty_ < th + 2) continue;
+      let t = b.name; while (t.length > 3 && ctx.measureText(t).width > room) t = t.slice(0, -2); if (t !== b.name) t += "…"; tag(t, tx_ + 3, ty_ + 3, f, th, false); }
+    for (const b of tops) { const x = sx(b.x), y = sy(b.y), w = b.w*k; if (w < 50 || x > W || y > H) continue;   // top folders: outlined, and named last so they sit above everything
+      ctx.strokeStyle = css.ink; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, b.h*k);
+      const t = b.name.toUpperCase(), f = `600 12px ${css.mono}`;
+      if (tmSubs) tag(t, Math.max(x, 2) + 2, Math.max(y, 2) + 2, f, 16, true);
+      else { ctx.font = f; ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.fillStyle = css.ink; ctx.strokeText(t, x + 5, y + 3); ctx.fillText(t, x + 5, y + 3); } }
     ctx.textBaseline = "alphabetic"; },
   ownLabels: true,
-  legend: "Treemap: every top folder, subfolder and note as a rectangle, its area set by its link score, after GrandPerspective. Maps and hubs wear their level colors; unlinked notes are the dull slivers.",
+  legend: "Treemap: every top folder, subfolder and note as a rectangle, its area set by its link score, after GrandPerspective. Maps and hubs wear their level colors; unlinked notes are the dull slivers. Layout → Subfolders outlines and names each subfolder.",
 };
 
 // ---------- Skyline: your vault as a city. Each top folder is a district, each map a tower ----------
@@ -2403,9 +2415,9 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", lay = sv || shv || mode === "time" || mode === "ace";   // the Layout section shows only where there are layout settings
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", lay = sv || shv || tmv || mode === "time" || mode === "ace";   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); $("#laygrp").previousElementSibling.hidden = !lay;
-  if (lay) { $("#startms").hidden = sv || shv || mode !== "time"; $("#subctl").hidden = sv || shv || mode !== "ace"; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; if (!shv && !$("#callpanel").hidden) closeCall(); }
+  if (lay) { $("#startms").hidden = sv || shv || tmv || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || mode !== "ace"; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); }
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -2544,6 +2556,8 @@ root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if 
 syncEmd();
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); }
 $("#gochord").onclick = () => goChord("");
+$("#tmsubs").setAttribute("aria-pressed", String(tmSubs));
+$("#tmsubs").onclick = () => { tmSubs = !tmSubs; save("iv-tmsubs", tmSubs); $("#tmsubs").setAttribute("aria-pressed", String(tmSubs)); draw(); };
 const syncSS = () => root.querySelectorAll("#shelfsort button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ss === shelfSort)));
 root.querySelectorAll("#shelfsort button").forEach(b => b.onclick = () => { shelfSort = b.dataset.ss; save("iv-ssort", shelfSort); syncSS(); if (view === "shelf") morph(true, () => fitTarget()); });
 syncSS();
