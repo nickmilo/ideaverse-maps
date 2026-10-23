@@ -20,4 +20,14 @@ module.exports = async ({ page, sleep, shot }) => {
   if (lh2.length) { await page.mouse.click(lh2[0][0] + 5, lh2[0][1] + 6); await sleep(1500); await shot('csph-out-note'); }
   await open('#gocsi'); await shot('csph-in');
   console.log('dome attr', await page.evaluate(() => document.querySelector('.ivm').dataset.dome));
+  // Drift on the sphere, and on 3D Starfield
+  await open('#gocso'); await sleep(500);
+  console.log('drift bar on sphere:', await q('#driftbar').isVisible());
+  const yaw = () => page.evaluate(() => { const r = document.querySelector('.ivm'); return JSON.parse(app.plugins.plugins['ideaverse-maps'].data.state['iv-cscam'] ? JSON.stringify(app.plugins.plugins['ideaverse-maps'].data.state['iv-cscam']) : 'null'); });
+  await q('#dplay').click(); await sleep(3000); await shot('csph-drift'); await q('#dplay').click(); await sleep(400);
+  console.log('after drift, saved angle:', JSON.stringify(await yaw()));
+  await q('#vseg button[data-v="stars"]').click(); await sleep(2000);
+  console.log('drift bar on 2D Starfield:', await q('#driftbar').isVisible());
+  await page.evaluate(() => document.querySelector('.ivm input[name="s3d"][value="3d"]').click()); await sleep(2500);
+  console.log('drift bar on 3D Starfield:', await q('#driftbar').isVisible());
 };
