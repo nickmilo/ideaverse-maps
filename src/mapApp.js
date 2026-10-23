@@ -744,7 +744,7 @@ const syT0 = () => SY0 <= SLMIN ? -Infinity : Date.UTC(SY0, 0, 1), syT1 = () => 
 const inYears = i => syFull() || (TV[i] >= syT0() && TV[i] <= syT1());
 const born = i => senseT == null || (TV[i] <= senseT && !(POP[i] > popNow));   // on the timeline, a note shows once its date has passed (and its pop has started)
 const shownAt = i => view === "sense" ? inYears(i) && born(i) : born(i);   // scheduled pops stay hidden until they burst
-const VV = i => vis[i] && shownAt(i) && (!domeOn() || DFR[i] === 1);
+const VV = i => vis[i] && shownAt(i) && (!(domeOn() || csphOn()) || DFR[i] === 1);
 let senseTrail = [];                              // (kept empty: the averaged trail was replaced by popcorn)
 const SPEEDS = {xslow: [12, 6000/1100], slow: [6, 4000/1100], normal: [2.6, 1.6], fast: [1, 1]};   // shifted one notch slower (Nick, Oct 11)   // [step ×, flight ×]: slow spaces the arrivals out more than it slows each flight, so fewer overlap and more names show
 let senseSpeed = SPEEDS[pref("iv-sspeed", "normal")] ? pref("iv-sspeed", "normal") : "normal";
@@ -929,6 +929,7 @@ function morph(animate, cam){
   if (view === "gravity") layoutGravity(); else if (view === "stars") layoutStars(); else if (view === "sense") layoutSense(); else if (view === "arc") layoutArc(); else if (view === "chord") layoutChord(); else if (view === "spacetime") layoutSpace();
   let tX = view === "spacetime" ? XT : view === "gravity" ? GX : view === "stars" ? (S3D ? (project3D(), P3X) : SX) : view === "sense" ? SNX : view === "arc" ? ARX : view === "chord" ? CHX : curX(), tY = view === "gravity" ? GY : view === "stars" ? (S3D ? P3Y : SY) : view === "sense" ? SNY : view === "arc" ? ARY : view === "chord" ? CHY : view === "spacetime" ? YST : YE;
   if (domeOn()) { domeUse(); domeAngles(tX, tY); domeProject(); tX = DX; tY = DY; }
+  if (csphOn()) { csAngles(); csProject(); tX = DX; tY = DY; }
   const c1 = cam ? cam(tX, tY) : null;
   if (!animate || win.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     X.set(tX); Y.set(tY); buildGrid(); if (c1) { k = c1.k; tx = c1.tx; ty = c1.ty; } draw(); return; }
@@ -957,7 +958,7 @@ function setView(v){
   root.querySelectorAll("#xseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.x === mode)));
   ungrow(); view = v; save("iv-view", v); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
   root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === view)));
-  root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() ? "1" : "";
+  root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || csphOn() ? "1" : "";
   syncRange(); legend(); morph(true, () => fitTarget());
   { const bb = root.querySelector(`#vseg button[data-v="${view}"]`); if (bb && isPhone()) bb.scrollIntoView({inline:"nearest", block:"nearest"}); }
 }
@@ -1050,6 +1051,67 @@ function layoutChord(){
       CHX[i] = CH_C.x + r*Math.cos(a); CHY[i] = CH_C.y + r*Math.sin(a); }); }
 }
 const chHue = c => CH_HUE[c.ace] || "#888";
+
+// ---------- Chord Sphere (experimental): the chord ring wrapped onto a globe you orbit from outside ----------
+// Each kind is a wedge from pole to pole (Level 5 toward the North Pole, Level 1 toward the South); the bundled ribbons
+// arc between kinds, either out over the surface like solar prominences ("out") or through the inside of the globe ("in").
+let CSPH = ["out", "in"].includes(pref("iv-csph", "")) ? pref("iv-csph", "") : "";
+const csphOn = () => view === "chord" && !!CSPH;
+let csYaw = .4, csPitch = .35; { const c = pref("iv-cscam", null); if (Array.isArray(c)) { csYaw = +c[0] || csYaw; csPitch = +c[1] || csPitch; } }
+const CS_R = 600, CS_D = 2400;   // the globe's radius; how far away you stand
+const CSC = [];   // each kind's heart on the globe (the average direction of its notes): where its ribbons leave from
+function csAngles(){ for (let i=0;i<n;i++) { DTH[i] = Math.atan2(CHY[i] - CH_C.y, CHX[i] - CH_C.x); DPH[i] = Math.asin(Math.max(-1, Math.min(1, 1 - 2*YE[i]/WH)))*.92; }
+  for (const c of CHCAT) { let x = 0, y = 0, z = 0; for (const i of c.ids) { const q = Math.cos(DPH[i]); x += q*Math.cos(DTH[i]); y += Math.sin(DPH[i]); z += q*Math.sin(DTH[i]); }
+    CSC[c.id] = [Math.atan2(z, x), Math.atan2(y, Math.hypot(x, z))]; } }
+function csCam(th, ph, r){   // a point on (or off) the globe → [world x, world y, hidden?]
+  const c = Math.cos(ph); let x = c*Math.cos(th)*r, y = Math.sin(ph)*r, z = c*Math.sin(th)*r;
+  const cy = Math.cos(csYaw), sy_ = Math.sin(csYaw), cp = Math.cos(csPitch), sp = Math.sin(csPitch);
+  const x1 = x*cy - z*sy_, z1 = x*sy_ + z*cy, y2 = y*cp - z1*sp, z2 = y*sp + z1*cp;
+  const dpt = CS_D - z2;
+  // hidden behind the globe? (the line from your eye to the point passes through the sphere first)
+  const dx = x1, dy = y2, dz = z2 - CS_D, a = dx*dx + dy*dy + dz*dz, b = 2*CS_D*dz, cc = CS_D*CS_D - CS_R*CS_R, disc = b*b - 4*a*cc;
+  let hid = false; if (disc > 0) { const t1 = (-b - Math.sqrt(disc))/(2*a); hid = t1 > 0 && t1 < 1 - 2e-3; }
+  return [x1*CS_D/dpt, -y2*CS_D/dpt, hid];
+}
+function csProject(){ const see = CSPH === "in";   // inside arcs: the globe is glass, so its far side shows too
+  for (let i=0;i<n;i++) { const p = csCam(DTH[i], DPH[i], CS_R); DX[i] = p[0]; DY[i] = p[1]; DFR[i] = see || !p[2] ? 1 : 0; if (!DFR[i]) { DX[i] = DY[i] = -1e7; } } }
+function csKeep(){ save("iv-cscam", [+csYaw.toFixed(3), +csPitch.toFixed(3)]); }
+function csArc(th1, ph1, th2, ph2, steps){   // the path between two points: over the outside, or through the inside
+  const u = [Math.cos(ph1)*Math.cos(th1), Math.sin(ph1), Math.cos(ph1)*Math.sin(th1)], v = [Math.cos(ph2)*Math.cos(th2), Math.sin(ph2), Math.cos(ph2)*Math.sin(th2)];
+  const om = Math.acos(Math.max(-1, Math.min(1, u[0]*v[0] + u[1]*v[1] + u[2]*v[2]))), so = Math.sin(om) || 1e-6, out = [];
+  const h = CSPH === "out" ? .06 + .32*om/Math.PI : -Math.min(.92, .25 + .8*om/Math.PI);
+  for (let s_ = 0; s_ <= steps; s_++) { const t = s_/steps, A = Math.sin((1 - t)*om)/so, B = Math.sin(t*om)/so;
+    let w = [A*u[0] + B*v[0], A*u[1] + B*v[1], A*u[2] + B*v[2]]; const L = Math.hypot(w[0], w[1], w[2]) || 1; w = w.map(q => q/L);
+    const r = CS_R*(1 + h*Math.sin(Math.PI*t)), ph = Math.asin(w[1]), th = Math.atan2(w[2], w[0]); out.push(csCam(th, ph, r)); }
+  return out;
+}
+function csStroke(pts){ let on = false; for (const p of pts) { if (p[2] && CSPH === "out") { on = false; continue; } const x = sx(p[0]), y = sy(p[1]); if (on) ctx.lineTo(x, y); else { ctx.moveTo(x, y); on = true; } } }
+function csGuides(){
+  const cx = sx(0), cy = sy(0), rs = CS_R*k*CS_D/Math.sqrt(CS_D*CS_D - CS_R*CS_R);
+  ctx.beginPath(); ctx.arc(cx, cy, rs, 0, 6.2832);
+  if (CSPH === "out") { const g = ctx.createRadialGradient(cx - rs*.3, cy - rs*.3, rs*.1, cx, cy, rs); g.addColorStop(0, css.panel); g.addColorStop(1, css.bg); ctx.fillStyle = g; ctx.globalAlpha = .9; ctx.fill(); }
+  ctx.globalAlpha = .6; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
+  // each kind's wedge: its colored belt along the equator, and its edge from pole to pole
+  ctx.lineCap = "butt";
+  for (const c of CHCAT) { const pts = []; for (let a = c.a0; a <= c.a1 + 1e-6; a += Math.max(.01, (c.a1 - c.a0)/16)) pts.push(csCam(a, 0, CS_R*1.04));
+    ctx.strokeStyle = chHue(c); ctx.globalAlpha = .8; ctx.lineWidth = Math.max(2.5, rs*.025); ctx.beginPath(); csStroke(pts); ctx.stroke();
+    const mer = []; for (let ph = -1.45; ph <= 1.45; ph += .05) mer.push(csCam(c.a0, ph, CS_R)); ctx.globalAlpha = .18; ctx.lineWidth = 1; ctx.beginPath(); csStroke(mer); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  // ribbons between kinds: out over the surface, or through the glass
+  const hl = sel >= 0 ? sel : hover, fade = hl >= 0 ? .25 : 1, mx = 900;
+  for (const r of chRibbons()) { const A = CHCAT[r.p], B = CHCAT[r.q];
+    ctx.strokeStyle = chHue(A); ctx.globalAlpha = (.08 + .3*Math.sqrt(r.c/mx))*fade; ctx.lineWidth = Math.max(.7, Math.sqrt(r.c/mx)*rs*(CSPH === "out" ? .045 : .07));
+    const ca = CSC[A.id], cb = CSC[B.id]; if (!ca || !cb) continue; ctx.beginPath(); csStroke(csArc(ca[0], ca[1], cb[0], cb[1], 28)); ctx.stroke(); }
+  ctx.globalAlpha = 1; ctx.lineCap = "round";
+}
+function csLabels(){
+  ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.textAlign = "center"; ctx.textBaseline = "middle"; const taken = [];
+  for (const c of [...CHCAT].sort((p_, q_) => q_.ids.length - p_.ids.length)) { const p = csCam((c.a0 + c.a1)/2, 0, CS_R*1.14); if (p[2]) continue;
+    const x = sx(p[0]), y = sy(p[1]); ctx.font = `600 12px ${css.body}`; const tw = ctx.measureText(c.short).width + 6, bx = [x - tw/2, y - 9, tw, 18];
+    if (taken.some(q => bx[0] < q[0]+q[2] && bx[0]+bx[2] > q[0] && bx[1] < q[1]+q[3] && bx[1]+bx[3] > q[1])) continue; taken.push(bx);
+    ctx.fillStyle = css.ink; ctx.strokeText(c.short, x, y); ctx.fillText(c.short, x, y); }
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+}
 let chArc = -1, chPin = -1;   // the arc under the cursor, and the one clicked to hold its ribbons
 const chOn = () => chArc >= 0 ? chArc : chPin;
 function showArcTip(a){   // the arc tooltip, set beside the ring on the arc's own side, never over the ribbons
@@ -1181,6 +1243,7 @@ else if (view === "stars") { layoutStars(); if (S3D) { project3D(); X.set(P3X); 
 else if (view === "sense") { layoutSense(); X.set(SNX); Y.set(SNY); }
 else if (view === "spacetime") { layoutSpace(); X.set(XT); Y.set(YST); }
 if (domeOn()) { domeUse(); domeAngles(Float32Array.from(X), Float32Array.from(Y)); domeProject(); X.set(DX); Y.set(DY); }
+if (csphOn()) { csAngles(); csProject(); X.set(DX); Y.set(DY); }
 buildGrid();
 
 // ---------- view ----------
@@ -1202,6 +1265,7 @@ function syncCls(){ const m = root.querySelector("main"), hd = root.querySelecto
   root.querySelectorAll(".ms").forEach(ms => { const x = ms.querySelector(":scope > .qx"); ms.toggleClass("has-x", !!x && !x.hidden); }); }
 function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(2, win.devicePixelRatio||1); const cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); draw(); }
 function fitTarget(){ const pad = 56;
+  if (csphOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: .4*Math.min(vw, H)/(CS_R*1.08), tx: vw/2, ty: H/2}; }
   if (domeOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: Math.max(vw, H*1.2)/2/(DF_*Math.tan(52*Math.PI/180)), tx: vw/2, ty: H/2}; }   // about a 104° view
   if (view === "sense") { const phone = isPhone(), lc = phone ? 0 : 400, tb = phone ? 58 : 16, pb = phone ? 70 : 16, vw = W - sideW() - lc;   // desktop: the bars live in a left column
     const kk = Math.min((vw - pad)/(2*SR0*1.08 + 300), (H - tb - pb - 150)/(2*SR0*1.08));   // 150 px for the archetype names above and below
@@ -1277,6 +1341,7 @@ function render(){
   else if (domeOn()) domeGuides();
   else if (view === "sense") senseGuides();
   else if (view === "gravity") gravityGuides();
+  else if (csphOn()) csGuides();
   else if (view === "chord") chordGuides();
   else {
   if (view === "spacetime") ROWS.forEach((r, idx) => {   // folder rows
@@ -1322,7 +1387,8 @@ function render(){
   }
   if (showAll) {
     ctx.strokeStyle = css["edge-faint"]; ctx.lineWidth = 1; ctx.beginPath();
-    if (view === "chord") { const cx = sx(CH_C.x), cy = sy(CH_C.y); for (const [a,b] of E) { if (!VV(a) || !VV(b)) continue; const x1 = sx(X[a]), y1 = sy(Y[a]), x2 = sx(X[b]), y2 = sy(Y[b]); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx + ((x1+x2)/2 - cx)*.25, cy + ((y1+y2)/2 - cy)*.25, x2, y2); } }
+    if (csphOn()) { for (const [a,b] of E) { if (VV(a) && VV(b)) csStroke(csArc(DTH[a], DPH[a], DTH[b], DPH[b], 10)); } }
+    else if (view === "chord") { const cx = sx(CH_C.x), cy = sy(CH_C.y); for (const [a,b] of E) { if (!VV(a) || !VV(b)) continue; const x1 = sx(X[a]), y1 = sy(Y[a]), x2 = sx(X[b]), y2 = sy(Y[b]); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx + ((x1+x2)/2 - cx)*.25, cy + ((y1+y2)/2 - cy)*.25, x2, y2); } }
     else for (const [a,b] of E) { if (!VV(a) || !VV(b)) continue; ctx.moveTo(sx(X[a]), sy(Y[a])); ctx.lineTo(sx(X[b]), sy(Y[b])); }
     ctx.stroke();
   }
@@ -1338,12 +1404,13 @@ function render(){
       const x1 = sx(X[hl]), y1 = sy(Y[hl]), x2 = sx(X[j]), y2 = sy(Y[j]);
       let mx = (x1+x2)/2, my = (y1+y2)/2 - Math.abs(x2-x1)*.12;
       if (view === "chord") { const cx = sx(CH_C.x), cy = sy(CH_C.y); mx = cx + ((x1+x2)/2 - cx)*.25; my = cy + ((y1+y2)/2 - cy)*.25; }
+      if (csphOn()) { ctx.beginPath(); csStroke(csArc(DTH[hl], DPH[hl], DTH[j], DPH[j], 22)); ctx.stroke(); continue; }
       ctx.beginPath(); ctx.moveTo(x1,y1); ctx.quadraticCurveTo(mx,my,x2,y2); ctx.stroke();
     }
     ctx.globalAlpha = 1;
   }
 
-  if (GROWV() && senseT != null) { const vw = W - (isPhone() ? 0 : sideW()), cen = domeOn() ? null : view === "gravity" ? GC : view === "chord" ? CH_C : null;
+  if (GROWV() && senseT != null) { const vw = W - (isPhone() ? 0 : sideW()), cen = domeOn() || csphOn() ? null : view === "gravity" ? GC : view === "chord" ? CH_C : null;
     drawWatermark(cen ? sx(cen.x) : vw/2, cen ? sy(cen.y) - Math.min(vw, H)*.06 : H*.5, Math.min(vw, H)*.3, css.ink, .07); }
   // notes: bottom levels first, batched
   const vx0 = -30, vx1 = W+30, vy0 = -30, vy1 = H+30;
@@ -1583,6 +1650,7 @@ function axisLabels(){
   if (view === "stars") { starLabels(); drawPops(); return; }
   if (view === "sense") { senseLabels(); return; }
   if (view === "gravity") { gravityLabels(); return; }
+  if (csphOn()) { csLabels(); return; }
   if (view === "chord") { chordLabels(); return; }
   ctx.textBaseline = "alphabetic";
   const yTop = Math.max(sy(0) - 12, 26);
@@ -1684,7 +1752,7 @@ function pick(px, py){
 // ---------- interaction ----------
 const tip = $("#tip"); tip.addClass("ivm-tip"); doc.body.appendChild(tip);
 let drag = null, moved = false; const pts = new Map();
-cv.addEventListener("pointerdown", e => { driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, orbit: (s3dOn() || domeOn()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
+cv.addEventListener("pointerdown", e => { driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, cyaw: csYaw, cpitch: csPitch, orbit: (s3dOn() || domeOn() || csphOn()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
 cv.addEventListener("contextmenu", e => e.preventDefault());   // right-drag pans (as in Miro); no menu on the map
 cv.addEventListener("pointermove", e => {
   if (pts.has(e.pointerId)) {
@@ -1696,6 +1764,8 @@ cv.addEventListener("pointermove", e => {
       moved = true; return;
     }
     if (drag) { const dx = e.offsetX - drag.x, dy = e.offsetY - drag.y; if (Math.abs(dx)+Math.abs(dy) > 3) { moved = true; cv.classList.add("drag"); }
+      if (drag.orbit && csphOn()) { if (!moved) return; csYaw = drag.cyaw + dx*.006; csPitch = Math.max(-1.5, Math.min(1.5, drag.cpitch + dy*.006));   // turn the globe in your hand
+        csProject(); X.set(DX); Y.set(DY); tip.hidden = true; draw(); return; }
       if (drag.orbit && domeOn()) { if (!moved) return; const u = 1/(k*DF_); domeYaw = drag.dyaw - dx*u; domePitch = Math.max(domeSphere() ? -1.53 : -.35, Math.min(1.53, drag.dpitch + dy*u));   // drag the sky
         domeProject(); X.set(DX); Y.set(DY); tip.hidden = true; draw(); return; }
       if (drag.orbit) { if (!moved) return; yaw3 = drag.yaw + dx*.006; pitch3 = Math.max(-1.45, Math.min(1.45, drag.pitch + dy*.006)); project3D(); X.set(P3X); Y.set(P3Y); tip.hidden = true; draw(); return; }
@@ -1703,7 +1773,7 @@ cv.addEventListener("pointermove", e => {
   }
   const i = pick(e.offsetX, e.offsetY);
   if (i !== hover) { hover = i; cv.classList.toggle("hot", i >= 0); draw(); }
-  if (i < 0 && view === "chord") { const a = chordArcAt(e.offsetX, e.offsetY);   // hovering an arc: its ribbons light up, with the counts
+  if (i < 0 && view === "chord" && !csphOn()) { const a = chordArcAt(e.offsetX, e.offsetY);   // hovering an arc: its ribbons light up, with the counts
     if (a !== chArc) { chArc = a; draw(); }
     if (a >= 0) { showArcTip(a); return; }
     if (chPin >= 0 && (CHCAT[chPin])) { showArcTip(chPin); return; } }   // a held arc keeps its details showing
@@ -1715,13 +1785,13 @@ cv.addEventListener("pointermove", e => {
   else tip.hidden = true;
 });
 const end = e => { pts.delete(e.pointerId);
-  if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
+  if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
-  if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY);
+  if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (csphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY);
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && isPhone()) flyTo(i); } toEditor(i); } drag = null; } };
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0) { hover = -1; draw(); } tip.hidden = true; });
-function zoomAt(px, py, f){ if (domeOn()) { px = tx; py = ty; }   // a dome zooms about where you're looking
+function zoomAt(px, py, f){ if (domeOn() || csphOn()) { px = tx; py = ty; }   // a dome zooms about where you're looking
   const nk = Math.min(40, Math.max(view === "stars" ? .04 : domeOn() ? .3 : .15, k*f)); f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
 cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
   if (!e.ctrlKey && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {   // shift + wheel (or a sideways swipe) pans left and right
@@ -1730,7 +1800,7 @@ cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
     tx -= dx * (e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }
   const f = Math.min(1.35, Math.max(.74, Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)))); zoomAt(e.offsetX, e.offsetY, f); }, {passive:false});
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
-$("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoomAt(W/2, H/2, 1/1.6); $("#zfit").onclick = () => { if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, 0]; domeKeep(); morph(true, () => fitTarget()); return; } fit(true); };   // in a dome: face forward again
+$("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoomAt(W/2, H/2, 1/1.6); $("#zfit").onclick = () => { if (csphOn()) { morph(true, () => fitTarget()); return; } if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, 0]; domeKeep(); morph(true, () => fitTarget()); return; } fit(true); };   // in a dome: face forward again
 root.querySelectorAll("#xseg button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.x === mode)); b.onclick = () => setMode(b.dataset.x); });
 $("#xmore").onchange = e => setMode(e.target.value || "time");
 root.querySelectorAll("#xmore option").forEach(o => { if (o.value && !axisHas(o.value)) o.remove(); });   // only axes some note has
@@ -1993,7 +2063,10 @@ $("#gostd").onclick = () => goMap("spacetime", true);
 $("#gogrd").onclick = () => goMap("gravity", true);
 function goEmDome(m){ closePops(); DOME.emergence = true; save("iv-dome", DOME); if (view !== "emergence") setView("emergence"); if (mode !== m) setMode(m); syncDome(); morph(true, () => fitTarget()); }
 $("#goemt").onclick = () => goEmDome("time");
-$("#gochord").onclick = () => { closePops(); setView("chord"); };
+function goChord(m){ closePops(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); }
+$("#gochord").onclick = () => goChord("");
+$("#gocso").onclick = () => goChord("out");
+$("#gocsi").onclick = () => goChord("in");
 $("#goema").onclick = () => goEmDome("ace");
 root.querySelectorAll("#vseg button[data-v]").forEach(b => b.onclick = e => {
   if (b.dataset.v === "stars" && view === "stars") { e.stopPropagation(); const el = $("#starpop"), open = el.hidden; closePops("#starpop"); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
@@ -2213,6 +2286,7 @@ function legend(){
     return `<div><i style="${sw}"></i>${L.lv} · ${L.name} <span style="margin-left:auto;padding-left:10px">${(cnt[L.lv]||0).toLocaleString()}</span></div>`;
   }).join("") + (showArch && hasArch ? `<div><i style="background:none;border:1.5px solid ${css.muted}"></i>Archive (rings)</div>` : "") + `<div style="margin-top:4px"><i class="ln" style="border-color:${css.up}"></i>links above</div><div><i class="ln" style="border-color:${css.down}"></i>links below</div>` + (linkCol === "props" ? `<div><i class="ln" style="border-color:${css.rel}"></i>from a property (up, related, any other)</div>` : linkCol === "each" ? `<div><i class="ln" style="border-color:${css.upp}"></i>up property</div><div><i class="ln" style="border-color:${css.rel}"></i>related property</div><div><i class="ln" style="border-color:${css.prop}"></i>other properties (actors, director, by, next…)</div>` : REL.size ? `<div><i class="ln" style="border-color:${css.rel}"></i>related (from the related property)</div>` : "") + (focus >= 0 ? `<div><i class="ln" style="border-color:${css.muted};opacity:.5;border-top-width:1px"></i>links between the other notes in focus</div>` : "");
   if (view === "spacetime" && !domeOn()) $("#legend").createDiv({ text: "Rows: your top folders. In each row, higher levels sit higher.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
+  if (csphOn()) $("#legend").createDiv({ text: CSPH === "out" ? "Chord Sphere: every kind is a wedge of the globe (Level 5 toward the North Pole); the links between kinds arc out over the surface. Drag to turn it, scroll to zoom." : "Chord Sphere: every kind is a wedge of a glass globe (Level 5 toward the North Pole); the links between kinds cross through the inside. Drag to turn it, scroll to zoom.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
   if (domeOn()) $("#legend").createDiv({ text: view === "emergence" ? "Dome: you stand at the center. Level 5 is the North Pole, Level 1 the South Pole; " + (mode === "ace" ? "your folders" : "time") + " runs around you. Drag to look around, scroll to zoom, ⤢ to face forward." : view === "gravity" ? "Dome: you stand at the center. Home and the hubs are overhead; the levels drop toward the horizon. Drag to look around, scroll to zoom, ⤢ to face forward." : "Dome: you stand at the center. Time runs around you; folders run from the North Pole (+) to the South Pole (x), with the equator halfway through your notes. Drag to look around, scroll to zoom, ⤢ to face forward.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
 }
 $("#legend").addEventListener("click", () => setLegend(false));   // a click anywhere on the legend tucks it away
@@ -2259,6 +2333,7 @@ function snapView(name){
     focus: focus >= 0 ? N[focus].path : null, fDir, fDepth, sel: sel >= 0 ? N[sel].path : null,
     tl: senseT != null ? {t: senseStepStart, step: senseStep} : null,   // where the time-lapse stands (null = all time)
     dome: domeOn() ? {yaw: +domeYaw.toFixed(3), pitch: +domePitch.toFixed(3)} : null,
+    csph: csphOn() ? {mode: CSPH, yaw: +csYaw.toFixed(3), pitch: +csPitch.toFixed(3)} : null,
     s3d: view === "stars" ? {on: S3D, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
     cam: {cx: +((W/2 - tx)/k).toFixed(1), cy: +((H/2 - ty)/k).toFixed(1), k: +k.toFixed(4)}, saved: new Date().toISOString().slice(0,10)};
 }
@@ -2288,6 +2363,7 @@ function applySaved(v){
   root.querySelectorAll("#xseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.x === mode)));
   syncRange(); legend();
   if (view === "spacetime" || view === "gravity" || view === "emergence") { DOME[view] = !!v.dome; save("iv-dome", DOME); if (v.dome) { DOMECAM[view] = [+v.dome.yaw || 0, +v.dome.pitch || .5]; save("iv-domecam", DOMECAM); } root.dataset.dome = domeOn() ? "1" : ""; }
+  if (view === "chord") { CSPH = v.csph && ["out", "in"].includes(v.csph.mode) ? v.csph.mode : ""; save("iv-csph", CSPH); if (v.csph) { csYaw = +v.csph.yaw || 0; csPitch = +v.csph.pitch || 0; csKeep(); } root.dataset.dome = csphOn() ? "1" : ""; }
   if (view === "stars" && v.s3d) { S3D = !!v.s3d.on; save("iv-s3d", S3D); if (isFinite(+v.s3d.yaw)) yaw3 = +v.s3d.yaw; if (isFinite(+v.s3d.pitch)) pitch3 = +v.s3d.pitch; save("iv-cam3", [yaw3, pitch3]);
     root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = (r.value === "3d") === S3D); placePlaybar(); }
   // the time-lapse, at the step it was saved on (or all time); set before the camera move below, so that move has the last word
@@ -2381,7 +2457,7 @@ root.querySelectorAll('input[name="ssrc"]').forEach(r => r.onchange = () => { if
   syncSenseSrc(); legend(); morph(true); if (sel >= 0) win.setTimeout(() => select(sel, true), 0); });
 syncSenseSrc();
 $("#tlall").onclick = senseClear;
-root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() ? "1" : "";
+root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || csphOn() ? "1" : "";
 win.setTimeout(() => { const b = root.querySelector(`#vseg button[data-v="${view}"]`); if (b && isPhone()) b.scrollIntoView({inline:"nearest", block:"nearest"}); }, 50);
 dbg.__ivArc = nm => { const c = CHCAT.find(c => c.short === nm); if (!c) return null; const a = (c.a0 + c.a1)/2, r = $("#cv").getBoundingClientRect(); return [r.left + sx(CH_C.x) + Math.cos(a)*CH_R*k*1.07, r.top + sy(CH_C.y) + Math.sin(a)*CH_R*k*1.07]; };
 dbg.__ivLHall = () => { const r = $("#cv").getBoundingClientRect(); return LH.map(b => [b[0] + r.left, b[1] + r.top, b[2], b[3], N[b[4]].title]); };
