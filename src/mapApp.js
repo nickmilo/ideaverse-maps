@@ -1657,7 +1657,7 @@ EXP.lincal = {
       for (let m = 0; m < 12; m++) ctx.fillText(MON3[m].toUpperCase(), sx(-10), sy(top + m*C + C/2));
       ctx.textAlign = "center"; for (let c = 0; c < 37; c++) ctx.fillText("MTWTFSS"[c % 7], sx(c*C + C/2), sy(top - 16));
       ctx.textAlign = "left"; ctx.fillStyle = css.accent; ctx.font = `600 ${Math.max(14, Math.min(30, C*k*.7))}px ${css.mono}`; ctx.fillText(String(y), sx(0), sy(top - 46)); ctx.textBaseline = "alphabetic"; } },
-  legend: "Linear Calendar: a year as twelve rows, one per month, each day a box, with the weeks lined up down the page. The notes you made that day fill its box: maps and hubs first, in their level colors. Layout → One year (‹ › to change it) or All years (the wheel scrolls through them).",
+  legend: "Linear Calendar: a year as twelve rows, one per month, each day a box, with the weeks lined up down the page. The notes you made that day fill its box: maps and hubs first, in their level colors. Layout → One year (‹ › to change it) or All years (the wheel scrolls through them; ⌘ + wheel zooms).",
 };
 
 // Spiral: time as one line winding outward, a turn a year, starting at 12 o'clock and running clockwise, so the same date
@@ -2625,9 +2625,9 @@ const end = e => { pts.delete(e.pointerId);
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hover = -1; shTape = -1; draw(); } tip.hidden = true; });
 function zoomAt(px, py, f){ if (domeOn() || sphOn()) { px = tx; py = ty; }   // a dome zooms about where you're looking
-  const nk = Math.min(40, Math.max(view === "stars" ? .04 : domeOn() ? .3 : .15, k*f)); f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
+  const lo = view === "stars" ? .04 : domeOn() ? .3 : .15, nk = Math.min(40, Math.max(expOn() ? Math.min(lo, fitTarget().k*.6) : lo, k*f));   // big maps (a long Spiral or Lifeline) can always zoom out past their whole picture f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
 cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
-  if (view === "lincal" && LCALL && !e.ctrlKey && !e.shiftKey && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) { ty -= e.deltaY*(e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }   // all years: the wheel scrolls through them (pinch or ctrl to zoom)
+  if (view === "lincal" && LCALL && !e.ctrlKey && !e.metaKey && !e.shiftKey && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) { ty -= e.deltaY*(e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }   // all years: the wheel scrolls through them (⌘ or ctrl + wheel, or a pinch, zooms)
   if (!e.ctrlKey && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {   // shift + wheel (or a sideways swipe) pans left and right
     const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
     if (domeOn()) { domeYaw += dx*(e.deltaMode === 1 ? 16 : 1)/(k*DF_); domeProject(); X.set(DX); Y.set(DY); buildGrid(); domeKeep(); tip.hidden = true; draw(); return; }   // in a dome a sideways swipe turns you
