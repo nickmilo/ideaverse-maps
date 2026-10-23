@@ -91,11 +91,11 @@
 .ivm .search{position:relative;flex:10 1 150px;max-width:240px;min-width:150px;margin-left:auto}
 .ivm .search input{width:100%;padding:8px 13px;border:1px solid var(--line);border-radius:999px;background:var(--panel)}
 .ivm .search input:focus{border-color:var(--accent);outline:none}
-.ivm .results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);overflow:hidden;z-index:10}
-.ivm .results button{display:flex;gap:8px;align-items:baseline;width:100%;text-align:left;border:0;background:none;padding:7px 12px;cursor:pointer}
+.ivm .results{position:absolute;top:calc(100% + 4px);left:auto;right:0;width:max(100%, min(460px, 100cqw - 32px));max-height:min(70vh, 520px);overflow-y:auto;background:var(--bg);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:10}
+.ivm .results button{display:flex;flex-direction:column;gap:2px;align-items:flex-start;width:100%;text-align:left;border:0;background:none;padding:7px 12px;cursor:pointer}
 .ivm .results button:hover,.ivm .results button.on{background:var(--accent-soft)}
-.ivm .results .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ivm .results .m{font:500 10.5px var(--mono);color:var(--muted);white-space:nowrap}
+.ivm .results .t{width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.3}
+.ivm .results .m{font:500 10.5px var(--mono);color:var(--muted);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .ivm .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--panel)}
 .ivm .seg button{border:0;background:none;color:var(--muted);font:500 12px var(--mono);padding:6px 11px;cursor:pointer}
 .ivm .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
