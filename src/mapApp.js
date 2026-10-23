@@ -913,7 +913,7 @@ function sensePlay(){ if (sensePlaying) { senseStop(); return; }
   sensePlaying = true; $("#tlplay").textContent = "❚❚"; $("#tlplay").setAttribute("aria-label", "Pause"); senseTimer = win.setTimeout(senseTick, 300); }
 function placePlaybar(){ const pb = $("#playbar"), tb = $("#timebar");   // Sensemaking and Starfield (desktop): autoplay sits just under the timeline bar, however many rows it wraps to
   pb.style.top = !isPhone() && !tb.hidden && (view === "sense" || view === "stars" || view === "gravity" || view === "chord") ? (tb.offsetTop + tb.offsetHeight + 8) + "px" : "";
-  const db = $("#driftbar"); db.hidden = !(view === "stars" && S3D); if (db.hidden) driftStop();
+  const db = $("#driftbar"); db.hidden = !(s3dOn() || csphOn()); if (db.hidden) driftStop();
   db.style.top = !isPhone() && pb.style.top ? (pb.offsetTop + pb.offsetHeight + 8) + "px" : ""; }
 on(win, "resize", () => placePlaybar());
 function syncTimebar(){ const on = true; win.setTimeout(placePlaybar, 0);
@@ -1062,9 +1062,9 @@ const CS_R = 600, CS_D = 2400;   // the globe's radius; how far away you stand
 const CSC = [];   // each kind's heart on the globe (the average direction of its notes): where its ribbons leave from
 function csAngles(){ for (let i=0;i<n;i++) { DTH[i] = Math.atan2(CHY[i] - CH_C.y, CHX[i] - CH_C.x); DPH[i] = Math.asin(Math.max(-1, Math.min(1, 1 - 2*YE[i]/WH)))*.92; }
   for (const c of CHCAT) { let x = 0, y = 0, z = 0; for (const i of c.ids) { const q = Math.cos(DPH[i]); x += q*Math.cos(DTH[i]); y += Math.sin(DPH[i]); z += q*Math.sin(DTH[i]); }
-    CSC[c.id] = [Math.atan2(z, x), Math.atan2(y, Math.hypot(x, z))]; } }
+    CSC[c.id] = [Math.atan2(z, x), Math.atan2(y, Math.hypot(x, z))]; } }   // (in the notes' own angles; csCam does the mirroring)
 function csCam(th, ph, r){   // a point on (or off) the globe → [world x, world y, hidden?]
-  const c = Math.cos(ph); let x = c*Math.cos(th)*r, y = Math.sin(ph)*r, z = c*Math.sin(th)*r;
+  const c = Math.cos(ph); let x = c*Math.cos(th)*r, y = Math.sin(ph)*r, z = -c*Math.sin(th)*r;   // z mirrored: from outside, near the equator, the kinds read left to right (+, Atlas, Calendar, Efforts, x)
   const cy = Math.cos(csYaw), sy_ = Math.sin(csYaw), cp = Math.cos(csPitch), sp = Math.sin(csPitch);
   const x1 = x*cy - z*sy_, z1 = x*sy_ + z*cy, y2 = y*cp - z1*sp, z2 = y*sp + z1*cp;
   const dpt = CS_D - z2;
@@ -1107,9 +1107,9 @@ function csGuides(){
 function csLabels(){
   ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.textAlign = "center"; ctx.textBaseline = "middle"; const taken = [];
   for (const c of [...CHCAT].sort((p_, q_) => q_.ids.length - p_.ids.length)) { const p = csCam((c.a0 + c.a1)/2, 0, CS_R*1.14); if (p[2]) continue;
-    const x = sx(p[0]), y = sy(p[1]); ctx.font = `600 12px ${css.body}`; const tw = ctx.measureText(c.short).width + 6, bx = [x - tw/2, y - 9, tw, 18];
+    const x = sx(p[0]), y = sy(p[1]), t = c.short.toUpperCase(); ctx.font = `600 10.5px ${css.mono}`; const tw = ctx.measureText(t).width + 6, bx = [x - tw/2, y - 9, tw, 18];
     if (taken.some(q => bx[0] < q[0]+q[2] && bx[0]+bx[2] > q[0] && bx[1] < q[1]+q[3] && bx[1]+bx[3] > q[1])) continue; taken.push(bx);
-    ctx.fillStyle = css.ink; ctx.strokeText(c.short, x, y); ctx.fillText(c.short, x, y); }
+    ctx.fillStyle = chHue(c); ctx.strokeText(t, x, y); ctx.fillText(t, x, y); }   // folder names: small caps in their folder's color, so they never read as note titles
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
 }
 let chArc = -1, chPin = -1;   // the arc under the cursor, and the one clicked to hold its ribbons
@@ -1205,6 +1205,8 @@ function driftPick(){ const gals = BODIES.filter(b => b.kind === "gal" && b.memb
   let r = Math.random()*tot; for (const b of gals) { r -= Math.sqrt(b.members.length); if (r <= 0 && b.id !== driftGal) return b.id; } return gals[0].id; }
 function driftFrame(now){
   if (!drifting) return; driftRaf = RAF(driftFrame);
+  if (csphOn()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;   // the globe turns slowly, tilting as it goes
+    csYaw += spin*1.6*dt; csPitch = .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); render(); return; }
   const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;
   yaw3 += spin*dt; pitch3 = .62 + .38*Math.sin(t*2*Math.PI/(breath*1.7));
   project3D(); X.set(P3X); Y.set(P3Y);
@@ -1217,10 +1219,10 @@ function driftFrame(now){
   const cxw = (vx - tx)/k, cyw = (vy - ty)/k, e = Math.min(1, dt*1.6);
   const ncx = cxw + (gx - cxw)*e, ncy = cyw + (gy - cyw)*e; k = k + (kk - k)*e; tx = vx - ncx*k; ty = vy - ncy*k;
   render(); }
-function driftStart(){ if (drifting || !s3dOn()) return; drifting = true; driftK0 = fitTarget().k*.95; driftT0 = driftLast = performance.now(); driftCyc = -1;
+function driftStart(){ if (drifting || !(s3dOn() || csphOn())) return; drifting = true; driftK0 = fitTarget().k*.95; driftT0 = driftLast = performance.now(); driftCyc = -1;
   $("#dplay").textContent = "❚❚"; $("#dplay").setAttribute("aria-label", "Stop drifting"); driftRaf = RAF(driftFrame); }
 function driftStop(){ if (!drifting) return; drifting = false; win.cancelAnimationFrame(driftRaf); const b = $("#dplay"); if (b) { b.textContent = "▶"; b.setAttribute("aria-label", "Drift"); }
-  buildGrid(); save("iv-cam3", [yaw3, pitch3]); draw(); }
+  buildGrid(); if (csphOn()) csKeep(); else save("iv-cam3", [yaw3, pitch3]); draw(); }
 function bodyPos(b){ if (s3dOn() && B3[b.id]) return [B3[b.id].px, B3[b.id].py]; return [UC.x + b.x, UC.y + b.y]; }
 function halos3D(dim){   // in 3D the cached glow can't follow the camera: each galaxy gets a soft halo, flattened as its disk turns edge-on
   ctx.globalCompositeOperation = "lighter";
@@ -2063,7 +2065,7 @@ $("#gostd").onclick = () => goMap("spacetime", true);
 $("#gogrd").onclick = () => goMap("gravity", true);
 function goEmDome(m){ closePops(); DOME.emergence = true; save("iv-dome", DOME); if (view !== "emergence") setView("emergence"); if (mode !== m) setMode(m); syncDome(); morph(true, () => fitTarget()); }
 $("#goemt").onclick = () => goEmDome("time");
-function goChord(m){ closePops(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); }
+function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); }
 $("#gochord").onclick = () => goChord("");
 $("#gocso").onclick = () => goChord("out");
 $("#gocsi").onclick = () => goChord("in");
