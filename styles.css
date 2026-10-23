@@ -516,3 +516,5 @@
 .ivm #lcyear{font:600 12px var(--mono);min-width:64px;text-align:center;color:var(--ink)}
 .ivm #lcprev,.ivm #lcnext{padding:3px 9px}
 .ivm #lcprev:disabled,.ivm #lcnext:disabled{opacity:.35;cursor:default}
+.ivm #lrctl select{font:600 12px var(--mono);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:3px 8px}
+.ivm #lrctl .lrl{font:500 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}

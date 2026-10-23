@@ -219,7 +219,7 @@ function growAt(t){
   for (let i=0;i<n;i++) { const d = N[i]; if (!d.s || !alive(i)) continue;
     let bi = 0, bt = 0, ui = 0, ut = 0, ai = 0, at = 0, bo = 0, bot = 0;
     for (let q = 0; q < EIN[i].length; q += 2) { const j = EIN[i][q], k_ = EIN[i][q+1], on = alive(j);
-      at++; if (on) ai++; if (k_ === 1 || k_ === 4) { ut++; if (on) ui++; } if (k_ !== 1 && k_ !== 5) { bt++; if (on) bi++; } }
+      at++; if (on) ai++; if (k_ === 1 || k_ === 4 || k_ === 5) { ut++; if (on) ui++; } if (k_ !== 1 && k_ !== 5) { bt++; if (on) bi++; } }
     for (let q = 0; q < EOUT[i].length; q += 2) { const j = EOUT[i][q], k_ = EOUT[i][q+1]; if (k_ === 1 || k_ === 5) continue; bot++; if (alive(j)) bo++; }
     const f = (num, tot) => tot ? num/tot : 1;
     const a = Math.round(d.s[0]*f(bi, bt)), b = Math.round(d.s[1]*f(bo, bot)), u = Math.round(d.s[2]*f(ui, ut)), c = Math.round(d.s[3]*f(ai, at));
@@ -277,7 +277,7 @@ const AXES = {
   "p:w":   {name:"Length (words)", get:d => d.p && d.p.w, kind:"log", jit:.006},
   "p:kb":  {name:"Size (KB)", get:d => d.p && d.p.kb, kind:"log", jit:.006},
   "links": {name:"Links (in + out)", get:d => d.body_in + d.body_out, kind:"log", jit:.01},
-  "upin":  {name:"Uplinks (notes that link up to it)", get:d => d.up_in, kind:"log", jit:.01}};
+  "upin":  {name:"Uplinks (notes that link to it from a property)", get:d => d.up_in, kind:"log", jit:.01}};
 const axisHas = m => !!AXES[m] && N.some(d => { const v = AXES[m].get(d); return v != null && isFinite(v); });
 const XP = new Float32Array(n), X0P = 170;
 let PA = null;   // the active property axis: {ax, umin, umax}
@@ -1265,7 +1265,7 @@ function layoutQuin(){
 EXP.quincunx = {
   layout: layoutQuin,
   guides(){
-    const gd = sel >= 0 ? .5 : hover >= 0 ? .78 : 1;   // the 3D shapes dim a little while a note is picked, less than other maps do
+    const gd = GEO === "shells" ? (sel >= 0 ? .22 : hover >= 0 ? .55 : 1) : (sel >= 0 ? .5 : hover >= 0 ? .78 : 1);   // Shells has many more petals, so they fade further   // the 3D shapes dim a little while a note is picked, less than other maps do
     if (geo3On() && GEO === "shells") {   // two glass shells, and a petal from each note to the one it grows from
       const Q = G3P.map(p => g3Cam(p[0], p[1], p[2]));
       for (const [r, al] of [[QS*.5, .22], [QS, .16]]) { ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.globalAlpha = gd*al;
@@ -1625,6 +1625,10 @@ EXP.skyline = {
 // ---------- Linear: time drawn as lines ----------
 const yOf = t => new Date(t).getUTCFullYear(), yStart = y => Date.UTC(y, 0, 1), yFrac = t => { const y = yOf(t); return (t - yStart(y))/(yStart(y + 1) - yStart(y)); };
 function datedYears(){ let a = Infinity, b = -Infinity; for (let i=0;i<n;i++) if (vis[i] && !isNaN(TV[i])) { const y = yOf(TV[i]); if (y < a) a = y; if (y > b) b = y; } return isFinite(a) ? [a, b] : [NOW_Y, NOW_Y]; }
+// Spiral and Lifeline show a range of years (Layout → from – to); every year by default
+let LR = Array.isArray(pref("iv-lrange", null)) ? pref("iv-lrange", null) : null;
+function yearRange(){ const [a, b] = datedYears(); if (!LR) return [a, b]; const y0 = Math.max(a, Math.min(b, LR[0])), y1 = Math.max(y0, Math.min(b, LR[1])); return [y0, y1]; }
+const inRange = (i, y0, y1) => { const y = yOf(TV[i]); return y >= y0 && y <= y1; };
 const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // Linear Calendar: a year as twelve rows, one per month, each day a box; a month's first day sits under its own weekday,
@@ -1664,12 +1668,12 @@ EXP.lincal = {
 // lines up year after year. Maps and hubs sit on the line; the rest of each day's notes gather around it.
 const SPI = {R0: 240, G: 150};
 function layoutSpiral(){
-  for (let i=0;i<n;i++) RW[i] = RH[i] = 0; const [y0] = datedYears(); SPI.y0 = y0;
-  for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) { EHID[i] = 1; continue; }
+  for (let i=0;i<n;i++) RW[i] = RH[i] = 0; const [y0, y1r] = yearRange(); SPI.y0 = y0;
+  for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i]) || !inRange(i, y0, y1r)) { EHID[i] = 1; continue; }
     const f = yFrac(TV[i]), t = yOf(TV[i]) - y0 + f, a = -Math.PI/2 + 2*Math.PI*f, lv = N[i].level, h = hash(N[i].path, 151) - .5;
     const off = lv >= 3 ? 0 : lv === 2 ? h*SPI.G*.42 : (h < 0 ? -1 : 1)*SPI.G*(.32 + .12*Math.abs(h));   // unlinked notes drift to the edges of their band
     const r = SPI.R0 + t*SPI.G + off; EX[i] = Math.cos(a)*r; EY[i] = Math.sin(a)*r; }
-  const [, y1] = datedYears(), R1 = SPI.R0 + (y1 - y0 + 1)*SPI.G; SPI.y1 = y1; expBox = {x0: -R1 - 60, y0: -R1 - 60, x1: R1 + 60, y1: R1 + 60}; }
+  const y1 = y1r, R1 = SPI.R0 + (y1 - y0 + 1)*SPI.G; SPI.y1 = y1; expBox = {x0: -R1 - 60, y0: -R1 - 60, x1: R1 + 60, y1: R1 + 60}; }
 EXP.spiral = {
   layout: layoutSpiral,
   guides(){ const gd = sel >= 0 ? .5 : hover >= 0 ? .78 : 1, {R0, G, y0, y1} = SPI, turns = y1 - y0 + 1, R1 = R0 + turns*G;
@@ -1690,9 +1694,9 @@ EXP.spiral = {
 // the higher its level, the taller its stem. Unlinked notes hang just below the line.
 const LL = {pxYear: 900, base: 0};
 function layoutLifeline(){
-  for (let i=0;i<n;i++) RW[i] = RH[i] = 0; const [y0, y1] = datedYears(); LL.y0 = y0; LL.y1 = y1;
+  for (let i=0;i<n;i++) RW[i] = RH[i] = 0; const [y0, y1] = yearRange(); LL.y0 = y0; LL.y1 = y1;
   const f = Math.max(1, (y1 - y0 + 1)*LL.pxYear/2600), hgt = [0, -46, -120, -210, -290, -380].map(v => v*f); LL.f = f;   // stems grow with the span, so the line keeps its shape at any length
-  for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) { EHID[i] = 1; continue; } const lv = N[i].level, h = hash(N[i].path, 157);
+  for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i]) || !inRange(i, y0, y1)) { EHID[i] = 1; continue; } const lv = N[i].level, h = hash(N[i].path, 157);
     EX[i] = (yOf(TV[i]) - y0 + yFrac(TV[i]))*LL.pxYear; EY[i] = lv === 1 ? (26 + 30*h)*f : hgt[lv] - (lv === 2 ? 60*h : 30*h)*f; }
   expBox = {x0: -40, y0: -430*f, x1: (y1 - y0 + 1)*LL.pxYear + 40, y1: 110*f}; }
 EXP.lifeline = {
@@ -1706,7 +1710,7 @@ EXP.lifeline = {
     for (let y = y0; y <= y1 + 1; y++) { const x = sx((y - y0)*pxYear); ctx.strokeStyle = css.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, by - 8); ctx.lineTo(x, by + 8); ctx.stroke();
       if (y <= y1) { ctx.font = `600 13px ${css.mono}`; ctx.fillStyle = css.accent; ctx.fillText(String(y), x + pxYear*k/2, by + 78); }
       if (y <= y1 && pxYear*k > 260) { ctx.font = `500 9.5px ${css.mono}`; ctx.fillStyle = css.muted; ctx.lineWidth = 1; ctx.strokeStyle = css.line; for (let m = 1; m < 12; m++) { const xm = x + m/12*pxYear*k; ctx.beginPath(); ctx.moveTo(xm, by - 4); ctx.lineTo(xm, by + 4); ctx.stroke(); } for (let m = 0; m < 12; m++) ctx.fillText(MON3[m], x + (m + .5)/12*pxYear*k, by + 62); } }
-    const tn = (Date.now() - yStart(y0))/(365.2425*DAY); if (tn > 0) { ctx.fillStyle = css.accent; ctx.beginPath(); ctx.arc(sx(tn*pxYear), by, 5, 0, 6.2832); ctx.fill(); }
+    const tn = (Date.now() - yStart(y0))/(365.2425*DAY); if (tn > 0 && tn < y1 - y0 + 1) { ctx.fillStyle = css.accent; ctx.beginPath(); ctx.arc(sx(tn*pxYear), by, 5, 0, 6.2832); ctx.fill(); }
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
   legend: "Lifeline: your whole ideaverse on one line, left to right. Each note stands on it like a mark on a seismograph: the higher its level, the taller its stem (hubs tallest). Unlinked notes hang just below the line. The gold dot is today.",
 };
@@ -2625,7 +2629,8 @@ const end = e => { pts.delete(e.pointerId);
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hover = -1; shTape = -1; draw(); } tip.hidden = true; });
 function zoomAt(px, py, f){ if (domeOn() || sphOn()) { px = tx; py = ty; }   // a dome zooms about where you're looking
-  const lo = view === "stars" ? .04 : domeOn() ? .3 : .15, nk = Math.min(40, Math.max(expOn() ? Math.min(lo, fitTarget().k*.6) : lo, k*f));   // big maps (a long Spiral or Lifeline) can always zoom out past their whole picture f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
+  // big maps (a long Spiral or Lifeline) can always zoom out past their whole picture
+  const lo = view === "stars" ? .04 : domeOn() ? .3 : .15, nk = Math.min(40, Math.max(expOn() ? Math.min(lo, fitTarget().k*.6) : lo, k*f)); f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
 cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
   if (view === "lincal" && LCALL && !e.ctrlKey && !e.metaKey && !e.shiftKey && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) { ty -= e.deltaY*(e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }   // all years: the wheel scrolls through them (⌘ or ctrl + wheel, or a pinch, zooms)
   if (!e.ctrlKey && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {   // shift + wheel (or a sideways swipe) pans left and right
@@ -2705,7 +2710,7 @@ function select(i, fromTrail){
   html(drawer).v = `<button class="x" id="dx">Close</button><button class="x dcol" id="dcol" title="Tuck the panel away; the note stays selected">›</button>
     <h2>${esc(d.title)}</h2><div class="path">${esc(d.path)}${d.date ? " · " + esc(d.date) : ""}</div>
     <div class="lvl">Level ${d.level} · ${esc(LV[d.level].name)}</div>${axisValue(d) ? `<div class="lvl axv">${esc(axisValue(d))}</div>` : ""}${d.archive ? `<div class="lvl" style="margin-left:6px">Archive</div>` : ""}${view === "arc" ? `<div class="lvl axv" title="${esc(ARW[i])}">ARC · ${ARC_L[ARS[i]].name} · ${esc(ARW[i])}</div>` : ""}${view === "chord" ? `<div class="lvl axv">◯ ${esc(CHCAT[CHC[i]].short)}</div>` : ""}${view === "stars" && BOD[i] >= 0 ? `<div class="lvl axv">✦ ${esc(bodyLabel(i))}</div>` : ""}
-    <div class="nums"><div><b>${d.body_in}</b><span>linked from</span></div><div><b>${d.body_out}</b><span>links to</span></div><div><b>${d.up_in}</b><span>link up to it</span></div><div><b>${d.score.toFixed(1)}</b><span>link score</span></div></div>
+    <div class="nums"><div><b>${d.body_in}</b><span>linked from</span></div><div><b>${d.body_out}</b><span>links to</span></div><div><b>${d.up_in}</b><span>via properties</span></div><div><b>${d.score.toFixed(1)}</b><span>link score</span></div></div>
     ${whyBox(i)}<button class="open" id="dopen" title="Open the note (Cmd/Ctrl-click: in a new tab)">Open note</button><button class="focusbtn" id="dfocus">${focus === i ? "Exit focus" : "Focus on its links"}</button>
     ${up.length || down.length ? `<div class="lgrp" title="Links in the body of the note, placed by emergence level">Emergence</div>` : ""}
     ${up.length ? `<h5><i style="border-color:var(--up)"></i>Above · ${up.length}</h5>${noteList(up)}` : ""}
@@ -2760,9 +2765,9 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", lcv = view === "lincal", pgv = view === "planet", csv = csphOn(), lay = sv || shv || tmv || lcv || pgv || csv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), lay = sv || shv || tmv || lcv || lrv || pgv || csv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); $("#laygrp").previousElementSibling.hidden = !lay;
-  if (lay) { $("#startms").hidden = sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || pgv || csv || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); }
+  if (lay) { $("#startms").hidden = sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || pgv || csv || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); }
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -2901,6 +2906,10 @@ root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if 
 syncEmd();
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
 $("#gochord").onclick = () => goChord("");
+function syncLR(){ const [a, b] = datedYears(), [y0, y1] = yearRange(), opts = sel_ => Array.from({length: b - a + 1}, (_, j) => a + j).map(y => `<option value="${y}"${y === sel_ ? " selected" : ""}>${y}</option>`).join("");
+  html($("#lr0")).v = opts(y0); html($("#lr1")).v = opts(y1); }
+for (const id of ["#lr0", "#lr1"]) $(id).onchange = () => { let y0 = +$("#lr0").value, y1 = +$("#lr1").value; if (id === "#lr0" && y1 < y0) y1 = y0; if (id === "#lr1" && y0 > y1) y0 = y1;
+  const [a, b] = datedYears(); LR = y0 === a && y1 === b ? null : [y0, y1]; save("iv-lrange", LR); syncLR(); if (view === "spiral" || view === "lifeline") morph(true, () => fitTarget()); };
 function syncLC(){ root.querySelectorAll("#lcseg button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.ly === "all") === LCALL))); $("#lcyear").textContent = LCALL ? "All years" : String(LCY || NOW_Y); $("#lcprev").disabled = $("#lcnext").disabled = LCALL; }
 root.querySelectorAll("#lcseg button").forEach(b => b.onclick = () => { LCALL = b.dataset.ly === "all"; save("iv-lcall", LCALL); syncLC(); if (view === "lincal") morph(true, () => fitTarget()); });
 for (const [id, d] of [["#lcprev", -1], ["#lcnext", 1]]) $(id).onclick = () => { const [a, b] = datedYears(); LCY = Math.max(a, Math.min(b, (LCY || NOW_Y) + d)); save("iv-lcyear", LCY); syncLC(); if (view === "lincal") morph(true, () => fitTarget()); };
@@ -2935,7 +2944,7 @@ const SROWS = [
   {key:"w.in", label:"Links in", hint:"Other notes link to it in their text. The clearest sign of a hub: other notes point here.", min:0, max:2, step:.05},
   {key:"w.out", label:"Links out", hint:"It links out in its own text. Lifts maps and indexes, and also busy notes like monthly reviews that link every daily note.", min:0, max:2, step:.05},
   {key:"w.both", label:"Links both in and out", hint:"A bonus only when a note has links in AND out (zero if either side is zero). Rewards notes woven into the web over pure lists or pure targets.", min:0, max:2, step:.05},
-  {key:"w.up", label:"Notes that link up to it", hint:"Uplinks: notes that name it in their up or related property. Lifts the parent of a series: a year above its months, a project above its notes.", min:0, max:2, step:.05},
+  {key:"w.up", label:"Notes that link to it from a property", hint:"Uplinks: notes that name it in a property (up, related, or any other). Lifts the parent of a series: a year above its months, a project above its notes.", min:0, max:2, step:.05},
   {key:"w.coll", label:"Notes in its collection", hint:"Notes that list it in their collections, which makes it a collection note (Maps, People, Reviews…). Off by default: big collections are named by hundreds of notes and would swamp everything.", min:0, max:2, step:.05},
   {h:"Where the levels start"},
   {key:"top", label:"Level 5: top notes by score", hint:"The highest-scoring notes join the home notes at the top. Raising it fills Level 5 from Level 4 down.", min:0, max:100, step:1},

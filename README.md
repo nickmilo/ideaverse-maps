@@ -56,7 +56,7 @@ Press ▶ on the timeline to replay your vault by month or by week. New notes ar
 | 2 | Linked notes | it has any link in or out |
 | 1 | Unlinked notes | no links yet |
 
-The score counts links in, links out, links both ways, and uplinks (the `up` and `related` properties), each with diminishing returns. Open **Scoring** on the map to change the weights and watch notes move. Click any note to see exactly why it sits where it does.
+The score counts links in, links out, links both ways, and links from properties (`up`, `related`, or any other property with a [[link]] in it), each with diminishing returns. A note linked only through its properties still counts as linked. Open **Scoring** on the map to change the weights and watch notes move. Click any note to see exactly why it sits where it does.
 
 ## Using it
 
