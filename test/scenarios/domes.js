@@ -20,6 +20,12 @@ module.exports = async ({ page, sleep, shot }) => {
   await menu('#gogrd'); await shot('dome-gr');
   await drag(0, 250); await shot('dome-gr-up');
   await page.mouse.wheel(0, -400); await sleep(800); await shot('dome-gr-zoom');
+  await menu('#goemt'); await shot('dome-em-time');
+  await drag(0, 500); await shot('dome-em-time-up');
+  await menu('#goema'); await shot('dome-em-ace');
+  console.log('emergence ace dome:', await page.evaluate(() => document.querySelector('.ivm').dataset.dome), await q('#xseg button[data-x="ace"]').getAttribute('aria-pressed'));
+  await q('#vseg button[data-v="emergence"]').click(); await sleep(1500);
+  console.log('after Emergence tab, dome attr:', JSON.stringify(await page.evaluate(() => document.querySelector('.ivm').dataset.dome)));
   await q('#vseg button[data-v="gravity"]').click(); await sleep(2000);
   console.log('after Gravity tab, dome attr:', JSON.stringify(await page.evaluate(() => document.querySelector('.ivm').dataset.dome))); await shot('gr-flat');
 };
