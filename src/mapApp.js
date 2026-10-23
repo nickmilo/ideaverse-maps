@@ -1094,7 +1094,14 @@ function csStroke(pts){ let on = false; for (const p of pts) { if (p[2] && CSPH 
 function csGuides(){
   const cx = sx(0), cy = sy(0), rs = CS_R*k*CS_D/Math.sqrt(CS_D*CS_D - CS_R*CS_R);
   ctx.beginPath(); ctx.arc(cx, cy, rs, 0, 6.2832);
-  if (CSPH === "out") { const g = ctx.createRadialGradient(cx - rs*.3, cy - rs*.3, rs*.1, cx, cy, rs); g.addColorStop(0, css.panel); g.addColorStop(1, css.bg); ctx.fillStyle = g; ctx.globalAlpha = .9; ctx.fill(); }
+  if (CSPH === "out") {   // a lit globe: a faint atmosphere around the rim, soft light from the upper left, the far side in shade
+    const tr = (c, al) => { const m = /rgba?\(([^)]+)\)/.exec(c); if (!m) return c; const v = m[1].split(",").slice(0, 3).join(","); return `rgba(${v},${al})`; };
+    const halo = ctx.createRadialGradient(cx, cy, rs*.97, cx, cy, rs*1.16); halo.addColorStop(0, tr(css.accent, .22)); halo.addColorStop(1, tr(css.accent, 0));
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx, cy, rs*1.16, 0, 6.2832); ctx.fill();
+    const g = ctx.createRadialGradient(cx - rs*.4, cy - rs*.45, 0, cx - rs*.15, cy - rs*.15, rs*1.15);
+    g.addColorStop(0, tr(css.ink, .16)); g.addColorStop(.45, tr(css.ink, .05)); g.addColorStop(1, tr(css.ink, 0));
+    ctx.beginPath(); ctx.arc(cx, cy, rs, 0, 6.2832); ctx.fillStyle = css.bg; ctx.globalAlpha = .85; ctx.fill(); ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fill();
+    const rim = ctx.createRadialGradient(cx, cy, rs*.82, cx, cy, rs); rim.addColorStop(0, tr(css.accent, 0)); rim.addColorStop(1, tr(css.accent, .10)); ctx.fillStyle = rim; ctx.fill(); }
   ctx.globalAlpha = .6; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
   // each kind's wedge: its colored belt along the equator, and its edge from pole to pole
   ctx.lineCap = "butt";
