@@ -471,7 +471,7 @@
 .ivm .tgrip:hover,.ivm .tgrip.on{background:linear-gradient(var(--accent),var(--accent)) top/100% 2px no-repeat}
 
 .ivm #driftseg .dearth{display:none}
-.ivm[data-view="chord"] #driftseg .dearth,.ivm[data-view="planet"] #driftseg .dearth{display:inline-block}
+.ivm[data-view="chord"] #driftseg .dearth,.ivm[data-view="planet"] #driftseg .dearth,.ivm[data-view="quincunx"] #driftseg .dearth,.ivm[data-view="stars"] #driftseg .dearth{display:inline-block}
 
 .ivm .legend .lgabout{margin-top:6px;max-width:300px;white-space:normal;cursor:default}
 .ivm .legend .lgabout summary{cursor:pointer;color:var(--accent)}
