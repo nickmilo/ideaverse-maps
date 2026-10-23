@@ -1217,7 +1217,8 @@ const SB = {W: 1500, gap: 140, SH: 100, board: 14};
 let SHELF = {rows: [], secs: [], calls: []};
 function layoutShelf(){
   const rows = [], secs = [], calls = []; for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
-  const right = i => ARCH[i] || ["Calendar", "Efforts", "+", "x"].includes(N[i].ace);
+  const right = i => ARCH[i] || ["Calendar", "Efforts", "x"].includes(N[i].ace);
+  const topOf = i => N[i].ace === "(root)" || N[i].ace === "+" ? "Root / +" : N[i].ace;   // the vault's top level and + share one shelf, above Atlas
   const width = i => (N[i].level >= 3 ? 3 : 0) + 2 + 2.6*Math.log10(1 + ((N[i].p && N[i].p.w) || 0)/40);
   const height = i => { const lv = N[i].level, h = hash(N[i].path, 41); return SB.SH*(lv === 5 ? .97 : lv === 4 ? .9 : lv === 3 ? .82 : lv === 2 ? .6 + .14*h : .5 + .1*h); };
   for (const [bay, x0] of [[0, 0], [1, SB.W + SB.gap]]) {
@@ -1229,10 +1230,12 @@ function layoutShelf(){
     const section = (label) => { newRow(); secs.push({label, x: x0, y: baseY(row) - SB.SH - 4}); };
     if (bay === 0) {
       const ok = i => !right(i), G = mapGroups(ok), mapRank = new Map(G.maps.map((m, j) => [m, j])), hubRank = new Map(G.hubs.map((h_, j) => [h_, j]));
-      const tops = [...new Set(N.map((d, i) => vis[i] && ok(i) ? (d.ace === "(root)" ? "(root)" : d.ace) : null).filter(Boolean))].sort((a, b) => (a === "Atlas" ? -1 : b === "Atlas" ? 1 : a === "(root)" ? 1 : b === "(root)" ? -1 : a.localeCompare(b)));
+      const rank_ = t => t === "Root / +" ? 0 : t === "Atlas" ? 1 : 2;
+      const tops = [...new Set(N.map((d, i) => vis[i] && ok(i) ? topOf(i) : null).filter(Boolean))].sort((a, b) => rank_(a) - rank_(b) || a.localeCompare(b));
       for (const top of tops) {
-        const ids = []; for (let i=0;i<n;i++) if (vis[i] && ok(i) && (N[i].ace === top)) ids.push(i);
-        if (!ids.length) continue; section(top === "(root)" ? "Root" : top);
+        const ids = []; for (let i=0;i<n;i++) if (vis[i] && ok(i) && topOf(i) === top) ids.push(i);
+        if (!ids.length) continue; section(top);
+        if (top === "Root / +") { ids.sort((a, b) => (isNaN(TV[a]) ? -Infinity : TV[a]) - (isNaN(TV[b]) ? -Infinity : TV[b])); for (const i of ids) put(i, N[i].level === 1); continue; }   // the inbox: by date, unlinked notes leaning
         const key = i => { const m = G.map[i], hb = G.hub[i]; return [hb >= 0 ? hubRank.get(hb) ?? 999 : 999, m >= 0 ? mapRank.get(m) : 1e6, m === i ? -1 : 0, isNaN(TV[i]) ? 0 : TV[i]]; };
         const shelved = ids.filter(i => G.map[i] >= 0).sort((a, b) => { const p = key(a), q = key(b); for (let j = 0; j < 4; j++) if (p[j] !== q[j]) return p[j] - q[j]; return 0; });
         const loose = ids.filter(i => G.map[i] < 0).sort((a, b) => (TV[a] || 0) - (TV[b] || 0));
@@ -1244,7 +1247,7 @@ function layoutShelf(){
         if (loose.length) { x += 10; for (const i of loose) put(i, true); }
       }
     } else {
-      const groups = [["Calendar", i => !ARCH[i] && N[i].ace === "Calendar"], ["Efforts", i => !ARCH[i] && N[i].ace === "Efforts"], ["+", i => !ARCH[i] && N[i].ace === "+"], ["x", i => !ARCH[i] && N[i].ace === "x"], ["Archive", i => !!ARCH[i]]];
+      const groups = [["Calendar", i => !ARCH[i] && N[i].ace === "Calendar"], ["Efforts", i => !ARCH[i] && N[i].ace === "Efforts"], ["x", i => !ARCH[i] && N[i].ace === "x"], ["Archive", i => !!ARCH[i]]];
       for (const [label, f] of groups) { const ids = []; for (let i=0;i<n;i++) if (vis[i] && f(i)) ids.push(i); if (!ids.length) continue;
         ids.sort((a, b) => (isNaN(TV[a]) ? -Infinity : TV[a]) - (isNaN(TV[b]) ? -Infinity : TV[b])); section(label);
         let lastY = null; for (const i of ids) { const y = isNaN(TV[i]) ? "?" : new Date(TV[i]).getUTCFullYear(); if (y !== lastY) { lastY = y; x += 6; put(i); calls.push({x: RX[i], y: RY[i] + RH[i], t: String(y), i}); continue; } put(i); } }
@@ -1274,7 +1277,7 @@ EXP.shelf = {
     for (const s of SHELF.secs) { const x = sx(s.x), y = sy(s.y); if (y < -20 || y > H + 20) continue; ctx.font = `600 ${k > .8 ? 12 : 10}px ${css.mono}`; ctx.fillStyle = css.accent; const t = s.label.toUpperCase(); ctx.strokeText(t, x + 2, y); ctx.fillText(t, x + 2, y); }
     if (k > 1.6) { ctx.font = `500 9.5px ${css.mono}`; ctx.fillStyle = css.muted; for (const c of SHELF.calls) { const x = sx(c.x), y = sy(c.y) + 11; if (x < -20 || x > W || y < 0 || y > H + 12) continue; ctx.strokeText(c.t, x, y); ctx.fillText(c.t, x, y); } } },
   ownLabels: true,
-  legend: "Bookshelf: left bay, knowledge, shelved by your own call numbers (hub.map): each map is a bookend holding the notes it reaches first; unlinked notes lean at the end. Right bay: Calendar by year, then Efforts, +, x. Spine width is words, height is level; maps and hubs wear their level colors.",
+  legend: "Bookshelf: left bay, knowledge, shelved by your own call numbers (hub.map): each map is a bookend holding the notes it reaches first; unlinked notes lean at the end. Root and + share the top shelf of the left bay. Right bay: Calendar by year, then Efforts and x. Spine width is words, height is level; maps and hubs wear their level colors.",
 };
 
 // ---------- Tree: Home is the trunk, the hubs and maps branch from it, notes are leaves ----------
