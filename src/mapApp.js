@@ -1154,7 +1154,7 @@ const hexHsl = (hex, dl, ds) => { const m = /^#?(..)(..)(..)$/.exec(hex || "#888
 const aceHue = d => CH_HUE[d.archive ? "x" : d.ace] || "#7a8a99";
 function lvFill(i, x, y, r){ const lv = N[i].level; if (lv < 3) return lv === 2 ? css.l2 : css.l1; const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r); g.addColorStop(0, GRAD[lv][0]); g.addColorStop(1, GRAD[lv][1]); return g; }
 function rectPick(x, y){ let best = -1, ba = Infinity;   // the smallest rectangle under the point
-  for (let i=0;i<n;i++) { if (!RW[i] || !VV(i)) continue; if (x >= RX[i] && x <= RX[i] + RW[i] && y >= RY[i] && y <= RY[i] + RH[i]) { const a = RW[i]*RH[i]; if (a < ba) { ba = a; best = i; } } }
+  for (let i=0;i<n;i++) { if (!RW[i] || !VV(i)) continue; const h = Math.abs(RH[i]); if (x >= RX[i] - (RH[i] < 0 ? 2 : 0) && x <= RX[i] + RW[i] + (RH[i] < 0 ? h*.22 : 0) && y >= RY[i] && y <= RY[i] + h) { const a = RW[i]*h; if (a < ba) { ba = a; best = i; } } }
   return best; }
 // nearest map for every note (maps: Level 3 and up), and the hub each map belongs to, within the notes ok() allows
 function mapGroups(ok){
@@ -1214,10 +1214,17 @@ EXP.quincunx = {
 // that holds its notes; unlinked notes lean at the end. Right bay: Calendar by date, then Efforts, +, x and the archive.
 // Spine width is words, height is level; maps and hubs wear their level colors.
 const SB = {W: 1500, gap: 140, SH: 100, board: 14};
-let SHELF = {rows: [], secs: [], calls: []};
-let shelfSort = ["call", "az", "created", "modified"].includes(pref("iv-ssort", "call")) ? pref("iv-ssort", "call") : "call";
+let SHELF = {rows: [], secs: [], calls: [], ghosts: []};
+// Bookshelf highlights: areas and projects picked in the Efforts panel light up their own notes (the effort and every note linked to it) in a color each
+let shelfHi = Array.isArray(pref("iv-shelfhi", null)) ? pref("iv-shelfhi", null) : [];
+const HI_COL = ["#f2c14e", "#e8538a", "#4fc3ef", "#3ddc84", "#ff8a3d", "#b18cff", "#c9cf3c", "#ef6a4f"];
+let hiCache = null;
+function shelfHiMap(){ if (hiCache) return hiCache; const m = new Map();
+  shelfHi.forEach((p, j) => { const i = N.findIndex(d => d.path === p); if (i < 0) return; const c = HI_COL[j % HI_COL.length]; for (const x of [i, ...out[i], ...inn[i]]) if (!m.has(x)) m.set(x, c); });
+  return hiCache = m; }
+let shelfSort = ["call", "az", "created", "modified", "folder"].includes(pref("iv-ssort", "call")) ? pref("iv-ssort", "call") : "call";
 function layoutShelf(){
-  const rows = [], secs = [], calls = []; for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
+  const rows = [], secs = [], calls = [], ghosts = []; for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
   const right = i => ARCH[i] || ["Calendar", "Efforts", "x"].includes(N[i].ace);
   const topOf = i => N[i].ace === "(root)" || N[i].ace === "+" ? "Root / +" : N[i].ace;   // the vault's top level and + share one shelf, above Atlas
   const width = i => (N[i].level >= 3 ? 3 : 0) + 2 + 2.6*Math.log10(1 + ((N[i].p && N[i].p.w) || 0)/40);
@@ -1230,8 +1237,9 @@ function layoutShelf(){
       RX[i] = x; RW[i] = w; RH[i] = h; RY[i] = by - h; EX[i] = x + w/2; EY[i] = by - h*.5; x += w + .6; used = true; if (lean) RH[i] = -h; };
     const section = (label) => { newRow(); secs.push({label, x: x0, y: baseY(row) - SB.SH - 4}); };
     // Shelve by A–Z, Created or Modified: one run per section, with a marker where the letter or year changes
-    const sorted = ids => { const tk = i => shelfSort === "az" ? N[i].title.toLowerCase() : shelfSort === "modified" ? (N[i].mt || 0) : (isNaN(TV[i]) ? -Infinity : TV[i]);
-      const mk = i => shelfSort === "az" ? (N[i].title[0] || "?").toUpperCase() : shelfSort === "modified" ? (N[i].mt ? String(new Date(N[i].mt).getUTCFullYear()) : "?") : (isNaN(TV[i]) ? "?" : String(new Date(TV[i]).getUTCFullYear()));
+    const subOf = i => { const sb = N[i].sub || ""; return sb.includes("/") ? sb.slice(sb.indexOf("/") + 1) : ""; };
+    const sorted = ids => { const tk = i => shelfSort === "az" ? N[i].title.toLowerCase() : shelfSort === "modified" ? (N[i].mt || 0) : shelfSort === "folder" ? subOf(i).toLowerCase() + "\u0000" + String(isNaN(TV[i]) ? 0 : TV[i]).padStart(16, "0") : (isNaN(TV[i]) ? -Infinity : TV[i]);
+      const mk = i => shelfSort === "folder" ? (subOf(i) || "(top)") : shelfSort === "az" ? (N[i].title[0] || "?").toUpperCase() : shelfSort === "modified" ? (N[i].mt ? String(new Date(N[i].mt).getUTCFullYear()) : "?") : (isNaN(TV[i]) ? "?" : String(new Date(TV[i]).getUTCFullYear()));
       ids.sort((a, b) => { const p = tk(a), q = tk(b); return p < q ? -1 : p > q ? 1 : 0; }); let last = null;
       for (const i of ids) { const m = mk(i); if (m !== last) { last = m; x += 6; put(i, N[i].level === 1); calls.push({x: RX[i], y: RY[i] + Math.abs(RH[i]), t: m, i}); continue; } put(i, N[i].level === 1); } };
     if (bay === 0) {
@@ -1249,7 +1257,9 @@ function layoutShelf(){
         let lastMap = -2, hubN = 0, mapN = 0, noteN = 0, lastHub = -2;
         for (const i of shelved) { const m = G.map[i], hb = G.hub[i];
           if (hb !== lastHub) { lastHub = hb; hubN++; mapN = 0; }
-          if (m !== lastMap) { lastMap = m; mapN++; noteN = 0; x += 4; put(i); calls.push({x: RX[i], y: RY[i] + RH[i], t: `${hubN}.${mapN}`, i}); continue; }
+          if (m !== lastMap) { lastMap = m; mapN++; noteN = 0; x += 4;
+            if (m !== i) { const gw = width(m), gh = height(m); if (x + gw > x0 + SB.W) { row++; x = x0; } ghosts.push({m, x, w: gw, h: gh, by: baseY(row)}); calls.push({x, y: baseY(row), t: `${hubN}.${mapN}`, i: m}); x += gw + .6; used = true; put(i); continue; }   // the map lives on another shelf: a ghost of it starts the run
+            put(i); calls.push({x: RX[i], y: RY[i] + RH[i], t: `${hubN}.${mapN}`, i}); continue; }
           noteN++; put(i); }
         if (loose.length) { x += 10; for (const i of loose) put(i, true); }
       }
@@ -1261,7 +1271,7 @@ function layoutShelf(){
     }
     rows.push({bay, x0, n: row + 1, baseY});
   }
-  SHELF = {rows, secs, calls}; expBounds(40); }
+  SHELF = {rows, secs, calls, ghosts}; expBounds(40); }
 EXP.shelf = {
   layout: layoutShelf, pick: (x, y) => rectPick(x, y), spinePick: true,
   guides(){ ctx.fillStyle = css.panel; ctx.strokeStyle = css.line;
@@ -1270,10 +1280,14 @@ EXP.shelf = {
       ctx.fillStyle = css.line; for (let j = 0; j < r.n; j++) { const y = sy(r.baseY(j)); ctx.fillRect(x0, y, w, Math.max(1.5, SB.board*k*.6)); } ctx.fillStyle = css.panel; } },
   notes(lit, dim){
     const ws = k;
+    for (const g of SHELF.ghosts || []) { const x = sx(g.x), w = Math.max(.6, g.w*k), h = g.h*k, by = sy(g.by); if (x > W + 10 || x + w < -10 || by < -10 || by - h > H + 10) continue;   // ghost bookends: the map that holds this run lives on another shelf
+      ctx.globalAlpha = .55; ctx.strokeStyle = GRAD[Math.max(3, N[g.m].level)][0]; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.strokeRect(x + .5, by - h + .5, w - 1, h - 1); ctx.setLineDash([]);
+      if (w >= 9 && h > 40) { ctx.save(); ctx.translate(x + w/2, by - 4); ctx.rotate(-Math.PI/2); ctx.fillStyle = css.muted; ctx.font = `italic 500 ${Math.min(11, w*.7)}px ${css.body}`; ctx.textBaseline = "middle"; let t = "→ " + N[g.m].title; const mw = h - 10; while (t.length > 4 && ctx.measureText(t).width > mw) t = t.slice(0, -2); ctx.fillText(t, 0, 0); ctx.restore(); } }
+    ctx.globalAlpha = 1;
     for (let i=0;i<n;i++) { if (!RW[i] || !VV(i)) continue; const x = sx(RX[i]), w = Math.max(.6, RW[i]*ws), h = Math.abs(RH[i])*k, by = sy(RY[i] + Math.abs(RH[i]));
       if (x > W + 10 || x + w < -10 || by < -10 || by - h > H + 10) continue;
-      const d = N[i]; ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .22 : .7) : 1;
-      ctx.fillStyle = d.level >= 3 ? lvFill(i, x, by - h, Math.max(w, h)) : hexHsl(aceHue(d), (hash(d.sub || d.ace, 3) - .5)*.2 + (hash(d.path, 5) - .5)*.12 - (d.level === 1 ? .08 : 0), d.level === 1 ? -.25 : 0);
+      const d = N[i], HI = shelfHi.length ? shelfHiMap() : null, hc = HI && HI.get(i); ctx.globalAlpha = (lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .22 : .7) : 1)*(HI && !hc ? .3 : 1);
+      ctx.fillStyle = hc ? hc : d.level >= 3 ? lvFill(i, x, by - h, Math.max(w, h)) : hexHsl(aceHue(d), (hash(d.sub || d.ace, 3) - .5)*.2 + (hash(d.path, 5) - .5)*.12 - (d.level === 1 ? .08 : 0), d.level === 1 ? -.25 : 0);
       if (RH[i] < 0) { ctx.save(); ctx.translate(x, by); ctx.rotate(.22); ctx.fillRect(0, -h, w, h); ctx.restore(); continue; }   // unlinked: leaning
       ctx.fillRect(x, by - h, w, h);
       if (d.level >= 3 && w > 1.5) { ctx.fillStyle = css.ink; ctx.globalAlpha *= .8; ctx.fillRect(x - 2*k, by - h*.55, Math.max(1, 1.6*k), h*.55); }   // the bookend
@@ -1284,7 +1298,15 @@ EXP.shelf = {
     for (const s of SHELF.secs) { const x = sx(s.x), y = sy(s.y); if (y < -20 || y > H + 20) continue; ctx.font = `600 ${k > .8 ? 12 : 10}px ${css.mono}`; ctx.fillStyle = css.accent; const t = s.label.toUpperCase(); ctx.strokeText(t, x + 2, y); ctx.fillText(t, x + 2, y); }
     if (k > 1.6) { ctx.font = `500 9.5px ${css.mono}`; ctx.fillStyle = css.muted; for (const c of SHELF.calls) { const x = sx(c.x), y = sy(c.y) + 11; if (x < -20 || x > W || y < 0 || y > H + 12) continue; ctx.strokeText(c.t, x, y); ctx.fillText(c.t, x, y); } } },
   ownLabels: true,
-  legend: "Bookshelf: Layout → Shelve by Call no., A–Z, Created or Modified. By call number, the left bay (knowledge) is shelved by your own call numbers (hub.map): each map is a bookend holding the notes it reaches first; unlinked notes lean at the end. Root and + share the top shelf of the left bay. Right bay: Calendar by year, then Efforts and x. Spine width is words, height is level; maps and hubs wear their level colors.",
+  about: [
+    "Call numbers (hub.map). Every note belongs to the Level 5 hub it reaches in the fewest links, and to the map (Level 3 or higher) it reaches in the fewest links. 2.18 is the second hub's 18th map. Hubs and maps are numbered by score.",
+    "Runs. A run is the notes one map gathers, in the order they were created. The map's own tall spine starts its run, with a thin bookend before it. When the map lives in another folder, a dashed ghost spine (→ its name) starts the run instead.",
+    "Spines. Height is the Idea Emergence level: hubs and maps stand tallest and wear their level colors; linked notes are shorter. Width is word count. Unlinked notes lean at the end of each section.",
+    "Sections. Each top folder has its own section: Root and + on the top shelf, then Atlas and the rest on the left; Calendar, Efforts and x on the right.",
+    "Shelve by (under Layout): Call no., A–Z, Created, Modified or Subfolder. The others ignore maps and mark each new letter, year or subfolder.",
+    "Light up areas and projects: open Efforts and pick any. Each one and every note linked to it glows in its own color; the rest of the shelf dims.",
+  ],
+  legend: "Bookshelf: every note as a book, shelved by your own call numbers. Tall spines are maps and hubs; unlinked notes lean.",
 };
 
 // ---------- Tree: Home is the trunk, the hubs and maps branch from it, notes are leaves ----------
@@ -2540,9 +2562,13 @@ function renderEffList(){
   const s = ($("#effq").value || "").trim().toLowerCase();
   html($("#efflist")).v = EFF.map(([name, ids]) => {
     const m = ids.filter(i => !s || N[i].title.toLowerCase().includes(s)); if (!m.length) return "";
-    return `<h6><span>${esc(name)}</span><span>${m.length}</span></h6><ul>${m.map(i => `<li><button data-ef="${i}" class="${i === focus ? "on" : ""}">${lvDot(i).replace('class="lv', 'class="lv')}<span class="t">${esc(N[i].title)}</span><span class="m">${linkCount(i)}</span></button></li>`).join("")}</ul>`;
+    const hiOn = i => view === "shelf" && shelfHi.includes(N[i].path), hiDot = i => hiOn(i) ? `<i class="hidot" style="background:${HI_COL[shelfHi.indexOf(N[i].path) % HI_COL.length]}"></i>` : "";
+    return `<h6><span>${esc(name)}</span><span>${m.length}</span></h6><ul>${m.map(i => `<li><button data-ef="${i}" class="${(view === "shelf" ? hiOn(i) : i === focus) ? "on" : ""}">${hiDot(i)}${lvDot(i).replace('class="lv', 'class="lv')}<span class="t">${esc(N[i].title)}</span><span class="m">${linkCount(i)}</span></button></li>`).join("")}</ul>`;
   }).join("") || `<p class="pn">No match.</p>`;
-  $("#efflist").querySelectorAll("[data-ef]").forEach(b => b.onclick = () => { setFocus(+b.dataset.ef); if (isPhone()) closeEff(); });
+  $("#efflist").querySelectorAll("[data-ef]").forEach(b => b.onclick = () => {
+    if (view === "shelf") { const p = N[+b.dataset.ef].path; shelfHi = shelfHi.includes(p) ? shelfHi.filter(x => x !== p) : [...shelfHi, p]; save("iv-shelfhi", shelfHi); hiCache = null; renderEffList(); legend(); draw(); return; }   // Bookshelf: light up, don't filter
+    setFocus(+b.dataset.ef); if (isPhone()) closeEff(); });
+  const pn = $("#effpanel").querySelector(".pn"); if (pn) pn.textContent = view === "shelf" ? "Bookshelf: pick areas and projects to light up their notes on the shelves, each in its own color. Pick again to turn one off." : "Pick an area or project to see only the notes it's linked to.";
 }
 function closeEff(){ $("#effpanel").hidden = true; $("#effbtn").setAttribute("aria-expanded", "false"); }
 $("#effbtn").onclick = e => { const p = $("#effpanel"); p.hidden = !p.hidden; e.currentTarget.setAttribute("aria-expanded", String(!p.hidden)); if (!p.hidden) { $("#scorepanel").hidden = true; renderEffList(); } };
@@ -2705,6 +2731,10 @@ function legend(){
   }).join("") + (showArch && hasArch ? `<div><i style="background:none;border:1.5px solid ${css.muted}"></i>Archive (rings)</div>` : "") + `<div style="margin-top:4px"><i class="ln" style="border-color:${css.up}"></i>links above</div><div><i class="ln" style="border-color:${css.down}"></i>links below</div>` + (linkCol === "props" ? `<div><i class="ln" style="border-color:${css.rel}"></i>from a property (up, related, any other)</div>` : linkCol === "each" ? `<div><i class="ln" style="border-color:${css.upp}"></i>up property</div><div><i class="ln" style="border-color:${css.rel}"></i>related property</div><div><i class="ln" style="border-color:${css.prop}"></i>other properties (actors, director, by, next…)</div>` : REL.size ? `<div><i class="ln" style="border-color:${css.rel}"></i>related (from the related property)</div>` : "") + (focus >= 0 ? `<div><i class="ln" style="border-color:${css.muted};opacity:.5;border-top-width:1px"></i>links between the other notes in focus</div>` : "");
   if (view === "spacetime" && !domeOn()) $("#legend").createDiv({ text: "Rows: your top folders. In each row, higher levels sit higher.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
   if (expOn() && EXP[view].legend) $("#legend").createDiv({ text: EXP[view].legend, attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
+  if (view === "shelf" && shelfHi.length) { const box = $("#legend").createDiv({ cls: "lghi" }); box.createDiv({ text: "Lit up (Efforts panel)", attr: { style: "color:var(--ink)" } });
+    shelfHi.forEach((p, j) => { const i = N.findIndex(d => d.path === p); if (i < 0) return; const row = box.createDiv(); row.createEl("i", { attr: { style: `background:${HI_COL[j % HI_COL.length]}` } }); row.appendText(N[i].title); }); }
+  if (expOn() && EXP[view].about) { const det = $("#legend").createEl("details", { cls: "lgabout" }); det.createEl("summary", { text: "How this map works" });   // the long explanation, folded away
+    for (const para of EXP[view].about) det.createEl("p", { text: para }); det.addEventListener("click", e => e.stopPropagation()); }
   if (csphOn()) $("#legend").createDiv({ text: CSPH === "out" ? "Corona: every kind is a wedge of the globe (Level 5 toward the North Pole); the links between kinds arc out over the surface. Drag to turn it, scroll to zoom." : "Tesla: every kind is a wedge of a glass globe (Level 5 toward the North Pole); the links between kinds cross through the inside. Drag to turn it, scroll to zoom.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
   if (domeOn()) $("#legend").createDiv({ text: view === "emergence" ? "Planetarium: you stand at the center. Level 5 is the North Pole, Level 1 the South Pole; " + (mode === "ace" ? "your folders" : "time") + " runs around you. Drag to look around, scroll to zoom, ⤢ to face forward." : view === "gravity" ? "Dome: you stand at the center. Home and the hubs are overhead; the levels drop toward the horizon. Drag to look around, scroll to zoom, ⤢ to face forward." : "Dome: you stand at the center. Time runs around you; folders run from the North Pole (+) to the South Pole (x), with the equator halfway through your notes. Drag to look around, scroll to zoom, ⤢ to face forward.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
 }
