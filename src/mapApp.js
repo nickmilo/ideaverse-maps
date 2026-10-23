@@ -1234,7 +1234,8 @@ function layoutShelf(){
     const baseY = r => (r + 1)*(SB.SH + SB.board + 8);
     const newRow = () => { if (used) { row++; x = x0; used = false; } };
     const put = (i, lean) => { const w = width(i); if (x + w > x0 + SB.W) { row++; x = x0; } const h = height(i), by = baseY(row);
-      RX[i] = x; RW[i] = w; RH[i] = h; RY[i] = by - h; EX[i] = x + w/2; EY[i] = by - h*.5; x += w + .6; used = true; if (lean) RH[i] = -h; };
+      RX[i] = x; RW[i] = w; RH[i] = h; RY[i] = by - h; EX[i] = x + w/2; EY[i] = by - h; x += w + .6; used = true;   // links land on the top of the spine, where you can see them
+      if (lean) { RH[i] = -h; EX[i] = x - .6 - w + w/2*Math.cos(.22) + h*Math.sin(.22); EY[i] = by - h*Math.cos(.22); } };
     const section = (label) => { newRow(); secs.push({label, x: x0, y: baseY(row) - SB.SH - 4}); };
     // Shelve by A–Z, Created or Modified: one run per section, with a marker where the letter or year changes
     const subOf = i => { const sb = N[i].sub || ""; return sb.includes("/") ? sb.slice(sb.indexOf("/") + 1) : ""; };
@@ -1276,6 +1277,7 @@ function layoutShelf(){
   for (const t of tapes) { const by = new Map(); for (const i of t.ids) { const b = Math.round(RY[i] + Math.abs(RH[i])), sg = by.get(b); if (sg) { sg.x0 = Math.min(sg.x0, RX[i]); sg.x1 = Math.max(sg.x1, RX[i] + RW[i]); sg.top = Math.min(sg.top, RY[i]); } else by.set(b, {x0: RX[i], x1: RX[i] + RW[i], top: RY[i], by: b}); } t.segs = [...by.values()]; }   // one stretch of tape per shelf the group spans
   shTape = -1; SHELF = {rows, secs, calls, ghosts, tapes}; expBounds(40); }
 let shTape = -1;   // the subfolder tape under the pointer
+dbg.__ivShelfMaps = () => { const r = []; for (let i=0;i<n;i++) if (RW[i] && VV(i) && N[i].level >= 3 && out[i].length + inn[i].length > 4) r.push([sx(RX[i] + RW[i]/2), sy(RY[i] + Math.abs(RH[i])*.6), out[i].length + inn[i].length]); return r; };
 dbg.__ivTapes = () => (SHELF.tapes || []).map(t => ({label: t.label, n: t.ids.length, at: t.segs.map(g => [sx((g.x0 + g.x1)/2), sy(g.by) + 2])}));
 function tapeAt(px, py){ if (view !== "shelf" || !SHELF.tapes) return -1; const x = wx(px), y = wy(py);
   for (let j = 0; j < SHELF.tapes.length; j++) for (const g of SHELF.tapes[j].segs) if (x >= g.x0 - 1 && x <= g.x1 + 1 && y >= g.by - 1 && y <= g.by + SB.board*.8 + 3/k) return j;
@@ -1303,6 +1305,10 @@ EXP.shelf = {
       if (w >= 9 && h > 40) { ctx.save(); ctx.translate(x + w/2, by - 4); ctx.rotate(-Math.PI/2); ctx.fillStyle = d.level >= 3 ? "#1a1a1a" : css.ink; ctx.globalAlpha = .9;
         ctx.font = `500 ${Math.min(11, w*.7)}px ${css.body}`; ctx.textBaseline = "middle"; let t = d.title; const mw = h - 10; while (t.length > 3 && ctx.measureText(t).width > mw) t = t.slice(0, -2); if (t !== d.title) t += "…"; ctx.fillText(t, 0, 0); ctx.restore(); } }
     ctx.globalAlpha = 1;
+    const hl = sel >= 0 ? sel : hover;   // the nodes the link lines end in, sitting on top of the spines
+    if (lit && hl >= 0) for (const j of lit) { if (!RW[j] || !VV(j)) continue; const x = sx(EX[j]), y = sy(EY[j]); if (x < -10 || x > W + 10 || y < -10 || y > H + 10) continue;
+      const up = N[j].level > N[hl].level || (N[j].level === N[hl].level && Y[j] < Y[hl]);
+      ctx.fillStyle = j === hl ? css.ink : edgeColor(hl, j, up); ctx.strokeStyle = css.bg; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, j === hl ? 4 : 3, 0, 6.2832); ctx.fill(); ctx.stroke(); }
     const th = Math.max(3, SB.board*k*.8);   // Subfolder: gray label tape along the shelf edge, with the name printed when there's room
     (SHELF.tapes || []).forEach((t, j) => { const on = j === shTape;
       for (const g of t.segs) { const x = sx(g.x0), w = (g.x1 - g.x0)*k, y = sy(g.by); if (x > W + 10 || x + w < -10 || y < -20 || y > H + 20) continue;
