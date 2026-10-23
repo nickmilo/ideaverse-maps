@@ -1063,7 +1063,8 @@ const chHue = c => CH_HUE[c.ace] || "#888";
 // arc between kinds, either out over the surface like solar prominences ("out") or through the inside of the globe ("in").
 let CSPH = ["out", "in"].includes(pref("iv-csph", "")) ? pref("iv-csph", "") : "";
 const csphOn = () => view === "chord" && !!CSPH;
-let PGLOBE = pref("iv-pglobe", true) !== false;   // PKM Planet: a globe (true) or the map on a table
+let PMODE = ["flat", "table", "globe"].includes(pref("iv-pmode", "")) ? pref("iv-pmode", "") : pref("iv-pglobe", true) !== false ? "globe" : "table";   // Planet: the map flat, on a tabletop, or as a globe
+let PGLOBE = PMODE === "globe";
 const globeOn = () => view === "planet" && PGLOBE;
 const sphOn = () => csphOn() || globeOn();   // any globe you orbit from outside: Corona, Tesla, or the PKM Planet globe
 const csOut = () => globeOn() || CSPH === "out";   // links arc out over the surface
@@ -1575,7 +1576,7 @@ function planetPlace(i){   // → [domain key, landmark name]
   if (/maps?/.test(sub) || d.level >= 3) return pickIn("ideas", d.level >= 4 ? "map-big" : sub);
   return pickIn("ideas", sub);
 }
-const planetProj = (u, v) => { const x = (u - .5)*PS, y = (v - .5)*PS, z = -y*Math.sin(PTILT), sc = PF/(PF + z); return [x*sc, y*Math.cos(PTILT)*sc, sc]; };
+const planetProj = (u, v) => { const tl = PMODE === "flat" ? 0 : PTILT, x = (u - .5)*PS, y = (v - .5)*PS, z = -y*Math.sin(tl), sc = PF/(PF + z); return [x*sc, y*Math.cos(tl)*sc, sc]; };
 let PLANET = {img: null, src: "", groups: []};
 // ---------- The far side: the Creator's Continent ----------
 // Only notes whose titles match a place on the continent (exactly or nearly), and notes from creative-work folders,
@@ -1700,8 +1701,8 @@ EXP.planet = {
     ctx.globalAlpha = 1; },
   ownLabels: true,
   get legend(){ return globeOn()
-    ? `PKM Planet · Globe: the six domains of personal knowledge on the near side, the Creator's Continent on the far side. Each note settles around a landmark by folder and title; a note crosses to the Creator's Continent only when its title matches a place there, or it lives in a creative-work folder (up to a tenth of the map${CREATOR.groups.length ? `; ${CREATOR.groups.reduce((t, g) => t + g.ids.length, 0).toLocaleString()} here` : "; none here yet"}). Drag to turn the globe; click a note to raise arcs to its links, dashed where they pass behind. Map art: PKM Planet and the Creator's Continent by Nick Milo.`
-    : "PKM Planet: the six domains of personal knowledge (Ideas & Insights, Expressions & Outputs, Productivity & Projects, Skills & Habits, Relationships & Environments, Memory & Inputs). Each note settles around a landmark in its domain, by folder and title; hubs and maps sit at the heart of each settlement. Click a note to raise arcs to its links. Map art: PKM Planet by Nick Milo."; },
+    ? `Planet · Globe: the six domains of personal knowledge on the near side, the Creator's Continent on the far side. Each note settles around a landmark by folder and title; a note crosses to the Creator's Continent only when its title matches a place there, or it lives in a creative-work folder (up to a tenth of the map${CREATOR.groups.length ? `; ${CREATOR.groups.reduce((t, g) => t + g.ids.length, 0).toLocaleString()} here` : "; none here yet"}). Drag to turn the globe; click a note to raise arcs to its links, dashed where they pass behind. Map art: PKM Planet and the Creator's Continent by Nick Milo.`
+    : `Planet · ${PMODE === "flat" ? "Flat" : "Tabletop"}: the six domains of personal knowledge (Ideas & Insights, Expressions & Outputs, Productivity & Projects, Skills & Habits, Relationships & Environments, Memory & Inputs). Each note settles around a landmark in its domain, by folder and title; hubs and maps sit at the heart of each settlement. Click a note to raise arcs to its links. Map art: PKM Planet by Nick Milo.`; },
 };
 let chArc = -1, chPin = -1;   // the arc under the cursor, and the one clicked to hold its ribbons
 const chOn = () => chArc >= 0 ? chArc : chPin;
@@ -2372,7 +2373,7 @@ cv.addEventListener("pointermove", e => {
       moved = true; return;
     }
     if (drag) { const dx = e.offsetX - drag.x, dy = e.offsetY - drag.y; if (Math.abs(dx)+Math.abs(dy) > 3) { moved = true; cv.classList.add("drag"); }
-      if (drag.orbit && sphOn()) { if (!moved) return; csYaw = drag.cyaw + dx*.006; csPitch = Math.max(-1.5, Math.min(1.5, drag.cpitch + dy*.006));   // turn the globe in your hand
+      if (drag.orbit && sphOn()) { if (!moved) return; csYaw = drag.cyaw + (globeOn() ? -dx : dx)*.006; csPitch = Math.max(-1.5, Math.min(1.5, drag.cpitch + dy*.006));   // turn the globe in your hand (the planet follows your hand left and right)
         csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } tip.hidden = true; draw(); return; }
       if (drag.orbit && domeOn()) { if (!moved) return; const u = 1/(k*DF_); domeYaw = drag.dyaw - dx*u; domePitch = Math.max(domeSphere() ? -1.53 : -.35, Math.min(1.53, drag.dpitch + dy*u));   // drag the sky
         domeProject(); X.set(DX); Y.set(DY); tip.hidden = true; draw(); return; }
@@ -2669,17 +2670,19 @@ $("#vmore").onclick = e => { e.stopPropagation(); const el = $("#vmorepop"), ope
 function goMap(v, dome){ closePops(); DOME[v] = dome; save("iv-dome", DOME); if (view !== v) setView(v); else { morph(true, () => fitTarget()); syncDome(); } }
 function syncDome(){ root.dataset.dome = domeOn() ? "1" : ""; legend(); placePlaybar(); }
 function goEmDome(m){ closePops(); DOME.emergence = true; save("iv-dome", DOME); if (view !== "emergence") setView("emergence"); if (mode !== m) setMode(m); syncDome(); morph(true, () => fitTarget()); }
-// Emergence ▾: Landscape, Planetarium (stand inside, Level 5 overhead) or Space-Time
+// Emergence ▾: Main, Space-Time or Planetarium (stand inside, Level 5 overhead)
 POPS.push(['#vseg button[data-v="emergence"]', "#emerpop", "#vsegms"]);
 const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.checked = view === "spacetime" ? r.value === "spacetime" : r.value === (DOME.emergence ? "dome" : "flat"));
 root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if (!r.checked) return; if (r.value === "spacetime") { goMap("spacetime", false); syncEmd(); return; } if (view === "spacetime") { closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); setView("emergence"); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); morph(true, () => fitTarget()); syncEmd(); });
 syncEmd();
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); }
 $("#gochord").onclick = () => goChord("");
-function syncPG(){ root.querySelectorAll("#planetseg button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.pg === "globe") === PGLOBE))); }
+function syncPG(){ root.querySelectorAll("#planetseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pg === PMODE))); }
+function setPMode(m){ if (!["flat", "table", "globe"].includes(m)) return; driftStop(); PMODE = m; PGLOBE = m === "globe"; save("iv-pmode", m); syncPG();
+  if (view !== "planet") { setView("planet"); return; } root.dataset.dome = sphOn() ? "1" : ""; $("#driftbar").hidden = !sphOn(); morph(true, () => fitTarget()); legend(); placePlaybar(); }
+for (const m of ["flat", "table", "globe"]) { const b = root.querySelector("#gopl" + m); if (b) b.onclick = () => { closePops(); setPMode(m); }; }
 syncPG();
-root.querySelectorAll("#planetseg button").forEach(b => b.onclick = () => { const g = b.dataset.pg === "globe"; if (g === PGLOBE) return; driftStop(); PGLOBE = g; save("iv-pglobe", g); syncPG();
-  if (view === "planet") { root.dataset.dome = sphOn() ? "1" : ""; const db = $("#driftbar"); db.hidden = !sphOn(); morph(true, () => fitTarget()); legend(); placePlaybar(); } });
+root.querySelectorAll("#planetseg button").forEach(b => b.onclick = () => { if (b.dataset.pg !== PMODE) setPMode(b.dataset.pg); });
 $("#tmsubs").setAttribute("aria-pressed", String(tmSubs));
 $("#tmsubs").onclick = () => { tmSubs = !tmSubs; save("iv-tmsubs", tmSubs); $("#tmsubs").setAttribute("aria-pressed", String(tmSubs)); draw(); };
 const syncSS = () => root.querySelectorAll("#shelfsort button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ss === shelfSort)));
@@ -2966,7 +2969,7 @@ setTheme(pref("iv-theme", autoTheme()));
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
 const PIDX = new Map(N.map((d,i) => [d.path, i]));
-const VIEW_NAME = {planet:"PKM Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemaking", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemaking", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
@@ -2997,7 +3000,7 @@ function snapView(name){
     tl: senseT != null ? {t: senseStepStart, step: senseStep} : null,   // where the time-lapse stands (null = all time)
     dome: domeOn() ? {yaw: +domeYaw.toFixed(3), pitch: +domePitch.toFixed(3)} : null,
     csph: csphOn() ? {mode: CSPH, yaw: +csYaw.toFixed(3), pitch: +csPitch.toFixed(3)} : null,
-    pg: view === "planet" ? PGLOBE : null, gcam: globeOn() ? {yaw: +csYaw.toFixed(3), pitch: +csPitch.toFixed(3)} : null,
+    pg: view === "planet" ? PMODE : null, gcam: globeOn() ? {yaw: +csYaw.toFixed(3), pitch: +csPitch.toFixed(3)} : null,
     geo: view === "quincunx" ? GEO : null,
     s3d: view === "stars" ? {on: S3D, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
     cam: {cx: +((W/2 - tx)/k).toFixed(1), cy: +((H/2 - ty)/k).toFixed(1), k: +k.toFixed(4)}, saved: new Date().toISOString().slice(0,10)};
@@ -3030,7 +3033,7 @@ function applySaved(v){
   syncRange(); legend();
   if (view === "spacetime" || view === "gravity" || view === "emergence") { DOME[view] = !!v.dome; save("iv-dome", DOME); if (v.dome) { DOMECAM[view] = [+v.dome.yaw || 0, +v.dome.pitch || .5]; save("iv-domecam", DOMECAM); } root.dataset.dome = domeOn() ? "1" : ""; }
   if (view === "chord") { CSPH = v.csph && ["out", "in"].includes(v.csph.mode) ? v.csph.mode : ""; save("iv-csph", CSPH); if (v.csph) { camOwner = "chord"; csYaw = +v.csph.yaw || 0; csPitch = +v.csph.pitch || 0; csKeep(); } root.dataset.dome = csphOn() ? "1" : ""; }
-  if (view === "planet" && typeof v.pg === "boolean") { PGLOBE = v.pg; save("iv-pglobe", PGLOBE); syncPG(); if (v.gcam) { camOwner = "globe"; csYaw = +v.gcam.yaw || 0; csPitch = +v.gcam.pitch || 0; csKeep(); } root.dataset.dome = sphOn() ? "1" : ""; }
+  if (view === "planet" && v.pg != null) { PMODE = v.pg === true ? "globe" : v.pg === false ? "table" : ["flat", "table", "globe"].includes(v.pg) ? v.pg : PMODE; PGLOBE = PMODE === "globe"; save("iv-pmode", PMODE); syncPG(); if (v.gcam) { camOwner = "globe"; csYaw = +v.gcam.yaw || 0; csPitch = +v.gcam.pitch || 0; csKeep(); } root.dataset.dome = sphOn() ? "1" : ""; }
   if (view === "stars" && v.s3d) { S3D = !!v.s3d.on; save("iv-s3d", S3D); if (isFinite(+v.s3d.yaw)) yaw3 = +v.s3d.yaw; if (isFinite(+v.s3d.pitch)) pitch3 = +v.s3d.pitch; save("iv-cam3", [yaw3, pitch3]);
     root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = (r.value === "3d") === S3D); placePlaybar(); }
   // the time-lapse, at the step it was saved on (or all time); set before the camera move below, so that move has the last word
