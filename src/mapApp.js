@@ -2639,8 +2639,15 @@ function callGroups(){ const out_ = []; let sec = null, hub = null;
   return out_; }
 function renderCallIndex(){
   const s_ = ($("#callq").value || "").trim().toLowerCase(), G = callGroups(), match = r => !s_ || N[r.m].title.toLowerCase().includes(s_) || r.call.startsWith(s_);
-  $("#callcopy").hidden = shelfSort !== "call"; $("#callq").hidden = shelfSort !== "call";
+  $("#callcopy").hidden = $("#callq").hidden = $("#callsum").hidden = $("#callwhy").hidden = shelfSort !== "call";
   if (shelfSort !== "call") { html($("#calllist")).v = `<p class="pn">Call numbers are given when Shelve by is set to Call no.</p><button class="chip" id="callgo">Shelve by Call no.</button>`; $("#callgo").onclick = () => root.querySelector('#shelfsort button[data-ss="call"]').click(); return; }
+  { const idx = SHELF.index || [], maps = new Set(idx.map(r => r.m)), hubs = new Set(idx.filter(r => r.hub >= 0).map(r => r.hub));
+    html($("#callsum")).v = `<b>${idx.length.toLocaleString()}</b> call numbers · <b>${maps.size.toLocaleString()}</b> maps · <b>${hubs.size}</b> hubs · <b>${G.length}</b> section${G.length === 1 ? "" : "s"}`;
+    html($("#callwhy")).v = `<summary>Why they're grouped this way</summary>`
+      + `<p><b>Hubs</b> are your Level 5 notes: your Home note plus your highest-scoring notes (how many is set in Scoring). A note earns that score from its links: being linked to counts most, then links both ways, then linking out, then being linked up to. Hubs take the first number, highest score first.</p>`
+      + `<p><b>Maps</b> are notes at Level 3 and up. Each map belongs to the hub it reaches in the fewest links, and takes the second number, again by score. So 2.7 is the 7th map under the 2nd hub.</p>`
+      + `<p><b>Runs.</b> Every other note joins the map it reaches in the fewest links. The count beside each map is how many books its run holds.</p>`
+      + `<p><b>Sections.</b> Numbering starts over in each top folder, so 1.1 in Atlas and 1.1 in another folder are different runs. A map whose notes live in several folders gets a call number in each, which is why there are more call numbers than maps. Maps no hub reaches are listed under No hub.</p>`; }
   html($("#calllist")).v = G.map(sec => { const hubs = sec.hubs.map(h => { const ms = h.maps.filter(match); if (!ms.length) return "";
       return `<h6><span>${h.n} · ${h.i >= 0 ? esc(N[h.i].title) : "No hub"}</span><span>${ms.length}</span></h6><ul>${ms.map(r => `<li><button data-cm="${r.m}"><span class="cn">${r.call}</span>${lvDot(r.m)}<span class="t">${esc(N[r.m].title)}</span><span class="m">${r.n}</span></button></li>`).join("")}</ul>`; }).join("");
     return hubs ? `<h5>${esc(sec.name)}</h5>${hubs}` : ""; }).join("") || `<p class="pn">No match.</p>`;
