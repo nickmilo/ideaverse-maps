@@ -1506,10 +1506,14 @@ function layoutSkyline(){
     const items = d.blds.map(m => ({m, f: 16 + 5*Math.sqrt(members.get(m).length), h: 30 + Math.pow(N[m].score, 1.25)*22*(N[m].level === 5 ? 1.5 : 1)})).sort((a, b) => b.h - a.h);
     const area = items.reduce((s_, it) => s_ + (it.f + 10)**2, 0) + (d.houses.length + d.lots.length)*36, side = Math.max(160, Math.sqrt(area)*1.15);
     // the tallest towers downtown (the middle of the district), the rest spiral out
-    const cells = []; const step = 6; for (let a = 0; a < side; a += step) for (let b = 0; b < side; b += step) cells.push([a, b, Math.hypot(a - side/2, b - side/2)]); cells.sort((p, q) => p[2] - q[2]);
-    const occ = new Set(), free = (a, b, f) => { for (let u = a; u < a + f + 6; u += step) for (let v = b; v < b + f + 6; v += step) if (occ.has(Math.round(u/step) + "," + Math.round(v/step)) || u >= side || v >= side) return false; return true; },
-      take = (a, b, f) => { for (let u = a; u < a + f + 6; u += step) for (let v = b; v < b + f + 6; v += step) occ.add(Math.round(u/step) + "," + Math.round(v/step)); };
-    let ci = 0; const placeAt = f => { for (let t = ci; t < cells.length; t++) { const [a, b] = cells[t]; if (free(a, b, f)) { take(a, b, f); return [a, b]; } } return [side, 0]; };
+    // a grid of 6-unit cells, filled from the middle outward (a typed array, and a pointer past the filled middle, keep this fast on big vaults)
+    const step = 6, Gn = Math.ceil(side/step), grid = new Uint8Array(Gn*Gn), dd = new Float32Array(Gn*Gn), cells = new Int32Array(Gn*Gn);
+    for (let c = 0; c < Gn*Gn; c++) { cells[c] = c; dd[c] = Math.hypot(Math.floor(c/Gn)*step - side/2, (c % Gn)*step - side/2); } cells.sort((p, q) => dd[p] - dd[q]);
+    const fits = (ix, iy, kf) => { if (ix + kf > Gn || iy + kf > Gn) return false; for (let u = 0; u < kf; u++) { const row = (ix + u)*Gn + iy; for (let v = 0; v < kf; v++) if (grid[row + v]) return false; } return true; };
+    let ci = 0; const placeAt = f => { const kf = Math.ceil((f + 6)/step); while (ci < cells.length && grid[cells[ci]]) ci++;
+      for (let t = ci; t < cells.length; t++) { const c = cells[t]; if (grid[c]) continue; const ix = Math.floor(c/Gn), iy = c % Gn; if (!fits(ix, iy, kf)) continue;
+        for (let u = 0; u < kf; u++) grid.fill(1, (ix + u)*Gn + iy, (ix + u)*Gn + iy + kf); return [ix*step, iy*step]; }
+      return [side, 0]; };
     for (const it of items) { const [a, b] = placeAt(it.f); blds.push({m: it.m, gx: gx0 + a, gy: b, f: it.f, h: it.h}); }
     const smalls = [...d.houses.map(i => [i, 8, 10]), ...d.lots.map(i => [i, 7, 0])];
     for (const [i, f, h] of smalls) { const [a, b] = placeAt(f); if (h) blds.push({m: i, gx: gx0 + a, gy: b, f, h, house: true}); else { const [x, y] = iso(gx0 + a + f/2, b + f/2, 0); EX[i] = x; EY[i] = y; RX[i] = gx0 + a; RY[i] = b; RW[i] = f; RH[i] = -1; } }
@@ -1520,6 +1524,8 @@ function layoutSkyline(){
       const [wx_, wy_] = face ? iso(B.gx + B.f, B.gy + u, zz) : iso(B.gx + u, B.gy + B.f, zz); EX[i] = wx_; EY[i] = wy_; }); }
   blds.sort((a, b) => (a.gx + a.gy + a.f) - (b.gx + b.gy + b.f));
   CITY = {blds, districts: D_, isB: new Set(blds.map(B => B.m))}; expBounds(60); }
+dbg.__ivCam = () => [Math.round(tx), Math.round(ty), +k.toFixed(3), +csYaw.toFixed(2)];
+dbg.__ivTime = (fn) => { const t0 = performance.now(); if (fn === 'skyline') layoutSkyline(); else if (fn === 'draw') render(); return Math.round(performance.now() - t0); };
 EXP.skyline = {
   layout: layoutSkyline,
   guides(){ for (const d of CITY.districts) { const P = [iso(d.gx, 0, 0), iso(d.gx + d.side, 0, 0), iso(d.gx + d.side, d.side, 0), iso(d.gx, d.side, 0)];
@@ -1722,7 +1728,9 @@ EXP.planet = {
     ctx.save(); ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = 24*Math.min(1, k); ctx.shadowOffsetY = 10*Math.min(1, k);
     for (let s_ = 0; s_ < NSTR; s_++) { const v0 = s_/NSTR, v1 = (s_ + 1)/NSTR, [, Y0] = planetProj(.5, v0), [, Y1, sc] = planetProj(.5, (v0 + v1)/2), [, Y2] = planetProj(.5, v1);
       const w = PS*sc; ctx.drawImage(im, 0, v0*ih, iw, (v1 - v0)*ih + 1, sx(-w/2), sy(Y0), w*k, (Y2 - Y0)*k + 1); if (s_ === 0) ctx.shadowColor = "transparent"; }
-    ctx.restore(); },
+    ctx.restore();
+    const dm = sel >= 0 ? .42 : hover >= 0 ? .18 : 0;   // the map dims while a note is picked, as the globe does, so its links stand out
+    if (dm) { const P = [planetProj(0, 0), planetProj(1, 0), planetProj(1, 1), planetProj(0, 1)]; ctx.fillStyle = `rgba(0,0,0,${dm})`; ctx.beginPath(); P.forEach((q, j) => j ? ctx.lineTo(sx(q[0]), sy(q[1])) : ctx.moveTo(sx(q[0]), sy(q[1]))); ctx.closePath(); ctx.fill(); } },
   notes(lit, dim){ const r0 = Math.max(1.3, 2.1*Math.pow(k, .5));
     if (globeOn()) { for (const [col, list] of [...PLANET.groups.map(g => [PD[g.dk].col, g.ids]), ...CREATOR.groups.map(g => [CR_COL, g.ids])])
       for (const i of list) { if (!VV(i)) continue; const x = sx(X[i]), y = sy(Y[i]); if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
@@ -2938,8 +2946,21 @@ function schedule(){
   RAF(() => pr.addClass("run"));
   pTimer = win.setTimeout(playStep, playSec * 1000);
 }
+// Autoplay can also drift a little: globes and 3D maps turn slowly (like Lively drift), flat maps glide and breathe
+let playDrift = pref("iv-pdrift", false) === true, apdRaf = 0, apdLast = 0, apdT = 0;
+function apdFrame(now){
+  if (!playing || !playDrift || dead) { apdRaf = 0; return; } apdRaf = RAF(apdFrame);
+  const dt = Math.min(.1, (now - (apdLast || now))/1000); apdLast = now; apdT += dt; if (!dt) return;
+  if (drifting) return;   // the Drift bar's own drift is already running
+  if (sphOn()) { csYaw += .07*1.6*dt*(globeOn() ? -1 : 1); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } }
+  else if (s3dOn()) { yaw3 += .07*dt; project3D(); X.set(P3X); Y.set(P3Y); }
+  else if (domeOn()) { domeYaw += .03*dt; domeProject(); X.set(DX); Y.set(DY); }
+  else if (!morphing) { const px = 9*Math.sin(apdT*.23), py = 6*Math.cos(apdT*.17);   // a slow glide, a few pixels a second, and a gentle in-and-out
+    tx += px*dt; ty += py*dt; const f = 1 + .012*Math.cos(apdT*.5)*dt; const cx = W/2, cy = H/2; tx = cx - (cx - tx)*f; ty = cy - (cy - ty)*f; k *= f; }
+  render(); }
+function apdSync(){ if (playing && playDrift && !apdRaf) { apdLast = 0; apdRaf = RAF(apdFrame); } if ((!playing || !playDrift) && apdRaf) { win.cancelAnimationFrame(apdRaf); apdRaf = 0; buildGrid(); if (sphOn()) csKeep(); draw(); } }
 function setPlaying(on){
-  playing = on; $("#playbar").classList.toggle("on", on);
+  playing = on; win.setTimeout(apdSync, 0); $("#playbar").classList.toggle("on", on);
   $("#pplay").textContent = on ? "■" : "▶"; $("#pplay").setAttribute("aria-label", on ? "Stop" : "Play");
   if (on) { runSeen = new Set(); runStack = []; if (tourRun) { if (tourRun.idx >= tourRun.ids.length - 1) tourGo(0); schedule(); } else if (sel < 0) playStep(); else schedule(); }
   else { win.clearTimeout(pTimer); const pr = $("#pprog"); pr.removeClass("run"); }
@@ -2951,6 +2972,7 @@ function syncPlay(){
 root.querySelectorAll("#playseg button").forEach(b => b.onclick = () => { playMode = b.dataset.p; save("iv-pmode", playMode); syncPlay(); if (!playing) setPlaying(true); else { runSeen = new Set(); runStack = []; schedule(); } });
 $("#pint").addEventListener("input", e => { playSec = +e.target.value; save("iv-psec", playSec); syncPlay(); if (playing) schedule(); });
 $("#pplay").onclick = () => setPlaying(!playing);
+$("#pdrift").checked = playDrift; $("#pdrift").onchange = () => { playDrift = $("#pdrift").checked; save("iv-pdrift", playDrift); apdSync(); };
 $("#pmaps").checked = playMaps; $("#pmaps").onchange = () => { playMaps = $("#pmaps").checked; save("iv-pmaps", playMaps); hopIn = 0; };
 onKey(e => { if (e.key === "Escape" && playing) setPlaying(false); });
 root.querySelectorAll("#playseg button").forEach(b => b.addEventListener("click", () => { if (tourRun) { tourRun = null; syncTour(); } }));   // picking Random/Thread leaves the tour
