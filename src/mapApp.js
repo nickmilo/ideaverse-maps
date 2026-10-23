@@ -1738,9 +1738,13 @@ EXP.planet = {
         if (lv === 2) { ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = "rgba(40,25,10,.55)"; ctx.lineWidth = .8; ctx.stroke(); } else { ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.stroke(); } } }
     ctx.globalAlpha = 1; },
   ownLabels: true,
-  get legend(){ return globeOn()
-    ? `Planet · Globe: the six domains of personal knowledge on the near side, the Creator's Continent on the far side. Each note settles around a landmark by folder and title; a note crosses to the Creator's Continent only when its title matches a place there, or it lives in a creative-work folder (up to a tenth of the map${CREATOR.groups.length ? `; ${CREATOR.groups.reduce((t, g) => t + g.ids.length, 0).toLocaleString()} here` : "; none here yet"}). Drag to turn the globe; click a note to raise arcs to its links, dashed where they pass behind. Map art: PKM Planet and the Creator's Continent by Nick Milo.`
-    : `Planet · ${PMODE === "flat" ? "Flat" : "Tabletop"}: the six domains of personal knowledge (Ideas & Insights, Expressions & Outputs, Productivity & Projects, Skills & Habits, Relationships & Environments, Memory & Inputs). Each note settles around a landmark in its domain, by folder and title; hubs and maps sit at the heart of each settlement. Click a note to raise arcs to its links. Map art: PKM Planet by Nick Milo.`; },
+  get legend(){ return globeOn() ? "Planet · Globe: the PKM Planet on the near side, the Creator's Continent on the far side. Drag to turn it; click a note to raise arcs to its links."
+    : `Planet · ${PMODE === "flat" ? "Flat" : "Tabletop"}: the six domains of personal knowledge. Click a note to raise arcs to its links.`; },
+  get about(){ return [
+    "Domains. Each note settles around a landmark in one of the six domains of personal knowledge (Ideas & Insights, Expressions & Outputs, Productivity & Projects, Skills & Habits, Relationships & Environments, Memory & Inputs), by its folder and title. Home and your inbox sit at the heart of the map.",
+    "Settlements. Maps and hubs make the old town at the center of each settlement; every other note moves in next to the map it links to most, and the rest scatter around the edges.",
+    ...(globeOn() ? [`The far side. A note crosses to the Creator's Continent only when its title matches a place there, or it lives in a creative-work folder, up to a tenth of the map (${CREATOR.groups.reduce((t, g) => t + g.ids.length, 0).toLocaleString()} here). Links that pass behind the globe are dashed.`] : []),
+    "Map art: PKM Planet" + (globeOn() ? " and the Creator's Continent" : "") + " by Nick Milo." ]; },
 };
 let chArc = -1, chPin = -1;   // the arc under the cursor, and the one clicked to hold its ribbons
 const chOn = () => chArc >= 0 ? chArc : chPin;
@@ -2991,6 +2995,11 @@ function legend(){
   if (expOn() && EXP[view].legend) $("#legend").createDiv({ text: EXP[view].legend, attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
   if (view === "shelf" && shelfHi.length) { const box = $("#legend").createDiv({ cls: "lghi" }); box.createDiv({ text: "Lit up (Efforts panel)", attr: { style: "color:var(--ink)" } });
     shelfHi.forEach((p, j) => { const i = N.findIndex(d => d.path === p); if (i < 0) return; const row = box.createDiv(); row.createEl("i", { attr: { style: `background:${HI_COL[j % HI_COL.length]}` } }); row.appendText(N[i].title); }); }
+  if (view === "planet") { const box = $("#legend").createDiv({ cls: "lghi" }); box.createDiv({ text: "Colors: the domain each note settles in", attr: { style: "color:var(--ink)" } });   // what the planet's colors mean
+    const cnt = {}; for (const g of PLANET.groups) cnt[g.dk] = (cnt[g.dk] || 0) + g.ids.filter(i => vis[i]).length;
+    const rows = Object.entries(PD).map(([dk, d]) => [d.col, d.name, cnt[dk] || 0]); if (globeOn()) rows.push([CR_COL, "The Creator's Continent", CREATOR.groups.reduce((t, g) => t + g.ids.length, 0)]);
+    for (const [col, name, c] of rows) { if (!c) continue; const row = box.createDiv(); row.createEl("i", { attr: { style: `background:${col}` } }); row.appendText(`${name} · ${c.toLocaleString()}`); }
+    box.createDiv({ text: "Filled dots are linked notes, rings are unlinked; maps and hubs keep their level shapes.", attr: { style: "white-space:normal;opacity:.85" } }); }
   if (expOn() && EXP[view].about) { const det = $("#legend").createEl("details", { cls: "lgabout" }); det.createEl("summary", { text: "How this map works" });   // the long explanation, folded away
     for (const para of EXP[view].about) det.createEl("p", { text: para }); det.addEventListener("click", e => e.stopPropagation()); }
   if (csphOn()) $("#legend").createDiv({ text: CSPH === "out" ? "Corona: every kind is a wedge of the globe (Level 5 toward the North Pole); the links between kinds arc out over the surface. Drag to turn it, scroll to zoom." : "Tesla: every kind is a wedge of a glass globe (Level 5 toward the North Pole); the links between kinds cross through the inside. Drag to turn it, scroll to zoom.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
