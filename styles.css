@@ -471,3 +471,11 @@
 
 .ivm #driftseg .dearth{display:none}
 .ivm[data-view="chord"] #driftseg .dearth{display:inline-block}
+
+.ivm .legend .lgabout{margin-top:6px;max-width:300px;white-space:normal;cursor:default}
+.ivm .legend .lgabout summary{cursor:pointer;color:var(--accent)}
+.ivm .legend .lgabout p{margin:5px 0 0;line-height:1.4;color:var(--muted)}
+.ivm .legend .lgabout[open]{max-height:min(46vh,420px);overflow-y:auto}
+.ivm #efflist .hidot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;flex:none}
+.ivm .legend .lghi{display:grid;gap:3px;margin-top:6px;max-width:300px}
+.ivm .legend .lghi > div{display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
