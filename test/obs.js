@@ -16,7 +16,7 @@ const SHOTS = process.env.SHOTS || path.join(require('os').tmpdir(), 'ivm-shots'
   fs.writeFileSync(path.join(vault, '.obsidian/community-plugins.json'), JSON.stringify(['ideaverse-maps']));
   fs.mkdirSync(DATA, { recursive: true });
   fs.writeFileSync(path.join(DATA, 'obsidian.json'), JSON.stringify({ vaults: { t1: { path: vault, ts: Date.now(), open: true } } }));
-  const p = spawn(OBSIDIAN, ['--no-sandbox', `--user-data-dir=${DATA}`, '--disable-gpu', '--remote-debugging-port=9333', `--window-size=${Wd},${Ht}`], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const p = spawn(OBSIDIAN, ['--no-sandbox', `--user-data-dir=${DATA}`, ...(process.env.GPU ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : ['--disable-gpu']), '--remote-debugging-port=9333', `--window-size=${Wd},${Ht}`], { stdio: ['ignore', 'pipe', 'pipe'] });
   let log = ''; p.stdout.on('data', d => log += d); p.stderr.on('data', d => log += d);
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   let b; for (let i = 0; i < 40; i++) { await sleep(500); try { b = await chromium.connectOverCDP('http://127.0.0.1:9333'); break; } catch (e) {} }

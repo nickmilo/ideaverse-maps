@@ -47,6 +47,9 @@ export class MapsSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Map image").setDesc("A full-size PKM Planet image in your vault (PNG, JPG or WebP). Left empty, the map uses the smaller image built into the plugin.").addText(t => t
       .setPlaceholder("Folder/PKM Planet.png").setValue(s.planetImage || "")
       .onChange(async v => { s.planetImage = v.trim() ? normalizePath(v.trim()) : ""; await p.saveSettings(); }));
+    new Setting(containerEl).setName("Creator's Continent image").setDesc("The far side of the PKM Planet globe: a full-size Creator's Continent image in your vault (PNG, JPG or WebP). Left empty, the globe uses the smaller image built into the plugin.").addText(t => t
+      .setPlaceholder("Folder/Creator's Continent.png").setValue(s.creatorImage || "")
+      .onChange(async v => { s.creatorImage = v.trim() ? normalizePath(v.trim()) : ""; await p.saveSettings(); }));
 
     new Setting(containerEl).setName("Saved views and tours").setHeading();
     new Setting(containerEl).setName("Folder").setDesc("The folder that keeps your saved views and tours (one JSON file, updated as you save). Left empty, the map asks before your first save. Use / for the vault root.").addText(t => t
