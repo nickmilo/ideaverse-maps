@@ -2927,6 +2927,9 @@ function pickThread(){
   }
 }
 // Autoplay can also hop between maps, the hidden experimental ones included: every few steps it moves the note you're on to another map
+let playTrail = pref("iv-ptrail", false) === true, trTimer = 0;   // Map mode: two-thirds into each step, follow a link to the next note
+function trailStep(){ if (!playing || playMode !== "map" || !playTrail || dead) return; const j = pickThread(); if (j < 0 || j === sel) return;
+  if (sel >= 0) { runSeen.add(sel); runStack.push(sel); } runSeen.add(j); navTo(j); toEditor(j); }
 let playMaps = pref("iv-pmaps", false) === true, hopIn = 0, hopLast = [];
 const hopTab = v => { if (view !== v) setView(v); };
 const hopRadio = (name, v) => { const r = root.querySelector(`input[name="${name}"][value="${v}"]`); if (!r) return; r.checked = true; r.dispatchEvent(new Event("change")); };
@@ -2943,6 +2946,7 @@ function hopNow(){ return view === "emergence" ? (DOME.emergence ? "planetarium"
 function hopMap(){ const cur = hopNow(), opts = HOPS.filter(([id]) => id !== cur && !hopLast.includes(id)), pick = opts[Math.floor(Math.random()*opts.length)]; if (!pick) return;
   hopLast = [cur, ...hopLast].slice(0, 5); const keep = sel; hopSlow = true; pick[1](); hopSlow = false; if (keep >= 0) { if (sel !== keep) select(keep); win.setTimeout(() => { if (sel === keep && !dead) flyTo(keep); }, 2000); } }
 function playStep(){
+  if (!tourRun && playMode === "map" && playTrail) win.setTimeout(() => { win.clearTimeout(trTimer); trTimer = win.setTimeout(trailStep, playSec*1000*2/3); }, 0);
   if (!tourRun && playMode === "map") { if (sel < 0) { const top = []; for (let i=0;i<n;i++) if (baseOK(i) && N[i].level >= 3) top.push(i); const j = top.length ? top[Math.floor(Math.random()*top.length)] : pickRandom(); if (j >= 0) navTo(j); } else hopMap(); schedule(); return; }   // Map: the same note, a new map each step
   if (!tourRun && playMaps && ++hopIn >= 3) { hopIn = 0; hopMap(); schedule(); return; }   // every third step: a new map, same note
   if (tourRun) { if (tourRun.idx >= tourRun.ids.length - 1) { setPlaying(false); syncTour(); return; } tourGo(tourRun.idx + 1); schedule(); return; }
@@ -2951,7 +2955,7 @@ function playStep(){
   schedule();
 }
 function schedule(){
-  win.clearTimeout(pTimer); if (!playing) return;
+  win.clearTimeout(pTimer); if (!playing) { win.clearTimeout(trTimer); return; }
   const pr = $("#pprog"); pr.removeClass("run"); pr.setCssProps({"--pdur": playSec + "s"});
   RAF(() => pr.addClass("run"));
   pTimer = win.setTimeout(playStep, playSec * 1000);
@@ -2973,16 +2977,18 @@ function setPlaying(on){
   playing = on; win.setTimeout(apdSync, 0); $("#playbar").classList.toggle("on", on);
   $("#pplay").textContent = on ? "■" : "▶"; $("#pplay").setAttribute("aria-label", on ? "Stop" : "Play");
   if (on) { runSeen = new Set(); runStack = []; if (tourRun) { if (tourRun.idx >= tourRun.ids.length - 1) tourGo(0); schedule(); } else if (sel < 0) playStep(); else schedule(); }
-  else { win.clearTimeout(pTimer); const pr = $("#pprog"); pr.removeClass("run"); }
+  else { win.clearTimeout(pTimer); win.clearTimeout(trTimer); const pr = $("#pprog"); pr.removeClass("run"); }
 }
 function syncPlay(){
   root.querySelectorAll("#playseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === playMode)));
   const hm = root.querySelector("#pmaps"); if (hm) hm.closest("label").hidden = playMode === "map";
+  const ht = root.querySelector("#ptrail"); if (ht) ht.closest("label").hidden = playMode !== "map";
   $("#pint").value = playSec; $("#pintv").textContent = playSec + "s";
 }
 root.querySelectorAll("#playseg button").forEach(b => b.onclick = () => { playMode = b.dataset.p; save("iv-pmode", playMode); syncPlay(); if (!playing) setPlaying(true); else { runSeen = new Set(); runStack = []; schedule(); } });
 $("#pint").addEventListener("input", e => { playSec = +e.target.value; save("iv-psec", playSec); syncPlay(); if (playing) schedule(); });
 $("#pplay").onclick = () => setPlaying(!playing);
+$("#ptrail").checked = playTrail; $("#ptrail").onchange = () => { playTrail = $("#ptrail").checked; save("iv-ptrail", playTrail); if (!playTrail) win.clearTimeout(trTimer); };
 $("#pdrift").checked = playDrift; $("#pdrift").onchange = () => { playDrift = $("#pdrift").checked; save("iv-pdrift", playDrift); apdSync(); };
 $("#pmaps").checked = playMaps; $("#pmaps").onchange = () => { playMaps = $("#pmaps").checked; save("iv-pmaps", playMaps); hopIn = 0; };
 onKey(e => { if (e.key === "Escape" && playing) setPlaying(false); });
