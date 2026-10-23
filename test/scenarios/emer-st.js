@@ -1,4 +1,4 @@
-// Emergence ▾ → Landscape / Planetarium / Space-Time; ⋯ → Experimental lists Chord, Corona, Tesla, Bookshelf before Sketches
+// Emergence ▾ → Main / Space-Time / Planetarium; ⋯ → Experimental lists Chord, Corona, Tesla, Bookshelf before Sketches
 module.exports = async ({ page, sleep, shot }) => {
   await page.evaluate(() => app.commands.executeCommandById('ideaverse-maps:open'));
   await page.waitForSelector('.ivm canvas', { timeout: 120000 }); await sleep(1500);

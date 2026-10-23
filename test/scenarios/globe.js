@@ -5,7 +5,7 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.waitForSelector('.ivm canvas', { timeout: 120000 }); await sleep(1500);
   const q = s => page.locator('.ivm ' + s).first();
   await q('#vmore').click(); await sleep(300); for (const d of await page.locator('.ivm #vmorepop details').all()) if (!(await d.evaluate(e => e.open))) { await d.locator(':scope > summary').click(); await sleep(150); }
-  await q('#goplanet').click(); await sleep(3500);
+  await q('#goplglobe').click(); await sleep(3500);
   console.log('seg visible:', await q('#planetseg').isVisible(), '| globe pressed:', await q('#planetseg button[data-pg="globe"]').getAttribute('aria-pressed'));
   console.log('legend:', (await q('#legend').textContent()).match(/PKM Planet[^.]*\./)?.[0], (await q('#legend').textContent()).match(/; [\d,]+ here|none here yet/)?.[0]);
   await shot('globe-front');
