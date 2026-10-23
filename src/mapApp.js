@@ -1070,7 +1070,7 @@ const sphOn = () => csphOn() || globeOn();   // any globe you orbit from outside
 const csOut = () => globeOn() || CSPH === "out";   // links arc out over the surface
 let camOwner = "";   // the chord sphere and the planet globe each keep their own camera
 function sphCam(owner){ if (camOwner === owner) return; if (camOwner) save(camOwner === "globe" ? "iv-gcam" : "iv-cscam", [+csYaw.toFixed(3), +csPitch.toFixed(3)]);
-  const c = pref(owner === "globe" ? "iv-gcam" : "iv-cscam", null); if (Array.isArray(c)) { csYaw = +c[0] || 0; csPitch = +c[1] || 0; } else if (owner === "globe") { csYaw = 0; csPitch = .18; } camOwner = owner; }
+  const c = pref(owner === "globe" ? "iv-gcam" : "iv-cscam", null); if (Array.isArray(c)) { csYaw = +c[0] || 0; csPitch = +c[1] || 0; } else if (owner === "globe") { csYaw = 0; csPitch = 0; } camOwner = owner; }
 let csYaw = .4, csPitch = .35; { const c = pref("iv-cscam", null); if (Array.isArray(c)) { csYaw = +c[0] || csYaw; csPitch = +c[1] || csPitch; } }
 const CS_R = 600, CS_D = 2400;   // the globe's radius; how far away you stand
 const CSC = [];   // each kind's heart on the globe (the average direction of its notes): where its ribbons leave from
@@ -1597,8 +1597,9 @@ function creatorMatch(i){   // → [landmark index, by title?] or null
 let CREATOR = {img: null, src: "", groups: []};
 const PU = new Float32Array(n), PV = new Float32Array(n), PSIDE = new Uint8Array(n);   // where each note sits on its map (0 the PKM side, 1 the Creator side)
 const P_RR = .4086;   // the PKM map's circle, as a fraction of its image (the frame around it stays off the globe)
+const P_RF = P_RR/.75;   // the PKM map at three-quarters of its old size on the globe, so more of its side shows at once, with ocean around it
 const CR_RR = 1;   // the Creator's Continent at half the PKM map's size: the dessert, not the main course (open sea fills the rest of its side)
-function globeAngles(){ for (let i=0;i<n;i++) { const back = PSIDE[i] === 1, rr = back ? CR_RR : P_RR, dx = (PU[i] - .5)/rr, dy = (PV[i] - .5)/rr, rho = Math.min(1, Math.hypot(dx, dy)), th = rho*Math.PI/2, al = Math.atan2(dy, dx), st = Math.sin(th);
+function globeAngles(){ for (let i=0;i<n;i++) { const back = PSIDE[i] === 1, rr = back ? CR_RR : P_RF, dx = (PU[i] - .5)/rr, dy = (PV[i] - .5)/rr, rho = Math.min(1, Math.hypot(dx, dy)), th = rho*Math.PI/2, al = Math.atan2(dy, dx), st = Math.sin(th);
     const px = (back ? -1 : 1)*st*Math.cos(al), py = -st*Math.sin(al), pz = (back ? -1 : 1)*Math.cos(th); DTH[i] = Math.atan2(-pz, px); DPH[i] = Math.asin(Math.max(-1, Math.min(1, py))); } }
 function planetImg(){ const src = host.planetSrc ? host.planetSrc() : ""; if (!src) return null;
   if (PLANET.src !== src) { PLANET.src = src; const im = new Image(); im.onload = () => { if (!dead) draw(); }; im.src = src; PLANET.img = im; }
@@ -1614,28 +1615,39 @@ function glReady(){ if (GL.gl || !GL.ok) return GL.gl;
     const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
     const vs = "attribute vec2 p; varying vec2 vUV; void main(){ vUV = vec2(p.x*.5 + .5, .5 - p.y*.5); gl_Position = vec4(p, 0., 1.); }";
     const fs = `precision highp float; varying vec2 vUV;
-      uniform vec2 uOff, uSize; uniform vec3 uCam; uniform vec4 uRot; uniform float uR, uD, uRF, uRB, uPx, uHasB, uHasF; uniform sampler2D uF, uB;
-      const float HP = 1.5707963;
-      vec3 side(sampler2D t, float has, vec3 p, float rr, float sgn){ float th = acos(clamp(sgn*p.z, -1., 1.)), rho = min(th/HP, 1.); float al = atan(-p.y, sgn*p.x);
-        if (has < .5) return vec3(.66, .76, .76);
-        float r = rr*rho; vec3 c = texture2D(t, vec2(.5) + min(r, .47)*vec2(cos(al), sin(al))).rgb;
-        if (r > .43) { float e = r - .43, a2 = al + e*3.;   // past the map's own edge: soft open sea, drawn from the sea along its rim
-          vec3 sea = texture2D(t, vec2(.5) + (.478 + .016*sin(e*31. + al*5.))*vec2(cos(a2), sin(a2)), 3.).rgb; c = mix(c, sea, smoothstep(.43, .48, r)); }
-        return c; }
+      uniform vec2 uOff, uSize; uniform vec3 uCam; uniform vec4 uRot; uniform float uR, uD, uRF, uRB, uPx, uHasB, uHasF, uDim; uniform sampler2D uF, uB;
+      const float HP = 1.5707963, RC = .4086;
+      float hs(vec2 q){ return fract(sin(dot(q, vec2(127.1, 311.7)))*43758.5453); }
+      float vn(vec2 q){ vec2 i = floor(q), f = fract(q); f = f*f*(3. - 2.*f); return mix(mix(hs(i), hs(i + vec2(1., 0.)), f.x), mix(hs(i + vec2(0., 1.)), hs(i + vec2(1., 1.)), f.x), f.y); }
+      float fbm(vec2 q){ float v = 0., a = .5; for (int k = 0; k < 5; k++) { v += a*vn(q); q *= 2.07; a *= .5; } return v; }
+      vec3 sea(vec3 p){   // the open ocean all round the globe: soft sea and cloud, drawn from the sea along the Creator map's rim
+        vec3 base = uHasB > .5 ? mix(vec3(.6, .71, .72), texture2D(uB, vec2(.5, .975), 6.).rgb, .5) : vec3(.64, .74, .75);
+        float cl = (fbm(p.xy*2.6 + 7.) + fbm(p.yz*2.6 + 1.3) + fbm(p.zx*2.6 + 4.2))/3.;   // drifting cloud, the same from every side
+        float sw = (fbm(p.xy*9. + 2.) + fbm(p.yz*9. + 5.) + fbm(p.zx*9. + 8.))/3.;   // a little texture in the water
+        vec3 c = base*(.94 + .12*sw); return mix(c, vec3(.9, .93, .93), smoothstep(.5, .64, cl)*.75); }
+      vec3 front(vec3 p){   // the PKM map, its coastlines ending in an uneven shore a little inside its own edge, then ocean
+        vec3 o = sea(p); if (uHasF < .5) return o;
+        float rho = acos(clamp(p.z, -1., 1.))/HP, al = atan(-p.y, p.x); vec2 dir = vec2(cos(al), sin(al)); float r = uRF*rho, rn = r/RC;
+        if (rn > 1.15) return o;
+        float nz = fbm(dir*rho*7. + 3.1) - .5, m = 1. - smoothstep(.84, .97, rn + .11*nz);
+        vec3 c = texture2D(uF, vec2(.5) + min(r, RC*.99)*dir).rgb, mixc = mix(o, c, m);
+        float shore = m*(1. - m)*4.; return mix(mixc, vec3(.88, .92, .9), .25*shore); }
+      vec3 back(vec3 p){   // the Creator's Continent, an island in the same ocean
+        vec3 o = sea(p); if (uHasB < .5) return o;
+        float rho = acos(clamp(-p.z, -1., 1.))/HP, al = atan(-p.y, -p.x); float r = uRB*rho; if (r > .48) return o;
+        vec3 c = texture2D(uB, vec2(.5) + r*vec2(cos(al), sin(al))).rgb; return mix(c, o, smoothstep(.42, .48, r)); }
       void main(){ vec2 w = (uOff + vUV*uSize - uCam.yz)/uCam.x; vec3 o = vec3(0., 0., uD), d = vec3(w.x, -w.y, -uD);
         float a = dot(d, d), b = 2.*dot(o, d), c = dot(o, o) - uR*uR, disc = b*b - 4.*a*c;
         float rs = uR*uD/sqrt(uD*uD - uR*uR), al = clamp((rs - length(w))/uPx + .5, 0., 1.); if (al <= 0.) { gl_FragColor = vec4(0.); return; }
         float t = (-b - sqrt(max(disc, 0.)))/(2.*a); vec3 q = o + t*d, nrm = normalize(q);
         float y = q.y*uRot.z + q.z*uRot.w, z1 = -q.y*uRot.w + q.z*uRot.z, x = q.x*uRot.x + z1*uRot.y, z = -q.x*uRot.y + z1*uRot.x; vec3 p = vec3(x, y, z)/uR;
-        vec3 cf = side(uF, uHasF, p, uRF, 1.), cb = side(uB, uHasB, p, uRB, -1.); float rf = acos(clamp(p.z, -1., 1.))/HP;
-        vec3 col = mix(cf, cb, smoothstep(.86, 1., rf));   // the PKM map's edge fades into the far side's sea before the equator
-        float belt = 1. - clamp(abs(rf - .98)/.13, 0., 1.), lum = dot(cb, vec3(.33)); col = mix(col, vec3(.88, .91, .91)*(.8 + .25*lum), .62*belt*belt*(3. - 2.*belt));   // a band of cloud along the equator where the two maps meet
-        float lt = max(dot(nrm, normalize(vec3(-.42, .5, .76))), 0.); col *= .58 + .5*lt; col *= mix(.78, 1., pow(max(nrm.z, 0.), .4));
+        vec3 col = p.z >= 0. ? front(p) : back(p);   // both maps end in the same ocean, so the two halves meet without a seam
+        float lt = max(dot(nrm, normalize(vec3(-.42, .5, .76))), 0.); col *= .58 + .5*lt; col *= mix(.78, 1., pow(max(nrm.z, 0.), .4)); col *= 1. - uDim;   // dims while a note is picked, so its links stand out
         gl_FragColor = vec4(col*al, al); }`;
     const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
     gl.useProgram(pr); const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(pr, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    for (const nm of ["uOff", "uSize", "uCam", "uRot", "uR", "uD", "uRF", "uRB", "uPx", "uHasB", "uHasF", "uF", "uB"]) GL.u[nm] = gl.getUniformLocation(pr, nm);
+    for (const nm of ["uOff", "uSize", "uCam", "uRot", "uR", "uD", "uRF", "uRB", "uPx", "uHasB", "uHasF", "uDim", "uF", "uB"]) GL.u[nm] = gl.getUniformLocation(pr, nm);
     gl.uniform1i(GL.u.uF, 0); gl.uniform1i(GL.u.uB, 1); GL.cv = c; GL.gl = gl; GL.prog = pr; return gl; }
   catch { GL.ok = false; return null; } }   // no WebGL: the globe is drawn plain
 function glTex(slot, im, key, disc){   // a square, power-of-two copy of the map (so it can be mipmapped); a rectangular Creator image is fitted to a disc
@@ -1660,7 +1672,7 @@ function globeDraw(){
   if (GL.cv.width !== w || GL.cv.height !== h) { GL.cv.width = w; GL.cv.height = h; } gl.viewport(0, 0, w, h); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
   const U = GL.u; gl.uniform2f(U.uOff, x0, y0); gl.uniform2f(U.uSize, x1 - x0, y1 - y0); gl.uniform3f(U.uCam, k, tx, ty);
   gl.uniform4f(U.uRot, Math.cos(csYaw), Math.sin(csYaw), Math.cos(csPitch), Math.sin(csPitch)); gl.uniform1f(U.uR, CS_R); gl.uniform1f(U.uD, CS_D);
-  gl.uniform1f(U.uRF, P_RR); gl.uniform1f(U.uRB, CR_RR); gl.uniform1f(U.uPx, 1/(k*sc)); gl.uniform1f(U.uHasF, hasF ? 1 : 0); gl.uniform1f(U.uHasB, hasB ? 1 : 0);
+  gl.uniform1f(U.uRF, P_RF); gl.uniform1f(U.uDim, sel >= 0 ? .42 : hover >= 0 ? .18 : 0); gl.uniform1f(U.uRB, CR_RR); gl.uniform1f(U.uPx, 1/(k*sc)); gl.uniform1f(U.uHasF, hasF ? 1 : 0); gl.uniform1f(U.uHasB, hasB ? 1 : 0);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, GL.tex[0]); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, GL.tex[1]);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); ctx.drawImage(GL.cv, x0, y0, x1 - x0, y1 - y0); }
 dbg.__ivTopVis = () => { let b = -1; for (let i=0;i<n;i++) if (VV(i) && N[i].level >= 3 && (b < 0 || N[i].score > N[b].score)) { const x = sx(X[i]), y = sy(Y[i]); if (x > 450 && x < W - 60 && y > 60 && y < H - 60) b = i; } return b < 0 ? null : [sx(X[b]), sy(Y[b]), N[b].title]; };
@@ -2416,7 +2428,8 @@ cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
     tx -= dx * (e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }
   const f = Math.min(1.35, Math.max(.74, Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)))); zoomAt(e.offsetX, e.offsetY, f); }, {passive:false});
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
-$("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoomAt(W/2, H/2, 1/1.6); $("#zfit").onclick = () => { if (sphOn()) { morph(true, () => fitTarget()); return; } if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, 0]; domeKeep(); morph(true, () => fitTarget()); return; } fit(true); };   // in a dome: face forward again
+$("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoomAt(W/2, H/2, 1/1.6); $("#zfit").onclick = () => { if (globeOn()) { csYaw = 0; csPitch = 0; csKeep(); }   // the globe faces the Sea of Knowledge again
+  if (sphOn()) { morph(true, () => fitTarget()); return; } if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, 0]; domeKeep(); morph(true, () => fitTarget()); return; } fit(true); };   // in a dome: face forward again
 root.querySelectorAll("#xseg button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.x === mode)); b.onclick = () => setMode(b.dataset.x); });
 $("#xmore").onchange = e => setMode(e.target.value || "time");
 root.querySelectorAll("#xmore option").forEach(o => { if (o.value && !axisHas(o.value)) o.remove(); });   // only axes some note has
