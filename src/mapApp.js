@@ -913,7 +913,7 @@ function sensePlay(){ if (sensePlaying) { senseStop(); return; }
   sensePlaying = true; $("#tlplay").textContent = "❚❚"; $("#tlplay").setAttribute("aria-label", "Pause"); senseTimer = win.setTimeout(senseTick, 300); }
 function placePlaybar(){ const pb = $("#playbar"), tb = $("#timebar");   // Sensemaking and Starfield (desktop): autoplay sits just under the timeline bar, however many rows it wraps to
   pb.style.top = !isPhone() && !tb.hidden && (view === "sense" || view === "stars" || view === "gravity" || view === "chord" || expOn()) ? (tb.offsetTop + tb.offsetHeight + 8) + "px" : "";
-  const db = $("#driftbar"); db.hidden = !(s3dOn() || sphOn()); if (db.hidden) driftStop();
+  const db = $("#driftbar"); db.hidden = !(s3dOn() || sphOn() || geo3On()); if (db.hidden) driftStop();
   db.style.top = !isPhone() && pb.style.top ? (pb.offsetTop + pb.offsetHeight + 8) + "px" : ""; }
 on(win, "resize", () => placePlaybar());
 function syncTimebar(){ const on = true; win.setTimeout(placePlaybar, 0);
@@ -959,7 +959,7 @@ function setView(v){
   root.querySelectorAll("#xseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.x === mode)));
   ungrow(); view = v; save("iv-view", v); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
   root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === (view === "spacetime" ? "emergence" : view))));
-  root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() ? "1" : "";
+  root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : "";
   syncRange(); legend(); morph(true, () => fitTarget());
   { const bb = root.querySelector(`#vseg button[data-v="${view}"]`); if (bb && isPhone()) bb.scrollIntoView({inline:"nearest", block:"nearest"}); }
 }
@@ -1178,7 +1178,7 @@ function mapGroups(ok){
 // Three shapes: Square (#2–5 in the corners), Hexagon (#2–7 on the six corners, the same triangle splitting) and
 // Mandala (#2–7 on an inner ring, #8–25 on an outer ring, three petals to each inner note).
 const QS = 800; let QPTS = [], QTRI = [], QTOP = [], QRC = [], QPAR = [];
-let GEO = ["square", "hex", "mandala"].includes(pref("iv-geo", "square")) ? pref("iv-geo", "square") : "square";
+let GEO = ["square", "hex", "mandala", "octa"].includes(pref("iv-geo", "square")) ? pref("iv-geo", "square") : "square";
 const hexAt = j => [Math.cos(-Math.PI/2 + j*Math.PI/3)*QS, Math.sin(-Math.PI/2 + j*Math.PI/3)*QS];
 function mandalaSeeds(m){   // #1 in the center; 6 petals; 18 outer petals, three around each inner one
   const pts = [[0, 0]], par = [-1], r1 = QS*.48, r2 = QS;
@@ -1200,7 +1200,44 @@ function quinSeeds(m){
     tris.forEach((t, j) => { if (!take.has(j)) { next.push(t); return; } const k_ = pts.length; pts.push(cen[j]); const s = [[t[0], t[1], k_], [t[1], t[2], k_], [t[2], t[0], k_]]; next.push(...s); all.push(...s); });
     tris = next; }
   return {pts, tris: all, par: []}; }
+// ---------- Geometric · Octahedron (3D): the same rule in space ----------
+// #1 at the core, #2–7 on the six points; then each tetrahedron (a face of the octahedron and the core) gets a note
+// at its center, the emptiest first, which splits it in four. Other notes gather in a small cloud around their top note.
+const geo3On = () => view === "quincunx" && GEO === "octa";
+let g3Yaw = .55, g3Pitch = .42; { const c = pref("iv-g3cam", null); if (Array.isArray(c)) { g3Yaw = +c[0] || g3Yaw; g3Pitch = +c[1] || g3Pitch; } }
+const G3 = new Float32Array(3*n); let G3P = [], G3E = [];
+const g3Keep = () => save("iv-g3cam", [+g3Yaw.toFixed(3), +g3Pitch.toFixed(3)]);
+function g3Cam(x, y, z){ const cy = Math.cos(g3Yaw), sy_ = Math.sin(g3Yaw), cp = Math.cos(g3Pitch), sp = Math.sin(g3Pitch);
+  const x1 = x*cy + z*sy_, z1 = -x*sy_ + z*cy, y2 = y*cp - z1*sp, z2 = y*sp + z1*cp, f = QS*4.5, sc = f/(f + z2); return [x1*sc, y2*sc, z2, sc]; }
+function geoProj(){ for (let i=0;i<n;i++) { const q = g3Cam(G3[3*i], G3[3*i+1], G3[3*i+2]); EX[i] = q[0]; EY[i] = q[1]; DS3[i] = Math.max(.5, Math.min(1.8, q[3])); } }
+function octaSeeds(m){
+  const P = [[0, 0, 0], [0, -QS, 0], [QS, 0, 0], [0, 0, QS], [-QS, 0, 0], [0, 0, -QS], [0, QS, 0]], pts = P.slice(0, Math.min(m, 7));
+  let tets = []; for (const a of [1, 6]) for (const [b, c] of [[2, 3], [3, 4], [4, 5], [5, 2]]) tets.push([a, b, c, 0]);
+  const edges = new Set(), ed = (a, b) => edges.add(a < b ? a + "," + b : b + "," + a); for (const t of tets) { ed(t[0], t[1]); ed(t[1], t[2]); ed(t[2], t[0]); ed(t[0], 3 - 3); }
+  for (const [b, c] of [[2, 3], [3, 4], [4, 5], [5, 2]]) ed(b, c); for (let v = 1; v <= 6; v++) ed(0, v);
+  while (pts.length < m) {
+    const cen = tets.map(t => [0, 1, 2].map(a => (pts[t[0]][a] + pts[t[1]][a] + pts[t[2]][a] + pts[t[3]][a])/4)), need = m - pts.length, take = new Set();
+    const d3 = (p, q) => Math.hypot(p[0]-q[0], p[1]-q[1], p[2]-q[2]);
+    if (cen.length <= need) cen.forEach((c, j) => take.add(j));
+    else while (take.size < need) { let bj = -1, bd = -1; cen.forEach((c, j) => { if (take.has(j)) return; let d = Infinity; for (const p of pts) d = Math.min(d, d3(c, p)); for (const t of take) d = Math.min(d, d3(c, cen[t])); if (d > bd + 1e-6) { bd = d; bj = j; } }); take.add(bj); }
+    const next = []; tets.forEach((t, j) => { if (!take.has(j)) { next.push(t); return; } const k_ = pts.length; pts.push(cen[j]); for (const v of t) ed(v, k_);
+      next.push([t[0], t[1], t[2], k_], [t[0], t[1], k_, t[3]], [t[0], k_, t[2], t[3]], [k_, t[1], t[2], t[3]]); }); tets = next; }
+  return {pts, edges: [...edges].map(e => e.split(",").map(Number)).filter(([a, b]) => a < pts.length && b < pts.length)}; }
+function layoutOcta(){
+  const cand = []; for (let i=0;i<n;i++) if (vis[i] && !ARCH[i]) cand.push(i); cand.sort(byRank);
+  QTOP = cand.slice(0, Math.min(25, cand.length)); const {pts, edges} = octaSeeds(QTOP.length); G3P = pts; G3E = edges; QPTS = []; QTRI = []; QPAR = [];
+  const rc = pts.map((p, a) => { let d = Infinity; pts.forEach((q, b) => { if (a !== b) d = Math.min(d, Math.hypot(p[0]-q[0], p[1]-q[1], p[2]-q[2])); }); return Math.min(isFinite(d) ? d*.42 : QS*.5, QS*.45); }); QRC = rc;
+  const seedOf = new Map(QTOP.map((i, a) => [i, a])), B = bfsMulti(QTOP, j => vis[j]);
+  for (let i=0;i<n;i++) { RW[i] = RH[i] = 0; const a = seedOf.get(i), h1 = hash(N[i].path, 31), h2 = hash(N[i].path, 37), h3 = hash(N[i].path, 41);
+    const zz = 2*h1 - 1, th = 2*Math.PI*h2, rr = Math.sqrt(1 - zz*zz), dir = [rr*Math.cos(th), zz, rr*Math.sin(th)];   // an even spread of directions
+    let p;
+    if (a !== undefined) p = pts[a];
+    else { const s_ = B.src[i]; if (s_ < 0) { const R_ = QS*(1.35 + .12*h3); p = dir.map(v => v*R_); }   // never reached: a faint shell around everything
+      else { const a2 = seedOf.get(s_), lv = N[i].level, fr = lv >= 4 ? .18 + .1*h3 : lv === 3 ? .32 + .12*h3 : lv === 2 ? .48 + .38*Math.sqrt(h3) : .9 + .1*h3; p = pts[a2].map((v, c) => v + dir[c]*rc[a2]*fr); } }
+    G3[3*i] = p[0]; G3[3*i+1] = p[1]; G3[3*i+2] = p[2]; }
+  geoProj(); expBox = {x0: -QS*1.45, y0: -QS*1.45, x1: QS*1.45, y1: QS*1.45}; }
 function layoutQuin(){
+  if (GEO === "octa") { layoutOcta(); return; }
   const cand = []; for (let i=0;i<n;i++) if (vis[i] && !ARCH[i]) cand.push(i); cand.sort(byRank);
   QTOP = cand.slice(0, Math.min(25, cand.length)); const {pts, tris, par} = quinSeeds(QTOP.length); QPTS = pts; QTRI = tris; QPAR = par;
   QRC = pts.map((p, a) => { let d = Infinity; pts.forEach((q, b) => { if (a !== b) d = Math.min(d, Math.hypot(p[0]-q[0], p[1]-q[1])); }); return Math.min(isFinite(d) ? d*.46 : QS*.6, QS*.5); });
@@ -1219,6 +1256,12 @@ function layoutQuin(){
 EXP.quincunx = {
   layout: layoutQuin,
   guides(){
+    if (geo3On()) {   // the octahedron's struts, fainter toward the back
+      const Q = G3P.map(p => g3Cam(p[0], p[1], p[2])); ctx.strokeStyle = css.line; ctx.lineWidth = 1;
+      for (const [a, b] of G3E) { const z = (Q[a][2] + Q[b][2])/2, hull = a >= 1 && a <= 6 && b >= 1 && b <= 6;   // the octahedron's own twelve edges stand out; the splits inside stay faint
+        ctx.strokeStyle = hull ? css.accent : css.line; ctx.lineWidth = hull ? 1.6 : 1; ctx.globalAlpha = Math.max(hull ? .3 : .12, Math.min(hull ? .9 : .6, (hull ? .7 : .4) - z/(QS*2.2)));
+        ctx.beginPath(); ctx.moveTo(sx(Q[a][0]), sy(Q[a][1])); ctx.lineTo(sx(Q[b][0]), sy(Q[b][1])); ctx.stroke(); }
+      ctx.globalAlpha = .18; ctx.setLineDash([2, 5]); ctx.beginPath(); ctx.arc(sx(0), sy(0), QS*1.35*k, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; return; }
     ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.globalAlpha = .9; ctx.beginPath();
     if (GEO === "mandala") {   // petals: each note's petal reaches from the note it grows from; rings behind
       const petal = (a, b, w) => { const [x1, y1] = a, [x2, y2] = b, mx = (x1 + x2)/2, my = (y1 + y2)/2, dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy/L*L*w, ny = dx/L*L*w;
@@ -1230,8 +1273,9 @@ EXP.quincunx = {
   labels(){ ctx.font = `600 10px ${css.mono}`; ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.lineWidth = 4; ctx.strokeStyle = css.bg;
     QTOP.forEach((i, a) => { if (!VV(i)) return; const x = sx(EX[i]), y = sy(EY[i]) + rad(i) + 5, t = "#" + (a + 1); ctx.fillStyle = a === 0 ? css.accent : css.muted; ctx.strokeText(t, x, y); ctx.fillText(t, x, y); });
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
-  mustLabel: () => QTOP.filter(i => VV(i)),
-  get legend(){ return GEO === "mandala" ? "Geometric · Mandala: your top 25 notes by score. #1 sits in the center, #2–7 on the inner ring, and #8–25 on the outer ring, three petals around each inner note. Every other note joins the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach ring the outside."
+  mustLabel: () => QTOP.filter(i => VV(i)).slice(0, geo3On() ? 7 : 25),
+  get legend(){ return GEO === "octa" ? "Geometric · Octahedron (3D): your top 25 notes by score. #1 sits at the core and #2–7 on the six points; then each pyramid between a face and the core gets a note at its center, which splits it in four. Every other note gathers in a small cloud around the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach make a faint shell around everything. Drag to turn it."
+    : GEO === "mandala" ? "Geometric · Mandala: your top 25 notes by score. #1 sits in the center, #2–7 on the inner ring, and #8–25 on the outer ring, three petals around each inner note. Every other note joins the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach ring the outside."
     : GEO === "hex" ? "Geometric · Hexagon: your top 25 notes by score. #1 sits in the center and #2–7 on the six corners; then each triangle gets a note at its center, which splits it in three. Every other note joins the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach ring the outside."
     : "Geometric · Square: your top 25 notes by score. #1 sits in the center and #2–5 in the corners; then each triangle gets a note at its center, which splits it in three. Every other note joins the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach line the frame."; },
 };
@@ -1848,6 +1892,8 @@ function driftPick(){ const gals = BODIES.filter(b => b.kind === "gal" && b.memb
   let r = Math.random()*tot; for (const b of gals) { r -= Math.sqrt(b.members.length); if (r <= 0 && b.id !== driftGal) return b.id; } return gals[0].id; }
 function driftFrame(now){
   if (!drifting) return; driftRaf = RAF(driftFrame);
+  if (geo3On()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;
+    g3Yaw -= spin*1.6*dt; g3Pitch = driftSpeed === "earth" ? 20*Math.PI/180 : .35 + .3*Math.sin(t*2*Math.PI/((breath || 30)*1.4)); geoProj(); X.set(EX); Y.set(EY); render(); return; }
   if (sphOn()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;   // the globe turns slowly, tilting as it goes
     csYaw += spin*1.6*dt; csPitch = driftSpeed === "earth" ? 20*Math.PI/180 : .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); return; }
   const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed === "earth" ? "slow" : driftSpeed], t = (now - driftT0)/1000;
@@ -1862,10 +1908,10 @@ function driftFrame(now){
   const cxw = (vx - tx)/k, cyw = (vy - ty)/k, e = Math.min(1, dt*1.6);
   const ncx = cxw + (gx - cxw)*e, ncy = cyw + (gy - cyw)*e; k = k + (kk - k)*e; tx = vx - ncx*k; ty = vy - ncy*k;
   render(); }
-function driftStart(){ if (drifting || !(s3dOn() || sphOn())) return; drifting = true; driftK0 = fitTarget().k*.95; driftT0 = driftLast = performance.now(); driftCyc = -1;
+function driftStart(){ if (drifting || !(s3dOn() || sphOn() || geo3On())) return; drifting = true; driftK0 = fitTarget().k*.95; driftT0 = driftLast = performance.now(); driftCyc = -1;
   $("#dplay").textContent = "❚❚"; $("#dplay").setAttribute("aria-label", "Stop drifting"); driftRaf = RAF(driftFrame); }
 function driftStop(){ if (!drifting) return; drifting = false; win.cancelAnimationFrame(driftRaf); const b = $("#dplay"); if (b) { b.textContent = "▶"; b.setAttribute("aria-label", "Drift"); }
-  buildGrid(); if (sphOn()) csKeep(); else save("iv-cam3", [yaw3, pitch3]); draw(); }
+  buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else save("iv-cam3", [yaw3, pitch3]); draw(); }
 function bodyPos(b){ if (s3dOn() && B3[b.id]) return [B3[b.id].px, B3[b.id].py]; return [UC.x + b.x, UC.y + b.y]; }
 function halos3D(dim){   // in 3D the cached glow can't follow the camera: each galaxy gets a soft halo, flattened as its disk turns edge-on
   ctx.globalCompositeOperation = "lighter";
@@ -2420,7 +2466,7 @@ function pick(px, py){
 // ---------- interaction ----------
 const tip = $("#tip"); tip.addClass("ivm-tip"); doc.body.appendChild(tip);
 let drag = null, moved = false; const pts = new Map();
-cv.addEventListener("pointerdown", e => { driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, cyaw: csYaw, cpitch: csPitch, orbit: (s3dOn() || domeOn() || sphOn()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
+cv.addEventListener("pointerdown", e => { driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, cyaw: csYaw, cpitch: csPitch, gyaw: g3Yaw, gpitch: g3Pitch, orbit: (s3dOn() || domeOn() || sphOn() || geo3On()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
 cv.addEventListener("contextmenu", e => e.preventDefault());   // right-drag pans (as in Miro); no menu on the map
 cv.addEventListener("pointermove", e => {
   if (pts.has(e.pointerId)) {
@@ -2436,6 +2482,7 @@ cv.addEventListener("pointermove", e => {
         csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } tip.hidden = true; draw(); return; }
       if (drag.orbit && domeOn()) { if (!moved) return; const u = 1/(k*DF_); domeYaw = drag.dyaw - dx*u; domePitch = Math.max(domeSphere() ? -1.53 : -.35, Math.min(1.53, drag.dpitch + dy*u));   // drag the sky
         domeProject(); X.set(DX); Y.set(DY); tip.hidden = true; draw(); return; }
+      if (drag.orbit && geo3On()) { if (!moved) return; g3Yaw = drag.gyaw - dx*.006; g3Pitch = Math.max(-1.5, Math.min(1.5, drag.gpitch + dy*.006)); geoProj(); X.set(EX); Y.set(EY); tip.hidden = true; draw(); return; }
       if (drag.orbit) { if (!moved) return; yaw3 = drag.yaw + dx*.006; pitch3 = Math.max(-1.45, Math.min(1.45, drag.pitch + dy*.006)); project3D(); X.set(P3X); Y.set(P3Y); tip.hidden = true; draw(); return; }
       tx = drag.tx + dx; ty = drag.ty + dy; tip.hidden = true; draw(); return; }
   }
@@ -2457,7 +2504,7 @@ cv.addEventListener("pointermove", e => {
 const end = e => { pts.delete(e.pointerId);
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
-  if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY);
+  if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY);
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && isPhone()) flyTo(i); } toEditor(i); } drag = null; } };
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hover = -1; shTape = -1; draw(); } tip.hidden = true; });
@@ -2750,7 +2797,7 @@ $("#tmsubs").onclick = () => { tmSubs = !tmSubs; save("iv-tmsubs", tmSubs); $("#
 const syncSS = () => root.querySelectorAll("#shelfsort button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ss === shelfSort)));
 root.querySelectorAll("#shelfsort button").forEach(b => b.onclick = () => { shelfSort = b.dataset.ss; save("iv-ssort", shelfSort); syncSS(); if (view === "shelf") morph(true, () => fitTarget()); });
 syncSS();
-for (const g of ["square", "hex", "mandala"]) { const b = root.querySelector("#gogeo" + g); if (b) b.onclick = () => { closePops(); driftStop(); GEO = g; save("iv-geo", g); if (view === "quincunx") { morph(true, () => fitTarget()); legend(); } else setView("quincunx"); }; }
+for (const g of ["square", "hex", "mandala", "octa"]) { const b = root.querySelector("#gogeo" + g); if (b) b.onclick = () => { closePops(); driftStop(); GEO = g; save("iv-geo", g); if (view === "quincunx") { morph(true, () => fitTarget()); legend(); } else setView("quincunx"); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : ""; placePlaybar(); }; }
 for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline", "planet"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
 $("#gocso").onclick = () => goChord("out");
 $("#gocsi").onclick = () => goChord("in");
@@ -2939,7 +2986,7 @@ const HOPS = [
   ["planetarium", () => { if (view !== "emergence" && view !== "spacetime") hopTab("emergence"); hopRadio("emd", "dome"); }],
   ["gravity", () => hopTab("gravity")], ["stars2d", () => { hopTab("stars"); hopRadio("s3d", "2d"); }], ["stars3d", () => { hopTab("stars"); hopRadio("s3d", "3d"); }], ["sense", () => hopTab("sense")],
   ["chord", () => hopBtn("#gochord")], ["corona", () => hopBtn("#gocso")], ["tesla", () => hopBtn("#gocsi")], ["treemap", () => hopBtn("#gotreemap")], ["shelf", () => hopBtn("#goshelf")],
-  ["geo-square", () => hopBtn("#gogeosquare")], ["geo-hex", () => hopBtn("#gogeohex")], ["geo-mandala", () => hopBtn("#gogeomandala")],
+  ["geo-square", () => hopBtn("#gogeosquare")], ["geo-hex", () => hopBtn("#gogeohex")], ["geo-mandala", () => hopBtn("#gogeomandala")], ["geo-octa", () => hopBtn("#gogeoocta")],
   ["planet-flat", () => hopBtn("#goplflat")], ["planet-table", () => hopBtn("#gopltable")], ["planet-globe", () => hopBtn("#goplglobe")], ["tree", () => hopBtn("#gotree")], ["skyline", () => hopBtn("#goskyline")]];
 function hopNow(){ return view === "emergence" ? (DOME.emergence ? "planetarium" : "emergence") : view === "stars" ? (S3D ? "stars3d" : "stars2d") : view === "chord" ? (CSPH === "out" ? "corona" : CSPH === "in" ? "tesla" : "chord")
   : view === "quincunx" ? "geo-" + GEO : view === "planet" ? "planet-" + PMODE : view; }
@@ -2966,7 +3013,8 @@ function apdFrame(now){
   if (!playing || !playDrift || dead) { apdRaf = 0; return; } apdRaf = RAF(apdFrame);
   const dt = Math.min(.1, (now - (apdLast || now))/1000); apdLast = now; apdT += dt; if (!dt) return;
   if (drifting) return;   // the Drift bar's own drift is already running
-  if (sphOn()) { csYaw += .07*1.6*dt*(globeOn() ? -1 : 1); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } }
+  if (geo3On()) { g3Yaw -= .07*1.6*dt; geoProj(); X.set(EX); Y.set(EY); }
+  else if (sphOn()) { csYaw += .07*1.6*dt*(globeOn() ? -1 : 1); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } }
   else if (s3dOn()) { yaw3 += .07*dt; project3D(); X.set(P3X); Y.set(P3Y); }
   else if (domeOn()) { domeYaw += .03*dt; domeProject(); X.set(DX); Y.set(DY); }
   else if (!morphing) { const px = 9*Math.sin(apdT*.23), py = 6*Math.cos(apdT*.17);   // a slow glide, a few pixels a second, and a gentle in-and-out
@@ -3115,7 +3163,7 @@ function snapView(name){
 function applySaved(v){
   if (typeof playing !== "undefined" && playing) setPlaying(false);
   closePops(); curView = v.name;
-  if (["square", "hex", "mandala"].includes(v.geo)) { GEO = v.geo; save("iv-geo", GEO); }
+  if (["square", "hex", "mandala", "octa"].includes(v.geo)) { GEO = v.geo; save("iv-geo", GEO); }
   { const nv = VIEWS_ON.includes(v.view) ? v.view : "emergence";
     if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
     ungrow();   // back to today's levels; a saved time-lapse point re-grows them below
@@ -3234,7 +3282,7 @@ root.querySelectorAll('input[name="ssrc"]').forEach(r => r.onchange = () => { if
   syncSenseSrc(); legend(); morph(true); if (sel >= 0) win.setTimeout(() => select(sel, true), 0); });
 syncSenseSrc();
 $("#tlall").onclick = senseClear;
-root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() ? "1" : "";
+root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : "";
 win.setTimeout(() => { const b = root.querySelector(`#vseg button[data-v="${view}"]`); if (b && isPhone()) b.scrollIntoView({inline:"nearest", block:"nearest"}); }, 50);
 dbg.__ivArc = nm => { const c = CHCAT.find(c => c.short === nm); if (!c) return null; const a = (c.a0 + c.a1)/2, r = $("#cv").getBoundingClientRect(); return [r.left + sx(CH_C.x) + Math.cos(a)*CH_R*k*1.07, r.top + sy(CH_C.y) + Math.sin(a)*CH_R*k*1.07]; };
 dbg.__ivLHall = () => { const r = $("#cv").getBoundingClientRect(); return LH.map(b => [b[0] + r.left, b[1] + r.top, b[2], b[3], N[b[4]].title]); };
