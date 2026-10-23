@@ -1215,6 +1215,7 @@ EXP.quincunx = {
 // Spine width is words, height is level; maps and hubs wear their level colors.
 const SB = {W: 1500, gap: 140, SH: 100, board: 14};
 let SHELF = {rows: [], secs: [], calls: []};
+let shelfSort = ["call", "az", "created", "modified"].includes(pref("iv-ssort", "call")) ? pref("iv-ssort", "call") : "call";
 function layoutShelf(){
   const rows = [], secs = [], calls = []; for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
   const right = i => ARCH[i] || ["Calendar", "Efforts", "x"].includes(N[i].ace);
@@ -1228,6 +1229,11 @@ function layoutShelf(){
     const put = (i, lean) => { const w = width(i); if (x + w > x0 + SB.W) { row++; x = x0; } const h = height(i), by = baseY(row);
       RX[i] = x; RW[i] = w; RH[i] = h; RY[i] = by - h; EX[i] = x + w/2; EY[i] = by - h*.5; x += w + .6; used = true; if (lean) RH[i] = -h; };
     const section = (label) => { newRow(); secs.push({label, x: x0, y: baseY(row) - SB.SH - 4}); };
+    // Shelve by A–Z, Created or Modified: one run per section, with a marker where the letter or year changes
+    const sorted = ids => { const tk = i => shelfSort === "az" ? N[i].title.toLowerCase() : shelfSort === "modified" ? (N[i].mt || 0) : (isNaN(TV[i]) ? -Infinity : TV[i]);
+      const mk = i => shelfSort === "az" ? (N[i].title[0] || "?").toUpperCase() : shelfSort === "modified" ? (N[i].mt ? String(new Date(N[i].mt).getUTCFullYear()) : "?") : (isNaN(TV[i]) ? "?" : String(new Date(TV[i]).getUTCFullYear()));
+      ids.sort((a, b) => { const p = tk(a), q = tk(b); return p < q ? -1 : p > q ? 1 : 0; }); let last = null;
+      for (const i of ids) { const m = mk(i); if (m !== last) { last = m; x += 6; put(i, N[i].level === 1); calls.push({x: RX[i], y: RY[i] + Math.abs(RH[i]), t: m, i}); continue; } put(i, N[i].level === 1); } };
     if (bay === 0) {
       const ok = i => !right(i), G = mapGroups(ok), mapRank = new Map(G.maps.map((m, j) => [m, j])), hubRank = new Map(G.hubs.map((h_, j) => [h_, j]));
       const rank_ = t => t === "Root / +" ? 0 : t === "Atlas" ? 1 : 2;
@@ -1235,6 +1241,7 @@ function layoutShelf(){
       for (const top of tops) {
         const ids = []; for (let i=0;i<n;i++) if (vis[i] && ok(i) && topOf(i) === top) ids.push(i);
         if (!ids.length) continue; section(top);
+        if (shelfSort !== "call") { sorted(ids); continue; }
         if (top === "Root / +") { ids.sort((a, b) => (isNaN(TV[a]) ? -Infinity : TV[a]) - (isNaN(TV[b]) ? -Infinity : TV[b])); for (const i of ids) put(i, N[i].level === 1); continue; }   // the inbox: by date, unlinked notes leaning
         const key = i => { const m = G.map[i], hb = G.hub[i]; return [hb >= 0 ? hubRank.get(hb) ?? 999 : 999, m >= 0 ? mapRank.get(m) : 1e6, m === i ? -1 : 0, isNaN(TV[i]) ? 0 : TV[i]]; };
         const shelved = ids.filter(i => G.map[i] >= 0).sort((a, b) => { const p = key(a), q = key(b); for (let j = 0; j < 4; j++) if (p[j] !== q[j]) return p[j] - q[j]; return 0; });
@@ -1249,7 +1256,7 @@ function layoutShelf(){
     } else {
       const groups = [["Calendar", i => !ARCH[i] && N[i].ace === "Calendar"], ["Efforts", i => !ARCH[i] && N[i].ace === "Efforts"], ["x", i => !ARCH[i] && N[i].ace === "x"], ["Archive", i => !!ARCH[i]]];
       for (const [label, f] of groups) { const ids = []; for (let i=0;i<n;i++) if (vis[i] && f(i)) ids.push(i); if (!ids.length) continue;
-        ids.sort((a, b) => (isNaN(TV[a]) ? -Infinity : TV[a]) - (isNaN(TV[b]) ? -Infinity : TV[b])); section(label);
+        section(label); if (shelfSort !== "call") { sorted(ids); continue; } ids.sort((a, b) => (isNaN(TV[a]) ? -Infinity : TV[a]) - (isNaN(TV[b]) ? -Infinity : TV[b]));
         let lastY = null; for (const i of ids) { const y = isNaN(TV[i]) ? "?" : new Date(TV[i]).getUTCFullYear(); if (y !== lastY) { lastY = y; x += 6; put(i); calls.push({x: RX[i], y: RY[i] + RH[i], t: String(y), i}); continue; } put(i); } }
     }
     rows.push({bay, x0, n: row + 1, baseY});
@@ -1277,7 +1284,7 @@ EXP.shelf = {
     for (const s of SHELF.secs) { const x = sx(s.x), y = sy(s.y); if (y < -20 || y > H + 20) continue; ctx.font = `600 ${k > .8 ? 12 : 10}px ${css.mono}`; ctx.fillStyle = css.accent; const t = s.label.toUpperCase(); ctx.strokeText(t, x + 2, y); ctx.fillText(t, x + 2, y); }
     if (k > 1.6) { ctx.font = `500 9.5px ${css.mono}`; ctx.fillStyle = css.muted; for (const c of SHELF.calls) { const x = sx(c.x), y = sy(c.y) + 11; if (x < -20 || x > W || y < 0 || y > H + 12) continue; ctx.strokeText(c.t, x, y); ctx.fillText(c.t, x, y); } } },
   ownLabels: true,
-  legend: "Bookshelf: left bay, knowledge, shelved by your own call numbers (hub.map): each map is a bookend holding the notes it reaches first; unlinked notes lean at the end. Root and + share the top shelf of the left bay. Right bay: Calendar by year, then Efforts and x. Spine width is words, height is level; maps and hubs wear their level colors.",
+  legend: "Bookshelf: Layout → Shelve by Call no., A–Z, Created or Modified. By call number, the left bay (knowledge) is shelved by your own call numbers (hub.map): each map is a bookend holding the notes it reaches first; unlinked notes lean at the end. Root and + share the top shelf of the left bay. Right bay: Calendar by year, then Efforts and x. Spine width is words, height is level; maps and hubs wear their level colors.",
 };
 
 // ---------- Tree: Home is the trunk, the hubs and maps branch from it, notes are leaves ----------
@@ -2329,9 +2336,9 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", lay = sv || mode === "time" || mode === "ace";   // the Layout section shows only where there are layout settings
+  const sv = view === "sense", shv = view === "shelf", lay = sv || shv || mode === "time" || mode === "ace";   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); $("#laygrp").previousElementSibling.hidden = !lay;
-  if (lay) { $("#startms").hidden = sv || mode !== "time"; $("#subctl").hidden = sv || mode !== "ace"; $("#sensems").hidden = !sv; }
+  if (lay) { $("#startms").hidden = sv || shv || mode !== "time"; $("#subctl").hidden = sv || shv || mode !== "ace"; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; }
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -2471,6 +2478,9 @@ root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if 
 syncEmd();
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); }
 $("#gochord").onclick = () => goChord("");
+const syncSS = () => root.querySelectorAll("#shelfsort button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ss === shelfSort)));
+root.querySelectorAll("#shelfsort button").forEach(b => b.onclick = () => { shelfSort = b.dataset.ss; save("iv-ssort", shelfSort); syncSS(); if (view === "shelf") morph(true, () => fitTarget()); });
+syncSS();
 for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline", "planet"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
 $("#gocso").onclick = () => goChord("out");
 $("#gocsi").onclick = () => goChord("in");

@@ -92,6 +92,7 @@ export async function scanVault(adapter, settings, onProgress) {
   }
 
   const ctime = new Map(notes.map(f => [f.path, f.ctime || 0]));
+  const mtime = new Map(notes.map(f => [f.path, f.mtime || 0]));
   const resolve = (target, from) => { const q = adapter.resolve(target.trim(), from); return q && pathSet.has(q) ? q : null; };
   const S = () => new Map(); const add = (m, k, v) => { let s = m.get(k); if (!s) m.set(k, s = new Set()); s.add(v); };
   const get = (m, k) => m.get(k) || new Set();
@@ -180,7 +181,7 @@ export async function scanVault(adapter, settings, onProgress) {
   }
   const cnt = s => { let c = 0; for (const x of s) if (keepSet.has(x)) c++; return c; };
   const nodes = keep.map(p => { const i = info.get(p), parts = p.split("/");
-    return { id: idx.get(p), path: p, title: i.title, ace: p.includes("/") ? parts[0] : "(root)", sub: parts.length > 2 ? parts.slice(0, 2).join("/") : parts[0],
+    return { id: idx.get(p), path: p, mt: mtime.get(p) || 0, title: i.title, ace: p.includes("/") ? parts[0] : "(root)", sub: parts.length > 2 ? parts.slice(0, 2).join("/") : parts[0],
       created: i.created, date: i.date, rank: i.rank, collections: i.collections, p: i.props,
       body_in: cnt(get(bodyIn, p)), body_out: cnt(get(bodyOut, p)), up_in: cnt(get(upIn, p)), coll_in: cnt(get(collIn, p)),
       series: series.get(p) || 0, density: i.density, is_map: i.is_map, maps_linked: i.maps_linked, score: i.score, level: i.level, why: i.why,
