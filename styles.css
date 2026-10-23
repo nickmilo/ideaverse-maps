@@ -202,7 +202,7 @@
 .ivm #vmorepop .mexp[open] summary::before{transform:rotate(90deg)}
 .ivm #vmorepop .mexp .chip{margin-top:4px}
 .ivm #vmorepop .mexp2{margin-left:12px}
-.ivm[data-view="spacetime"] #vseg .vmore,.ivm[data-view="chord"] #vseg .vmore,.ivm[data-view="quincunx"] #vseg .vmore,.ivm[data-view="shelf"] #vseg .vmore,.ivm[data-view="tree"] #vseg .vmore,.ivm[data-view="treemap"] #vseg .vmore,.ivm[data-view="skyline"] #vseg .vmore,.ivm[data-view="planet"] #vseg .vmore{background:var(--ink);color:var(--bg)}
+.ivm[data-view="chord"] #vseg .vmore,.ivm[data-view="quincunx"] #vseg .vmore,.ivm[data-view="shelf"] #vseg .vmore,.ivm[data-view="tree"] #vseg .vmore,.ivm[data-view="treemap"] #vseg .vmore,.ivm[data-view="skyline"] #vseg .vmore,.ivm[data-view="planet"] #vseg .vmore{background:var(--ink);color:var(--bg)}
 .ivm[data-dome="1"] canvas{cursor:grab}
 @container ivm (min-width:761px){.ivm.ivm.ivm.ivm[data-view="gravity"] .timebar,.ivm.ivm.ivm.ivm[data-view="chord"] .timebar,.ivm.ivm.ivm.ivm[data-view="quincunx"] .timebar,.ivm.ivm.ivm.ivm[data-view="shelf"] .timebar,.ivm.ivm.ivm.ivm[data-view="tree"] .timebar,.ivm.ivm.ivm.ivm[data-view="treemap"] .timebar,.ivm.ivm.ivm.ivm[data-view="skyline"] .timebar,.ivm.ivm.ivm.ivm[data-view="planet"] .timebar{top:14px;bottom:auto;left:14px}
 .ivm.ivm[data-view="gravity"] .playbar,.ivm.ivm[data-view="chord"] .playbar,.ivm.ivm[data-view="quincunx"] .playbar,.ivm.ivm[data-view="shelf"] .playbar,.ivm.ivm[data-view="tree"] .playbar,.ivm.ivm[data-view="treemap"] .playbar,.ivm.ivm[data-view="skyline"] .playbar,.ivm.ivm[data-view="planet"] .playbar{left:14px;transform:none;bottom:auto}}
@@ -238,7 +238,7 @@
 .ivm.ivm[data-view="sense"] .playbar{left:14px;transform:none;bottom:auto}}
 .ivm #vseg .vcar{display:none;font-size:10px}
 .ivm #vseg button{white-space:nowrap}
-.ivm[data-view="sense"] #vseg [data-v="sense"] .vcar,.ivm[data-view="stars"] #vseg [data-v="stars"] .vcar,.ivm[data-view="emergence"] #vseg [data-v="emergence"] .vcar{display:inline}
+.ivm[data-view="sense"] #vseg [data-v="sense"] .vcar,.ivm[data-view="stars"] #vseg [data-v="stars"] .vcar,.ivm[data-view="emergence"] #vseg [data-v="emergence"] .vcar,.ivm[data-view="spacetime"] #vseg [data-v="emergence"] .vcar{display:inline}
 .ivm #sensepop{left:auto;right:0;min-width:250px}
 .ivm #starpop{left:auto;right:0;min-width:270px}
 .ivm #lcolpop{left:auto;right:0;min-width:290px}
