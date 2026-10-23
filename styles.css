@@ -47,11 +47,6 @@
   --display:var(--font-interface); --dw:700; --title:var(--h1-color,var(--text-normal)); color-scheme:inherit;}
 .ivm .ivm-probe{position:absolute;width:0;height:0;overflow:hidden;color:var(--probe);pointer-events:none}
 /* Cybertron: after Nick Milo's dark Obsidian theme. Levels: 5 yellow, 4 purple, 3 cyan, 2 pink, 1 gray; links below green */
-.ivm[data-theme="cybertron"],.ivm-tip[data-theme="cybertron"]{--g5a:#fcf601; --g5b:#c7c400; --g4a:#c3b8ff; --g4b:#8a6cff; --g3a:#7fdcef; --g3b:#2a93ab; --bg:#2f3136; --panel:#222222; --line:#45484e; --ink:#5dbcd2; --muted:#aaaaaa; --title:#c7c400;
-  --accent:#c7c400; --accent-soft:rgba(199,196,0,.13); --up:#ff6ec7; --down:#3ddc84; --rel:#9e8aff; --upp:#fcf601; --prop:#aaaaaa;
-  --band-a:rgba(93,188,210,.03); --band-b:rgba(93,188,210,0);
-  --l2:rgba(240,110,200,.72); --l1:rgba(170,170,170,.38); --sl2:rgba(240,110,200,.9); --sl1:rgba(170,170,170,.65); --qa:.06; --edge-faint:rgba(38,121,140,.42);
-  --display:var(--font-interface); --dw:700; color-scheme:dark;}
 .ivm *{box-sizing:border-box}
 .ivm [hidden]:not(#ivm-none),.ivm-tip[hidden]{display:none}
 .ivm{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;overflow:hidden}
@@ -116,7 +111,6 @@
 .ivm #themeseg button[data-th="softpaper"] i{background:radial-gradient(circle at 50% 50%,#1a7da4 0 2px,transparent 2.5px),#eee6dd;box-shadow:inset 0 0 0 1px #cac1b9}
 .ivm #themeseg button[data-th="dark"] i{background:#111614;box-shadow:inset 0 0 0 1px #2a3530}
 .ivm #themeseg button[data-th="lyt"] i{background:radial-gradient(circle at 50% 50%,hsl(58,86%,66%) 0 2.5px,transparent 3px),hsl(225,12%,20%);box-shadow:inset 0 0 0 1px hsl(196,27%,41%)}
-.ivm #themeseg button[data-th="cybertron"] i{background:radial-gradient(circle at 50% 50%,#fcf601 0 2.5px,transparent 3px),#2f3136;box-shadow:inset 0 0 0 1px #5dbcd2}
 .ivm #themeseg button[data-th="obsidian"] i{background:linear-gradient(135deg,var(--background-primary) 0 50%,var(--interactive-accent) 50%);box-shadow:inset 0 0 0 1px var(--background-modifier-border)}
 .ivm #themeseg button[aria-pressed="true"]{background:none;border:2px solid var(--accent)}
 .ivm .glbl{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-right:-4px}
@@ -474,3 +468,6 @@
 .ivm .timebar.collapsed{gap:8px}
 .ivm .tgrip{position:absolute;left:0;right:0;top:0;height:7px;cursor:ns-resize;z-index:2}
 .ivm .tgrip:hover,.ivm .tgrip.on{background:linear-gradient(var(--accent),var(--accent)) top/100% 2px no-repeat}
+
+.ivm #driftseg .dearth{display:none}
+.ivm[data-view="chord"] #driftseg .dearth{display:inline-block}

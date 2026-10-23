@@ -339,7 +339,7 @@ function layoutSpace(){
   for (const r of ROWS) { r.c0 = c + (c ? g : 0); c += r.n/total; r.c1 = c - (c < .999 ? g : 0); }
   for (let i=0;i<n;i++) { const r = at.get(rowKey(i)) || ROWS[0]; YST[i] = r ? r.y0 + (YE[i]/WH)*(r.y1 - r.y0) : YE[i]; YSC[i] = r ? r.c0 + (YE[i]/WH)*(r.c1 - r.c0) : .5; }
 }
-const rowName = k => k === "\u0000arch" ? "Archive" : k === "\u0000root" ? "Top level" : ACE_SYM[k] ? ACE_SYM[k][0] + " " + ACE_SYM[k][1].replace(/[()]/g, "") : k;
+const rowName = k => k === "\u0000arch" ? "Archive" : k === "\u0000root" ? "Root" : k === "+" ? "+" : ACE_SYM[k] ? ACE_SYM[k][0] + " " + ACE_SYM[k][1].replace(/[()]/g, "") : k;
 
 // ---------- hit-test grid ----------
 const CELL = 24; let grid = new Map();
@@ -1096,12 +1096,12 @@ function csGuides(){
   ctx.beginPath(); ctx.arc(cx, cy, rs, 0, 6.2832);
   if (CSPH === "out") {   // a lit globe: a faint atmosphere around the rim, soft light from the upper left, the far side in shade
     const tr = (c, al) => { const m = /rgba?\(([^)]+)\)/.exec(c); if (!m) return c; const v = m[1].split(",").slice(0, 3).join(","); return `rgba(${v},${al})`; };
-    const halo = ctx.createRadialGradient(cx, cy, rs*.97, cx, cy, rs*1.16); halo.addColorStop(0, tr(css.accent, .22)); halo.addColorStop(1, tr(css.accent, 0));
+    const halo = ctx.createRadialGradient(cx, cy, rs*.97, cx, cy, rs*1.16); halo.addColorStop(0, tr(css.accent, .1)); halo.addColorStop(1, tr(css.accent, 0));
     ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx, cy, rs*1.16, 0, 6.2832); ctx.fill();
     const g = ctx.createRadialGradient(cx - rs*.4, cy - rs*.45, 0, cx - rs*.15, cy - rs*.15, rs*1.15);
-    g.addColorStop(0, tr(css.ink, .16)); g.addColorStop(.45, tr(css.ink, .05)); g.addColorStop(1, tr(css.ink, 0));
+    g.addColorStop(0, tr(css.ink, .08)); g.addColorStop(.45, tr(css.ink, .025)); g.addColorStop(1, tr(css.ink, 0));
     ctx.beginPath(); ctx.arc(cx, cy, rs, 0, 6.2832); ctx.fillStyle = css.bg; ctx.globalAlpha = .85; ctx.fill(); ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fill();
-    const rim = ctx.createRadialGradient(cx, cy, rs*.82, cx, cy, rs); rim.addColorStop(0, tr(css.accent, 0)); rim.addColorStop(1, tr(css.accent, .10)); ctx.fillStyle = rim; ctx.fill(); }
+    const rim = ctx.createRadialGradient(cx, cy, rs*.82, cx, cy, rs); rim.addColorStop(0, tr(css.accent, 0)); rim.addColorStop(1, tr(css.accent, .05)); ctx.fillStyle = rim; ctx.fill(); }
   ctx.globalAlpha = .6; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
   // each kind's wedge: its colored belt along the equator, and its edge from pole to pole
   ctx.lineCap = "butt";
@@ -1211,15 +1211,15 @@ const s3dOn = () => view === "stars" && S3D;
 // ---- Drift: a screensaver for 3D Starfield. The camera circles the universe, its tilt sways, and every ~40 s it breathes in
 // toward one galaxy (a different one each time, bigger ones more often) and back out again. Any touch, drag or scroll stops it.
 let drifting = false, driftRaf = 0, driftT0 = 0, driftLast = 0, driftGal = -1, driftCyc = -1, driftK0 = 1, driftSpeed = "slow";
-const DRIFT = {calm: [.018, 70], slow: [.035, 44], lively: [.07, 26]};   // [radians of orbit per second, seconds per in-and-out breath]
+const DRIFT = {calm: [.018, 70], slow: [.035, 44], lively: [.07, 26], earth: [.05, 0]};   // earth: Corona and Tesla only, a steady spin at a fixed 20° tilt   // [radians of orbit per second, seconds per in-and-out breath]
 function driftPick(){ const gals = BODIES.filter(b => b.kind === "gal" && b.members.some(i => VV(i)));
   if (!gals.length) return -1; let tot = 0; for (const b of gals) tot += Math.sqrt(b.members.length);
   let r = Math.random()*tot; for (const b of gals) { r -= Math.sqrt(b.members.length); if (r <= 0 && b.id !== driftGal) return b.id; } return gals[0].id; }
 function driftFrame(now){
   if (!drifting) return; driftRaf = RAF(driftFrame);
   if (csphOn()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;   // the globe turns slowly, tilting as it goes
-    csYaw += spin*1.6*dt; csPitch = .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); render(); return; }
-  const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;
+    csYaw += spin*1.6*dt; csPitch = driftSpeed === "earth" ? 20*Math.PI/180 : .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); render(); return; }
+  const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed === "earth" ? "slow" : driftSpeed], t = (now - driftT0)/1000;
   yaw3 += spin*dt; pitch3 = .62 + .38*Math.sin(t*2*Math.PI/(breath*1.7));
   project3D(); X.set(P3X); Y.set(P3Y);
   const cyc = Math.floor(t/breath), ph = (t % breath)/breath, inA = Math.pow(Math.sin(ph*Math.PI), 2);   // 0 far out → 1 close in → 0
@@ -2308,7 +2308,7 @@ function setTheme(t, keep){ root.setAttribute("data-theme", t); if (keep) save("
 root.querySelectorAll("#themeseg button").forEach(b => b.onclick = () => setTheme(b.dataset.th, true));
 setLegend(legendOpen);
 updateCounts();
-{ const t = pref("iv-theme", null); if (t === "sepia") save("iv-theme", "softpaper"); }   // Sepia became Soft Paper (0.1.2)
+{ const t = pref("iv-theme", null); if (t === "sepia") save("iv-theme", "softpaper"); if (t === "cybertron") save("iv-theme", "lyt"); }   // Sepia became Soft Paper (0.1.2); Cybertron was retired for LYT Mode (0.1.49)   // Sepia became Soft Paper (0.1.2)
 setTheme(pref("iv-theme", autoTheme()));
 
 
