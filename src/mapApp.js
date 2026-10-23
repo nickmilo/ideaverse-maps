@@ -1401,8 +1401,6 @@ function domeGuides(){
     ctx.strokeStyle = css.accent; ctx.globalAlpha = .55; ctx.beginPath(); for (const th of [a0, a1]) domePath(domeMeridian(th, -P, P)); ctx.stroke();   // the seam: start | today
     if (senseT != null && byTime) { ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5; ctx.beginPath(); domePath(domeMeridian(stTheta(xTime(Math.min(senseT, T1))), -P, P)); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1; }
     ctx.globalAlpha = 1;
-    if (senseT == null && Math.abs(domePitch) < 1.15) { const yr = domeAhead(), vw = W - (isPhone() ? 0 : sideW()), sz = Math.min(vw, H)*.3;   // always say which year you're facing
-      if (yr) { ctx.save(); ctx.globalAlpha = .07; ctx.fillStyle = css.ink; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = `${css.dw} ${Math.round(sz)}px ${css.display}`; ctx.fillText(yr, vw/2, H/2); ctx.restore(); } }
   } else {
     ctx.beginPath(); for (const L of LEVELS) { const a = RING[L.lv][0]; if (a > 0) domePath(domeCircle(grPhi(a - .015))); } domePath(domeCircle(grPhi(1))); ctx.stroke();
     ctx.setLineDash([2, 4]); ctx.beginPath();
@@ -1410,15 +1408,6 @@ function domeGuides(){
     else for (const c of cols) domePath(domeMeridian(angOf(c.x0), grPhi(1), grPhi(.15)));
     ctx.stroke(); ctx.setLineDash([]);
   }
-}
-function domeAhead(){   // what's straight ahead of you in a whole-sphere dome: the year (or, by ACE, the folder); "" in the seam
-  let a = domeYaw; while (a > Math.PI) a -= 2*Math.PI; while (a < -Math.PI) a += 2*Math.PI;
-  const f = (a - (-Math.PI + STGAP/2))/(2*Math.PI - STGAP); if (f < 0 || f > 1) return "";
-  const x = ND[0] + f*(WW - ND[0]);
-  if (view === "emergence" && mode !== "time") { if (mode !== "ace") return ""; const c = cols.find(c => x >= c.x0 - 30 && x <= c.x1 + 30); return c ? rowName(c.ace) : ""; }
-  if (x < X0T) return ER && x >= ER[0] ? `Before ${fromY}` : x < ND[1] + 30 ? "No date" : "";
-  const u = (x - X0T)/(WW - X0T)*UT, uc = (TS - TF)/YEAR*COMP, t = u <= uc ? TF + u/COMP*YEAR : TS + (u - uc)*YEAR;
-  return String(new Date(Math.min(t, T1)).getUTCFullYear());
 }
 function domeLabels(){   // band names ride along the left of your view; years (or folders) sit just above the horizon
   const vw = W - (isPhone() ? 0 : sideW()), half = Math.atan((vw/2)/(k*DF_)), thL = domeYaw - half*.8;
