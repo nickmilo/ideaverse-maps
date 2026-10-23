@@ -924,7 +924,7 @@ function syncTimebar(){ const on = true; win.setTimeout(placePlaybar, 0);
 let morphing = false;
 // Moves notes to their new places. With cam, the camera's destination is worked out from where the
 // notes will land, and camera and notes move in the same frames (one motion, not two).
-let morphId = 0;
+let morphId = 0, hopSlow = false;
 function morph(animate, cam){
   if (view === "gravity") layoutGravity(); else if (view === "stars") layoutStars(); else if (view === "sense") layoutSense(); else if (view === "arc") layoutArc(); else if (view === "chord") layoutChord(); else if (view === "spacetime") layoutSpace(); else if (expOn()) EXP[view].layout();
   let tX = expOn() ? EX : view === "spacetime" ? XT : view === "gravity" ? GX : view === "stars" ? (S3D ? (project3D(), P3X) : SX) : view === "sense" ? SNX : view === "arc" ? ARX : view === "chord" ? CHX : curX(), tY = view === "gravity" ? GY : view === "stars" ? (S3D ? P3Y : SY) : view === "sense" ? SNY : view === "arc" ? ARY : view === "chord" ? CHY : view === "spacetime" ? YST : YE;
@@ -934,7 +934,7 @@ function morph(animate, cam){
   const c1 = cam ? cam(tX, tY) : null;
   if (!animate || win.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     X.set(tX); Y.set(tY); buildGrid(); if (c1) { k = c1.k; tx = c1.tx; ty = c1.ty; } draw(); return; }
-  const fX = Float32Array.from(X), fY = Float32Array.from(Y), t0 = performance.now(), dur = 750, id = ++morphId;
+  const fX = Float32Array.from(X), fY = Float32Array.from(Y), t0 = performance.now(), dur = hopSlow ? 1900 : 750, id = ++morphId;   // autoplay's map hops move slower, so you can watch the notes travel
   const c0 = {k, tx, ty};
   morphing = true; hover = -1; camBusy = id;
   const step = now => { if (id !== morphId) return;   // a newer move took over
@@ -1682,7 +1682,8 @@ function globeDraw(){
   const x0 = Math.max(0, Math.floor(cx - rs - 2)), y0 = Math.max(0, Math.floor(cy - rs - 2)), x1 = Math.min(W, Math.ceil(cx + rs + 2)), y1 = Math.min(H, Math.ceil(cy + rs + 2)); if (x1 <= x0 || y1 <= y0) return;
   const gl = glReady(); if (!gl) { ctx.fillStyle = css.panel; ctx.beginPath(); ctx.arc(cx, cy, rs, 0, 6.2832); ctx.fill(); return; }
   const pf = planetImg(), cr = creatorImg(), hasF = glTex(0, pf, PLANET.src, true), hasB = glTex(1, cr, CREATOR.src, CREATOR.disc);
-  const sc = Math.min(dpr, 2600/Math.max(x1 - x0, y1 - y0)), w = Math.max(1, Math.round((x1 - x0)*sc)), h = Math.max(1, Math.round((y1 - y0)*sc));
+  // a lighter globe while it turns keeps the motion smooth
+  const moving = drifting || apdRaf || sphTurning || (drag && drag.orbit && moved), sc = Math.min(moving ? 1 : dpr, 2600/Math.max(x1 - x0, y1 - y0)), w = Math.max(1, Math.round((x1 - x0)*sc)), h = Math.max(1, Math.round((y1 - y0)*sc));
   if (GL.cv.width !== w || GL.cv.height !== h) { GL.cv.width = w; GL.cv.height = h; } gl.viewport(0, 0, w, h); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
   const U = GL.u; gl.uniform2f(U.uOff, x0, y0); gl.uniform2f(U.uSize, x1 - x0, y1 - y0); gl.uniform3f(U.uCam, k, tx, ty);
   gl.uniform4f(U.uRot, Math.cos(csYaw), Math.sin(csYaw), Math.cos(csPitch), Math.sin(csPitch)); gl.uniform1f(U.uR, CS_R); gl.uniform1f(U.uD, CS_D);
@@ -1936,7 +1937,15 @@ function animateTo(t){ const k0=k, x0=tx, y0=ty, t0=performance.now(), dur=420, 
   const step = now => { if (camBusy && camBusy !== mid) return; const p = Math.min(1,(now-t0)/dur), e = 1-Math.pow(1-p,3);
     k = k0 + (t.k-k0)*e; tx = x0 + (t.tx-x0)*e; ty = y0 + (t.ty-y0)*e; render(); if (p<1) RAF(step); };
   RAF(step); }
+let sphTw = 0, sphTurning = false;
+function sphFace(i){   // a globe turns the note to face you instead of zooming in on it
+  const y1 = DTH[i] + Math.PI/2, p1 = Math.max(-1.3, Math.min(1.3, DPH[i])), y0 = csYaw, p0 = csPitch, dy = Math.atan2(Math.sin(y1 - y0), Math.cos(y1 - y0)), t0 = performance.now(), id = ++sphTw, f = fitTarget();
+  const step = now => { if (id !== sphTw || dead) return; const t = Math.min(1, (now - t0)/900), e = t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2)/2;
+    csYaw = y0 + dy*e; csPitch = p0 + (p1 - p0)*e; k = k + (f.k - k)*e*.25; tx = tx + (f.tx - tx)*e*.25; ty = ty + (f.ty - ty)*e*.25;
+    csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); if (t < 1) RAF(step); else { sphTurning = false; buildGrid(); csKeep(); draw(); } };
+  sphTurning = true; RAF(step); }
 function flyTo(i){
+  if (sphOn()) { sphFace(i); return; }
   if (domeOn()) { domeYaw = DTH[i]; domePitch = Math.max(domeSphere() ? -1.45 : -.2, Math.min(1.45, DPH[i] - .08)); domeKeep(); const kk = k; morph(true, () => ({k: kk, tx: (W - (isPhone() ? 0 : sideW()))/2, ty: H/2})); return; }   // in a dome: turn to face it
   const phone = isPhone(), dw = phone ? 0 : sideW(), lc = !phone && (view === "sense" || view === "stars") ? 400 : 0, vw = W - dw - lc, vh = phone ? H*.48 : H, pad = phone ? 36 : 70;   // Sensemaking keeps its bars in a left column
   let x0 = X[i], x1 = X[i], y0 = Y[i], y1 = Y[i];
@@ -2904,7 +2913,7 @@ on(win, "resize", () => fitFocus());
 
 dbg.__ivCam = () => ({k, tx, ty, morphing, dome: domeOn(), yaw: domeYaw, pitch: domePitch, sel, selXY: sel >= 0 ? [sx(X[sel]), sy(Y[sel]), DTH[sel], DPH[sel], DFR[sel]] : null});   // read-only hook for automated checks
 // ---------- autoplay: Random (any note) or Thread (note to linked note) ----------
-let playMode = pref("iv-pmode", "thread") === "random" ? "random" : "thread", playSec = Math.max(2, Math.min(30, +pref("iv-psec", 6))), playing = false, pTimer = 0;
+let playMode = ["random", "map"].includes(pref("iv-pmode", "thread")) ? pref("iv-pmode", "thread") : "thread", playSec = Math.max(2, Math.min(30, +pref("iv-psec", 6))), playing = false, pTimer = 0;
 let runSeen = new Set(), runStack = [];
 function pickRandom(){ const a = []; for (let i=0;i<n;i++) if (baseOK(i) && i !== sel) a.push(i); return a.length ? a[Math.floor(Math.random()*a.length)] : -1; }
 function pickThread(){
@@ -2932,8 +2941,9 @@ const HOPS = [
 function hopNow(){ return view === "emergence" ? (DOME.emergence ? "planetarium" : "emergence") : view === "stars" ? (S3D ? "stars3d" : "stars2d") : view === "chord" ? (CSPH === "out" ? "corona" : CSPH === "in" ? "tesla" : "chord")
   : view === "quincunx" ? "geo-" + GEO : view === "planet" ? "planet-" + PMODE : view; }
 function hopMap(){ const cur = hopNow(), opts = HOPS.filter(([id]) => id !== cur && !hopLast.includes(id)), pick = opts[Math.floor(Math.random()*opts.length)]; if (!pick) return;
-  hopLast = [cur, ...hopLast].slice(0, 5); const keep = sel; pick[1](); if (keep >= 0 && sel !== keep) select(keep); }
+  hopLast = [cur, ...hopLast].slice(0, 5); const keep = sel; hopSlow = true; pick[1](); hopSlow = false; if (keep >= 0) { if (sel !== keep) select(keep); win.setTimeout(() => { if (sel === keep && !dead) flyTo(keep); }, 2000); } }
 function playStep(){
+  if (!tourRun && playMode === "map") { if (sel < 0) { const top = []; for (let i=0;i<n;i++) if (baseOK(i) && N[i].level >= 3) top.push(i); const j = top.length ? top[Math.floor(Math.random()*top.length)] : pickRandom(); if (j >= 0) navTo(j); } else hopMap(); schedule(); return; }   // Map: the same note, a new map each step
   if (!tourRun && playMaps && ++hopIn >= 3) { hopIn = 0; hopMap(); schedule(); return; }   // every third step: a new map, same note
   if (tourRun) { if (tourRun.idx >= tourRun.ids.length - 1) { setPlaying(false); syncTour(); return; } tourGo(tourRun.idx + 1); schedule(); return; }
   const j = playMode === "random" ? pickRandom() : pickThread();
@@ -2967,6 +2977,7 @@ function setPlaying(on){
 }
 function syncPlay(){
   root.querySelectorAll("#playseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === playMode)));
+  const hm = root.querySelector("#pmaps"); if (hm) hm.closest("label").hidden = playMode === "map";
   $("#pint").value = playSec; $("#pintv").textContent = playSec + "s";
 }
 root.querySelectorAll("#playseg button").forEach(b => b.onclick = () => { playMode = b.dataset.p; save("iv-pmode", playMode); syncPlay(); if (!playing) setPlaying(true); else { runSeen = new Set(); runStack = []; schedule(); } });
