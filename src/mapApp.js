@@ -1067,7 +1067,8 @@ let PMODE = ["flat", "table", "globe"].includes(pref("iv-pmode", "")) ? pref("iv
 let PGLOBE = PMODE === "globe";
 const globeOn = () => view === "planet" && PGLOBE;
 const sphOn = () => csphOn() || globeOn();   // any globe you orbit from outside: Corona, Tesla, or the PKM Planet globe
-const csOut = () => globeOn() || CSPH === "out";   // links arc out over the surface
+const csOut = () => globeOn() || CSPH === "out";
+let csBands = pref("iv-csbands", true) !== false;   // Corona and Tesla: the bundled bands between kinds (on by default)   // links arc out over the surface
 let camOwner = "";   // the chord sphere and the planet globe each keep their own camera
 function sphCam(owner){ if (camOwner === owner) return; if (camOwner) save(camOwner === "globe" ? "iv-gcam" : "iv-cscam", [+csYaw.toFixed(3), +csPitch.toFixed(3)]);
   const c = pref(owner === "globe" ? "iv-gcam" : "iv-cscam", null); if (Array.isArray(c)) { csYaw = +c[0] || 0; csPitch = +c[1] || 0; } else if (owner === "globe") { csYaw = 0; csPitch = 0; } camOwner = owner; }
@@ -1120,7 +1121,7 @@ function csGuides(){
   ctx.globalAlpha = 1;
   // ribbons between kinds: out over the surface, or through the glass
   const hl = sel >= 0 ? sel : hover, fade = hl >= 0 ? .25 : 1, mx = 900;
-  for (const r of chRibbons()) { const A = CHCAT[r.p], B = CHCAT[r.q];
+  if (csBands) for (const r of chRibbons()) { const A = CHCAT[r.p], B = CHCAT[r.q];
     ctx.strokeStyle = chHue(A); ctx.globalAlpha = (.08 + .3*Math.sqrt(r.c/mx))*fade; ctx.lineWidth = Math.max(.7, Math.sqrt(r.c/mx)*rs*(CSPH === "out" ? .045 : .07));
     const ca = CSC[A.id], cb = CSC[B.id]; if (!ca || !cb) continue; ctx.beginPath(); csStroke(csArc(ca[0], ca[1], cb[0], cb[1], 28)); ctx.stroke(); }
   ctx.globalAlpha = 1; ctx.lineCap = "round";
@@ -1597,7 +1598,12 @@ function creatorMatch(i){   // → [landmark index, by title?] or null
 let CREATOR = {img: null, src: "", groups: []};
 const PU = new Float32Array(n), PV = new Float32Array(n), PSIDE = new Uint8Array(n);   // where each note sits on its map (0 the PKM side, 1 the Creator side)
 const P_RR = .4086;   // the PKM map's circle, as a fraction of its image (the frame around it stays off the globe)
-const P_RF = P_RR/.75;   // the PKM map at three-quarters of its old size on the globe, so more of its side shows at once, with ocean around it
+const P_RF = P_RR/.75;
+const P_LAB = [   // place names on the PKM map's outer ring [u, v, half-width, half-height], kept clear of the shoreline fade
+  [.491, .108, .085, .022], [.332, .152, .08, .024], [.238, .209, .07, .026], [.245, .273, .07, .026], [.238, .329, .07, .026], [.577, .141, .06, .018], [.606, .179, .065, .026],
+  [.772, .287, .06, .018], [.794, .411, .05, .026], [.789, .481, .05, .026], [.818, .524, .055, .03], [.775, .654, .1, .05], [.721, .672, .05, .026], [.642, .742, .06, .018],
+  [.657, .837, .07, .018], [.606, .869, .065, .018], [.495, .802, .055, .026], [.375, .747, .045, .026], [.274, .675, .1, .05], [.253, .625, .065, .026], [.166, .589, .065, .03],
+  [.202, .528, .055, .026], [.195, .43, .1, .05], [.27, .40, .045, .026]];   // the PKM map at three-quarters of its old size on the globe, so more of its side shows at once, with ocean around it
 const CR_RR = 1;   // the Creator's Continent at half the PKM map's size: the dessert, not the main course (open sea fills the rest of its side)
 function globeAngles(){ for (let i=0;i<n;i++) { const back = PSIDE[i] === 1, rr = back ? CR_RR : P_RF, dx = (PU[i] - .5)/rr, dy = (PV[i] - .5)/rr, rho = Math.min(1, Math.hypot(dx, dy)), th = rho*Math.PI/2, al = Math.atan2(dy, dx), st = Math.sin(th);
     const px = (back ? -1 : 1)*st*Math.cos(al), py = -st*Math.sin(al), pz = (back ? -1 : 1)*Math.cos(th); DTH[i] = Math.atan2(-pz, px); DPH[i] = Math.asin(Math.max(-1, Math.min(1, py))); } }
@@ -1615,7 +1621,7 @@ function glReady(){ if (GL.gl || !GL.ok) return GL.gl;
     const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
     const vs = "attribute vec2 p; varying vec2 vUV; void main(){ vUV = vec2(p.x*.5 + .5, .5 - p.y*.5); gl_Position = vec4(p, 0., 1.); }";
     const fs = `precision highp float; varying vec2 vUV;
-      uniform vec2 uOff, uSize; uniform vec3 uCam; uniform vec4 uRot; uniform float uR, uD, uRF, uRB, uPx, uHasB, uHasF, uDim; uniform sampler2D uF, uB;
+      uniform vec2 uOff, uSize; uniform vec3 uCam; uniform vec4 uRot; uniform float uR, uD, uRF, uRB, uPx, uHasB, uHasF, uDim; uniform sampler2D uF, uB; uniform vec4 uLab[24];
       const float HP = 1.5707963, RC = .4086;
       float hs(vec2 q){ return fract(sin(dot(q, vec2(127.1, 311.7)))*43758.5453); }
       float vn(vec2 q){ vec2 i = floor(q), f = fract(q); f = f*f*(3. - 2.*f); return mix(mix(hs(i), hs(i + vec2(1., 0.)), f.x), mix(hs(i + vec2(0., 1.)), hs(i + vec2(1., 1.)), f.x), f.y); }
@@ -1630,6 +1636,7 @@ function glReady(){ if (GL.gl || !GL.ok) return GL.gl;
         float rho = acos(clamp(p.z, -1., 1.))/HP, al = atan(-p.y, p.x); vec2 dir = vec2(cos(al), sin(al)); float r = uRF*rho, rn = r/RC;
         if (rn > 1.15) return o;
         float nz = fbm(dir*rho*7. + 3.1) - .5, m = 1. - smoothstep(.84, .97, rn + .11*nz);
+        if (rn < 1.) { vec2 uv = vec2(.5) + r*dir; for (int k = 0; k < 24; k++) { vec2 dd = (uv - uLab[k].xy)/uLab[k].zw; m = max(m, 1. - smoothstep(.75, 1., length(dd))); } }   // place names near the edge stay readable
         vec3 c = texture2D(uF, vec2(.5) + min(r, RC*.99)*dir).rgb, mixc = mix(o, c, m);
         float shore = m*(1. - m)*4.; return mix(mixc, vec3(.88, .92, .9), .25*shore); }
       vec3 back(vec3 p){   // the Creator's Continent, an island in the same ocean
@@ -1648,7 +1655,8 @@ function glReady(){ if (GL.gl || !GL.ok) return GL.gl;
     gl.useProgram(pr); const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(pr, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     for (const nm of ["uOff", "uSize", "uCam", "uRot", "uR", "uD", "uRF", "uRB", "uPx", "uHasB", "uHasF", "uDim", "uF", "uB"]) GL.u[nm] = gl.getUniformLocation(pr, nm);
-    gl.uniform1i(GL.u.uF, 0); gl.uniform1i(GL.u.uB, 1); GL.cv = c; GL.gl = gl; GL.prog = pr; return gl; }
+    gl.uniform1i(GL.u.uF, 0); gl.uniform1i(GL.u.uB, 1); GL.u.uLab = gl.getUniformLocation(pr, "uLab");
+    gl.uniform4fv(GL.u.uLab, new Float32Array(P_LAB.flatMap(([u, v, w, h]) => [u, v, w, h]))); GL.cv = c; GL.gl = gl; GL.prog = pr; return gl; }
   catch { GL.ok = false; return null; } }   // no WebGL: the globe is drawn plain
 function glTex(slot, im, key, disc){   // a square, power-of-two copy of the map (so it can be mipmapped); a rectangular Creator image is fitted to a disc
   const gl = GL.gl; if (!im) return false; if (GL.key[slot] === key) return true;
@@ -1677,6 +1685,20 @@ function globeDraw(){
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); ctx.drawImage(GL.cv, x0, y0, x1 - x0, y1 - y0); }
 dbg.__ivTopVis = () => { let b = -1; for (let i=0;i<n;i++) if (VV(i) && N[i].level >= 3 && (b < 0 || N[i].score > N[b].score)) { const x = sx(X[i]), y = sy(Y[i]); if (x > 450 && x < W - 60 && y > 60 && y < H - 60) b = i; } return b < 0 ? null : [sx(X[b]), sy(Y[b]), N[b].title]; };
 dbg.__ivGlobe = () => { let c = 0; for (let i=0;i<n;i++) if (PSIDE[i]) c++; return {gl: !!glReady(), ok: GL.ok, side1: c, groups: CREATOR.groups.length, works: N.filter(d => /works?/i.test(d.sub || '')).length, subs: [...new Set(N.map(d => d.sub))].slice(0, 30)}; };
+// A settlement grows like a town, not a target: its maps and hubs make the old town at the heart, each note moves in
+// next to a map it links to (small neighborhoods), the rest scatter around them, and each settlement has its own lean and shape.
+function settle(ids, cu, cv, step, key){
+  ids.sort(byRank); const R = step*Math.sqrt(ids.length + 1), th = hash(key, 103)*Math.PI, asp = .55 + .45*hash(key, 107), ct = Math.cos(th), st = Math.sin(th);
+  const put = (i, dx, dy) => { const x = dx, y = dy*asp; PU[i] = cu + x*ct - y*st; PV[i] = cv + (x*st + y*ct)*.9; };
+  const gauss = (i, salt) => { const u1 = Math.max(1e-6, hash(N[i].path, salt)), u2 = hash(N[i].path, salt + 1), m = Math.sqrt(-2*Math.log(u1)); return [m*Math.cos(6.2832*u2), m*Math.sin(6.2832*u2)]; };
+  const maps = ids.filter(i => N[i].level >= 3), spot = new Map();
+  maps.forEach((i, j) => { const a = j*2.39996 + hash(N[i].path, 109)*.8, r = R*.55*Math.sqrt((j + .3)/Math.max(1, maps.length))*(.7 + .5*hash(N[i].path, 113)); spot.set(i, [Math.cos(a)*r, Math.sin(a)*r]); put(i, ...spot.get(i)); });
+  for (const i of ids) { if (spot.has(i)) continue;
+    let an = -1; for (const j of out[i].concat(inn[i])) if (spot.has(j) && (an < 0 || N[j].score > N[an].score)) an = j;   // the best map it links to, in this settlement
+    const [gx, gy] = gauss(i, 117), lone = N[i].level === 1;
+    if (an >= 0) { const [ax, ay] = spot.get(an), sg = R*(.12 + .1*hash(N[an].path, 127)); put(i, ax + gx*sg, ay + gy*sg); }
+    else { const sg = R*(lone ? .62 : .42); put(i, gx*sg, gy*sg); } }
+}
 function layoutPlanet(){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
   const groups = new Map(); for (let i=0;i<n;i++) { if (!vis[i]) continue; const [dk, lm] = planetPlace(i); if (!groups.has(lm)) groups.set(lm, {lm, dk, ids: []}); groups.get(lm).ids.push(i); }
@@ -1686,10 +1708,9 @@ function layoutPlanet(){
     let nv = 0; for (let i=0;i<n;i++) if (vis[i]) nv++;
     cand.sort((a, b) => (b[2] - a[2]) || byRank(a[0], b[0])); for (const [i, j] of cand.slice(0, Math.max(0, Math.floor(nv*.1)))) {
       const g = groups.get(planetPlace(i)[1]); if (g) g.ids.splice(g.ids.indexOf(i), 1); PSIDE[i] = 1; const nm = CR_LM[j][0] + "#" + j; if (!cg.has(nm)) cg.set(nm, {j, ids: []}); cg.get(nm).ids.push(i); } }
-  for (const g of groups.values()) { g.ids.sort(byRank); const L = PLM[g.lm], s_ = Math.min(.0042, .085/Math.sqrt(g.ids.length));   // sunflower spiral: the hubs at the heart, notes spiraling out
-    g.ids.forEach((i, j) => { const a = j*2.39996, r = s_*Math.sqrt(j + .5), u = L.u + Math.cos(a)*r, v = L.v + .012 + Math.sin(a)*r*.9; PU[i] = u; PV[i] = v; const [x, y] = planetProj(u, v); EX[i] = x; EY[i] = y; }); }
-  for (const g of cg.values()) { g.ids.sort(byRank); const [, lu, lv] = CR_LM[g.j], s_ = Math.min(.0055, .1/Math.sqrt(g.ids.length));
-    g.ids.forEach((i, j) => { const a = j*2.39996, r = s_*Math.sqrt(j + .5); PU[i] = lu + Math.cos(a)*r; PV[i] = lv + .008 + Math.sin(a)*r*.9; }); }
+  for (const g of groups.values()) { const L = PLM[g.lm]; settle(g.ids, L.u, L.v + .012, Math.min(.0042, .085/Math.sqrt(g.ids.length)), g.lm);
+    for (const i of g.ids) { const [x, y] = planetProj(PU[i], PV[i]); EX[i] = x; EY[i] = y; } }
+  for (const g of cg.values()) { const [, lu, lv] = CR_LM[g.j]; settle(g.ids, lu, lv + .008, Math.min(.0055, .1/Math.sqrt(g.ids.length)), "cr" + g.j); }
   PLANET.groups = [...groups.values()]; CREATOR.groups = [...cg.values()];
   if (PGLOBE) { sphCam("globe"); globeAngles(); csProject(); EX.set(DX); EY.set(DY); planetImg(); creatorImg(); const cn = CREATOR.groups.reduce((t, g) => t + g.ids.length, 0); if (cn !== CREATOR.n) { CREATOR.n = cn; if (view === "planet") Promise.resolve().then(() => legend()); } return; }
   const a = planetProj(0, 0), b = planetProj(1, 1); expBox = {x0: b[0]*-1 - 20, y0: a[1] - 20, x1: b[0] + 20, y1: b[1] + 20}; planetImg(); }
@@ -2554,9 +2575,9 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", pgv = view === "planet", lay = sv || shv || tmv || pgv || mode === "time" || mode === "ace";   // the Layout section shows only where there are layout settings
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", pgv = view === "planet", csv = csphOn(), lay = sv || shv || tmv || pgv || csv || mode === "time" || mode === "ace";   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); $("#laygrp").previousElementSibling.hidden = !lay;
-  if (lay) { $("#startms").hidden = sv || shv || tmv || pgv || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || pgv || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); }
+  if (lay) { $("#startms").hidden = sv || shv || tmv || pgv || csv || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || pgv || csv || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); }
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -2693,7 +2714,7 @@ POPS.push(['#vseg button[data-v="emergence"]', "#emerpop", "#vsegms"]);
 const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.checked = view === "spacetime" ? r.value === "spacetime" : r.value === (DOME.emergence ? "dome" : "flat"));
 root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if (!r.checked) return; if (r.value === "spacetime") { goMap("spacetime", false); syncEmd(); return; } if (view === "spacetime") { closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); setView("emergence"); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); morph(true, () => fitTarget()); syncEmd(); });
 syncEmd();
-function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); }
+function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
 $("#gochord").onclick = () => goChord("");
 function syncPG(){ root.querySelectorAll("#planetseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pg === PMODE))); }
 function setPMode(m){ if (!["flat", "table", "globe"].includes(m)) return; driftStop(); PMODE = m; PGLOBE = m === "globe"; save("iv-pmode", m); syncPG();
@@ -2701,6 +2722,8 @@ function setPMode(m){ if (!["flat", "table", "globe"].includes(m)) return; drift
 for (const m of ["flat", "table", "globe"]) { const b = root.querySelector("#gopl" + m); if (b) b.onclick = () => { closePops(); setPMode(m); }; }
 syncPG();
 root.querySelectorAll("#planetseg button").forEach(b => b.onclick = () => { if (b.dataset.pg !== PMODE) setPMode(b.dataset.pg); });
+$("#csbands").setAttribute("aria-pressed", String(csBands));
+$("#csbands").onclick = () => { csBands = !csBands; save("iv-csbands", csBands); $("#csbands").setAttribute("aria-pressed", String(csBands)); draw(); };
 $("#tmsubs").setAttribute("aria-pressed", String(tmSubs));
 $("#tmsubs").onclick = () => { tmSubs = !tmSubs; save("iv-tmsubs", tmSubs); $("#tmsubs").setAttribute("aria-pressed", String(tmSubs)); draw(); };
 const syncSS = () => root.querySelectorAll("#shelfsort button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ss === shelfSort)));
