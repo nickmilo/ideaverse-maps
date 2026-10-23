@@ -1063,7 +1063,7 @@ const chHue = c => CH_HUE[c.ace] || "#888";
 // arc between kinds, either out over the surface like solar prominences ("out") or through the inside of the globe ("in").
 let CSPH = ["out", "in"].includes(pref("iv-csph", "")) ? pref("iv-csph", "") : "";
 const csphOn = () => view === "chord" && !!CSPH;
-let PMODE = ["flat", "table", "globe"].includes(pref("iv-pmode", "")) ? pref("iv-pmode", "") : pref("iv-pglobe", true) !== false ? "globe" : "table";   // Planet: the map flat, on a tabletop, or as a globe
+let PMODE = ["flat", "table", "globe"].includes(pref("iv-planetmode", "")) ? pref("iv-planetmode", "") : ["flat", "table", "globe"].includes(pref("iv-pmode", "")) ? pref("iv-pmode", "") : pref("iv-pglobe", true) !== false ? "globe" : "table";   // (0.1.69–0.1.73 kept this under autoplay's key by mistake)   // Planet: the map flat, on a tabletop, or as a globe
 let PGLOBE = PMODE === "globe";
 const globeOn = () => view === "planet" && PGLOBE;
 const sphOn = () => csphOn() || globeOn();   // any globe you orbit from outside: Corona, Tesla, or the PKM Planet globe
@@ -2721,7 +2721,7 @@ syncEmd();
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
 $("#gochord").onclick = () => goChord("");
 function syncPG(){ root.querySelectorAll("#planetseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pg === PMODE))); }
-function setPMode(m){ if (!["flat", "table", "globe"].includes(m)) return; driftStop(); PMODE = m; PGLOBE = m === "globe"; save("iv-pmode", m); syncPG();
+function setPMode(m){ if (!["flat", "table", "globe"].includes(m)) return; driftStop(); PMODE = m; PGLOBE = m === "globe"; save("iv-planetmode", m); syncPG();
   if (view !== "planet") { setView("planet"); return; } root.dataset.dome = sphOn() ? "1" : ""; $("#driftbar").hidden = !sphOn(); morph(true, () => fitTarget()); legend(); placePlaybar(); }
 for (const m of ["flat", "table", "globe"]) { const b = root.querySelector("#gopl" + m); if (b) b.onclick = () => { closePops(); setPMode(m); }; }
 syncPG();
@@ -2896,7 +2896,7 @@ on(win, "resize", () => fitFocus());
 
 dbg.__ivCam = () => ({k, tx, ty, morphing, dome: domeOn(), yaw: domeYaw, pitch: domePitch, sel, selXY: sel >= 0 ? [sx(X[sel]), sy(Y[sel]), DTH[sel], DPH[sel], DFR[sel]] : null});   // read-only hook for automated checks
 // ---------- autoplay: Random (any note) or Thread (note to linked note) ----------
-let playMode = pref("iv-pmode", "thread"), playSec = Math.max(2, Math.min(30, +pref("iv-psec", 6))), playing = false, pTimer = 0;
+let playMode = pref("iv-pmode", "thread") === "random" ? "random" : "thread", playSec = Math.max(2, Math.min(30, +pref("iv-psec", 6))), playing = false, pTimer = 0;
 let runSeen = new Set(), runStack = [];
 function pickRandom(){ const a = []; for (let i=0;i<n;i++) if (baseOK(i) && i !== sel) a.push(i); return a.length ? a[Math.floor(Math.random()*a.length)] : -1; }
 function pickThread(){
@@ -2909,7 +2909,24 @@ function pickThread(){
     cur = runStack.pop();                               // backtrack to the last note with untried links
   }
 }
+// Autoplay can also hop between maps, the hidden experimental ones included: every few steps it moves the note you're on to another map
+let playMaps = pref("iv-pmaps", false) === true, hopIn = 0, hopLast = [];
+const hopTab = v => { if (view !== v) setView(v); };
+const hopRadio = (name, v) => { const r = root.querySelector(`input[name="${name}"][value="${v}"]`); if (!r) return; r.checked = true; r.dispatchEvent(new Event("change")); };
+const hopBtn = id => { const b = root.querySelector(id); if (b) b.click(); };
+const HOPS = [
+  ["emergence", () => { if (view !== "emergence" && view !== "spacetime") hopTab("emergence"); hopRadio("emd", "flat"); }], ["spacetime", () => hopRadio("emd", "spacetime")],
+  ["planetarium", () => { if (view !== "emergence" && view !== "spacetime") hopTab("emergence"); hopRadio("emd", "dome"); }],
+  ["gravity", () => hopTab("gravity")], ["stars2d", () => { hopTab("stars"); hopRadio("s3d", "2d"); }], ["stars3d", () => { hopTab("stars"); hopRadio("s3d", "3d"); }], ["sense", () => hopTab("sense")],
+  ["chord", () => hopBtn("#gochord")], ["corona", () => hopBtn("#gocso")], ["tesla", () => hopBtn("#gocsi")], ["treemap", () => hopBtn("#gotreemap")], ["shelf", () => hopBtn("#goshelf")],
+  ["geo-square", () => hopBtn("#gogeosquare")], ["geo-hex", () => hopBtn("#gogeohex")], ["geo-mandala", () => hopBtn("#gogeomandala")],
+  ["planet-flat", () => hopBtn("#goplflat")], ["planet-table", () => hopBtn("#gopltable")], ["planet-globe", () => hopBtn("#goplglobe")], ["tree", () => hopBtn("#gotree")], ["skyline", () => hopBtn("#goskyline")]];
+function hopNow(){ return view === "emergence" ? (DOME.emergence ? "planetarium" : "emergence") : view === "stars" ? (S3D ? "stars3d" : "stars2d") : view === "chord" ? (CSPH === "out" ? "corona" : CSPH === "in" ? "tesla" : "chord")
+  : view === "quincunx" ? "geo-" + GEO : view === "planet" ? "planet-" + PMODE : view; }
+function hopMap(){ const cur = hopNow(), opts = HOPS.filter(([id]) => id !== cur && !hopLast.includes(id)), pick = opts[Math.floor(Math.random()*opts.length)]; if (!pick) return;
+  hopLast = [cur, ...hopLast].slice(0, 5); const keep = sel; pick[1](); if (keep >= 0 && sel !== keep) select(keep); }
 function playStep(){
+  if (!tourRun && playMaps && ++hopIn >= 3) { hopIn = 0; hopMap(); schedule(); return; }   // every third step: a new map, same note
   if (tourRun) { if (tourRun.idx >= tourRun.ids.length - 1) { setPlaying(false); syncTour(); return; } tourGo(tourRun.idx + 1); schedule(); return; }
   const j = playMode === "random" ? pickRandom() : pickThread();
   if (j >= 0) { if (sel >= 0) { runSeen.add(sel); if (playMode === "thread") runStack.push(sel); } runSeen.add(j); navTo(j); toEditor(j); }
@@ -2934,6 +2951,7 @@ function syncPlay(){
 root.querySelectorAll("#playseg button").forEach(b => b.onclick = () => { playMode = b.dataset.p; save("iv-pmode", playMode); syncPlay(); if (!playing) setPlaying(true); else { runSeen = new Set(); runStack = []; schedule(); } });
 $("#pint").addEventListener("input", e => { playSec = +e.target.value; save("iv-psec", playSec); syncPlay(); if (playing) schedule(); });
 $("#pplay").onclick = () => setPlaying(!playing);
+$("#pmaps").checked = playMaps; $("#pmaps").onchange = () => { playMaps = $("#pmaps").checked; save("iv-pmaps", playMaps); hopIn = 0; };
 onKey(e => { if (e.key === "Escape" && playing) setPlaying(false); });
 root.querySelectorAll("#playseg button").forEach(b => b.addEventListener("click", () => { if (tourRun) { tourRun = null; syncTour(); } }));   // picking Random/Thread leaves the tour
 syncPlay();
@@ -3083,7 +3101,7 @@ function applySaved(v){
   syncRange(); legend();
   if (view === "spacetime" || view === "gravity" || view === "emergence") { DOME[view] = !!v.dome; save("iv-dome", DOME); if (v.dome) { DOMECAM[view] = [+v.dome.yaw || 0, +v.dome.pitch || .5]; save("iv-domecam", DOMECAM); } root.dataset.dome = domeOn() ? "1" : ""; }
   if (view === "chord") { CSPH = v.csph && ["out", "in"].includes(v.csph.mode) ? v.csph.mode : ""; save("iv-csph", CSPH); if (v.csph) { camOwner = "chord"; csYaw = +v.csph.yaw || 0; csPitch = +v.csph.pitch || 0; csKeep(); } root.dataset.dome = csphOn() ? "1" : ""; }
-  if (view === "planet" && v.pg != null) { PMODE = v.pg === true ? "globe" : v.pg === false ? "table" : ["flat", "table", "globe"].includes(v.pg) ? v.pg : PMODE; PGLOBE = PMODE === "globe"; save("iv-pmode", PMODE); syncPG(); if (v.gcam) { camOwner = "globe"; csYaw = +v.gcam.yaw || 0; csPitch = +v.gcam.pitch || 0; csKeep(); } root.dataset.dome = sphOn() ? "1" : ""; }
+  if (view === "planet" && v.pg != null) { PMODE = v.pg === true ? "globe" : v.pg === false ? "table" : ["flat", "table", "globe"].includes(v.pg) ? v.pg : PMODE; PGLOBE = PMODE === "globe"; save("iv-planetmode", PMODE); syncPG(); if (v.gcam) { camOwner = "globe"; csYaw = +v.gcam.yaw || 0; csPitch = +v.gcam.pitch || 0; csKeep(); } root.dataset.dome = sphOn() ? "1" : ""; }
   if (view === "stars" && v.s3d) { S3D = !!v.s3d.on; save("iv-s3d", S3D); if (isFinite(+v.s3d.yaw)) yaw3 = +v.s3d.yaw; if (isFinite(+v.s3d.pitch)) pitch3 = +v.s3d.pitch; save("iv-cam3", [yaw3, pitch3]);
     root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = (r.value === "3d") === S3D); placePlaybar(); }
   // the time-lapse, at the step it was saved on (or all time); set before the camera move below, so that move has the last word

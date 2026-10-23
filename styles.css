@@ -227,7 +227,7 @@
 .ivm[data-view="emergence"] .timebar input, .ivm[data-view="spacetime"] .timebar input,.ivm[data-view="gravity"] .timebar input,.ivm[data-view="arc"] .timebar input,.ivm[data-view="chord"] .timebar input,.ivm[data-view="quincunx"] .timebar input,.ivm[data-view="shelf"] .timebar input,.ivm[data-view="tree"] .timebar input,.ivm[data-view="treemap"] .timebar input,.ivm[data-view="skyline"] .timebar input,.ivm[data-view="planet"] .timebar input{width:auto;flex:1;min-width:0}
 .ivm[data-view="emergence"] .tlopts, .ivm[data-view="spacetime"] .tlopts,.ivm[data-view="gravity"] .tlopts,.ivm[data-view="arc"] .tlopts,.ivm[data-view="chord"] .tlopts,.ivm[data-view="quincunx"] .tlopts,.ivm[data-view="shelf"] .tlopts,.ivm[data-view="tree"] .tlopts,.ivm[data-view="treemap"] .tlopts,.ivm[data-view="skyline"] .tlopts,.ivm[data-view="planet"] .tlopts{display:flex;flex-wrap:wrap;gap:6px 8px;width:100%;padding-left:4px}
 .ivm[data-view="emergence"] #tlfx, .ivm[data-view="spacetime"] #tlfx,.ivm[data-view="gravity"] #tlfx,.ivm[data-view="arc"] #tlfx,.ivm[data-view="chord"] #tlfx,.ivm[data-view="quincunx"] #tlfx,.ivm[data-view="shelf"] #tlfx,.ivm[data-view="tree"] #tlfx,.ivm[data-view="treemap"] #tlfx,.ivm[data-view="skyline"] #tlfx,.ivm[data-view="planet"] #tlfx{display:none}
-.ivm[data-view="emergence"] .app main.legend-open .timebar, .ivm[data-view="spacetime"] .app main.legend-open .timebar,.ivm[data-view="gravity"] .app main.legend-open .timebar,.ivm[data-view="arc"] .app main.legend-open .timebar,.ivm[data-view="chord"] .app main.legend-open .timebar,.ivm[data-view="quincunx"] .app main.legend-open .timebar,.ivm[data-view="shelf"] .app main.legend-open .timebar,.ivm[data-view="tree"] .app main.legend-open .timebar,.ivm[data-view="treemap"] .app main.legend-open .timebar,.ivm[data-view="skyline"] .app main.legend-open .timebar,.ivm[data-view="planet"] .app main.legend-open .timebar{left:390px;bottom:70px}}
+.ivm[data-view="emergence"] .app main.legend-open .timebar, .ivm[data-view="spacetime"] .app main.legend-open .timebar,.ivm[data-view="gravity"] .app main.legend-open .timebar,.ivm[data-view="arc"] .app main.legend-open .timebar,.ivm[data-view="chord"] .app main.legend-open .timebar,.ivm[data-view="quincunx"] .app main.legend-open .timebar,.ivm[data-view="shelf"] .app main.legend-open .timebar,.ivm[data-view="tree"] .app main.legend-open .timebar,.ivm[data-view="treemap"] .app main.legend-open .timebar,.ivm[data-view="skyline"] .app main.legend-open .timebar,.ivm[data-view="planet"] .app main.legend-open .timebar{left:390px;bottom:84px}}
 @container ivm (max-width:760px){.ivm[data-view="emergence"] .timebar, .ivm[data-view="spacetime"] .timebar,.ivm[data-view="gravity"] .timebar,.ivm[data-view="arc"] .timebar,.ivm[data-view="chord"] .timebar,.ivm[data-view="quincunx"] .timebar,.ivm[data-view="shelf"] .timebar,.ivm[data-view="tree"] .timebar,.ivm[data-view="treemap"] .timebar,.ivm[data-view="skyline"] .timebar,.ivm[data-view="planet"] .timebar{display:none}}
 @container ivm (min-width:761px){.ivm[data-view="stars"] .timebar{left:14px;transform:none;flex-wrap:wrap;width:372px;border-radius:20px;padding:6px 10px 8px 6px}
 .ivm[data-view="stars"] .timebar input{width:auto;flex:1;min-width:0}
@@ -306,7 +306,7 @@
 .ivm #efflist .lv.l5{border-radius:2px}
 .ivm #efflist .lv.l4{border-radius:1px;transform:rotate(45deg) scale(.85)}
 .ivm.ivm.ivm .playbar.driftbar{left:14px;transform:none;bottom:auto}
-@container ivm (max-width:760px){.ivm.ivm.ivm .playbar.driftbar{top:auto;bottom:70px;left:8px}}
+@container ivm (max-width:760px){.ivm.ivm.ivm .playbar.driftbar{top:auto;bottom:84px;left:8px}}
 .ivm .playbar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:3;display:flex;align-items:center;gap:8px;background:color-mix(in srgb,var(--bg) 94%,transparent);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 14px;box-shadow:0 6px 18px rgba(0,0,0,.1);overflow:hidden}
 .ivm .playbar .pl{font:500 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .ivm .playbar .seg button{padding:4px 10px;font-size:11px}
@@ -500,3 +500,12 @@
 .ivm #callwhy summary{cursor:pointer;color:var(--ink);font-size:12.5px}
 .ivm #callwhy p{margin:6px 0}
 .ivm #callwhy b{color:var(--ink)}
+/* Autoplay: a thin second row to also hop between maps */
+.ivm #playbar{flex-wrap:wrap;row-gap:2px;border-radius:18px}
+.ivm #playbar .pmaps{flex-basis:100%;order:10;contain:inline-size;display:flex;align-items:center;gap:7px;font:500 10px var(--mono);letter-spacing:.06em;color:var(--muted);cursor:pointer;padding:0 0 3px;line-height:1}
+.ivm #playbar .pmaps input{position:absolute;opacity:0;width:1px;height:1px}
+.ivm #playbar .pmaps .sw{width:22px;height:10px;border-radius:6px;background:var(--line);position:relative;flex:none}
+.ivm #playbar .pmaps .sw::after{content:"";position:absolute;top:1px;left:1px;width:8px;height:8px;border-radius:50%;background:var(--muted);transition:left .15s}
+.ivm #playbar .pmaps input:checked + .sw{background:var(--accent)}
+.ivm #playbar .pmaps input:checked + .sw::after{left:13px;background:var(--bg)}
+.ivm #playbar .pmaps input:focus-visible + .sw{outline:2px solid var(--accent);outline-offset:2px}
