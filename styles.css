@@ -480,3 +480,17 @@
 .ivm #efflist .hidot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;flex:none}
 .ivm .legend .lghi{display:grid;gap:3px;margin-top:6px;max-width:300px}
 .ivm .legend .lghi > div{display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Bookshelf: call-number index */
+.ivm #callcopy{margin:6px 0 8px}
+.ivm #callq{width:100%;padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel);margin:0 0 6px}
+.ivm #calllist h5{margin:12px 0 4px;font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.ivm #calllist h6{display:flex;justify-content:space-between;margin:8px 0 2px;font:500 11px var(--mono);color:var(--muted)}
+.ivm #calllist ul{list-style:none;margin:0;padding:0;display:grid;gap:1px}
+.ivm #calllist li button{display:flex;gap:8px;align-items:center;width:100%;text-align:left;border:0;background:none;padding:4px 6px;border-radius:6px;cursor:pointer;color:var(--ink);font-size:13px}
+.ivm #calllist li button:hover{background:var(--accent-soft)}
+.ivm #calllist .cn{font:500 11px var(--mono);color:var(--muted);min-width:38px}
+.ivm #calllist .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ivm #calllist .m{font:500 10.5px var(--mono);color:var(--muted)}
+.ivm #calllist .lv{width:9px;height:9px;flex:none;border-radius:50%}
+.ivm #calllist .lv.l5{border-radius:2px}
+.ivm #calllist .lv.l4{border-radius:1px;transform:rotate(45deg) scale(.85)}
