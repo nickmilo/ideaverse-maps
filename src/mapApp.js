@@ -1166,10 +1166,20 @@ function mapGroups(ok){
 // ---------- Geometric: the top 25 placed as far apart as the triangles allow; #1 in the center, #2–5 in the corners ----------
 // Then each triangle gets a note at its center (6–9), which splits it in three, and so on. Every other note joins
 // the top note it reaches in the fewest links, closer in the higher its level. Placement follows the scoring live.
-const QS = 800; let QPTS = [], QTRI = [], QTOP = [], QRC = [];
+// Three shapes: Square (#2–5 in the corners), Hexagon (#2–7 on the six corners, the same triangle splitting) and
+// Mandala (#2–7 on an inner ring, #8–25 on an outer ring, three petals to each inner note).
+const QS = 800; let QPTS = [], QTRI = [], QTOP = [], QRC = [], QPAR = [];
+let GEO = ["square", "hex", "mandala"].includes(pref("iv-geo", "square")) ? pref("iv-geo", "square") : "square";
+const hexAt = j => [Math.cos(-Math.PI/2 + j*Math.PI/3)*QS, Math.sin(-Math.PI/2 + j*Math.PI/3)*QS];
+function mandalaSeeds(m){   // #1 in the center; 6 petals; 18 outer petals, three around each inner one
+  const pts = [[0, 0]], par = [-1], r1 = QS*.48, r2 = QS;
+  for (let j = 0; j < 6 && pts.length < m; j++) { const a = -Math.PI/2 + j*Math.PI/3; pts.push([Math.cos(a)*r1, Math.sin(a)*r1]); par.push(0); }
+  for (const d of [0, -1, 1]) for (let j = 0; j < 6 && pts.length < m; j++) { const a = -Math.PI/2 + j*Math.PI/3 + d*Math.PI/9; pts.push([Math.cos(a)*r2, Math.sin(a)*r2]); par.push(1 + j); }
+  return {pts, tris: [], par}; }
 function quinSeeds(m){
-  const P = [[0, 0], [-QS, -QS], [QS, -QS], [QS, QS], [-QS, QS]];
-  let tris = [[1, 2, 0], [2, 3, 0], [3, 4, 0], [4, 1, 0]]; const pts = P.slice(0, Math.min(m, 5)), all = [...tris];
+  if (GEO === "mandala") return mandalaSeeds(m);
+  const P = GEO === "hex" ? [[0, 0], ...[0, 1, 2, 3, 4, 5].map(hexAt)] : [[0, 0], [-QS, -QS], [QS, -QS], [QS, QS], [-QS, QS]];
+  let tris = GEO === "hex" ? [[1, 2, 0], [2, 3, 0], [3, 4, 0], [4, 5, 0], [5, 6, 0], [6, 1, 0]] : [[1, 2, 0], [2, 3, 0], [3, 4, 0], [4, 1, 0]]; const pts = P.slice(0, Math.min(m, P.length)), all = [...tris];
   while (pts.length < m) {
     const cen = tris.map(t => [(pts[t[0]][0] + pts[t[1]][0] + pts[t[2]][0])/3, (pts[t[0]][1] + pts[t[1]][1] + pts[t[2]][1])/3]);
     const need = m - pts.length, take = new Set();
@@ -1180,15 +1190,16 @@ function quinSeeds(m){
     const next = [];
     tris.forEach((t, j) => { if (!take.has(j)) { next.push(t); return; } const k_ = pts.length; pts.push(cen[j]); const s = [[t[0], t[1], k_], [t[1], t[2], k_], [t[2], t[0], k_]]; next.push(...s); all.push(...s); });
     tris = next; }
-  return {pts, tris: all}; }
+  return {pts, tris: all, par: []}; }
 function layoutQuin(){
   const cand = []; for (let i=0;i<n;i++) if (vis[i] && !ARCH[i]) cand.push(i); cand.sort(byRank);
-  QTOP = cand.slice(0, Math.min(25, cand.length)); const {pts, tris} = quinSeeds(QTOP.length); QPTS = pts; QTRI = tris;
+  QTOP = cand.slice(0, Math.min(25, cand.length)); const {pts, tris, par} = quinSeeds(QTOP.length); QPTS = pts; QTRI = tris; QPAR = par;
   QRC = pts.map((p, a) => { let d = Infinity; pts.forEach((q, b) => { if (a !== b) d = Math.min(d, Math.hypot(p[0]-q[0], p[1]-q[1])); }); return Math.min(isFinite(d) ? d*.46 : QS*.6, QS*.5); });
   const seedOf = new Map(QTOP.map((i, a) => [i, a])), B = bfsMulti(QTOP, j => vis[j]);
   for (let i=0;i<n;i++) { RW[i] = RH[i] = 0; const a = seedOf.get(i);
     if (a !== undefined) { EX[i] = pts[a][0]; EY[i] = pts[a][1]; continue; }
     const s = B.src[i], h1 = hash(N[i].path, 31), h2 = hash(N[i].path, 37);
+    if (s < 0 && GEO !== "square") { const a = h1*2*Math.PI, r = QS*(1.2 + .1*h2); EX[i] = Math.cos(a)*r; EY[i] = Math.sin(a)*r; continue; }   // a ring around the hexagon or mandala
     if (s < 0) {   // never reached from the top 25: a frame around the square
       const t = h1*4, side = Math.floor(t), f = t - side, off = QS*(1.16 + .1*h2), e = -QS*1.1 + f*QS*2.2;
       [EX[i], EY[i]] = side === 0 ? [e, -off] : side === 1 ? [off, e] : side === 2 ? [-e, off] : [-off, -e]; continue; }
@@ -1200,13 +1211,20 @@ EXP.quincunx = {
   layout: layoutQuin,
   guides(){
     ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.globalAlpha = .9; ctx.beginPath();
+    if (GEO === "mandala") {   // petals: each note's petal reaches from the note it grows from; rings behind
+      const petal = (a, b, w) => { const [x1, y1] = a, [x2, y2] = b, mx = (x1 + x2)/2, my = (y1 + y2)/2, dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy/L*L*w, ny = dx/L*L*w;
+        ctx.moveTo(sx(x1), sy(y1)); ctx.quadraticCurveTo(sx(mx + nx), sy(my + ny), sx(x2), sy(y2)); ctx.quadraticCurveTo(sx(mx - nx), sy(my - ny), sx(x1), sy(y1)); };
+      QPTS.forEach((p, a) => { if (a && QPAR[a] >= 0) petal(QPTS[QPAR[a]], p, QPAR[a] === 0 ? .3 : .22); });
+      ctx.stroke(); ctx.globalAlpha = .5; ctx.beginPath(); for (const r of [QS*.48, QS]) { ctx.moveTo(sx(r), sy(0)); ctx.arc(sx(0), sy(0), r*k, 0, 6.2832); } ctx.stroke(); }
     for (const t of QTRI) { const a = QPTS[t[0]], b = QPTS[t[1]], c = QPTS[t[2]]; if (!a || !b || !c) continue; ctx.moveTo(sx(a[0]), sy(a[1])); ctx.lineTo(sx(b[0]), sy(b[1])); ctx.lineTo(sx(c[0]), sy(c[1])); ctx.closePath(); }
     ctx.stroke(); ctx.globalAlpha = .35; ctx.setLineDash([2, 5]); ctx.beginPath(); QPTS.forEach((p, a) => { ctx.moveTo(sx(p[0]) + QRC[a]*k, sy(p[1])); ctx.arc(sx(p[0]), sy(p[1]), QRC[a]*k, 0, 6.2832); }); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; },
   labels(){ ctx.font = `600 10px ${css.mono}`; ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.lineWidth = 4; ctx.strokeStyle = css.bg;
     QTOP.forEach((i, a) => { if (!VV(i)) return; const x = sx(EX[i]), y = sy(EY[i]) + rad(i) + 5, t = "#" + (a + 1); ctx.fillStyle = a === 0 ? css.accent : css.muted; ctx.strokeText(t, x, y); ctx.fillText(t, x, y); });
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
   mustLabel: () => QTOP.filter(i => VV(i)),
-  legend: "Geometric: your top 25 notes by score. #1 sits in the center and #2–5 in the corners; then each triangle gets a note at its center, which splits it in three. Every other note joins the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach line the frame.",
+  get legend(){ return GEO === "mandala" ? "Geometric · Mandala: your top 25 notes by score. #1 sits in the center, #2–7 on the inner ring, and #8–25 on the outer ring, three petals around each inner note. Every other note joins the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach ring the outside."
+    : GEO === "hex" ? "Geometric · Hexagon: your top 25 notes by score. #1 sits in the center and #2–7 on the six corners; then each triangle gets a note at its center, which splits it in three. Every other note joins the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach ring the outside."
+    : "Geometric · Square: your top 25 notes by score. #1 sits in the center and #2–5 in the corners; then each triangle gets a note at its center, which splits it in three. Every other note joins the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach line the frame."; },
 };
 
 // ---------- Bookshelf: a double-wide wall of books with your own call numbers ----------
@@ -2527,6 +2545,7 @@ $("#gochord").onclick = () => goChord("");
 const syncSS = () => root.querySelectorAll("#shelfsort button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ss === shelfSort)));
 root.querySelectorAll("#shelfsort button").forEach(b => b.onclick = () => { shelfSort = b.dataset.ss; save("iv-ssort", shelfSort); syncSS(); if (view === "shelf") morph(true, () => fitTarget()); });
 syncSS();
+for (const g of ["square", "hex", "mandala"]) { const b = root.querySelector("#gogeo" + g); if (b) b.onclick = () => { closePops(); driftStop(); GEO = g; save("iv-geo", g); if (view === "quincunx") { morph(true, () => fitTarget()); legend(); } else setView("quincunx"); }; }
 for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline", "planet"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
 $("#gocso").onclick = () => goChord("out");
 $("#gocsi").onclick = () => goChord("in");
@@ -2806,12 +2825,14 @@ function snapView(name){
     tl: senseT != null ? {t: senseStepStart, step: senseStep} : null,   // where the time-lapse stands (null = all time)
     dome: domeOn() ? {yaw: +domeYaw.toFixed(3), pitch: +domePitch.toFixed(3)} : null,
     csph: csphOn() ? {mode: CSPH, yaw: +csYaw.toFixed(3), pitch: +csPitch.toFixed(3)} : null,
+    geo: view === "quincunx" ? GEO : null,
     s3d: view === "stars" ? {on: S3D, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
     cam: {cx: +((W/2 - tx)/k).toFixed(1), cy: +((H/2 - ty)/k).toFixed(1), k: +k.toFixed(4)}, saved: new Date().toISOString().slice(0,10)};
 }
 function applySaved(v){
   if (typeof playing !== "undefined" && playing) setPlaying(false);
   closePops(); curView = v.name;
+  if (["square", "hex", "mandala"].includes(v.geo)) { GEO = v.geo; save("iv-geo", GEO); }
   { const nv = VIEWS_ON.includes(v.view) ? v.view : "emergence";
     if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
     ungrow();   // back to today's levels; a saved time-lapse point re-grows them below

@@ -195,7 +195,8 @@
 .ivm #vseg .vburied{display:none}
 .ivm[data-view="arc"] #vseg .vburied{display:inline-block}
 .ivm[data-view="arc"] #vseg .vmore{display:none}
-.ivm #vmorepop{left:auto;right:0;min-width:240px}
+.ivm #vmorepop{left:auto;right:0;min-width:240px;max-height:min(640px,80vh);overflow-y:auto}
+.ivm #vmorepop > *{flex-shrink:0}
 .ivm #vmorepop .chip{width:100%;text-align:left}
 .ivm #vmorepop .mexp summary{cursor:pointer;font:500 11px var(--mono);letter-spacing:.06em;color:var(--muted);padding:4px 6px;list-style:none}
 .ivm #vmorepop .mexp summary::before{content:"› ";display:inline-block;transition:transform .15s}
