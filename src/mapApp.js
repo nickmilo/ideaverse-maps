@@ -1265,20 +1265,21 @@ function layoutQuin(){
 EXP.quincunx = {
   layout: layoutQuin,
   guides(){
+    const gd = sel >= 0 ? .5 : hover >= 0 ? .78 : 1;   // the 3D shapes dim a little while a note is picked, less than other maps do
     if (geo3On() && GEO === "shells") {   // two glass shells, and a petal from each note to the one it grows from
       const Q = G3P.map(p => g3Cam(p[0], p[1], p[2]));
-      for (const [r, al] of [[QS*.5, .22], [QS, .16]]) { ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.globalAlpha = al;
+      for (const [r, al] of [[QS*.5, .22], [QS, .16]]) { ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.globalAlpha = gd*al;
         for (const ax of [0, 1, 2]) { ctx.beginPath(); for (let t = 0; t <= 64; t++) { const a = t/64*2*Math.PI, p = ax === 0 ? [0, Math.cos(a)*r, Math.sin(a)*r] : ax === 1 ? [Math.cos(a)*r, 0, Math.sin(a)*r] : [Math.cos(a)*r, Math.sin(a)*r, 0], q = g3Cam(...p); t ? ctx.lineTo(sx(q[0]), sy(q[1])) : ctx.moveTo(sx(q[0]), sy(q[1])); } ctx.stroke(); } }
       for (const [a, b] of G3E) { const A = Q[a], B = Q[b], inner = a === 0, z = (A[2] + B[2])/2, mx = (A[0] + B[0])/2, my = (A[1] + B[1])/2, dx = B[0] - A[0], dy = B[1] - A[1], w = inner ? .22 : .3;
-        ctx.globalAlpha = Math.max(.15, Math.min(.85, .6 - z/(QS*2.2))); ctx.strokeStyle = css.accent; ctx.lineWidth = inner ? 1.6 : 1.1; ctx.beginPath();
+        ctx.globalAlpha = gd*Math.max(.15, Math.min(.85, .6 - z/(QS*2.2))); ctx.strokeStyle = css.accent; ctx.lineWidth = inner ? 1.6 : 1.1; ctx.beginPath();
         ctx.moveTo(sx(A[0]), sy(A[1])); ctx.quadraticCurveTo(sx(mx - dy*w), sy(my + dx*w), sx(B[0]), sy(B[1])); ctx.quadraticCurveTo(sx(mx + dy*w), sy(my - dx*w), sx(A[0]), sy(A[1])); ctx.stroke(); }
       ctx.globalAlpha = 1; return; }
     if (geo3On()) {   // the octahedron's struts, fainter toward the back
       const Q = G3P.map(p => g3Cam(p[0], p[1], p[2])); ctx.strokeStyle = css.line; ctx.lineWidth = 1;
       for (const [a, b] of G3E) { const z = (Q[a][2] + Q[b][2])/2, hull = a >= 1 && a <= 6 && b >= 1 && b <= 6;   // the octahedron's own twelve edges stand out; the splits inside stay faint
-        ctx.strokeStyle = hull ? css.accent : css.line; ctx.lineWidth = hull ? 1.6 : 1; ctx.globalAlpha = Math.max(hull ? .3 : .12, Math.min(hull ? .9 : .6, (hull ? .7 : .4) - z/(QS*2.2)));
+        ctx.strokeStyle = hull ? css.accent : css.line; ctx.lineWidth = hull ? 1.6 : 1; ctx.globalAlpha = gd*Math.max(hull ? .3 : .12, Math.min(hull ? .9 : .6, (hull ? .7 : .4) - z/(QS*2.2)));
         ctx.beginPath(); ctx.moveTo(sx(Q[a][0]), sy(Q[a][1])); ctx.lineTo(sx(Q[b][0]), sy(Q[b][1])); ctx.stroke(); }
-      ctx.globalAlpha = .18; ctx.setLineDash([2, 5]); ctx.beginPath(); ctx.arc(sx(0), sy(0), QS*1.35*k, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; return; }
+      ctx.globalAlpha = gd*.18; ctx.setLineDash([2, 5]); ctx.beginPath(); ctx.arc(sx(0), sy(0), QS*1.35*k, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; return; }
     ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.globalAlpha = .9; ctx.beginPath();
     if (GEO === "mandala") {   // petals: each note's petal reaches from the note it grows from; rings behind
       const petal = (a, b, w) => { const [x1, y1] = a, [x2, y2] = b, mx = (x1 + x2)/2, my = (y1 + y2)/2, dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy/L*L*w, ny = dx/L*L*w;
@@ -1671,10 +1672,10 @@ function layoutSpiral(){
   const [, y1] = datedYears(), R1 = SPI.R0 + (y1 - y0 + 1)*SPI.G; SPI.y1 = y1; expBox = {x0: -R1 - 60, y0: -R1 - 60, x1: R1 + 60, y1: R1 + 60}; }
 EXP.spiral = {
   layout: layoutSpiral,
-  guides(){ const {R0, G, y0, y1} = SPI, turns = y1 - y0 + 1, R1 = R0 + turns*G;
-    ctx.strokeStyle = css.line; ctx.globalAlpha = .45; ctx.lineWidth = 1; ctx.beginPath();
+  guides(){ const gd = sel >= 0 ? .5 : hover >= 0 ? .78 : 1, {R0, G, y0, y1} = SPI, turns = y1 - y0 + 1, R1 = R0 + turns*G;
+    ctx.strokeStyle = css.line; ctx.globalAlpha = .45*gd; ctx.lineWidth = 1; ctx.beginPath();
     for (let m = 0; m < 12; m++) { const a = -Math.PI/2 + 2*Math.PI*m/12; ctx.moveTo(sx(Math.cos(a)*R0*.85), sy(Math.sin(a)*R0*.85)); ctx.lineTo(sx(Math.cos(a)*R1), sy(Math.sin(a)*R1)); } ctx.stroke();
-    ctx.globalAlpha = .9; ctx.strokeStyle = css.muted; ctx.lineWidth = 1.4; ctx.beginPath();   // the line of time
+    ctx.globalAlpha = .9*gd; ctx.strokeStyle = css.muted; ctx.lineWidth = 1.4; ctx.beginPath();   // the line of time
     for (let s_ = 0; s_ <= turns*360; s_++) { const t = s_/360, a = -Math.PI/2 + 2*Math.PI*t, r = R0 + t*G, x = sx(Math.cos(a)*r), y = sy(Math.sin(a)*r); s_ ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
     const tn = (Date.now() - yStart(y0))/(365.2425*DAY); if (tn > 0 && tn < turns) { const a = -Math.PI/2 + 2*Math.PI*(tn % 1), r = R0 + tn*G; ctx.fillStyle = css.accent; ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(sx(Math.cos(a)*r), sy(Math.sin(a)*r), 5, 0, 6.2832); ctx.fill(); }
     ctx.globalAlpha = 1; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = `600 11px ${css.mono}`; ctx.fillStyle = css.muted;
