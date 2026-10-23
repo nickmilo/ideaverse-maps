@@ -2,7 +2,7 @@
    the page's code runs inside the plugin's view, scoped to `root`, with Obsidian handling storage, events and notes. */
 import { sanitizeHTMLToDom } from "obsidian";
 
-export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
+export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -744,7 +744,8 @@ const syT0 = () => SY0 <= SLMIN ? -Infinity : Date.UTC(SY0, 0, 1), syT1 = () => 
 const inYears = i => syFull() || (TV[i] >= syT0() && TV[i] <= syT1());
 const born = i => senseT == null || (TV[i] <= senseT && !(POP[i] > popNow));   // on the timeline, a note shows once its date has passed (and its pop has started)
 const shownAt = i => view === "sense" ? inYears(i) && born(i) : born(i);   // scheduled pops stay hidden until they burst
-const VV = i => vis[i] && shownAt(i) && (!(domeOn() || sphOn()) || DFR[i] === 1);
+const EHID = new Uint8Array(n);   // notes an experimental map leaves out (Linear: other years, no date)
+const VV = i => vis[i] && shownAt(i) && !(EHID[i] && expOn()) && (!(domeOn() || sphOn()) || DFR[i] === 1);
 let senseTrail = [];                              // (kept empty: the averaged trail was replaced by popcorn)
 const SPEEDS = {xslow: [12, 6000/1100], slow: [6, 4000/1100], normal: [2.6, 1.6], fast: [1, 1]};   // shifted one notch slower (Nick, Oct 11)   // [step ×, flight ×]: slow spaces the arrivals out more than it slows each flight, so fewer overlap and more names show
 let senseSpeed = SPEEDS[pref("iv-sspeed", "normal")] ? pref("iv-sspeed", "normal") : "normal";
@@ -926,7 +927,7 @@ let morphing = false;
 // notes will land, and camera and notes move in the same frames (one motion, not two).
 let morphId = 0, hopSlow = false;
 function morph(animate, cam){
-  if (view === "gravity") layoutGravity(); else if (view === "stars") layoutStars(); else if (view === "sense") layoutSense(); else if (view === "arc") layoutArc(); else if (view === "chord") layoutChord(); else if (view === "spacetime") layoutSpace(); else if (expOn()) EXP[view].layout();
+  if (view === "gravity") layoutGravity(); else if (view === "stars") layoutStars(); else if (view === "sense") layoutSense(); else if (view === "arc") layoutArc(); else if (view === "chord") layoutChord(); else if (view === "spacetime") layoutSpace(); else if (expOn()) { EHID.fill(0); EXP[view].layout(); }
   let tX = expOn() ? EX : view === "spacetime" ? XT : view === "gravity" ? GX : view === "stars" ? (S3D ? (project3D(), P3X) : SX) : view === "sense" ? SNX : view === "arc" ? ARX : view === "chord" ? CHX : curX(), tY = view === "gravity" ? GY : view === "stars" ? (S3D ? P3Y : SY) : view === "sense" ? SNY : view === "arc" ? ARY : view === "chord" ? CHY : view === "spacetime" ? YST : YE;
   if (expOn()) tY = EY;
   if (domeOn()) { domeUse(); domeAngles(tX, tY); domeProject(); tX = DX; tY = DY; }
@@ -1620,6 +1621,95 @@ EXP.skyline = {
   legend: "Skyline: each top folder is a district, each map a tower. Height is its link score, footprint how many notes it gathers, and its notes are the windows (lit if from the last year). Notes no map reaches are low houses; unlinked notes are empty lots.",
 };
 
+// ---------- Linear: time drawn as lines ----------
+const yOf = t => new Date(t).getUTCFullYear(), yStart = y => Date.UTC(y, 0, 1), yFrac = t => { const y = yOf(t); return (t - yStart(y))/(yStart(y + 1) - yStart(y)); };
+function datedYears(){ let a = Infinity, b = -Infinity; for (let i=0;i<n;i++) if (vis[i] && !isNaN(TV[i])) { const y = yOf(TV[i]); if (y < a) a = y; if (y > b) b = y; } return isFinite(a) ? [a, b] : [NOW_Y, NOW_Y]; }
+const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Linear Calendar: a year as twelve rows, one per month, each day a box; a month's first day sits under its own weekday,
+// so the weeks line up down the page (the Year Map). The notes made that day fill its box.
+let LCALL = pref("iv-lcall", false) === true, LCY = +pref("iv-lcyear", 0) || 0, LC = {years: [], C: 44};
+const LC_GAP = 150;
+function layoutLincal(){
+  for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
+  const [y0, y1] = datedYears(); if (!LCY || LCY < y0 || LCY > y1) LCY = Math.min(y1, NOW_Y);
+  const years = LCALL ? Array.from({length: y1 - y0 + 1}, (_, j) => y0 + j) : [LCY], C = LC.C, H1 = 12*C + LC_GAP, cells = new Map();
+  for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) { EHID[i] = 1; continue; } const d = new Date(TV[i]), y = d.getUTCFullYear(), yi = years.indexOf(y); if (yi < 0) { EHID[i] = 1; continue; }
+    const key = yi*400 + d.getUTCMonth()*32 + d.getUTCDate(); if (!cells.has(key)) cells.set(key, []); cells.get(key).push(i); }
+  const col = (y, m, day) => (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7 + day - 1;   // weeks start on Monday
+  for (const [key, ids] of cells) { const yi = Math.floor(key/400), m = Math.floor((key % 400)/32), day = key % 32, y = years[yi], cx = col(y, m, day)*C + C/2, cy = yi*H1 + m*C + C/2;
+    ids.sort(byRank); const g = Math.ceil(Math.sqrt(ids.length)), st = Math.min(C*.26, C*.8/g);
+    ids.forEach((i, j) => { const r = Math.floor(j/g), c = j % g; EX[i] = cx + (c - (g - 1)/2)*st; EY[i] = cy + (r - (g - 1)/2)*st; }); }
+  LC = {years, C, H1, col};
+  const last = years.length - 1; expBox = {x0: -90, y0: last*H1 - 70, x1: 37*C + 20, y1: last*H1 + 12*C + 20}; }   // fit to the latest year; the wheel scrolls back through the rest
+EXP.lincal = {
+  layout: layoutLincal,
+  guides(){ const {years, C, H1, col} = LC, now = new Date();
+    for (let yi = 0; yi < years.length; yi++) { const y = years[yi], top = yi*H1; if (sy(top + 12*C) < -40 || sy(top - 70) > H + 40) continue;
+      ctx.fillStyle = css.panel; ctx.globalAlpha = .55; for (const wc of [5, 6, 12, 13, 19, 20, 26, 27, 33, 34]) ctx.fillRect(sx(wc*C), sy(top - 6), C*k, (12*C + 6)*k); ctx.globalAlpha = 1;   // weekend columns
+      ctx.strokeStyle = css.line; ctx.lineWidth = 1;
+      for (let m = 0; m < 12; m++) { const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+        for (let d = 1; d <= days; d++) { const x = sx(col(y, m, d)*C) + 1.5, yy = sy(top + m*C) + 1.5, w = C*k - 3; ctx.globalAlpha = .7; ctx.strokeRect(x, yy, w, w);
+          if (k*C > 30) { ctx.globalAlpha = .55; ctx.fillStyle = css.muted; ctx.font = `500 ${Math.min(10, C*k*.22)}px ${css.mono}`; ctx.textBaseline = "top"; ctx.fillText(String(d), x + 3, yy + 2); }
+          if (y === now.getFullYear() && m === now.getMonth() && d === now.getDate()) { ctx.globalAlpha = 1; ctx.strokeStyle = css.accent; ctx.lineWidth = 2; ctx.strokeRect(x, yy, w, w); ctx.strokeStyle = css.line; ctx.lineWidth = 1; } } }
+      ctx.globalAlpha = 1; ctx.textBaseline = "middle"; ctx.fillStyle = css.muted; ctx.font = `600 ${Math.max(9, Math.min(13, C*k*.32))}px ${css.mono}`; ctx.textAlign = "right";
+      for (let m = 0; m < 12; m++) ctx.fillText(MON3[m].toUpperCase(), sx(-10), sy(top + m*C + C/2));
+      ctx.textAlign = "center"; for (let c = 0; c < 37; c++) ctx.fillText("MTWTFSS"[c % 7], sx(c*C + C/2), sy(top - 16));
+      ctx.textAlign = "left"; ctx.fillStyle = css.accent; ctx.font = `600 ${Math.max(14, Math.min(30, C*k*.7))}px ${css.mono}`; ctx.fillText(String(y), sx(0), sy(top - 46)); ctx.textBaseline = "alphabetic"; } },
+  legend: "Linear Calendar: a year as twelve rows, one per month, each day a box, with the weeks lined up down the page. The notes you made that day fill its box: maps and hubs first, in their level colors. Layout → One year (‹ › to change it) or All years (the wheel scrolls through them).",
+};
+
+// Spiral: time as one line winding outward, a turn a year, starting at 12 o'clock and running clockwise, so the same date
+// lines up year after year. Maps and hubs sit on the line; the rest of each day's notes gather around it.
+const SPI = {R0: 240, G: 150};
+function layoutSpiral(){
+  for (let i=0;i<n;i++) RW[i] = RH[i] = 0; const [y0] = datedYears(); SPI.y0 = y0;
+  for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) { EHID[i] = 1; continue; }
+    const f = yFrac(TV[i]), t = yOf(TV[i]) - y0 + f, a = -Math.PI/2 + 2*Math.PI*f, lv = N[i].level, h = hash(N[i].path, 151) - .5;
+    const off = lv >= 3 ? 0 : lv === 2 ? h*SPI.G*.42 : (h < 0 ? -1 : 1)*SPI.G*(.32 + .12*Math.abs(h));   // unlinked notes drift to the edges of their band
+    const r = SPI.R0 + t*SPI.G + off; EX[i] = Math.cos(a)*r; EY[i] = Math.sin(a)*r; }
+  const [, y1] = datedYears(), R1 = SPI.R0 + (y1 - y0 + 1)*SPI.G; SPI.y1 = y1; expBox = {x0: -R1 - 60, y0: -R1 - 60, x1: R1 + 60, y1: R1 + 60}; }
+EXP.spiral = {
+  layout: layoutSpiral,
+  guides(){ const {R0, G, y0, y1} = SPI, turns = y1 - y0 + 1, R1 = R0 + turns*G;
+    ctx.strokeStyle = css.line; ctx.globalAlpha = .45; ctx.lineWidth = 1; ctx.beginPath();
+    for (let m = 0; m < 12; m++) { const a = -Math.PI/2 + 2*Math.PI*m/12; ctx.moveTo(sx(Math.cos(a)*R0*.85), sy(Math.sin(a)*R0*.85)); ctx.lineTo(sx(Math.cos(a)*R1), sy(Math.sin(a)*R1)); } ctx.stroke();
+    ctx.globalAlpha = .9; ctx.strokeStyle = css.muted; ctx.lineWidth = 1.4; ctx.beginPath();   // the line of time
+    for (let s_ = 0; s_ <= turns*360; s_++) { const t = s_/360, a = -Math.PI/2 + 2*Math.PI*t, r = R0 + t*G, x = sx(Math.cos(a)*r), y = sy(Math.sin(a)*r); s_ ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+    const tn = (Date.now() - yStart(y0))/(365.2425*DAY); if (tn > 0 && tn < turns) { const a = -Math.PI/2 + 2*Math.PI*(tn % 1), r = R0 + tn*G; ctx.fillStyle = css.accent; ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(sx(Math.cos(a)*r), sy(Math.sin(a)*r), 5, 0, 6.2832); ctx.fill(); }
+    ctx.globalAlpha = 1; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = `600 11px ${css.mono}`; ctx.fillStyle = css.muted;
+    for (let m = 0; m < 12; m++) { const a = -Math.PI/2 + 2*Math.PI*(m + .5)/12; ctx.fillText(MON3[m].toUpperCase(), sx(Math.cos(a)*(R1 + 34)), sy(Math.sin(a)*(R1 + 34))); }
+    ctx.fillStyle = css.accent; ctx.font = `600 12px ${css.mono}`; ctx.lineWidth = 4; ctx.strokeStyle = css.bg;
+    for (let y = y0; y <= y1; y++) { const r = R0 + (y - y0)*G, x = sx(0), yy = sy(-r); ctx.strokeText(String(y), x, yy); ctx.fillText(String(y), x, yy); }
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
+  legend: "Spiral: time as one line winding outward, a turn a year, starting at 12 o'clock and running clockwise, so each month lines up across the years. Maps and hubs sit on the line; linked notes gather around it, unlinked notes at the edges. The gold dot is today.",
+};
+
+// Lifeline: your whole ideaverse on one line, left to right. Each note stands on it like a mark on a seismograph:
+// the higher its level, the taller its stem. Unlinked notes hang just below the line.
+const LL = {pxYear: 900, base: 0};
+function layoutLifeline(){
+  for (let i=0;i<n;i++) RW[i] = RH[i] = 0; const [y0, y1] = datedYears(); LL.y0 = y0; LL.y1 = y1;
+  const f = Math.max(1, (y1 - y0 + 1)*LL.pxYear/2600), hgt = [0, -46, -120, -210, -290, -380].map(v => v*f); LL.f = f;   // stems grow with the span, so the line keeps its shape at any length
+  for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) { EHID[i] = 1; continue; } const lv = N[i].level, h = hash(N[i].path, 157);
+    EX[i] = (yOf(TV[i]) - y0 + yFrac(TV[i]))*LL.pxYear; EY[i] = lv === 1 ? (26 + 30*h)*f : hgt[lv] - (lv === 2 ? 60*h : 30*h)*f; }
+  expBox = {x0: -40, y0: -430*f, x1: (y1 - y0 + 1)*LL.pxYear + 40, y1: 110*f}; }
+EXP.lifeline = {
+  layout: layoutLifeline,
+  guides(){ const {y0, y1, pxYear} = LL, x0 = sx(0), x1 = sx((y1 - y0 + 1)*pxYear), by = sy(0);
+    ctx.lineWidth = 1;   // stems: every map and hub stands on the line in its level color; linked notes get a faint hair
+    for (let i=0;i<n;i++) { if (!VV(i)) continue; const lv = N[i].level; if (lv === 1) continue; const x = sx(X[i]); if (x < -5 || x > W + 5) continue;
+      ctx.strokeStyle = lv >= 3 ? GRAD[lv][0] : css.line; ctx.globalAlpha = lv >= 3 ? .55 : .22; ctx.beginPath(); ctx.moveTo(x, by); ctx.lineTo(x, sy(Y[i])); ctx.stroke(); }
+    ctx.globalAlpha = 1; ctx.strokeStyle = css.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, by); ctx.lineTo(x1, by); ctx.stroke();
+    ctx.fillStyle = css.muted; ctx.textAlign = "center"; ctx.textBaseline = "top";
+    for (let y = y0; y <= y1 + 1; y++) { const x = sx((y - y0)*pxYear); ctx.strokeStyle = css.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, by - 8); ctx.lineTo(x, by + 8); ctx.stroke();
+      if (y <= y1) { ctx.font = `600 13px ${css.mono}`; ctx.fillStyle = css.accent; ctx.fillText(String(y), x + pxYear*k/2, by + 78); }
+      if (y <= y1 && pxYear*k > 260) { ctx.font = `500 9.5px ${css.mono}`; ctx.fillStyle = css.muted; ctx.lineWidth = 1; ctx.strokeStyle = css.line; for (let m = 1; m < 12; m++) { const xm = x + m/12*pxYear*k; ctx.beginPath(); ctx.moveTo(xm, by - 4); ctx.lineTo(xm, by + 4); ctx.stroke(); } for (let m = 0; m < 12; m++) ctx.fillText(MON3[m], x + (m + .5)/12*pxYear*k, by + 62); } }
+    const tn = (Date.now() - yStart(y0))/(365.2425*DAY); if (tn > 0) { ctx.fillStyle = css.accent; ctx.beginPath(); ctx.arc(sx(tn*pxYear), by, 5, 0, 6.2832); ctx.fill(); }
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
+  legend: "Lifeline: your whole ideaverse on one line, left to right. Each note stands on it like a mark on a seismograph: the higher its level, the taller its stem (hubs tallest). Unlinked notes hang just below the line. The gold dot is today.",
+};
+
 // ---------- PKM Planet: the six domains of personal knowledge as a world map on a table ----------
 // Each note settles around a landmark in its domain (by folder and title); hubs and maps sit at the heart of each
 // settlement, notes spiral out. Clicking a note raises arcs over the map to its links. The art is Nick Milo's PKM Planet.
@@ -1957,7 +2047,7 @@ else if (view === "gravity") { layoutGravity(); X.set(GX); Y.set(GY); }
 else if (view === "stars") { layoutStars(); if (S3D) { project3D(); X.set(P3X); Y.set(P3Y); } else { X.set(SX); Y.set(SY); } }
 else if (view === "sense") { layoutSense(); X.set(SNX); Y.set(SNY); }
 else if (view === "spacetime") { layoutSpace(); X.set(XT); Y.set(YST); }
-else if (expOn()) { EXP[view].layout(); X.set(EX); Y.set(EY); }
+else if (expOn()) { EHID.fill(0); EXP[view].layout(); X.set(EX); Y.set(EY); }
 if (domeOn()) { domeUse(); domeAngles(Float32Array.from(X), Float32Array.from(Y)); domeProject(); X.set(DX); Y.set(DY); }
 if (csphOn()) { csAngles(); csProject(); X.set(DX); Y.set(DY); }
 buildGrid();
@@ -2054,7 +2144,7 @@ function visTarget(xs, ys){   // camera that frames every visible note, given wh
   const kk = Math.min(4, Math.max(.1, Math.min((vw - pad*2) / Math.max(x1-x0, 40), (vh - pad*2 - 40) / Math.max(y1-y0, 40))));
   return {k:kk, tx: vw/2 - (x0+x1)/2*kk, ty: (vh + 40)/2 - (y0+y1)/2*kk};
 }
-function rad(i){ if (view === "stars") return Math.max(.7, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1), 16)); return Math.max(1.1, Math.min(R[i]*Math.pow(k, .55)*(geo3On() ? DS3[i] : 1), 30)); }   // 3D Geometric: nearer notes are bigger
+function rad(i){ if (view === "stars") return Math.max(.7, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1), 16)); return Math.max(view === "lincal" ? 1.8 : 1.1, Math.min(R[i]*Math.pow(k, .55)*(geo3On() ? DS3[i] : view === "lincal" ? 1.5 : 1), 30)); }   // 3D Geometric: nearer notes are bigger
 
 function render(){
   raf = 0;
@@ -2535,6 +2625,7 @@ cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hov
 function zoomAt(px, py, f){ if (domeOn() || sphOn()) { px = tx; py = ty; }   // a dome zooms about where you're looking
   const nk = Math.min(40, Math.max(view === "stars" ? .04 : domeOn() ? .3 : .15, k*f)); f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
 cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
+  if (view === "lincal" && LCALL && !e.ctrlKey && !e.shiftKey && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) { ty -= e.deltaY*(e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }   // all years: the wheel scrolls through them (pinch or ctrl to zoom)
   if (!e.ctrlKey && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {   // shift + wheel (or a sideways swipe) pans left and right
     const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
     if (domeOn()) { domeYaw += dx*(e.deltaMode === 1 ? 16 : 1)/(k*DF_); domeProject(); X.set(DX); Y.set(DY); buildGrid(); domeKeep(); tip.hidden = true; draw(); return; }   // in a dome a sideways swipe turns you
@@ -2667,9 +2758,9 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", pgv = view === "planet", csv = csphOn(), lay = sv || shv || tmv || pgv || csv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", lcv = view === "lincal", pgv = view === "planet", csv = csphOn(), lay = sv || shv || tmv || lcv || pgv || csv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); $("#laygrp").previousElementSibling.hidden = !lay;
-  if (lay) { $("#startms").hidden = sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || pgv || csv || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); }
+  if (lay) { $("#startms").hidden = sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || pgv || csv || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); }
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -2808,6 +2899,10 @@ root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if 
 syncEmd();
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
 $("#gochord").onclick = () => goChord("");
+function syncLC(){ root.querySelectorAll("#lcseg button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.ly === "all") === LCALL))); $("#lcyear").textContent = LCALL ? "All years" : String(LCY || NOW_Y); $("#lcprev").disabled = $("#lcnext").disabled = LCALL; }
+root.querySelectorAll("#lcseg button").forEach(b => b.onclick = () => { LCALL = b.dataset.ly === "all"; save("iv-lcall", LCALL); syncLC(); if (view === "lincal") morph(true, () => fitTarget()); });
+for (const [id, d] of [["#lcprev", -1], ["#lcnext", 1]]) $(id).onclick = () => { const [a, b] = datedYears(); LCY = Math.max(a, Math.min(b, (LCY || NOW_Y) + d)); save("iv-lcyear", LCY); syncLC(); if (view === "lincal") morph(true, () => fitTarget()); };
+syncLC();
 function syncPG(){ root.querySelectorAll("#planetseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pg === PMODE))); }
 function setPMode(m){ if (!["flat", "table", "globe"].includes(m)) return; driftStop(); PMODE = m; PGLOBE = m === "globe"; save("iv-planetmode", m); syncPG();
   if (view !== "planet") { setView("planet"); return; } root.dataset.dome = sphOn() ? "1" : ""; $("#driftbar").hidden = !sphOn(); morph(true, () => fitTarget()); legend(); placePlaybar(); }
@@ -2822,7 +2917,7 @@ const syncSS = () => root.querySelectorAll("#shelfsort button").forEach(b => b.s
 root.querySelectorAll("#shelfsort button").forEach(b => b.onclick = () => { shelfSort = b.dataset.ss; save("iv-ssort", shelfSort); syncSS(); if (view === "shelf") morph(true, () => fitTarget()); });
 syncSS();
 for (const g of ["square", "hex", "mandala", "octa", "shells"]) { const b = root.querySelector("#gogeo" + g); if (b) b.onclick = () => { closePops(); driftStop(); GEO = g; save("iv-geo", g); if (view === "quincunx") { morph(true, () => fitTarget()); legend(); } else setView("quincunx"); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : ""; placePlaybar(); }; }
-for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline", "planet"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
+for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
 $("#gocso").onclick = () => goChord("out");
 $("#gocsi").onclick = () => goChord("in");
 
@@ -3011,7 +3106,7 @@ const HOPS = [
   ["gravity", () => hopTab("gravity")], ["stars2d", () => { hopTab("stars"); hopRadio("s3d", "2d"); }], ["stars3d", () => { hopTab("stars"); hopRadio("s3d", "3d"); }], ["sense", () => hopTab("sense")],
   ["chord", () => hopBtn("#gochord")], ["corona", () => hopBtn("#gocso")], ["tesla", () => hopBtn("#gocsi")], ["treemap", () => hopBtn("#gotreemap")], ["shelf", () => hopBtn("#goshelf")],
   ["geo-square", () => hopBtn("#gogeosquare")], ["geo-hex", () => hopBtn("#gogeohex")], ["geo-mandala", () => hopBtn("#gogeomandala")], ["geo-octa", () => hopBtn("#gogeoocta")], ["geo-shells", () => hopBtn("#gogeoshells")],
-  ["planet-flat", () => hopBtn("#goplflat")], ["planet-table", () => hopBtn("#gopltable")], ["planet-globe", () => hopBtn("#goplglobe")], ["tree", () => hopBtn("#gotree")], ["skyline", () => hopBtn("#goskyline")]];
+  ["planet-flat", () => hopBtn("#goplflat")], ["planet-table", () => hopBtn("#gopltable")], ["planet-globe", () => hopBtn("#goplglobe")], ["tree", () => hopBtn("#gotree")], ["lincal", () => hopBtn("#golincal")], ["spiral", () => hopBtn("#gospiral")], ["lifeline", () => hopBtn("#golifeline")], ["skyline", () => hopBtn("#goskyline")]];
 function hopNow(){ return view === "emergence" ? (DOME.emergence ? "planetarium" : "emergence") : view === "stars" ? (S3D ? "stars3d" : "stars2d") : view === "chord" ? (CSPH === "out" ? "corona" : CSPH === "in" ? "tesla" : "chord")
   : view === "quincunx" ? "geo-" + GEO : view === "planet" ? "planet-" + PMODE : view; }
 function hopMap(){ const cur = hopNow(), opts = HOPS.filter(([id]) => id !== cur && !hopLast.includes(id)), pick = opts[Math.floor(Math.random()*opts.length)]; if (!pick) return;
@@ -3147,7 +3242,7 @@ setTheme(pref("iv-theme", autoTheme()));
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
 const PIDX = new Map(N.map((d,i) => [d.path, i]));
-const VIEW_NAME = {planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemaking", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemaking", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
