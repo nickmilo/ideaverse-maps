@@ -21,6 +21,7 @@ class FolderPicker extends FuzzySuggestModal {
 }
 import { UI, buildUI } from "./ui.js";
 import { mountMap } from "./mapApp.js";
+import { PLANET_IMG } from "./planet.js";
 
 export const VIEW_TYPE = "ideaverse-maps";
 
@@ -77,6 +78,8 @@ export class MapView extends ItemView {
       registerDomEvent: (target, type, fn, opts) => events.registerDomEvent(target, type, fn, opts),
       openNote: (path, newTab, background) => this.openNote(path, newTab, background),
       // saved views and tours live in one JSON file, in a folder the user picks before the first save
+      // PKM Planet's map art: a full-size image from the vault if one is set in Settings, otherwise the small built-in one
+      planetSrc: () => { const v = this.plugin.settings.planetImage; if (v) { const f = this.app.vault.getAbstractFileByPath(normalizePath(v)); if (f instanceof TFile) return this.app.vault.getResourcePath(f); } return PLANET_IMG; },
       savedFolder: () => this.plugin.settings.viewsFolder || null,
       pickSavedFolder: async () => {
         const dir = await new Promise(res => new FolderPicker(this.app, res).open());

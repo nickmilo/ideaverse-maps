@@ -2,7 +2,7 @@
    the page's code runs inside the plugin's view, scoped to `root`, with Obsidian handling storage, events and notes. */
 import { sanitizeHTMLToDom } from "obsidian";
 
-export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
+export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -1437,6 +1437,70 @@ EXP.skyline = {
     ctx.textAlign = "left"; },
   legend: "Skyline: each top folder is a district, each map a tower. Height is its link score, footprint how many notes it gathers, and its notes are the windows (lit if from the last year). Notes no map reaches are low houses; unlinked notes are empty lots.",
 };
+
+// ---------- PKM Planet: the six domains of personal knowledge as a world map on a table ----------
+// Each note settles around a landmark in its domain (by folder and title); hubs and maps sit at the heart of each
+// settlement, notes spiral out. Clicking a note raises arcs over the map to its links. The art is Nick Milo's PKM Planet.
+const PS = 2000, PTILT = 48*Math.PI/180, PF = 3200;
+const PD = {   // the six domains: color, and landmarks [name, u, v] as fractions of the map
+  ideas: {name: "Ideas & Insights", col: "#ef6a4f", lm: [["Range of Reflection", .50, .12], ["Cabin of Solitude", .52, .15], ["Waterfall of Wonder", .51, .21], ["Camp of Ideation", .59, .26], ["Mysterious Spiral Staircase", .57, .19], ["Sensemaker's Lake", .57, .33], ["Ridge of Shadow Mapping", .35, .25]]},
+  expr: {name: "Expressions & Outputs", col: "#c9cf3c", lm: [["Creator Studio", .66, .27], ["Typewriter's Cabin", .83, .29], ["Cafe of the World", .80, .41], ["Arena of Endless Expressions", .67, .45]]},
+  prod: {name: "Productivity & Projects", col: "#3fc56a", lm: [["Bridge of Efforts", .76, .49], ["Productivity Pier", .59, .49], ["Financial District", .60, .53], ["Output Station", .64, .53], ["Timetracking Square", .70, .54], ["Central Command Park", .81, .54], ["Goal Getter Center", .70, .58]]},
+  skills: {name: "Skills & Habits", col: "#3ab8d0", lm: [["Builder's Bay", .48, .66], ["Falls of Repeated Actions", .44, .69], ["Field of Reps", .53, .73], ["Grand Canyon of Habits", .49, .80], ["Path of Skill Acquisition", .59, .69], ["Bridge of Skill Stacks", .62, .63], ["Intuition Rapids", .38, .75], ["Temple of Virtues", .71, .68], ["Desert of Beliefs", .67, .75], ["Oasis of Permission", .65, .83], ["Mirage of Identity", .61, .87]]},
+  rel: {name: "Relationships & Environments", col: "#8a6cf0", lm: [["Roles of Community", .25, .51], ["Roles of Close Friends", .19, .54], ["Roles of Family", .29, .55], ["Roles in Society", .36, .55], ["Plateau of Career Navigation", .15, .60], ["Canals of Life Experiences", .24, .63]]},
+  mem: {name: "Memory & Inputs", col: "#ee5fc6", lm: [["Archipelago of Memories", .17, .46], ["Shores of Past Experiences", .24, .34], ["Information City", .27, .40], ["Library of Knowledge", .32, .36], ["Caves of the Ancient Paintings", .24, .22], ["Stones of the Forgotten Past", .22, .29], ["Ridge of Reverse Engineering", .35, .17]]},
+  hub: {name: "The heart of the map", col: "#e8c27a", lm: [["Home", .33, .31], ["Town of Available Tools", .45, .56], ["Center of Personal Development", .52, .57]]},
+};
+const PLM = {}; for (const [dk, d] of Object.entries(PD)) for (const [nm, u, v] of d.lm) PLM[nm] = {dk, u, v};
+function planetPlace(i){   // → [domain key, landmark name]
+  const d = N[i], p = d.path, t = d.title.toLowerCase(), sub = (d.sub || "").toLowerCase(), c = (d.collections || []).map(x => x.toLowerCase()).join(" ");
+  const pickIn = (dk, key) => { const L = PD[dk].lm; return [dk, L[Math.floor(hash(key || p, 71)*L.length)][0]]; };
+  if (d.home) return ["hub", "Home"];
+  if (d.archive || d.ace === "x") return ["mem", "Stones of the Forgotten Past"];
+  if (d.ace === "+") return ["hub", "Town of Available Tools"];
+  if (d.ace === "(root)") return ["hub", "Home"];
+  if (/\b(habit|habits|practice|routine|workout|exercise|skill|skills|reps|training|meditation)\b/.test(t) || /logs?\b/.test(sub)) return pickIn("skills", sub + t.split(" ")[0]);
+  if (/\b(meeting|call with|1:1|family|friend|friends|wedding|birthday|community)\b/.test(t) || /people|person|meetings?/.test(sub) || /people/.test(c)) return pickIn("rel", sub || t);
+  if (d.ace === "Efforts") return /works?|writing|publish/.test(sub) || /\b(draft|script|post|video|newsletter|course|workshop|essay|book|chapter)\b/.test(t) ? pickIn("expr", sub) : pickIn("prod", sub);
+  if (/\b(draft|script|post|video|newsletter|course|workshop|essay|chapter)\b/.test(t)) return pickIn("expr", sub);
+  if (d.ace === "Calendar") { if (/reviews?/.test(sub)) return ["ideas", "Range of Reflection"]; if (/days?|journal|daily/.test(sub) || /^\d{4}-\d{2}-\d{2}/.test(d.title)) return [ "mem", hash(p, 73) < .5 ? "Archipelago of Memories" : "Shores of Past Experiences"]; return pickIn("prod", sub); }
+  if (/sources?|clippings?|readwise|books?|articles?|quotes?/.test(sub) || /source|book|article/.test(c)) return ["mem", /quotes?/.test(sub) ? "Caves of the Ancient Paintings" : hash(p, 79) < .5 ? "Library of Knowledge" : "Information City"];
+  if (/collections?/.test(sub)) return ["mem", "Information City"];
+  if (/maps?/.test(sub) || d.level >= 3) return pickIn("ideas", d.level >= 4 ? "map-big" : sub);
+  return pickIn("ideas", sub);
+}
+const planetProj = (u, v) => { const x = (u - .5)*PS, y = (v - .5)*PS, z = -y*Math.sin(PTILT), sc = PF/(PF + z); return [x*sc, y*Math.cos(PTILT)*sc, sc]; };
+let PLANET = {img: null, src: "", groups: []};
+function planetImg(){ const src = host.planetSrc ? host.planetSrc() : ""; if (!src) return null;
+  if (PLANET.src !== src) { PLANET.src = src; const im = new Image(); im.onload = () => { if (!dead) draw(); }; im.src = src; PLANET.img = im; }
+  return PLANET.img && PLANET.img.complete && PLANET.img.naturalWidth ? PLANET.img : null; }
+function layoutPlanet(){
+  for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
+  const groups = new Map(); for (let i=0;i<n;i++) { if (!vis[i]) continue; const [dk, lm] = planetPlace(i); if (!groups.has(lm)) groups.set(lm, {lm, dk, ids: []}); groups.get(lm).ids.push(i); }
+  for (const g of groups.values()) { g.ids.sort(byRank); const L = PLM[g.lm], s_ = Math.min(.0042, .085/Math.sqrt(g.ids.length));   // sunflower spiral: the hubs at the heart, notes spiraling out
+    g.ids.forEach((i, j) => { const a = j*2.39996, r = s_*Math.sqrt(j + .5), u = L.u + Math.cos(a)*r, v = L.v + .012 + Math.sin(a)*r*.9; const [x, y] = planetProj(u, v); EX[i] = x; EY[i] = y; }); }
+  PLANET.groups = [...groups.values()];
+  const a = planetProj(0, 0), b = planetProj(1, 1); expBox = {x0: b[0]*-1 - 20, y0: a[1] - 20, x1: b[0] + 20, y1: b[1] + 20}; planetImg(); }
+EXP.planet = {
+  layout: layoutPlanet,
+  guides(){ const im = planetImg(); const NSTR = 220;
+    if (!im) { ctx.fillStyle = css.panel; const [x0, y0] = planetProj(0, 0), [x1, y1] = planetProj(1, 1); ctx.fillRect(sx(-x1), sy(y0), (2*x1)*k, (y1 - y0)*k); return; }
+    const iw = im.naturalWidth, ih = im.naturalHeight;
+    ctx.save(); ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = 24*Math.min(1, k); ctx.shadowOffsetY = 10*Math.min(1, k);
+    for (let s_ = 0; s_ < NSTR; s_++) { const v0 = s_/NSTR, v1 = (s_ + 1)/NSTR, [, Y0] = planetProj(.5, v0), [, Y1, sc] = planetProj(.5, (v0 + v1)/2), [, Y2] = planetProj(.5, v1);
+      const w = PS*sc; ctx.drawImage(im, 0, v0*ih, iw, (v1 - v0)*ih + 1, sx(-w/2), sy(Y0), w*k, (Y2 - Y0)*k + 1); if (s_ === 0) ctx.shadowColor = "transparent"; }
+    ctx.restore(); },
+  notes(lit, dim){ const r0 = Math.max(1.3, 2.1*Math.pow(k, .5));
+    for (const g of PLANET.groups) { const col = PD[g.dk].col;
+      for (const i of g.ids) { if (!VV(i)) continue; const x = sx(EX[i]), y = sy(EY[i]); if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
+        ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .25 : .7) : 1; const lv = N[i].level;
+        if (lv >= 3) { const r = rad(i); ctx.fillStyle = lvFill(i, x, y, r); ctx.beginPath(); shape(lv, x, y, r); ctx.fill(); ctx.strokeStyle = "rgba(40,25,10,.7)"; ctx.lineWidth = 1; ctx.stroke(); continue; }
+        ctx.beginPath(); ctx.arc(x, y, lv === 2 ? r0 : r0*.8, 0, 6.2832);
+        if (lv === 2) { ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = "rgba(40,25,10,.55)"; ctx.lineWidth = .8; ctx.stroke(); } else { ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.stroke(); } } }
+    ctx.globalAlpha = 1; },
+  ownLabels: true,
+  legend: "PKM Planet: the six domains of personal knowledge (Ideas & Insights, Expressions & Outputs, Productivity & Projects, Skills & Habits, Relationships & Environments, Memory & Inputs). Each note settles around a landmark in its domain, by folder and title; hubs and maps sit at the heart of each settlement. Click a note to raise arcs to its links. Map art: PKM Planet by Nick Milo.",
+};
 let chArc = -1, chPin = -1;   // the arc under the cursor, and the one clicked to hold its ribbons
 const chOn = () => chArc >= 0 ? chArc : chPin;
 function showArcTip(a){   // the arc tooltip, set beside the ring on the arc's own side, never over the ribbons
@@ -1733,7 +1797,7 @@ function render(){
       const upward = N[j].level > N[hl].level || (N[j].level === N[hl].level && Y[j] < Y[hl]);
       ctx.strokeStyle = edgeColor(hl, j, upward); ctx.globalAlpha = sel >= 0 ? .75 : .5; ctx.lineWidth = sel >= 0 ? 1.4 : 1;
       const x1 = sx(X[hl]), y1 = sy(Y[hl]), x2 = sx(X[j]), y2 = sy(Y[j]);
-      let mx = (x1+x2)/2, my = (y1+y2)/2 - Math.abs(x2-x1)*.12;
+      let mx = (x1+x2)/2, my = (y1+y2)/2 - (view === "planet" ? Math.hypot(x2-x1, y2-y1)*.55 : Math.abs(x2-x1)*.12);   // PKM Planet: links arc up off the table
       if (view === "chord") { const cx = sx(CH_C.x), cy = sy(CH_C.y); mx = cx + ((x1+x2)/2 - cx)*.25; my = cy + ((y1+y2)/2 - cy)*.25; }
       if (csphOn()) { const pts = csArc(DTH[hl], DPH[hl], DTH[j], DPH[j], 26); ctx.beginPath(); csStroke(pts); ctx.stroke();
         if (CSPH === "out") { const ga = ctx.globalAlpha; ctx.globalAlpha = ga*.45; ctx.setLineDash([3, 4]); ctx.beginPath(); let on = false;   // the part behind the globe: dashed, so every link shows
@@ -2407,7 +2471,7 @@ root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if 
 syncEmd();
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); }
 $("#gochord").onclick = () => goChord("");
-for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
+for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline", "planet"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
 $("#gocso").onclick = () => goChord("out");
 $("#gocsi").onclick = () => goChord("in");
 
@@ -2647,7 +2711,7 @@ setTheme(pref("iv-theme", autoTheme()));
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
 const PIDX = new Map(N.map((d,i) => [d.path, i]));
-const VIEW_NAME = {quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemaking", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {planet:"PKM Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemaking", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
