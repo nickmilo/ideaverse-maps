@@ -43,6 +43,11 @@ export class MapsSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Dates from files").setDesc("A note with no created property and no date in its name is placed by when its file was made. File dates can change when notes are copied or synced.")
       .addToggle(t => t.setValue(s.fileDates !== false).onChange(async v => { s.fileDates = v; await save(); }));
 
+    new Setting(containerEl).setName("PKM Planet").setHeading();
+    new Setting(containerEl).setName("Map image").setDesc("A full-size PKM Planet image in your vault (PNG, JPG or WebP). Left empty, the map uses the smaller image built into the plugin.").addText(t => t
+      .setPlaceholder("Folder/PKM Planet.png").setValue(s.planetImage || "")
+      .onChange(async v => { s.planetImage = v.trim() ? normalizePath(v.trim()) : ""; await p.saveSettings(); }));
+
     new Setting(containerEl).setName("Saved views and tours").setHeading();
     new Setting(containerEl).setName("Folder").setDesc("The folder that keeps your saved views and tours (one JSON file, updated as you save). Left empty, the map asks before your first save. Use / for the vault root.").addText(t => t
       .setPlaceholder("Folder/path").setValue(s.viewsFolder || "")
