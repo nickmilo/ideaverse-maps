@@ -2,7 +2,7 @@
    the page's code runs inside the plugin's view, scoped to `root`, with Obsidian handling storage, events and notes. */
 import { sanitizeHTMLToDom } from "obsidian";
 
-export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
+export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -912,7 +912,7 @@ function sensePlay(){ if (sensePlaying) { senseStop(); return; }
   if (senseT == null || +$("#tlrange").value >= SSTEPS.length - 1) senseSet(0, true);
   sensePlaying = true; $("#tlplay").textContent = "❚❚"; $("#tlplay").setAttribute("aria-label", "Pause"); senseTimer = win.setTimeout(senseTick, 300); }
 function placePlaybar(){ const pb = $("#playbar"), tb = $("#timebar");   // Sensemaking and Starfield (desktop): autoplay sits just under the timeline bar, however many rows it wraps to
-  pb.style.top = !isPhone() && !tb.hidden && (view === "sense" || view === "stars" || view === "gravity" || view === "chord") ? (tb.offsetTop + tb.offsetHeight + 8) + "px" : "";
+  pb.style.top = !isPhone() && !tb.hidden && (view === "sense" || view === "stars" || view === "gravity" || view === "chord" || expOn()) ? (tb.offsetTop + tb.offsetHeight + 8) + "px" : "";
   const db = $("#driftbar"); db.hidden = !(s3dOn() || csphOn()); if (db.hidden) driftStop();
   db.style.top = !isPhone() && pb.style.top ? (pb.offsetTop + pb.offsetHeight + 8) + "px" : ""; }
 on(win, "resize", () => placePlaybar());
@@ -926,8 +926,9 @@ let morphing = false;
 // notes will land, and camera and notes move in the same frames (one motion, not two).
 let morphId = 0;
 function morph(animate, cam){
-  if (view === "gravity") layoutGravity(); else if (view === "stars") layoutStars(); else if (view === "sense") layoutSense(); else if (view === "arc") layoutArc(); else if (view === "chord") layoutChord(); else if (view === "spacetime") layoutSpace();
-  let tX = view === "spacetime" ? XT : view === "gravity" ? GX : view === "stars" ? (S3D ? (project3D(), P3X) : SX) : view === "sense" ? SNX : view === "arc" ? ARX : view === "chord" ? CHX : curX(), tY = view === "gravity" ? GY : view === "stars" ? (S3D ? P3Y : SY) : view === "sense" ? SNY : view === "arc" ? ARY : view === "chord" ? CHY : view === "spacetime" ? YST : YE;
+  if (view === "gravity") layoutGravity(); else if (view === "stars") layoutStars(); else if (view === "sense") layoutSense(); else if (view === "arc") layoutArc(); else if (view === "chord") layoutChord(); else if (view === "spacetime") layoutSpace(); else if (expOn()) EXP[view].layout();
+  let tX = expOn() ? EX : view === "spacetime" ? XT : view === "gravity" ? GX : view === "stars" ? (S3D ? (project3D(), P3X) : SX) : view === "sense" ? SNX : view === "arc" ? ARX : view === "chord" ? CHX : curX(), tY = view === "gravity" ? GY : view === "stars" ? (S3D ? P3Y : SY) : view === "sense" ? SNY : view === "arc" ? ARY : view === "chord" ? CHY : view === "spacetime" ? YST : YE;
+  if (expOn()) tY = EY;
   if (domeOn()) { domeUse(); domeAngles(tX, tY); domeProject(); tX = DX; tY = DY; }
   if (csphOn()) { csAngles(); csProject(); tX = DX; tY = DY; }
   const c1 = cam ? cam(tX, tY) : null;
@@ -1096,12 +1097,12 @@ function csGuides(){
   ctx.beginPath(); ctx.arc(cx, cy, rs, 0, 6.2832);
   if (CSPH === "out") {   // a lit globe: a faint atmosphere around the rim, soft light from the upper left, the far side in shade
     const tr = (c, al) => { const m = /rgba?\(([^)]+)\)/.exec(c); if (!m) return c; const v = m[1].split(",").slice(0, 3).join(","); return `rgba(${v},${al})`; };
-    const halo = ctx.createRadialGradient(cx, cy, rs*.97, cx, cy, rs*1.16); halo.addColorStop(0, tr(css.accent, .1)); halo.addColorStop(1, tr(css.accent, 0));
+    const halo = ctx.createRadialGradient(cx, cy, rs*.97, cx, cy, rs*1.16); halo.addColorStop(0, tr(css.accent, .035)); halo.addColorStop(1, tr(css.accent, 0));
     ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx, cy, rs*1.16, 0, 6.2832); ctx.fill();
     const g = ctx.createRadialGradient(cx - rs*.4, cy - rs*.45, 0, cx - rs*.15, cy - rs*.15, rs*1.15);
-    g.addColorStop(0, tr(css.ink, .08)); g.addColorStop(.45, tr(css.ink, .025)); g.addColorStop(1, tr(css.ink, 0));
+    g.addColorStop(0, tr(css.ink, .035)); g.addColorStop(.45, tr(css.ink, .01)); g.addColorStop(1, tr(css.ink, 0));
     ctx.beginPath(); ctx.arc(cx, cy, rs, 0, 6.2832); ctx.fillStyle = css.bg; ctx.globalAlpha = .85; ctx.fill(); ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fill();
-    const rim = ctx.createRadialGradient(cx, cy, rs*.82, cx, cy, rs); rim.addColorStop(0, tr(css.accent, 0)); rim.addColorStop(1, tr(css.accent, .05)); ctx.fillStyle = rim; ctx.fill(); }
+    const rim = ctx.createRadialGradient(cx, cy, rs*.82, cx, cy, rs); rim.addColorStop(0, tr(css.accent, 0)); rim.addColorStop(1, tr(css.accent, .02)); ctx.fillStyle = rim; ctx.fill(); }
   ctx.globalAlpha = .6; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
   // each kind's wedge: its colored belt along the equator, and its edge from pole to pole
   ctx.lineCap = "butt";
@@ -1124,6 +1125,157 @@ function csLabels(){
     ctx.fillStyle = chHue(c); ctx.strokeText(t, x, y); ctx.fillText(t, x, y); }   // folder names: small caps in their folder's color, so they never read as note titles
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
 }
+
+// ======================================================================================================
+// Experimental maps (under ⋯ → Experimental → Sketches → Unfinished): Geometric, Bookshelf, Tree, Treemap, Skyline.
+// Each one fills EX/EY with where its notes sit, and may draw its own guides, notes and labels. Everything else
+// (links on click, the note panel, search, the trail, the time-lapse) works as on every other map.
+// ======================================================================================================
+const EX = new Float32Array(n), EY = new Float32Array(n);
+const RX = new Float32Array(n), RY = new Float32Array(n), RW = new Float32Array(n), RH = new Float32Array(n);   // a note's rectangle (spines, tiles), world units
+const EXP = {};
+const expOn = () => !!EXP[view];
+let expBox = {x0: 0, y0: 0, x1: 1, y1: 1};
+function expBounds(pad){ let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let i=0;i<n;i++) { if (!vis[i]) continue; const a = RW[i] ? RX[i] : EX[i], b = RH[i] ? RY[i] : EY[i], c = RW[i] ? RX[i] + RW[i] : EX[i], d = RH[i] ? RY[i] + RH[i] : EY[i];
+    if (a < x0) x0 = a; if (b < y0) y0 = b; if (c > x1) x1 = c; if (d > y1) y1 = d; }
+  if (!isFinite(x0)) { x0 = y0 = 0; x1 = y1 = 1; } expBox = {x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad}; }
+const UND = i => { const a = out[i], b = inn[i]; return a.length ? (b.length ? a.concat(b) : a) : b; };
+// several sources at once: every note reached gets the source it's closest to (ties go to the earlier source); ok limits where it may go
+function bfsMulti(sources, ok){ const src = new Int32Array(n).fill(-1), dist = new Int32Array(n).fill(-1), par = new Int32Array(n).fill(-1), q = [];
+  for (const s of sources) if (src[s] < 0) { src[s] = s; dist[s] = 0; q.push(s); }
+  for (let h = 0; h < q.length; h++) { const i = q[h]; for (const j of UND(i)) { if (src[j] >= 0 || !ok(j)) continue; src[j] = src[i]; dist[j] = dist[i] + 1; par[j] = i; q.push(j); } }
+  return {src, dist, par}; }
+const byRank = (a, b) => (N[b].level - N[a].level) || (N[b].score - N[a].score);
+const hexHsl = (hex, dl, ds) => { const m = /^#?(..)(..)(..)$/.exec(hex || "#888888"); let r = parseInt(m[1],16)/255, g = parseInt(m[2],16)/255, b = parseInt(m[3],16)/255;
+  const mx = Math.max(r,g,b), mn = Math.min(r,g,b), l = (mx+mn)/2, d_ = mx - mn; let h = 0, s = 0;
+  if (d_) { s = d_/(1 - Math.abs(2*l - 1)); h = mx === r ? ((g-b)/d_ + 6) % 6 : mx === g ? (b-r)/d_ + 2 : (r-g)/d_ + 4; h *= 60; }
+  return `hsl(${Math.round(h)},${Math.round(Math.max(0, Math.min(1, s + (ds || 0)))*100)}%,${Math.round(Math.max(.08, Math.min(.92, l + (dl || 0)))*100)}%)`; };
+const aceHue = d => CH_HUE[d.archive ? "x" : d.ace] || "#7a8a99";
+function lvFill(i, x, y, r){ const lv = N[i].level; if (lv < 3) return lv === 2 ? css.l2 : css.l1; const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r); g.addColorStop(0, GRAD[lv][0]); g.addColorStop(1, GRAD[lv][1]); return g; }
+function rectPick(x, y){ let best = -1, ba = Infinity;   // the smallest rectangle under the point
+  for (let i=0;i<n;i++) { if (!RW[i] || !VV(i)) continue; if (x >= RX[i] && x <= RX[i] + RW[i] && y >= RY[i] && y <= RY[i] + RH[i]) { const a = RW[i]*RH[i]; if (a < ba) { ba = a; best = i; } } }
+  return best; }
+// nearest map for every note (maps: Level 3 and up), and the hub each map belongs to, within the notes ok() allows
+function mapGroups(ok){
+  const maps = []; for (let i=0;i<n;i++) if (vis[i] && ok(i) && N[i].level >= 3) maps.push(i); maps.sort(byRank);
+  const hubs = maps.filter(i => N[i].level === 5);
+  const G = bfsMulti(maps, j => vis[j] && ok(j)), H = bfsMulti(hubs.length ? hubs : maps.slice(0, 1), j => vis[j] && ok(j));
+  return {maps, hubs, map: G.src, hub: H.src}; }
+
+// ---------- Geometric: the top 25 placed as far apart as the triangles allow; #1 in the center, #2–5 in the corners ----------
+// Then each triangle gets a note at its center (6–9), which splits it in three, and so on. Every other note joins
+// the top note it reaches in the fewest links, closer in the higher its level. Placement follows the scoring live.
+const QS = 800; let QPTS = [], QTRI = [], QTOP = [], QRC = [];
+function quinSeeds(m){
+  const P = [[0, 0], [-QS, -QS], [QS, -QS], [QS, QS], [-QS, QS]];
+  let tris = [[1, 2, 0], [2, 3, 0], [3, 4, 0], [4, 1, 0]]; const pts = P.slice(0, Math.min(m, 5)), all = [...tris];
+  while (pts.length < m) {
+    const cen = tris.map(t => [(pts[t[0]][0] + pts[t[1]][0] + pts[t[2]][0])/3, (pts[t[0]][1] + pts[t[1]][1] + pts[t[2]][1])/3]);
+    const need = m - pts.length, take = new Set();
+    if (cen.length <= need) cen.forEach((c, j) => take.add(j));
+    else while (take.size < need) { let bj = -1, bd = -1;   // the emptiest centers first
+      cen.forEach((c, j) => { if (take.has(j)) return; let d = Infinity; for (const p of pts) d = Math.min(d, Math.hypot(c[0]-p[0], c[1]-p[1])); for (const t of take) d = Math.min(d, Math.hypot(c[0]-cen[t][0], c[1]-cen[t][1])); if (d > bd + 1e-6) { bd = d; bj = j; } });
+      take.add(bj); }
+    const next = [];
+    tris.forEach((t, j) => { if (!take.has(j)) { next.push(t); return; } const k_ = pts.length; pts.push(cen[j]); const s = [[t[0], t[1], k_], [t[1], t[2], k_], [t[2], t[0], k_]]; next.push(...s); all.push(...s); });
+    tris = next; }
+  return {pts, tris: all}; }
+function layoutQuin(){
+  const cand = []; for (let i=0;i<n;i++) if (vis[i] && !ARCH[i]) cand.push(i); cand.sort(byRank);
+  QTOP = cand.slice(0, Math.min(25, cand.length)); const {pts, tris} = quinSeeds(QTOP.length); QPTS = pts; QTRI = tris;
+  QRC = pts.map((p, a) => { let d = Infinity; pts.forEach((q, b) => { if (a !== b) d = Math.min(d, Math.hypot(p[0]-q[0], p[1]-q[1])); }); return Math.min(isFinite(d) ? d*.46 : QS*.6, QS*.5); });
+  const seedOf = new Map(QTOP.map((i, a) => [i, a])), B = bfsMulti(QTOP, j => vis[j]);
+  for (let i=0;i<n;i++) { RW[i] = RH[i] = 0; const a = seedOf.get(i);
+    if (a !== undefined) { EX[i] = pts[a][0]; EY[i] = pts[a][1]; continue; }
+    const s = B.src[i], h1 = hash(N[i].path, 31), h2 = hash(N[i].path, 37);
+    if (s < 0) {   // never reached from the top 25: a frame around the square
+      const t = h1*4, side = Math.floor(t), f = t - side, off = QS*(1.16 + .1*h2), e = -QS*1.1 + f*QS*2.2;
+      [EX[i], EY[i]] = side === 0 ? [e, -off] : side === 1 ? [off, e] : side === 2 ? [-e, off] : [-off, -e]; continue; }
+    const a2 = seedOf.get(s), lv = N[i].level, rc = QRC[a2];
+    const fr = lv >= 4 ? .16 + .1*h2 : lv === 3 ? .3 + .12*h2 : lv === 2 ? .46 + .4*Math.sqrt(h2) : .88 + .1*h2, ang = h1*2*Math.PI;
+    EX[i] = pts[a2][0] + Math.cos(ang)*rc*fr; EY[i] = pts[a2][1] + Math.sin(ang)*rc*fr; }
+  expBounds(80); }
+EXP.quincunx = {
+  layout: layoutQuin,
+  guides(){
+    ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.globalAlpha = .9; ctx.beginPath();
+    for (const t of QTRI) { const a = QPTS[t[0]], b = QPTS[t[1]], c = QPTS[t[2]]; if (!a || !b || !c) continue; ctx.moveTo(sx(a[0]), sy(a[1])); ctx.lineTo(sx(b[0]), sy(b[1])); ctx.lineTo(sx(c[0]), sy(c[1])); ctx.closePath(); }
+    ctx.stroke(); ctx.globalAlpha = .35; ctx.setLineDash([2, 5]); ctx.beginPath(); QPTS.forEach((p, a) => { ctx.moveTo(sx(p[0]) + QRC[a]*k, sy(p[1])); ctx.arc(sx(p[0]), sy(p[1]), QRC[a]*k, 0, 6.2832); }); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; },
+  labels(){ ctx.font = `600 10px ${css.mono}`; ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.lineWidth = 4; ctx.strokeStyle = css.bg;
+    QTOP.forEach((i, a) => { if (!VV(i)) return; const x = sx(EX[i]), y = sy(EY[i]) + rad(i) + 5, t = "#" + (a + 1); ctx.fillStyle = a === 0 ? css.accent : css.muted; ctx.strokeText(t, x, y); ctx.fillText(t, x, y); });
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
+  mustLabel: () => QTOP.filter(i => VV(i)),
+  legend: "Geometric: your top 25 notes by score. #1 sits in the center and #2–5 in the corners; then each triangle gets a note at its center, which splits it in three. Every other note joins the top note it reaches in the fewest links: the higher its level, the closer it sits. Notes the top 25 never reach line the frame.",
+};
+
+// ---------- Bookshelf: a double-wide wall of books with your own call numbers ----------
+// Left bay: knowledge (Atlas and the other folders), shelved by call number: hub → map → note. Each map is a bookend
+// that holds its notes; unlinked notes lean at the end. Right bay: Calendar by date, then Efforts, +, x and the archive.
+// Spine width is words, height is level; maps and hubs wear their level colors.
+const SB = {W: 1500, gap: 140, SH: 100, board: 14};
+let SHELF = {rows: [], secs: [], calls: []};
+function layoutShelf(){
+  const rows = [], secs = [], calls = []; for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
+  const right = i => ARCH[i] || ["Calendar", "Efforts", "+", "x"].includes(N[i].ace);
+  const width = i => (N[i].level >= 3 ? 3 : 0) + 2 + 2.6*Math.log10(1 + ((N[i].p && N[i].p.w) || 0)/40);
+  const height = i => { const lv = N[i].level, h = hash(N[i].path, 41); return SB.SH*(lv === 5 ? .97 : lv === 4 ? .9 : lv === 3 ? .82 : lv === 2 ? .6 + .14*h : .5 + .1*h); };
+  for (const [bay, x0] of [[0, 0], [1, SB.W + SB.gap]]) {
+    let row = 0, x = x0, used = false;
+    const baseY = r => (r + 1)*(SB.SH + SB.board + 8);
+    const newRow = () => { if (used) { row++; x = x0; used = false; } };
+    const put = (i, lean) => { const w = width(i); if (x + w > x0 + SB.W) { row++; x = x0; } const h = height(i), by = baseY(row);
+      RX[i] = x; RW[i] = w; RH[i] = h; RY[i] = by - h; EX[i] = x + w/2; EY[i] = by - h*.5; x += w + .6; used = true; if (lean) RH[i] = -h; };
+    const section = (label) => { newRow(); secs.push({label, x: x0, y: baseY(row) - SB.SH - 4}); };
+    if (bay === 0) {
+      const ok = i => !right(i), G = mapGroups(ok), mapRank = new Map(G.maps.map((m, j) => [m, j])), hubRank = new Map(G.hubs.map((h_, j) => [h_, j]));
+      const tops = [...new Set(N.map((d, i) => vis[i] && ok(i) ? (d.ace === "(root)" ? "(root)" : d.ace) : null).filter(Boolean))].sort((a, b) => (a === "Atlas" ? -1 : b === "Atlas" ? 1 : a === "(root)" ? 1 : b === "(root)" ? -1 : a.localeCompare(b)));
+      for (const top of tops) {
+        const ids = []; for (let i=0;i<n;i++) if (vis[i] && ok(i) && (N[i].ace === top)) ids.push(i);
+        if (!ids.length) continue; section(top === "(root)" ? "Root" : top);
+        const key = i => { const m = G.map[i], hb = G.hub[i]; return [hb >= 0 ? hubRank.get(hb) ?? 999 : 999, m >= 0 ? mapRank.get(m) : 1e6, m === i ? -1 : 0, isNaN(TV[i]) ? 0 : TV[i]]; };
+        const shelved = ids.filter(i => G.map[i] >= 0).sort((a, b) => { const p = key(a), q = key(b); for (let j = 0; j < 4; j++) if (p[j] !== q[j]) return p[j] - q[j]; return 0; });
+        const loose = ids.filter(i => G.map[i] < 0).sort((a, b) => (TV[a] || 0) - (TV[b] || 0));
+        let lastMap = -2, hubN = 0, mapN = 0, noteN = 0, lastHub = -2;
+        for (const i of shelved) { const m = G.map[i], hb = G.hub[i];
+          if (hb !== lastHub) { lastHub = hb; hubN++; mapN = 0; }
+          if (m !== lastMap) { lastMap = m; mapN++; noteN = 0; x += 4; put(i); calls.push({x: RX[i], y: RY[i] + RH[i], t: `${hubN}.${mapN}`, i}); continue; }
+          noteN++; put(i); }
+        if (loose.length) { x += 10; for (const i of loose) put(i, true); }
+      }
+    } else {
+      const groups = [["Calendar", i => !ARCH[i] && N[i].ace === "Calendar"], ["Efforts", i => !ARCH[i] && N[i].ace === "Efforts"], ["+", i => !ARCH[i] && N[i].ace === "+"], ["x", i => !ARCH[i] && N[i].ace === "x"], ["Archive", i => !!ARCH[i]]];
+      for (const [label, f] of groups) { const ids = []; for (let i=0;i<n;i++) if (vis[i] && f(i)) ids.push(i); if (!ids.length) continue;
+        ids.sort((a, b) => (isNaN(TV[a]) ? -Infinity : TV[a]) - (isNaN(TV[b]) ? -Infinity : TV[b])); section(label);
+        let lastY = null; for (const i of ids) { const y = isNaN(TV[i]) ? "?" : new Date(TV[i]).getUTCFullYear(); if (y !== lastY) { lastY = y; x += 6; put(i); calls.push({x: RX[i], y: RY[i] + RH[i], t: String(y), i}); continue; } put(i); } }
+    }
+    rows.push({bay, x0, n: row + 1, baseY});
+  }
+  SHELF = {rows, secs, calls}; expBounds(40); }
+EXP.shelf = {
+  layout: layoutShelf, pick: (x, y) => rectPick(x, y),
+  guides(){ ctx.fillStyle = css.panel; ctx.strokeStyle = css.line;
+    for (const r of SHELF.rows) { const top = sy(0) - 6*k, x0 = sx(r.x0 - 10), w = (SB.W + 20)*k, bot = sy(r.baseY(r.n - 1) + SB.board);
+      ctx.globalAlpha = .55; ctx.fillRect(x0, top, w, bot - top); ctx.globalAlpha = 1; ctx.lineWidth = 1; ctx.strokeRect(x0, top, w, bot - top);
+      ctx.fillStyle = css.line; for (let j = 0; j < r.n; j++) { const y = sy(r.baseY(j)); ctx.fillRect(x0, y, w, Math.max(1.5, SB.board*k*.6)); } ctx.fillStyle = css.panel; } },
+  notes(lit, dim){
+    const ws = k;
+    for (let i=0;i<n;i++) { if (!RW[i] || !VV(i)) continue; const x = sx(RX[i]), w = Math.max(.6, RW[i]*ws), h = Math.abs(RH[i])*k, by = sy(RY[i] + Math.abs(RH[i]));
+      if (x > W + 10 || x + w < -10 || by < -10 || by - h > H + 10) continue;
+      const d = N[i]; ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .22 : .7) : 1;
+      ctx.fillStyle = d.level >= 3 ? lvFill(i, x, by - h, Math.max(w, h)) : hexHsl(aceHue(d), (hash(d.sub || d.ace, 3) - .5)*.2 + (hash(d.path, 5) - .5)*.12 - (d.level === 1 ? .08 : 0), d.level === 1 ? -.25 : 0);
+      if (RH[i] < 0) { ctx.save(); ctx.translate(x, by); ctx.rotate(.22); ctx.fillRect(0, -h, w, h); ctx.restore(); continue; }   // unlinked: leaning
+      ctx.fillRect(x, by - h, w, h);
+      if (d.level >= 3 && w > 1.5) { ctx.fillStyle = css.ink; ctx.globalAlpha *= .8; ctx.fillRect(x - 2*k, by - h*.55, Math.max(1, 1.6*k), h*.55); }   // the bookend
+      if (w >= 9 && h > 40) { ctx.save(); ctx.translate(x + w/2, by - 4); ctx.rotate(-Math.PI/2); ctx.fillStyle = d.level >= 3 ? "#1a1a1a" : css.ink; ctx.globalAlpha = .9;
+        ctx.font = `500 ${Math.min(11, w*.7)}px ${css.body}`; ctx.textBaseline = "middle"; let t = d.title; const mw = h - 10; while (t.length > 3 && ctx.measureText(t).width > mw) t = t.slice(0, -2); if (t !== d.title) t += "…"; ctx.fillText(t, 0, 0); ctx.restore(); } }
+    ctx.globalAlpha = 1; },
+  labels(){ ctx.textBaseline = "alphabetic"; ctx.lineWidth = 4; ctx.strokeStyle = css.bg;
+    for (const s of SHELF.secs) { const x = sx(s.x), y = sy(s.y); if (y < -20 || y > H + 20) continue; ctx.font = `600 ${k > .8 ? 12 : 10}px ${css.mono}`; ctx.fillStyle = css.accent; const t = s.label.toUpperCase(); ctx.strokeText(t, x + 2, y); ctx.fillText(t, x + 2, y); }
+    if (k > 1.6) { ctx.font = `500 9.5px ${css.mono}`; ctx.fillStyle = css.muted; for (const c of SHELF.calls) { const x = sx(c.x), y = sy(c.y) + 11; if (x < -20 || x > W || y < 0 || y > H + 12) continue; ctx.strokeText(c.t, x, y); ctx.fillText(c.t, x, y); } } },
+  ownLabels: true,
+  legend: "Bookshelf: left bay, knowledge, shelved by your own call numbers (hub.map): each map is a bookend holding the notes it reaches first; unlinked notes lean at the end. Right bay: Calendar by year, then Efforts, +, x. Spine width is words, height is level; maps and hubs wear their level colors.",
+};
 let chArc = -1, chPin = -1;   // the arc under the cursor, and the one clicked to hold its ribbons
 const chOn = () => chArc >= 0 ? chArc : chPin;
 function showArcTip(a){   // the arc tooltip, set beside the ring on the arc's own side, never over the ribbons
@@ -1256,6 +1408,7 @@ else if (view === "gravity") { layoutGravity(); X.set(GX); Y.set(GY); }
 else if (view === "stars") { layoutStars(); if (S3D) { project3D(); X.set(P3X); Y.set(P3Y); } else { X.set(SX); Y.set(SY); } }
 else if (view === "sense") { layoutSense(); X.set(SNX); Y.set(SNY); }
 else if (view === "spacetime") { layoutSpace(); X.set(XT); Y.set(YST); }
+else if (expOn()) { EXP[view].layout(); X.set(EX); Y.set(EY); }
 if (domeOn()) { domeUse(); domeAngles(Float32Array.from(X), Float32Array.from(Y)); domeProject(); X.set(DX); Y.set(DY); }
 if (csphOn()) { csAngles(); csProject(); X.set(DX); Y.set(DY); }
 buildGrid();
@@ -1279,6 +1432,8 @@ function syncCls(){ const m = root.querySelector("main"), hd = root.querySelecto
   root.querySelectorAll(".ms").forEach(ms => { const x = ms.querySelector(":scope > .qx"); ms.toggleClass("has-x", !!x && !x.hidden); }); }
 function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(2, win.devicePixelRatio||1); const cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); draw(); }
 function fitTarget(){ const pad = 56;
+  if (expOn()) { const lc = isPhone() ? 0 : 400, vw = W - sideW() - lc, b = expBox, bw = b.x1 - b.x0, bh = b.y1 - b.y0, kk = Math.min((vw - pad)/bw, (H - pad)/bh);   // beside the bars' column
+    return {k: kk, tx: lc + vw/2 - (b.x0 + bw/2)*kk, ty: H/2 - (b.y0 + bh/2)*kk}; }
   if (csphOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: .4*Math.min(vw, H)/(CS_R*1.08), tx: vw/2, ty: H/2}; }
   if (domeOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: Math.max(vw, H*1.2)/2/(DF_*Math.tan(52*Math.PI/180)), tx: vw/2, ty: H/2}; }   // about a 104° view
   if (view === "sense") { const phone = isPhone(), lc = phone ? 0 : 400, tb = phone ? 58 : 16, pb = phone ? 70 : 16, vw = W - sideW() - lc;   // desktop: the bars live in a left column
@@ -1356,6 +1511,7 @@ function render(){
   else if (view === "sense") senseGuides();
   else if (view === "gravity") gravityGuides();
   else if (csphOn()) csGuides();
+  else if (expOn()) { if (EXP[view].guides) EXP[view].guides(); }
   else if (view === "chord") chordGuides();
   else {
   if (view === "spacetime") ROWS.forEach((r, idx) => {   // folder rows
@@ -1430,7 +1586,7 @@ function render(){
   const vx0 = -30, vx1 = W+30, vy0 = -30, vy1 = H+30;
   // hovering fades the rest gently; a click (selection) fades it fully, like the link lines
   const dim = lit && !(focus >= 0 && (sel === focus || sel < 0) && hover < 0) ? (sel >= 0 ? .25 : .7) : 1;
-  if (view === "stars") starsNotes(lit, dim); else {
+  if (view === "stars") starsNotes(lit, dim); else if (expOn() && EXP[view].notes) EXP[view].notes(lit, dim); else {
   for (const lv of [1,2]) for (const ar of [1,0]) {   // archive notes as rings, vault notes as dots
     ctx.globalAlpha = dim; ctx.beginPath();
     for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i) || ARCH[i] !== ar) continue; const x = sx(X[i]), y = sy(Y[i]); if (x<vx0||x>vx1||y<vy0||y>vy1) continue; const r = rad(i); ctx.moveTo(x+r,y); ctx.arc(x,y,r,0,6.2832); }
@@ -1635,6 +1791,7 @@ function labels(lit){
   ctx.textBaseline = "middle";
   const must = [];
   if (sel >= 0) must.push(sel); if (hover >= 0) must.push(hover);
+  if (expOn() && EXP[view].mustLabel) for (const j of EXP[view].mustLabel()) must.push(j);
   const hl = sel >= 0 ? sel : hover;
   if (lit) [...lit].filter(j => j !== hl).sort((a,b) => (N[b].level-N[a].level) || (N[b].score-N[a].score)).forEach(j => must.push(j));
   const seen = new Set(), list = [...must, ...order];
@@ -1643,6 +1800,7 @@ function labels(lit){
     if (seen.has(i) || !VV(i)) continue; seen.add(i);
     const isMust = must.includes(i);
     if (!isMust && N[i].level < minLv) continue;
+    if (!isMust && expOn() && EXP[view].ownLabels) continue;   // these maps name things their own way; titles show for the note you're on and its links
     if (!isMust && view === "stars" && COREB[i] >= 0 && BODIES[COREB[i]].r*k <= Math.min(W, H)*.8) continue;   // the galaxy's own label names it
     if (!isMust && lit && !lit.has(i) && !(focus >= 0 && dim_ok())) continue;
     const x = sx(X[i]), y = sy(Y[i]); if (x < -200 || x > W+20 || y < -20 || y > H+20) continue;
@@ -1660,6 +1818,7 @@ function labels(lit){
 }
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function axisLabels(){
+  if (expOn()) { if (EXP[view].labels) EXP[view].labels(); return; }
   if (domeOn()) { domeLabels(); return; }
   if (view === "stars") { starLabels(); drawPops(); return; }
   if (view === "sense") { senseLabels(); return; }
@@ -1743,6 +1902,7 @@ function axisLabels(){
 let linkedOf = -1, linkedSet = null;
 dbg.__ivPickTest = () => { if (sel < 0) return null; let ok = 0, other = 0, tot = 0; for (const j of new Set([...out[sel], ...inn[sel]])) { if (!VV(j)) continue; const px = sx(X[j]) + 4, py = sy(Y[j]) + 3; if (px < 0 || px > W || py < 0 || py > H) continue; tot++; const p = pick(px, py); if (p === j) ok++; else if (p === sel || out[sel].includes(p) || inn[sel].includes(p)) other++; } return [ok, other, tot]; };   // the selected note and the notes it links with, cached per selection
 function pick(px, py){
+  if (expOn() && EXP[view].pick && !(morphing && senseT == null)) { for (let q = LH.length - 1; q >= 0; q--) { const [lx, ly, lw, lh, i] = LH[q]; if (px >= lx && px <= lx + lw && py >= ly && py <= ly + lh && vis[i]) return i; } return EXP[view].pick(wx(px), wy(py)); }
   if (morphing && senseT == null) return -1;   // the timeline keeps notes gliding; they stay clickable
   if (sel >= 0) {   // with a note selected, its linked notes win: moving toward one doesn't get hijacked by the notes on the way
     if (linkedOf !== sel) { linkedOf = sel; linkedSet = new Set([sel, ...out[sel], ...inn[sel]]); }
@@ -2077,6 +2237,7 @@ function goEmDome(m){ closePops(); DOME.emergence = true; save("iv-dome", DOME);
 $("#goemt").onclick = () => goEmDome("time");
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); }
 $("#gochord").onclick = () => goChord("");
+for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
 $("#gocso").onclick = () => goChord("out");
 $("#gocsi").onclick = () => goChord("in");
 
@@ -2298,6 +2459,7 @@ function legend(){
     return `<div><i style="${sw}"></i>${L.lv} · ${L.name} <span style="margin-left:auto;padding-left:10px">${(cnt[L.lv]||0).toLocaleString()}</span></div>`;
   }).join("") + (showArch && hasArch ? `<div><i style="background:none;border:1.5px solid ${css.muted}"></i>Archive (rings)</div>` : "") + `<div style="margin-top:4px"><i class="ln" style="border-color:${css.up}"></i>links above</div><div><i class="ln" style="border-color:${css.down}"></i>links below</div>` + (linkCol === "props" ? `<div><i class="ln" style="border-color:${css.rel}"></i>from a property (up, related, any other)</div>` : linkCol === "each" ? `<div><i class="ln" style="border-color:${css.upp}"></i>up property</div><div><i class="ln" style="border-color:${css.rel}"></i>related property</div><div><i class="ln" style="border-color:${css.prop}"></i>other properties (actors, director, by, next…)</div>` : REL.size ? `<div><i class="ln" style="border-color:${css.rel}"></i>related (from the related property)</div>` : "") + (focus >= 0 ? `<div><i class="ln" style="border-color:${css.muted};opacity:.5;border-top-width:1px"></i>links between the other notes in focus</div>` : "");
   if (view === "spacetime" && !domeOn()) $("#legend").createDiv({ text: "Rows: your top folders. In each row, higher levels sit higher.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
+  if (expOn() && EXP[view].legend) $("#legend").createDiv({ text: EXP[view].legend, attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
   if (csphOn()) $("#legend").createDiv({ text: CSPH === "out" ? "Corona: every kind is a wedge of the globe (Level 5 toward the North Pole); the links between kinds arc out over the surface. Drag to turn it, scroll to zoom." : "Tesla: every kind is a wedge of a glass globe (Level 5 toward the North Pole); the links between kinds cross through the inside. Drag to turn it, scroll to zoom.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
   if (domeOn()) $("#legend").createDiv({ text: view === "emergence" ? "Dome: you stand at the center. Level 5 is the North Pole, Level 1 the South Pole; " + (mode === "ace" ? "your folders" : "time") + " runs around you. Drag to look around, scroll to zoom, ⤢ to face forward." : view === "gravity" ? "Dome: you stand at the center. Home and the hubs are overhead; the levels drop toward the horizon. Drag to look around, scroll to zoom, ⤢ to face forward." : "Dome: you stand at the center. Time runs around you; folders run from the North Pole (+) to the South Pole (x), with the equator halfway through your notes. Drag to look around, scroll to zoom, ⤢ to face forward.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
 }
@@ -2315,7 +2477,7 @@ setTheme(pref("iv-theme", autoTheme()));
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
 const PIDX = new Map(N.map((d,i) => [d.path, i]));
-const VIEW_NAME = {emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemaking", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemaking", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
