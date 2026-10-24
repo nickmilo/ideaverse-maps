@@ -1533,14 +1533,18 @@ function layoutTree(){
   const A0 = new Float64Array(n), A1 = new Float64Array(n); A0[root] = TR.span[0]; A1[root] = TR.span[1];
   for (const i of post) { let a = A0[i]; const tot = kids[i].reduce((s_, j) => s_ + w[j], 0) || 1; for (const j of kids[i]) { A0[j] = a; a += (A1[i] - A0[i])*w[j]/tot; A1[j] = a; } }
   const maxD = Math.max(1, ...post.map(i => depth[i]));
+  // a parent with many leaves sets them in a few staggered rows instead of one dense arc
+  const row = new Float64Array(n); for (let i=0;i<n;i++) { const ks = kids[i]; if (!ks.length) continue; const lv = ks.filter(j => !kids[j].length), R = Math.max(1, Math.min(5, Math.round(Math.sqrt(lv.length) / 3)));
+    lv.forEach((j, q) => { row[j] = (q % R) / Math.max(1, R - 1 || 1) * (R > 1 ? 1 : 0); }); }
   for (let i=0;i<n;i++) {
     if (i === root) { EX[i] = 0; EY[i] = -TR.trunk; continue; }
-    if (par[i] >= 0) { const a = (A0[i] + A1[i])/2, r = TR.step*Math.pow(depth[i], .85)*(5/Math.max(5, maxD))*1.6 + 60*hash(N[i].path, 43)*(kids[i].length ? 0 : 1);
+    if (par[i] >= 0) { const a = (A0[i] + A1[i])/2, r = TR.step*Math.pow(depth[i], .85)*(5/Math.max(5, maxD))*1.6 + (kids[i].length ? 0 : 30*hash(N[i].path, 43) + 150*row[i]);
       EX[i] = Math.cos(a)*r*1.25; EY[i] = -TR.trunk + Math.sin(a)*r; continue; }
     const h1 = hash(N[i].path, 47), h2 = hash(N[i].path, 53);   // fallen leaves
     EX[i] = (h1 - .5)*TR.step*9; EY[i] = 30 + h2*90; }
   TREE = {root, par, kids, w, depth}; expBounds(60); }
 // the path from a note back to the root, through each note it hangs from
+let TREE_CH = new Set();
 const treeChain = i => { const out_ = []; if (i < 0 || !TREE.par || TREE.par[i] === -2) return out_; let g = 0; while (i >= 0 && g++ < 200) { out_.push(i); i = TREE.par[i]; } return out_; };
 const leafCol = i => { const t = TV[i]; if (isNaN(t)) return "hsl(40,25%,45%)"; const y = (T1 - t)/YEAR; const hue = y < 1 ? 110 : y < 2 ? 90 : y < 4 ? 55 : y < 7 ? 32 : 18, l = y < 1 ? 52 : y < 4 ? 50 : 42; return `hsl(${hue},${y > 7 ? 35 : 55}%,${l}%)`; };
 EXP.tree = {
@@ -1548,12 +1552,12 @@ EXP.tree = {
   guides(){ const {root, par, w} = TREE; if (root < 0) return;
     ctx.fillStyle = css["band-a"] || css.panel; ctx.fillRect(0, sy(0), W, H - sy(0));   // the ground
     ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, sy(0)); ctx.lineTo(W, sy(0)); ctx.stroke();
-    const bark = css.muted; ctx.strokeStyle = bark; ctx.lineCap = "round";
+    const bark = css.muted; ctx.strokeStyle = bark; ctx.lineCap = "round"; const hl0 = sel >= 0 ? sel : hover, dimT = treeChain(hl0).length > 1 ? .28 : 1;
     // the trunk
     const tw = Math.max(2, Math.min(26, Math.sqrt(w[root])*.5*k)); ctx.lineWidth = tw; ctx.globalAlpha = .75; ctx.beginPath(); ctx.moveTo(sx(0), sy(0)); ctx.quadraticCurveTo(sx(-20), sy(-TR.trunk*.5), sx(0), sy(-TR.trunk)); ctx.stroke();
     for (let i=0;i<n;i++) { const p = par[i]; if (p < 0 || !VV(i)) continue; const x1 = sx(EX[p]), y1 = sy(EY[p]), x2 = sx(EX[i]), y2 = sy(EY[i]);
       if ((x1 < -50 && x2 < -50) || (x1 > W + 50 && x2 > W + 50) || (y1 < -50 && y2 < -50) || (y1 > H + 50 && y2 > H + 50)) continue;
-      ctx.lineWidth = Math.max(.5, Math.min(tw*.8, Math.sqrt(w[i])*.6*k)); ctx.globalAlpha = TREE.kids[i].length ? .5 : .22;
+      ctx.lineWidth = Math.max(.5, Math.min(tw*.6, Math.sqrt(w[i])*.42*k)); ctx.globalAlpha = (TREE.kids[i].length ? .42 : Math.max(.05, Math.min(.2, .05 + .1*k))) * dimT;
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(x1 + (x2 - x1)*.15, y1 + (y2 - y1)*.75, x2, y2); ctx.stroke(); }
     // the picked note's way home: every branch from it back down to the trunk, lit, like degrees of separation
     const hl = sel >= 0 ? sel : hover, chain = treeChain(hl);
@@ -1567,9 +1571,9 @@ EXP.tree = {
       const d = chain.length - 1, t = `${d} ${d === 1 ? "link" : "links"} from ${N[chain[chain.length - 1]].title}`; ctx.font = `600 11px ${css.mono}`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
       const x = sx(EX[hl]) + 12, y = sy(EY[hl]) - 16, tw = ctx.measureText(t).width; ctx.globalAlpha = .9; ctx.fillStyle = css.bg; ctx.fillRect(x - 4, y - 9, tw + 8, 18); ctx.globalAlpha = 1; ctx.fillStyle = css.accent; ctx.fillText(t, x, y); ctx.textBaseline = "alphabetic"; }
     ctx.globalAlpha = 1; ctx.lineCap = "butt"; },
-  notes(lit, dim){ const r0 = Math.max(1.2, 2.2*Math.pow(k, .55));
+  notes(lit, dim){ const r0 = Math.max(1.2, 2.2*Math.pow(k, .55)); TREE_CH = new Set(treeChain(sel >= 0 ? sel : hover));
     for (let i=0;i<n;i++) { if (!VV(i)) continue; const x = sx(EX[i]), y = sy(EY[i]); if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
-      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .2 : .65) : 1; const lv = N[i].level;
+      const onWay = TREE_CH.has(i); ctx.globalAlpha = onWay ? 1 : TREE_CH.size > 1 ? (lit && lit.has(i) ? .55 : .1) : lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .2 : .65) : 1; const lv = N[i].level;
       if (lv >= 3) { const r = rad(i); ctx.fillStyle = lvFill(i, x, y, r); ctx.beginPath(); shape(lv, x, y, r); ctx.fill(); continue; }
       const fallen = TREE.par[i] === -2, a = hash(N[i].path, 59)*Math.PI; ctx.fillStyle = fallen ? "hsl(28,30%,38%)" : leafCol(i);
       ctx.beginPath(); ctx.ellipse(x, y, r0*1.5, r0*.8, fallen ? 0 : a, 0, 6.2832); ctx.fill(); }
