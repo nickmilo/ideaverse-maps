@@ -41,7 +41,7 @@ A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), P
 
 ## The time-lapse
 
-Press ▶ on the timeline to replay your vault by month or by week. New notes arrive (popcorn, comets, rain, or a swirl), and notes move up a level as their links arrive. Click a note at any point to pause and look around; Resume carries on.
+In **Animations** (bottom left), pick **Timelapse** and press ▶ to replay your vault by month or by week. New notes arrive (popcorn, comets, rain, or a swirl), and notes move up a level as their links arrive. Click a note at any point to pause and look around; Resume carries on.
 
 ![The time-lapse playing on Gravity, November 2023](docs/timelapse.png)
 <sub>The time-lapse mid-play on Gravity, LYT Mode theme: November 2023's new notes burst in around the clock.</sub>
@@ -62,7 +62,7 @@ The score counts links in, links out, links both ways, and uplinks (the `up` and
 
 - Open it from the ribbon (the orbit icon) or the command **Maps of the Ideaverse: Open map**.
 - Click a note to see its links; **Open note** opens it beside the map. Cmd/Ctrl-click opens it in a new tab.
-- Search with `/`. Drag to pan, scroll to zoom. **Focus mode** shows one note and its neighbors. **Autoplay** wanders from note to linked note.
+- Search with `/`. Drag to pan, scroll to zoom. **Focus mode** shows one note and its neighbors. **Animations** (bottom left) holds the Timelapse, **Wander Mode** (wanders from note to linked note, or hops between maps) and, on 3D maps, **Orbit** (a slow drift).
 - **Follow note** (or the command **Toggle follow note**): the map follows whichever note you're editing, like a local graph linked to the active note. It works both ways: pick a note on the map (click, search, the note panel or the trail), or let a tour or Autoplay move along, and it opens in your editor, while the map keeps focus. Put the map in a split or the sidebar and it keeps up as you move through your notes. In Focus mode it shows just that note and its links.
 - **★ Saved** holds saved views and tours. Name the current view (map, axis, filters, zoom and position, selected note, where the time-lapse stands, Starfield's 3D angle) to come back to it. **Record a tour**, click through some notes, stop, and name it; play it back with ‹ › or let it run. Before your first save it asks which folder to keep them in (pick one or type a new one). They live in `Maps of the Ideaverse - saved views.json` there, a plain file you own, updated every time you save. The 📁 button moves it.
 - Filter by folder (drill into subfolders with ›) or by collection. Folder views use your top folders, whatever they're called; ACE folders (Atlas, Calendar, Efforts) get their symbols.
@@ -85,7 +85,7 @@ Everything runs on your computer. The plugin reads your notes to draw the map an
 
 ## Notes
 
-- Works on desktop, tablets and phones. On a phone the toolbars fold into **Options**, the legend and Autoplay start tucked away, and tapping a note opens its panel from the bottom. Large vaults (10,000+ notes) take a while to scan the first time; after that only changed notes are read.
+- Works on desktop, tablets and phones. On a phone the toolbars fold into **Options**, the legend and Animations start tucked away, and tapping a note opens its panel from the bottom. Large vaults (10,000+ notes) take a while to scan the first time; after that only changed notes are read.
 - Works best with folders. Vaults with few or no folders still get Emergence and Starfield; folder views will be thin.
 
 ## License

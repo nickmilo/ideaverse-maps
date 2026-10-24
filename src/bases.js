@@ -4,7 +4,7 @@ import { mountInto, openBeside } from "./view.js";
 /* Maps of the Ideaverse as a Bases view: the map, showing only the notes the base's query returns.
    Levels and scores still come from the whole vault, so a hub stays a hub inside a project. Needs Obsidian 1.10+. */
 export const BASES_VIEW = "ideaverse-map";
-const SHARED = new Set(["iv-packs1", "iv-tcol", "iv-pcol", "iv-legend", "iv-hcol", "iv-views", "iv-tours", "iv-subsoff"]);
+const SHARED = new Set(["iv-packs1", "iv-tcol", "iv-pcol", "iv-acol", "iv-anim", "iv-legend", "iv-hcol", "iv-views", "iv-tours", "iv-subsoff"]);
 
 const makeView = BasesView => class MapBasesView extends BasesView {
   constructor(controller, containerEl, plugin) {
