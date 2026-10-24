@@ -553,3 +553,12 @@ body.is-phone .ivm.kb header .results{max-height:min(320px, 45vh);overflow-y:aut
 .ivm #animdock.collapsed{right:auto}
 .ivm #animdock .anihead .pl{display:none}
 .ivm div main.has-drawer #animdock{display:none}}
+/* Animations tucked: a vertical tab like the legend's, just above it */
+.ivm .anitab{bottom:100px}
+.ivm .anitab[hidden]{display:none}
+.ivm .anitab.running{color:var(--accent);border-color:var(--accent)}
+.ivm .anitab.running::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin-bottom:6px}
+@container ivm (max-width:760px){.ivm div main.has-drawer .anitab{display:none}}
+.ivm #animdock{cursor:pointer}
+.ivm #animdock :is(button, input, select, label, .seg){cursor:auto}
+.ivm #animdock :is(button, label){cursor:pointer}

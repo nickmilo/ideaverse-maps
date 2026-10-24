@@ -18,6 +18,7 @@ const onKey = fn => on(doc, "keydown", e => { if (!dead && host.isActive() && (!
 const html = el => ({ set v(h) { el.empty(); el.append(sanitizeHTMLToDom(h)); } });
 const PACKS0 = (D.settings && D.settings.packs) || "";
 const cv = $("#cv"), ctx = cv.getContext("2d");
+let placeAnitab = () => {};   // set by the Animations dock (below)
 
 const N = D.nodes, E = D.edges, n = N.length;
 const LEVELS = [
@@ -922,7 +923,7 @@ function placePlaybar(){ const pb = $("#playbar"), tb = $("#timebar");   // Sens
   pb.style.top = !isPhone() && !tb.hidden && (view === "sense" || view === "stars" || view === "gravity" || view === "chord" || expOn()) ? (tb.offsetTop + tb.offsetHeight + 8) + "px" : "";
   const db = $("#driftbar"); db.hidden = !(s3dOn() || sphOn() || geo3On()); if (db.hidden) driftStop();
   db.style.top = !isPhone() && pb.style.top ? (pb.offsetTop + pb.offsetHeight + 8) + "px" : ""; }
-on(win, "resize", () => placePlaybar());
+on(win, "resize", () => { placePlaybar(); placeAnitab(); });
 function syncTimebar(){ const on = true; win.setTimeout(placePlaybar, 0);
   root.querySelectorAll("#tlstep button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === senseStep)));
   root.querySelectorAll("#tlfx button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === senseFx)));
@@ -3206,17 +3207,26 @@ syncPlay();
   const SECS = [["time", "Timelapse", $("#timebar"), $("#tlplay")], ["wander", "Wander Mode", $("#playbar"), $("#pplay")], ["orbit", "Orbit", $("#driftbar"), $("#dplay")]];
   for (const s_ of SECS) { s_.push(tabs.createEl("button", { text: s_[1], attr: { "data-a": s_[0], "aria-pressed": "false" } })); body.appendChild(s_[2]); s_[2].classList.add("anisec"); }
   const col = head.createEl("button", { cls: "acol" });
+  // tucked: a vertical tab like the legend's, just above it (or above the open legend)
+  const atab = cv.parentElement.createEl("button", { cls: "legtab anitab", text: "Animations", attr: { id: "anitab", "aria-label": "Show animations", "aria-expanded": "false" } });
+  atab.onclick = () => setC(false);
+  placeAnitab = () => { const lt = $("#legtab"), lg = $("#legend"), m = cv.parentElement.getBoundingClientRect(); let b = 14;
+    if (lt && !lt.hidden && lt.offsetParent) b = m.bottom - lt.getBoundingClientRect().top + 8;
+    else if (lg && !lg.classList.contains("collapsed") && lg.offsetParent) b = m.bottom - lg.getBoundingClientRect().top + 8;
+    atab.style.bottom = Math.round(b) + "px"; };
   let cur = pref("iv-anim", "time");
   const avail = s_ => !s_[2].hidden, running = s_ => /❚❚|■/.test(s_[3].textContent);
   const sync = () => { if ($("#playbar").classList.contains("touring")) cur = "wander";
     let a = SECS.find(s_ => s_[0] === cur); if (!a || !avail(a)) a = SECS.find(avail) || SECS[0];
     for (const s_ of SECS) { const t = s_[4], h = !avail(s_), on = s_ === a, r = running(s_);
       if (t.hidden !== h) t.hidden = h; if (t.getAttribute("aria-pressed") !== String(on)) t.setAttribute("aria-pressed", String(on)); if (t.classList.contains("run") !== r) t.classList.toggle("run", r); }
-    if (dock.dataset.a !== a[0]) dock.dataset.a = a[0]; const r = SECS.some(running); if (dock.classList.contains("running") !== r) dock.classList.toggle("running", r); };
+    if (dock.dataset.a !== a[0]) dock.dataset.a = a[0]; const r = SECS.some(running); if (dock.classList.contains("running") !== r) { dock.classList.toggle("running", r); atab.classList.toggle("running", r); } };
   for (const s_ of SECS) s_[4].onclick = () => { cur = s_[0]; save("iv-anim", cur); sync(); win.setTimeout(placePlaybar, 0); };
   const mo = new MutationObserver(sync); for (const s_ of SECS) { mo.observe(s_[3], { childList: true, characterData: true, subtree: true }); mo.observe(s_[2], { attributes: true, attributeFilter: ["hidden", "class"] }); }
-  const setC = c => { dock.classList.toggle("collapsed", c); col.setText(c ? "›" : "‹"); const t = c ? "Show animations" : "Tuck animations away"; col.setAttribute("aria-label", t); col.title = t; save("iv-acol", c); };
+  const setC = c => { dock.classList.toggle("collapsed", c); dock.hidden = c; atab.hidden = !c; if (c) placeAnitab(); col.setText(c ? "›" : "‹"); const t = c ? "Show animations" : "Tuck animations away"; col.setAttribute("aria-label", t); col.title = t; save("iv-acol", c); };
   col.onclick = () => setC(!dock.classList.contains("collapsed"));
+  // like the legend: a click on the dock's empty space tucks it away
+  dock.addEventListener("click", e => { if (!e.target.closest("button, input, select, label, a, .seg, #tourctl, #tldate")) setC(true); });
   setC(pref("iv-acol", doc.body.classList.contains("is-mobile")) === true); sync(); }   // tucked away by default on phones and tablets
 
 // ---------- header, legend, theme ----------
@@ -3234,6 +3244,7 @@ function setLegend(open){
   legendOpen = open; save("iv-legend", open);
   $("#legend").classList.toggle("collapsed", !open); $("#legend").setAttribute("aria-hidden", String(!open));
   $("#legtab").hidden = open; $("#legtab").setAttribute("aria-expanded", String(open));
+  placeAnitab(); win.setTimeout(placeAnitab, 300);
 }
 $("#legtab").onclick = () => setLegend(true);
 function bodyLabel(i){ const b = BODIES[BOD[i]]; if (!b) return "";
@@ -3581,7 +3592,7 @@ function whyBox(i){
     </details>`;
 }
 on(doc, "toggle", e => { if (e.target.classList && e.target.classList.contains("whybox")) save("iv-why2", e.target.open); }, true);
-const ro = new ResizeObserver(() => { if (dead) return; const first = W === 0; resize(); if (first && W) fit(false); placePlaybar(); fitFocus(); }); ro.observe(cv);
+const ro = new ResizeObserver(() => { if (dead) return; const first = W === 0; resize(); if (first && W) fit(false); placePlaybar(); placeAnitab(); fitFocus(); }); ro.observe(cv);
 if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } });
 
 // the whole top bar (title, maps, filters, options) can tuck away; a small tab brings it back
