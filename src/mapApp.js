@@ -3609,6 +3609,8 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
   const tab = $("#main").createEl("button", { cls: "htab", text: "﹀", attr: { "aria-label": "Show the top bar", title: "Show the top bar" } });
   const set = c => { hd.hidden = c; tab.hidden = !c; save("iv-hcol", c); };
   const flip = c => { set(c); win.setTimeout(() => { resize(); if (sel >= 0) flyTo(sel); else fit(true); }, 30); };   // reframe for the new height
+  // centered chevrons (Obsidian's own icons) in place of the wide ︿ ﹀ characters
+  for (const [b, ic] of [[hb, "chevron-up"], [tab, "chevron-down"]]) { b.empty(); setIcon(b, ic); const sv = b.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } }
   hb.onclick = () => flip(true); tab.onclick = () => flip(false);
   set(pref("iv-hcol", false) === true); }
 

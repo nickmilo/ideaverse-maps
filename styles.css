@@ -705,3 +705,4 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm .htab[hidden]{display:none}
 .ivm .app:has(> header[hidden]) .wm-name{margin-right:40px}
 .ivm.ivm .htab{white-space:nowrap;overflow:hidden}
+.ivm header.tb2 .hcol svg,.ivm.ivm .htab svg{display:block}
