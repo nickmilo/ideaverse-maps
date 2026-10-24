@@ -8,7 +8,7 @@ module.exports = async ({ page, sleep, shot }) => {
   ok('header is one row', await E(() => document.querySelector('.ivm header').getBoundingClientRect().height < 60), await E(() => Math.round(document.querySelector('.ivm header').getBoundingClientRect().height)));
   // map menu, nested Starts popover
   await C('#vseg button[data-v=emergence]'); ok('Emergence ▾ opens its menu', await shown('#mapopts'));
-  await C('#startbtn'); ok('Starts opens inside it, menu stays', (await shown('#startpop')) && (await shown('#mapopts')));
+  ok('Years shown sits in the map menu', (await shown('#yrctl')) && (await shown('#mapopts')));
   await page.keyboard.press('Escape'); await sleep(200); ok('Escape closes both', !(await shown('#mapopts')) && !(await shown('#startpop')));
   // Space-Time from the menu
   await C('#vseg button[data-v=emergence]'); await E(() => { const r = [...document.querySelectorAll('.ivm #emerpop input, .ivm #emerpop label')].find(e => /Space-Time/.test(e.textContent || '') || e.value === 'spacetime'); r && r.click(); }); await sleep(1500);
