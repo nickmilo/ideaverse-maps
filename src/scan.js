@@ -11,7 +11,7 @@ const WORD = /[\p{L}\p{N}_]+/gu;
 const KEYS = /^([A-Za-z_][\w-]*):/gm;
 
 /** Everything the scan needs from one note's text, so a note's text is read only when it changes (see adapter.cache). */
-export const EXTRACT_VERSION = 5;
+export const EXTRACT_VERSION = 6;
 function extractNote(t){
   const [fm, body0] = splitFm(t), body = body0.replace(FENCE, ""), lines = nonEmptyLines(body);
   const keys = []; KEYS.lastIndex = 0; let km; while ((km = KEYS.exec(fm))) if (!keys.includes(km[1])) keys.push(km[1]);
@@ -39,6 +39,7 @@ export const DEFAULTS = {
   dateProps: ["created", "createdAt", "created_at", "created on", "date created", "dateCreated", "creation date", "creation_date", "date"],  // the property that says when a note was made; the first one a note has wins (any capitalization)    // number properties offered under By → More… (as well as the built-in axes)
   mapFolders: [],         // every note in these folders counts as a map
   mapCollections: ["Maps", "Views"],   // notes listed in these collections count as maps
+  mdLinks: false,         // also count markdown links to notes ([text](Note.md)); off by default
   fileDates: true,        // a note with no created date and no date in its name is dated by when its file was made
   l5Top: 0,               // the N highest-scoring notes become Level 5; 0 = scale with the vault
   l4MapLinks: 3, l3MinOut: 10, l3Density: 0.5, promoteL4: 6.5, promoteL3: 5.5, navJaccard: 0.7,
@@ -89,7 +90,7 @@ function fmScalar(fm, key) {
 // [[wikilinks]], and markdown links to notes ([text](folder/Note.md), often written by tools)
 const MDLINK = /\[[^\]\n]*\]\(<?([^()<>\n]+?\.md)>?(?:#[^)\n]*)?\)/gi;
 const links = s => { const out = []; LINK.lastIndex = 0; let m; while ((m = LINK.exec(s))) out.push(m[1]);
-  if (s.includes(".md")) { MDLINK.lastIndex = 0; while ((m = MDLINK.exec(s))) { if (/^[a-z][a-z0-9+.-]*:/i.test(m[1])) continue; let t = m[1]; try { t = decodeURIComponent(t); } catch (e) { /* keep as written */ } out.push(t.replace(/^\.\//, "")); } }
+  if (s.includes(".md")) { MDLINK.lastIndex = 0; while ((m = MDLINK.exec(s))) { if (/^[a-z][a-z0-9+.-]*:/i.test(m[1])) continue; let t = m[1]; try { t = decodeURIComponent(t); } catch (e) { /* keep as written */ } out.push("\u0001" + t.replace(/^\.\//, "")); } }   // marked, so Settings → Markdown links can count them or not without a rescan
   return out; };
 const nonEmptyLines = s => s.split(/\r\n|\r|\n/).filter(l => l.trim());
 const FIRST_PERSON = /\b(I|I'm|I've|I'd|I'll|me|my|mine|myself)\b/g;
@@ -151,8 +152,11 @@ export async function scanVault(adapter, settings, onProgress) {
   const bodyOut = S(), bodyIn = S(), upOut = S(), upIn = S(), collIn = S(), relOut = S(), upkOut = S(), cross = S(), propOut = S(), propIn = S(), collOut = S();
   const info = new Map(); let unresolved = 0;
 
+  // markdown links come marked from the extract: kept (unmarked) when the setting is on, dropped when it's off
+  const mdk = a => C.mdLinks ? a.map(x => x[0] === "\u0001" ? x.slice(1) : x) : a.filter(x => x[0] !== "\u0001");
+  const mdl = e => e && { ...e, B: mdk(e.B), U: mdk(e.U), R: mdk(e.R), P: mdk(e.P), C: mdk(e.C) };
   for (const p of paths) {
-    const e = ex.get(p); if (!e) continue;
+    const e = mdl(ex.get(p)); if (!e) continue;
     const colls = e.C.map(x => base(x.trim()));
     const title = stem(p);
     for (const l of e.B) {
@@ -246,7 +250,7 @@ export async function scanVault(adapter, settings, onProgress) {
       m = /((?:19|20)\d{2})-(\d{2})\b/.exec(name); if (m && +m[2] >= 1 && +m[2] <= 12) return m[0] + "-15";
       m = /^((?:19|20)\d{2})\b/.exec(name); return m ? m[1] + "-07-01" : ""; };
     const aOut = S(), aIn = S(), aInfo = new Map();
-    for (const p of arch) { const e = ex.get(p), name = stem(p);
+    for (const p of arch) { const e = mdl(ex.get(p)), name = stem(p);
       for (const l of e.B) { const q = aResolve(l); if (q && q !== p) { add(aOut, p, q); if (aSet.has(q)) add(aIn, q, p); } }
       aInfo.set(p, { title: name, date: aDate(name, createdOf(e, C)), w: e.w, kb: e.kb, sf: e.sf, density: e.density, named_map: /\bMOC\b|\bIndex\b/.test(name) }); }
     const aIdx = new Map(); arch.forEach((p, j) => aIdx.set(p, nodes.length + j));
