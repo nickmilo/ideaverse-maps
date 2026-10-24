@@ -922,7 +922,7 @@ function starFlares(now, few){
   ctx.restore(); }
 const senseDateLabel = t => { const d = new Date(t); return senseStep === "week" ? `${MON[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}` : `${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
 // ---- the timeline bar: ▶ / ❚❚, Month | Week, a scrubber, the date, and × to show everything ----
-let senseStep = pref("iv-sstep", "month") === "week" ? "week" : "month", senseFx = ["pop","comet","rain","swirl","swirlin"].includes(pref("iv-sfx", "pop")) ? pref("iv-sfx", "pop") : "pop", sensePlaying = false, senseTimer = 0;
+let senseStep = pref("iv-sstep", "month") === "week" ? "week" : "month", senseFx = ["comet","rain","swirl","swirlin"].includes(pref("iv-sfx", "comet")) ? pref("iv-sfx", "comet") : "comet",   /* Popcorn retired: anyone on it moves to Comets */ sensePlaying = false, senseTimer = 0;
 function GROWV(){ return view === "emergence" || view === "spacetime" || view === "gravity" || view === "arc" || view === "chord"; }   // maps where the time-lapse regrows levels
 function senseSteps(){ const out = [], grow = GROWV(); let t = Date.UTC(grow ? fromY : SY0, 0, 1); const T_END = grow ? T1 : Math.min(T1, syT1());
   while (t <= T_END) { out.push(t); if (senseStep === "week") t += 7*DAY; else { const d = new Date(t); t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1); } }
