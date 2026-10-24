@@ -2077,7 +2077,7 @@ function syncCls(){ const m = root.querySelector("main"), hd = root.querySelecto
   if (m) { m.toggleClass("has-drawer", !!a && !a.hidden); m.toggleClass("legend-open", !!lg && !lg.classList.contains("collapsed")); }
   if (hd && fb) hd.toggleClass("has-fb", !fb.hidden);
   root.querySelectorAll(".ms").forEach(ms => { const x = ms.querySelector(":scope > .qx"); ms.toggleClass("has-x", !!x && !x.hidden); }); }
-function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(2, win.devicePixelRatio||1); const firstSize = !(W > 0) && r.width > 0, cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); if (firstSize || !isFinite(k) || !isFinite(tx)) { const f = fitTarget(); if (isFinite(f.k) && f.k > 0) { k = f.k; tx = f.tx; ty = f.ty; } } draw(); }   // opened while hidden (a base still laying out): fit once it has a size
+function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(doc.body.classList.contains("is-mobile") ? 1.5 : 2, win.devicePixelRatio||1);   /* phones and tablets draw a little lighter */ const firstSize = !(W > 0) && r.width > 0, cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); if (firstSize || !isFinite(k) || !isFinite(tx)) { const f = fitTarget(); if (isFinite(f.k) && f.k > 0) { k = f.k; tx = f.tx; ty = f.ty; } } draw(); }   // opened while hidden (a base still laying out): fit once it has a size
 function fitTarget(){ const pad = 56;
   if (globeOn()) { const lc = isPhone() ? 0 : 400, vw = W - sideW() - lc; return {k: .44*Math.min(vw, H)/(CS_R*1.08), tx: lc + vw/2, ty: H/2}; }
   if (expOn()) { const lc = isPhone() ? 0 : 400, vw = W - sideW() - lc, b = expBox, bw = b.x1 - b.x0, bh = b.y1 - b.y0, kk = Math.min((vw - pad)/bw, (H - pad)/bh);   // beside the bars' column
@@ -3182,7 +3182,7 @@ syncPlay();
 { const pb = $("#playbar"), b = pb.createEl("button", { cls: "pcol" });
   const set = c => { pb.classList.toggle("collapsed", c); b.setText(c ? "›" : "‹"); b.setAttribute("aria-label", c ? "Show autoplay" : "Tuck autoplay away"); b.title = c ? "Show autoplay" : "Tuck autoplay away"; save("iv-pcol", c); win.setTimeout(placePlaybar, 0); };
   b.onclick = () => set(!pb.classList.contains("collapsed"));
-  set(pref("iv-pcol", false) === true); }
+  set(pref("iv-pcol", isPhone() || doc.body.classList.contains("is-mobile")) === true); }   // tucked away by default on phones and tablets
 
 // ---------- header, legend, theme ----------
 const cnt = {};
@@ -3194,7 +3194,7 @@ function updateCounts(){
   $("#stats").title = `${m.toLocaleString()} notes${a ? ` (${a.toLocaleString()} from the archive)` : ""} · ${l.toLocaleString()} links · scanned ${(D.generated||"").slice(0,10)}`;
   if (css.bg) legend();
 }
-let legendOpen = pref("iv-legend", win.innerWidth > 760) !== false;   // phones start with the tab
+let legendOpen = pref("iv-legend", win.innerWidth > 760 && !doc.body.classList.contains("is-mobile")) !== false;   // phones and tablets start with the tab
 function setLegend(open){
   legendOpen = open; save("iv-legend", open);
   $("#legend").classList.toggle("collapsed", !open); $("#legend").setAttribute("aria-hidden", String(!open));

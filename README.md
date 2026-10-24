@@ -85,7 +85,7 @@ Everything runs on your computer. The plugin reads your notes to draw the map an
 
 ## Notes
 
-- Desktop only for now. Large vaults (10,000+ notes) take a few seconds to scan.
+- Works on desktop, tablets and phones. On a phone the toolbars fold into **Options**, the legend and Autoplay start tucked away, and tapping a note opens its panel from the bottom. Large vaults (10,000+ notes) take a while to scan the first time; after that only changed notes are read.
 - Works best with folders. Vaults with few or no folders still get Emergence and Starfield; folder views will be thin.
 
 ## License
