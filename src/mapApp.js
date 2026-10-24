@@ -879,6 +879,7 @@ function drawGrowth(){
 function popCentre(i){
   if (view === "stars") { const b = BOD[i] >= 0 ? BODIES[BOD[i]] : null;
     return b ? (([bx_, by_]) => [sx(bx_), sy(by_), Math.max(40, b.r*k*1.25)])(bodyPos(b)) : [sx(UC.x), sy(UC.y), Math.max(60, (UB.x1 - UB.x0)*k*.3)]; }
+  if (view === "graph") return [sx((expBox.x0 + expBox.x1) / 2), sy((expBox.y0 + expBox.y1) / 2), Math.max(60, (expBox.x1 - expBox.x0) * k * .5)];   // the Obsidian map: from its middle
   return [sx(SC_.x), sy(SC_.y), SR0*k*1.25];
 }
 function drawPops(){
@@ -887,7 +888,7 @@ function drawPops(){
     few.sort((a,b) => N[a].level - N[b].level);
     ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const taken = LH.map(b => b.slice(0, 4));
     few.sort((a,b) => N[b].level - N[a].level || N[b].score - N[a].score);   // biggest names claim label space first; draw order doesn't matter much
-    for (const i of few) { const e = (now - POP[i])/popMs(), lv = N[i].level, col = view === "stars" ? SPAL[SC[i]] : ARCH4[quadOf(i)][3], r = Math.max(2.2, rad(i));
+    for (const i of few) { const e = (now - POP[i])/popMs(), lv = N[i].level, col = view === "stars" ? SPAL[SC[i]] : view === "graph" ? (GRAD[lv] ? GRAD[lv][0] : css.accent) : ARCH4[quadOf(i)][3], r = Math.max(2.2, rad(i));
       const hx = sx(X[i]), hy = sy(Y[i]); let x = hx, y = hy, sc = 1;
       if (senseFx === "pop") {   // popcorn: burst big, hop, settle
         const burst = e < .14 ? e/.14 : 1, settle = e < .14 ? 0 : (e - .14)/.86, big = (2.6 + lv*1.3)/Math.sqrt(1 + few.length/20);
@@ -3144,7 +3145,7 @@ function labels(lit){
 }
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function axisLabels(){
-  if (expOn()) { if (EXP[view].labels) EXP[view].labels(); return; }
+  if (expOn()) { if (EXP[view].labels) EXP[view].labels(); if (view === "graph") drawPops(); return; }   // the Obsidian map's Timelapse: comets, rain or swirls, as on Starfield
   if (domeOn()) { domeLabels(); return; }
   if (view === "stars") { starLabels(); drawPops(); return; }
   if (view === "sense") { senseLabels(); return; }
