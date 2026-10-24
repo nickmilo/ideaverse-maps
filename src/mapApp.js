@@ -4199,7 +4199,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const AR = popBtn("arr", "Arrange", "arrange");
   const axisName = m => m === "time" ? "Time" : m === "ace" ? ($('#xseg button[data-x="ace"]').textContent || "ACE") : m === "rank" ? "Rank" : (AXES[m] && AXES[m].name) || (($(`#xmore option[value="${CSS.escape(m)}"]`) || {}).textContent) || m;
   // what Arrange does depends on the map: left to right, around the circle, around you, or the stars' color
-  const arrWhat = () => view === "gravity" ? "Arrange notes around the circle by" : view === "stars" ? "Color the stars by" : view === "emergence" && domeOn() ? "Arrange notes around you by" : view === "emergence" ? "Arrange notes left to right by" : "Arrange notes by";
+  const arrWhat = () => view === "gravity" ? "Arrange notes around the circle by" : view === "stars" ? "Color the stars by" : view === "emergence" ? "Arrange notes left to right by" : "Arrange notes by";
   const fillArr = () => { AR.p.empty(); AR.p.createDiv({ cls: "pt", text: arrWhat() });
     const row = (m, txt) => { const r = AR.p.createEl("button", { cls: "orow" + (m === mode ? " on" : ""), attr: { type: "button", role: "menuitemradio", "aria-checked": String(m === mode) } }); r.createSpan({ cls: "rd" }); r.createSpan({ text: txt }); r.onclick = () => { closePops(); setMode(m); }; };
     row("time", "Time"); row("ace", axisName("ace")); { const rb = $('#xseg button[data-x="rank"]'); if (rb && !rb.hidden) row("rank", rb.textContent); }
