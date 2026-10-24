@@ -46,7 +46,7 @@ const makeView = BasesView => class MapBasesView extends BasesView {
   onDataUpdated() { this.paths = this.currentPaths(); if (this.map) this.map.setScope(this.paths); }
   /** Called by the plugin after a rescan. */
   async reload() { if (this.map) { this.map.destroy(); this.map = null; } await this.mount(); }
-  showStale() { if (this.staleBtn) this.staleBtn.hidden = false; }
+  showStale(c) { const b = this.staleBtn; if (!b) return; b.hidden = false; const t = `${c || "Some"} notes changed · rescan`; b.setAttribute("aria-label", t); b.title = t; const n = b.querySelector(".tbadge"); if (n) n.setText(String(c || "")); }
 };
 
 export function registerBases(plugin) {

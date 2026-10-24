@@ -26,11 +26,11 @@ export default class IdeaverseMapsPlugin extends Plugin {
 
     // offer a rescan when notes change (watched only once the vault has loaded, so startup doesn't count)
     this.app.workspace.onLayoutReady(() => {
-      const mark = file => { if (file instanceof TFile && (file.extension === "md" || file.extension === "txt")) this.setDirty(); };
+      const mark = file => { if (file instanceof TFile && (file.extension === "md" || file.extension === "txt")) this.setDirty(file.path); };
       this.registerEvent(this.app.vault.on("modify", mark));
       this.registerEvent(this.app.vault.on("create", mark));
       this.registerEvent(this.app.vault.on("delete", mark));
-      this.registerEvent(this.app.vault.on("rename", mark));
+      this.registerEvent(this.app.vault.on("rename", (file, oldPath) => { mark(file); if (oldPath) this.setDirty(oldPath); }));
       // after an update, a base that was already open still runs the map from the old version: redraw it with this one
       for (const leaf of this.app.workspace.getLeavesOfType("bases")) {
         const old = leaf.view && leaf.view.containerEl && leaf.view.containerEl.querySelector(".ivm-bases");
@@ -61,11 +61,13 @@ export default class IdeaverseMapsPlugin extends Plugin {
     };
   }
 
-  setDirty() {
-    if (this.dirty || !this.graph) return;
-    this.dirty = true;
-    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) if (leaf.view instanceof MapView) leaf.view.showStale();
-    for (const v of this.basesViews || []) v.showStale();
+  /** A note changed since the last scan. The map offers a rescan once 5 or more have (one edit alone isn't worth a prompt). */
+  setDirty(path) {
+    if (!this.graph) return;
+    (this.changed ||= new Set()).add(path || "?"); const c = this.changed.size;
+    this.dirty = c >= 5; if (!this.dirty) return;
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) if (leaf.view instanceof MapView) leaf.view.showStale(c);
+    for (const v of this.basesViews || []) v.showStale(c);
   }
 
   async openMap() {
@@ -76,7 +78,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
   }
 
   async rescan() {
-    this.graph = null; this.dirty = false;
+    this.graph = null; this.dirty = false; this.changed = new Set();
     const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE);
     for (const v of this.basesViews || []) await v.reload();
     if (!leaves.length) { if (!(this.basesViews && this.basesViews.size)) await this.openMap(); return; }   // no map open yet: opening one runs the scan
@@ -109,7 +111,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
     const cache = await this.scanCache();
     this.graph = await scanVault({ files, resolve, vaultName: app.vault.getName(), cache }, s, onProgress);
     if (cache.changed) void this.saveScanCache();
-    this.dirty = false;
+    this.dirty = false; this.changed = new Set();
     return this.graph;
   }
 }
