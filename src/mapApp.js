@@ -3602,6 +3602,11 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
   hb.onclick = () => flip(true); tab.onclick = () => flip(false);
   set(pref("iv-hcol", false) === true); }
 
+// watermarks on the map: Linking Your Thinking at the bottom center, and (desktop) the plugin's name at the top left. Neither takes clicks.
+{ const m = cv.parentElement;
+  const lyt = m.createDiv({ cls: "wm wm-lyt", attr: { "aria-hidden": "true" } }); lyt.appendChild(root.querySelector(".brand .duo").cloneNode(true)); lyt.createSpan({ text: "Linking Your Thinking" });
+  const nm = m.createDiv({ cls: "wm wm-name", attr: { "aria-hidden": "true" } }); nm.appendText("Maps of the "); nm.createEl("em", { text: "Ideaverse" }); }
+
 // ---------- the toolbar: one row, the way Bases lays out its own ----------
 // Left: the two dots, the maps (the current map's tab opens its variants and options), and the counts.
 // Right: Arrange, Group (maps that group), Filter (with a count when on), Display, Find, Follow note, Saved.
