@@ -81,6 +81,9 @@ let fullY = fromY;   // kept equal to the start: every shown year at full scale
 let YR0 = Math.max(SLMIN, Math.min(NOW_Y, +pref("iv-yr0", SLMIN))), YR1 = Math.max(SLMIN, Math.min(NOW_Y, +pref("iv-yr1", NOW_Y))); if (YR0 > YR1) [YR0, YR1] = [YR1, YR0];
 fromY = fullY = YR0;
 const YRV = new Set(["emergence", "spacetime", "gravity", "stars"]);
+// "Show notes outside the date range": off by default, so these maps show only the years picked, and no undated notes;
+// on, notes with no date sit in the No date strip, older ones in a Before strip, newer ones in an After strip
+let YRALL = pref("iv-yrall", false) === true;
 // (the first layout runs before the map's view is set up, so it reads the saved one)
 const curV = () => { try { return view; } catch (e) { return pref("iv-view", "emergence"); } };
 const yrEnd = () => YRV.has(curV()) ? YR1 : NOW_Y;
@@ -145,7 +148,7 @@ function computeVis(){ const fs = new Set(folders);
       && !subHid[i]
       && collOK(d)
       && (!fset || fset[i])) ? 1 : 0; }
-  if (yrOn()) for (let i=0;i<n;i++) if (vis[i] && !isNaN(TV[i])) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; }
+  if (YRV.has(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
   if (focus >= 0) vis[focus] = 1;
   // a filter, a collection or a base that leaves few notes: draw them bigger, so a small set never looks empty
   let nv = 0; for (let i=0;i<n;i++) nv += vis[i]; NVIS = nv;
@@ -273,20 +276,23 @@ layoutY();
 
 // ---------- Time layout: [No date] [Before start] [start → Full scale from, compressed] [Full scale from → today] ----------
 const ND = [0,110], COMP = 0.2;     // a compressed year is a fifth of a full-scale year
-let X0T = 170, ER = null;           // ER: the "Before <start>" strip, when any note is older than the timeline's start
+let X0T = 170, ER = null, AR = null, AFW = 0;   // AR: the "After <end>" strip at the right           // ER: the "Before <start>" strip, when any note is older than the timeline's start
 let TF = 0, TS = 0, UT = 1;
 const units = v => v < TS ? (v - TF)/YEAR*COMP : (TS - TF)/YEAR*COMP + (v - TS)/YEAR;
-const xTime = v => X0T + units(v)/UT * (WW - X0T);
-const dayFull = () => (WW - X0T)/UT/365.2425;   // world width of one day at full scale
+const xTime = v => X0T + units(v)/UT * (WW - X0T - AFW);
+const dayFull = () => (WW - X0T - AFW)/UT/365.2425;   // world width of one day at full scale
 function layoutTime(){
   TF = Date.UTC(fromY,0,1); TS = Date.UTC(fullY,0,1);
   let tmin = Infinity; for (let i=0;i<n;i++) if (TV[i] < tmin && (vis[i] || !yrOn())) tmin = TV[i];
   ER = tmin < TF ? [140, 300] : null; X0T = ER ? 340 : 170;
-  UT = Math.max(units(YRV.has(curV()) && YR1 < NOW_Y ? Date.UTC(YR1 + 1, 0, 1) : T1), .5);
+  const TE = YRV.has(curV()) && YR1 < NOW_Y ? Date.UTC(YR1 + 1, 0, 1) : T1; UT = Math.max(units(TE), .5);
+  let tmax = -Infinity; if (TE < T1) for (let i=0;i<n;i++) if (vis[i] && TV[i] >= TE && TV[i] > tmax) tmax = TV[i];
+  AR = isFinite(tmax) ? [WW - 160, WW] : null; AFW = AR ? 190 : 0;
   const d1 = dayFull();
   for (let i=0;i<n;i++) { const j = hash(N[i].path, 13);
     if (isNaN(TV[i])) XT[i] = ND[0] + 8 + j*(ND[1]-ND[0]-16);
     else if (TV[i] < TF && !ER) XT[i] = X0T - 20;   // outside the years shown: off the map anyway
+    else if (TV[i] >= TE) XT[i] = AR ? AR[0] + 8 + Math.sqrt((TV[i] - TE)/Math.max(tmax - TE, 1))*(AR[1]-AR[0]-16) + (j - .5)*6 : WW + 20;
     else if (TV[i] < TF) XT[i] = ER[0] + 8 + Math.sqrt((TV[i] - tmin)/Math.max(TF - tmin, 1))*(ER[1]-ER[0]-16) + (j - .5)*6;   // kept in date order, older to the left
     else XT[i] = xTime(TV[i]) + (j - .5) * d1 * (TV[i] < TS ? COMP : 1) * 3; }   // ±1.5 days, so same-day notes stay a stripe
 }
@@ -2968,7 +2974,7 @@ function gravityGuides(){
     ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, b*R0, 0, 6.2832); ctx.stroke(); });
   ctx.strokeStyle = css.line; ctx.setLineDash([2,4]); ctx.beginPath();
   const spoke = x => { const a = angOf(x); ctx.moveTo(cx + Math.cos(a)*R0*.13, cy + Math.sin(a)*R0*.13); ctx.lineTo(cx + Math.cos(a)*R0*1.02, cy + Math.sin(a)*R0*1.02); };
-  if (mode === "time") { spoke(ND[1] + 30); if (ER) spoke(ER[1] + 20); for (let yr = fromY; yr <= yrEnd(); yr++) { if (yr < fullY && yr % 5 && yr !== fromY) continue; spoke(xTime(Date.UTC(yr,0,1))); } }
+  if (mode === "time") { spoke(ND[1] + 30); if (ER) spoke(ER[1] + 20); if (AR) spoke(AR[0] - 15); for (let yr = fromY; yr <= yrEnd(); yr++) { if (yr < fullY && yr % 5 && yr !== fromY) continue; spoke(xTime(Date.UTC(yr,0,1))); } }
   else if (PA) { spoke(ND[1] + 30); for (const tk of propTicks()) spoke(xOfU(tk.u)); }
   else for (const c of cols) { spoke(c.x0); spoke(c.x1); }
   ctx.stroke(); ctx.setLineDash([]);
@@ -2991,6 +2997,7 @@ function gravityLabels(){
   if (mode === "time") {
     at("No date", ND[1]/2, `500 11px ${css.mono}`, css.muted, 1.06);
     if (ER) at(`Before ${fromY}`, (ER[0] + ER[1])/2, `500 11px ${css.mono}`, css.muted, 1.06);
+    if (AR) at(`After ${YR1}`, (AR[0] + AR[1])/2, `500 11px ${css.mono}`, css.muted, 1.06);
     const fw = k * dayFull() * 365 * GR / WW * aS();   // rough on-screen arc length of a full year
     for (let yr = fromY; yr <= yrEnd(); yr++) { const comp = yr < fullY; if (comp && yr % 5 && yr !== fromY) continue;
       const mid = xTime(Date.UTC(yr, comp ? 0 : 6, comp ? 1 : 1));
@@ -3032,6 +3039,7 @@ function timeGuides(){
   ctx.strokeStyle = css.line; ctx.setLineDash([2,4]); ctx.beginPath();
   ctx.moveTo(v(ND[1]+30), top); ctx.lineTo(v(ND[1]+30), bot);
   if (ER) { ctx.moveTo(v(ER[1]+20), top); ctx.lineTo(v(ER[1]+20), bot); }
+  if (AR) { ctx.moveTo(v(AR[0]-15), top); ctx.lineTo(v(AR[0]-15), bot); }
   const cw = k * dayFull() * 365 * COMP;            // on-screen width of one compressed year
   for (let yr = fromY; yr <= yrEnd(); yr++) {
     if (yr < fullY && cw < 14 && yr % 5 && yr !== fromY) continue;
@@ -3115,6 +3123,7 @@ function axisLabels(){
       const bx = sx(ER[0]) + 4, bt = `Before ${fromY}`;
       if (strip(bt, bx)) compX = bx;
       else { ctx.font = small; ctx.lineWidth = 5; ctx.strokeStyle = css.bg; ctx.fillStyle = css.muted; ctx.strokeText(bt, bx, yTop + 16); ctx.fillText(bt, bx, yTop + 16); } }
+    if (AR && sx(AR[0]) < W - 30) strip(`After ${YR1}`, sx(AR[0]) + 4);
     const fw = k * dayFull() * 365, cw = fw * COMP;   // on-screen widths of a full and a compressed year
     const yearLbl = (yr, w) => w > 50 ? [String(yr), big] : w > 24 ? ["'" + String(yr).slice(2), small] : null;
     for (let yr = fromY; yr <= yrEnd(); yr++) {
@@ -4287,7 +4296,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const box = yc.createDiv({ cls: "prng" }), d = box.createDiv({ cls: "dual" }); d.createSpan({ cls: "trk" }); d.createSpan({ cls: "fill" });
     const a = d.createEl("input", { type: "range", attr: { "aria-label": "First year shown" } }), b = d.createEl("input", { type: "range", attr: { "aria-label": "Last year shown" } });
     for (const x of [a, b]) { x.min = SLMIN; x.max = NOW_Y; x.step = 1; } const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ text: String(SLMIN) }); lb.createSpan({ text: String(NOW_Y) });
-    yc.createDiv({ cls: "phint", text: "Drag either end. Notes from other years leave the map, however it's arranged. Notes with no date stay." });
+    yc.createDiv({ cls: "phint", text: "Drag either end. Notes from other years, and notes with no date, leave the map, however it's arranged, unless the switch below is on." });
+    // the same thin switch as Wander Mode's
+    const tg = yc.createEl("label", { cls: "pmaps yrall", attr: { "aria-label": "Show notes with no date, and notes from before or after the years shown, in strips at the edges" } });
+    const cb = tg.createEl("input", { type: "checkbox", attr: { id: "yrall" } }); cb.checked = YRALL; tg.createEl("i", { cls: "sw" }); tg.createSpan({ text: "Show notes outside the date range" });
+    cb.onchange = () => { YRALL = cb.checked; save("iv-yrall", YRALL); relayout(true, false, () => fitTarget()); };
     let t_ = 0; const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; syncYr();
       win.clearTimeout(t_); if (commit) { save("iv-yr0", YR0); save("iv-yr1", YR1); } t_ = win.setTimeout(() => relayout(false), commit ? 0 : 90); };
     a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true); }
