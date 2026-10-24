@@ -242,8 +242,6 @@
 .ivm[data-view="sense"] #vseg [data-v="sense"] .vcar,.ivm[data-view="stars"] #vseg [data-v="stars"] .vcar,.ivm[data-view="emergence"] #vseg [data-v="emergence"] .vcar,.ivm[data-view="spacetime"] #vseg [data-v="emergence"] .vcar{display:inline}
 .ivm #sensepop{left:auto;right:0;min-width:250px}
 .ivm #starpop{left:auto;right:0;min-width:270px}
-.ivm #lcolpop{left:auto;right:0;min-width:290px}
-.ivm #lcolbtn{padding:6px 8px;margin-left:-4px}
 .ivm .mspop .srow{display:flex;flex-direction:row;justify-content:flex-start;text-align:left;width:auto;gap:8px;align-items:flex-start;padding:6px;border-radius:8px;cursor:pointer}
 .ivm .srow:hover{background:var(--line)}
 .ivm .mspop .srow span{display:flex;flex:1;flex-direction:column;align-items:flex-start;text-align:left;gap:1px}
