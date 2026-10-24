@@ -11,7 +11,7 @@ const WORD = /[\p{L}\p{N}_]+/gu;
 const KEYS = /^([A-Za-z_][\w-]*):/gm;
 
 /** Everything the scan needs from one note's text, so a note's text is read only when it changes (see adapter.cache). */
-export const EXTRACT_VERSION = 4;
+export const EXTRACT_VERSION = 5;
 function extractNote(t){
   const [fm, body0] = splitFm(t), body = body0.replace(FENCE, ""), lines = nonEmptyLines(body);
   const keys = []; KEYS.lastIndex = 0; let km; while ((km = KEYS.exec(fm))) if (!keys.includes(km[1])) keys.push(km[1]);
@@ -36,7 +36,7 @@ export const DEFAULTS = {
   privateFolders: [],     // only big maps (Level 3+) from these folders appear
   homeNotes: [],          // always Level 5
   axisProps: ["year"],
-  dateProps: ["created", "createdAt", "created_at", "created on", "date created", "dateCreated", "creation date", "creation_date"],  // the property that says when a note was made; the first one a note has wins (any capitalization)    // number properties offered under By → More… (as well as the built-in axes)
+  dateProps: ["created", "createdAt", "created_at", "created on", "date created", "dateCreated", "creation date", "creation_date", "date"],  // the property that says when a note was made; the first one a note has wins (any capitalization)    // number properties offered under By → More… (as well as the built-in axes)
   mapFolders: [],         // every note in these folders counts as a map
   mapCollections: ["Maps", "Views"],   // notes listed in these collections count as maps
   fileDates: true,        // a note with no created date and no date in its name is dated by when its file was made
@@ -67,6 +67,9 @@ export function parseDay(v) {
   if (v == null) return ""; let t = String(v).trim().replace(/^\[\[|\]\]$/g, "").replace(/\|.*$/, "").replace(/^["']+|["']+$/g, "").trim();
   const ok = (y, m, d) => { y = +y; m = +m; d = +d; if (!(y >= 1000 && y <= 2999 && m >= 1 && m <= 12 && d >= 1 && d <= 31)) return ""; return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`; };
   let m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(t); if (m) return ok(m[1], m[2], m[3]);
+  // a month or a year alone (2024-05, 2024): the first of it
+  m = /^(\d{4})-(\d{1,2})$/.exec(t); if (m) return ok(m[1], m[2], 1);
+  if (/^\d{4}$/.test(t)) return ok(t, 1, 1);
   if (/^1\d{9}(\d{3})?$/.test(t)) { const d = new Date(+t * (t.length === 10 ? 1000 : 1)); return ok(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()); }   // seconds or milliseconds since 1970 (some exports)
   m = /^(\d{4})(\d{2})(\d{2})(?:\d{2,6})?$/.exec(t); if (m) return ok(m[1], m[2], m[3]);
   m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})/.exec(t); if (m) return +m[1] > 12 ? ok(m[3], m[2], m[1]) : ok(m[3], m[1], m[2]);
@@ -75,13 +78,19 @@ export function parseDay(v) {
   return ""; }
 /** The note's created date: the first of the date properties (Settings) it has, any capitalization. */
 // a setting left at the old default (just "created") gets today's wider default, so createdAt and the like work without touching Settings
-const dateKeys = C => !C.dateProps || !C.dateProps.length || (C.dateProps.length === 1 && String(C.dateProps[0]).toLowerCase() === "created") ? DEFAULTS.dateProps : C.dateProps;
+// (and a list saved as 0.3's default picks up "date", added in 0.4.5)
+const OLD_DEF = "created,createdat,created_at,created on,date created,datecreated,creation date,creation_date";
+export const dateKeys = C => !C.dateProps || !C.dateProps.length || (C.dateProps.length === 1 && String(C.dateProps[0]).toLowerCase() === "created") || C.dateProps.map(k => String(k).toLowerCase()).join() === OLD_DEF ? DEFAULTS.dateProps : C.dateProps;
 const createdOf = (e, C) => { const d = e.dates || {}; for (const k of dateKeys(C)) { const v = parseDay(d[String(k).toLowerCase()]); if (v) return v; } return e.created ? parseDay(e.created) : ""; };
 function fmScalar(fm, key) {
   const m = new RegExp("^" + esc(key) + ":[ \\t]*(.*)$", "m").exec(fm);
   return m ? m[1].trim().replace(/^["']+|["']+$/g, "") : "";
 }
-const links = s => { const out = []; LINK.lastIndex = 0; let m; while ((m = LINK.exec(s))) out.push(m[1]); return out; };
+// [[wikilinks]], and markdown links to notes ([text](folder/Note.md), often written by tools)
+const MDLINK = /\[[^\]\n]*\]\(<?([^()<>\n]+?\.md)>?(?:#[^)\n]*)?\)/gi;
+const links = s => { const out = []; LINK.lastIndex = 0; let m; while ((m = LINK.exec(s))) out.push(m[1]);
+  if (s.includes(".md")) { MDLINK.lastIndex = 0; while ((m = MDLINK.exec(s))) { if (/^[a-z][a-z0-9+.-]*:/i.test(m[1])) continue; let t = m[1]; try { t = decodeURIComponent(t); } catch (e) { /* keep as written */ } out.push(t.replace(/^\.\//, "")); } }
+  return out; };
 const nonEmptyLines = s => s.split(/\r\n|\r|\n/).filter(l => l.trim());
 const FIRST_PERSON = /\b(I|I'm|I've|I'd|I'll|me|my|mine|myself)\b/g;
 const QUERY = /```(dataview|dataviewjs|base|query)|!\[\[[^\]]+\.base/i;

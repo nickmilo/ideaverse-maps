@@ -1791,7 +1791,7 @@ const linkName = v => String(v).replace(/^!?\[\[|\]\]$/g, "").replace(/\|.*$/, "
 const isLink = v => typeof v === "string" && /^!?\[\[[^\]]+\]\]$/.test(v.trim());
 const asNum = v => typeof v === "number" ? (isFinite(v) ? v : null) : typeof v === "string" && /^-?\d+(\.\d+)?$/.test(v.trim()) ? +v : null;
 const isImg = (k_, v) => typeof v === "string" && (/^https?:\/\/\S+\.(jpe?g|png|webp|gif|avif)(\?\S*)?$/i.test(v.trim()) || (/image|cover|poster|thumb|banner|art/i.test(k_) && (/^https?:\/\//.test(v.trim()) || /\.(jpe?g|png|webp|gif|avif)\]*$/i.test(v.trim()))));
-const DATEK = new Set(["created","createdat","created_at","created on","date created","datecreated","creation date","creation_date"]);
+const DATEK = new Set(["created","createdat","created_at","created on","date created","datecreated","creation date","creation_date","date"]);
 function postersDetect(){
   const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
   const key = ids.length + ":" + (ids[0] ?? -1) + ":" + (ids[ids.length - 1] ?? -1) + ":" + (BASEINFO ? BASEINFO.v : 0); if (PST.key === key && PST.opts) return PST.opts; PST.key = key;

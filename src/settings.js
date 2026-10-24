@@ -1,5 +1,5 @@
 import { PluginSettingTab, Setting, TFolder, normalizePath } from "obsidian";
-import { DEFAULTS } from "./scan.js";
+import { DEFAULTS, dateKeys } from "./scan.js";
 
 const list = v => String(v || "").split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(s => normalizePath(s)).filter(s => s && s !== "/");
 
@@ -41,11 +41,11 @@ export class MapsSettingTab extends PluginSettingTab {
     folderOne("Hidden until picked", "A folder that's on the map but switched off by default, and never scored against the rest (for example, imported learning packs).", "packs");
     folderList("Big maps only", "Private folders: only their maps (Level 3 and up) appear.", "privateFolders");
 
-    new Setting(containerEl).setName("Date property").setDesc("The property that says when a note was made, in any capitalization (created, Created, CREATED). The first one a note has wins; the list starts with the common names (created, createdAt, date created…), and you can add your own. Reads 2024-05-01, [[2024-05-01]], 2024-05-01T09:30, May 1, 2024 and more. Rescan after changing.").addText(t => t
-      .setPlaceholder("created, createdAt, date created").setValue((s.dateProps && !(s.dateProps.length === 1 && s.dateProps[0].toLowerCase() === "created") ? s.dateProps : DEFAULTS.dateProps).join(", "))
+    new Setting(containerEl).setName("Date property").setDesc("The property that says when a note was made, in any capitalization (created, Created, CREATED). The first one a note has wins; the list starts with the common names (created, createdAt, date created… and date last), and you can add your own or reorder them. Reads 2024-05-01, [[2024-05-01]], 2024-05-01T09:30, May 1, 2024 and more; a month or year alone (2024-05, 2024) counts as its first day. Rescan after changing.").addText(t => t
+      .setPlaceholder("created, createdAt, date created").setValue(dateKeys(s).join(", "))
       .onChange(async v => { const l = v.split(",").map(x => x.trim()).filter(Boolean); s.dateProps = l.length ? l : ["created"]; await p.saveSettings(); }));
 
-    new Setting(containerEl).setName("Dates from files").setDesc("A note with no date property and no date in its name is placed by when its file was made. File dates can change when notes are copied, synced or restored.")
+    new Setting(containerEl).setName("Dates from files").setDesc("A note with no date property and no date in its name is placed by when its file was made. File dates change when notes are copied, synced, restored or checked out with git; if that's your vault, turn this off and list your own date property above instead.")
       .addToggle(t => t.setValue(s.fileDates !== false).onChange(async v => { s.fileDates = v; await save(); }));
 
     new Setting(containerEl).setName("Properties to plot").setDesc("Number properties offered under By → More… (comma-separated), for example year, rating, pages. Each becomes an axis: notes line up left to right by its value. Rescan after changing.").addText(t => t
