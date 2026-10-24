@@ -1,6 +1,6 @@
 /* Maps of the Ideaverse: the map itself. Ported from the standalone HTML map (index.html) with its logic intact:
    the page's code runs inside the plugin's view, scoped to `root`, with Obsidian handling storage, events and notes. */
-import { sanitizeHTMLToDom } from "obsidian";
+import { sanitizeHTMLToDom, setIcon } from "obsidian";
 
 export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
@@ -2097,7 +2097,7 @@ const isPhone = () => (root.clientWidth || win.innerWidth) <= 760;
 // state classes the stylesheet keys off (instead of :has, which is slow to re-match): panel open, legend open, focus bar shown, a clear-× showing
 function syncCls(){ const m = root.querySelector("main"), hd = root.querySelector("header"), a = root.querySelector("aside"), lg = root.querySelector("#legend"), fb = root.querySelector("#focusbar");
   if (m) { m.toggleClass("has-drawer", !!a && !a.hidden); m.toggleClass("legend-open", !!lg && !lg.classList.contains("collapsed")); }
-  if (hd && fb) hd.toggleClass("has-fb", !fb.hidden);
+  if (hd && fb) hd.toggleClass("has-fb", !fb.hidden); syncTB();
   root.querySelectorAll(".ms").forEach(ms => { const x = ms.querySelector(":scope > .qx"); ms.toggleClass("has-x", !!x && !x.hidden); }); }
 function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(doc.body.classList.contains("is-mobile") ? 1.5 : 2, win.devicePixelRatio||1);   /* phones and tablets draw a little lighter */ const firstSize = !(W > 0) && r.width > 0, cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); if (firstSize || !isFinite(k) || !isFinite(tx)) { const f = fitTarget(); if (isFinite(f.k) && f.k > 0) { k = f.k; tx = f.tx; ty = f.ty; } } draw(); }   // opened while hidden (a base still laying out): fit once it has a size
 function fitTarget(){ const pad = 56;
@@ -3621,11 +3621,14 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
     group: [["rect", { x: "2", y: "2.5", width: "12", height: "4", rx: "1" }], ["rect", { x: "2", y: "9.5", width: "12", height: "4", rx: "1" }]],
     filter: [["path", { d: "M2 3h12l-4.5 5.5V13l-3-1.5v-3z" }]],
     display: [["path", { d: "M2 4h12M2 8h12M2 12h12" }], ["circle", { cx: "5", cy: "4", r: "1.6", fill: "var(--bg)" }], ["circle", { cx: "11", cy: "8", r: "1.6", fill: "var(--bg)" }], ["circle", { cx: "7", cy: "12", r: "1.6", fill: "var(--bg)" }]],
-    follow: [["circle", { cx: "8", cy: "8", r: "5.5" }], ["circle", { cx: "8", cy: "8", r: "1.8", fill: "currentColor" }], ["path", { d: "M8 1v2M8 13v2M1 8h2M13 8h2" }]],
+    focus: [["circle", { cx: "8", cy: "8", r: "5.5" }], ["circle", { cx: "8", cy: "8", r: "1.8", fill: "currentColor" }], ["path", { d: "M8 1v2M8 13v2M1 8h2M13 8h2" }]],
+    sync: [["path", { d: "M13.2 6.2A5.5 5.5 0 0 0 3.1 4.9" }], ["path", { d: "M2.6 2.4v2.9h2.9" }], ["path", { d: "M2.8 9.8a5.5 5.5 0 0 0 10.1 1.3" }], ["path", { d: "M13.4 13.6v-2.9h-2.9" }]],
     star: [["path", { d: "M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z" }]],
   };
   const left = hd.createDiv({ cls: "tbl" }), right = hd.createDiv({ cls: "tbr" });
-  left.appendChild(root.querySelector(".brand .duo")); left.appendChild($("#vsegms")); left.appendChild($("#stats")); left.appendChild($("#focusbar"));
+  left.appendChild(root.querySelector(".brand .duo")); left.appendChild($("#vsegms")); { const fbar = $("#focusbar"); fbar.classList.add("mapfb"); cv.parentElement.appendChild(fbar); }   // the focus bar floats at the top of the map
+  // the note and link counts sit at the map's top left (the plugin's name sits at the top right, clear of the note panel)
+  { const st = $("#stats"); st.classList.add("mapstats"); cv.parentElement.appendChild(st); }
   // a tab for the current map when it lives under More (Corona, Bookshelf, Spiral…), and More itself
   const vcur = $("#vseg").createEl("button", { cls: "vcur", attr: { id: "vcur", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } }); $("#vseg").insertBefore(vcur, $("#vmore"));
   $("#vmore").setText("More ▾"); $("#vmore").setAttribute("aria-label", "More maps");
@@ -3680,13 +3683,18 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
   // Display: links, theme, how scoring works
   const DI = popBtn("disp", "Display", "display");
   const dsec = (title, el) => { const w = DI.p.createDiv({ cls: "fsec" }); w.createDiv({ cls: "pt", text: title }); w.appendChild(el); };
-  dsec("Links", $("#alllinks")); dsec("Theme", $("#themeseg")); dsec("Scoring", $("#scorebtn")); $("#scorebtn").setText("How notes are scored");
+  dsec("Links", $("#alllinks")); const thSec = DI.p.createDiv({ cls: "fsec thsec" }); thSec.createDiv({ cls: "pt", text: "Theme" }); dsec("Scoring", $("#scorebtn")); $("#scorebtn").setText("How notes are scored");
   $("#scorebtn").addEventListener("click", () => closePops());
   opener(DI);
   // Find, Follow note (an icon), Saved, and the ︿ that tucks the bar away
   right.appendChild(root.querySelector("header .search"));
-  const fb = $("#follownote"); fb.empty(); fb.appendChild(icon(I.follow)); fb.classList.add("tbb", "tbi"); fb.setAttribute("aria-label", "Follow note: the map follows the note you're editing"); fb.title = "Follow note"; right.appendChild(fb);
+  // Focus on active note (the note and its neighbors), then Sync active note with the Obsidian editor
+  const fo = $("#focusmode"); fo.empty(); fo.appendChild(icon(I.focus)); fo.classList.add("tbb", "tbi"); fo.setAttribute("aria-label", "Focus on active note"); fo.title = "Focus on active note"; right.appendChild(fo);
+  // Sync uses Obsidian's own link icon
+  const fb = $("#follownote"); fb.empty(); setIcon(fb, "link"); { const sv = fb.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } fb.classList.add("tbb", "tbi"); fb.setAttribute("aria-label", "Sync active note with Obsidian editor"); fb.title = "Sync active note with Obsidian editor"; right.appendChild(fb);
   right.appendChild($("#viewms")); { const vb = $("#viewbtn"); const t = vb.textContent.replace(/^★\s*/, ""); vb.empty(); vb.appendChild(icon(I.star)); vb.createSpan({ text: t || "Saved" }); vb.classList.add("tbb"); }
+  // the themes sit at the far right of the bar, one click away (on a phone they move into Display)
+  const thSlot = right.createDiv({ cls: "thslot" }); thSlot.appendChild($("#themeseg"));
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
   const ARR_OFF = new Set(["spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   syncTB = () => {
@@ -3696,6 +3704,9 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
     AR.w.hidden = ARR_OFF.has(view); AR.val.setText(axisName(mode));
     let g = false; for (const [w, el] of GS) { w.hidden = el.hidden; g = g || !el.hidden; } GR.w.hidden = !g;
     GR.val.setText(view === "shelf" ? (($("#shelfsort button[aria-pressed=true]") || {}).textContent || "") : view === "chord" ? (($("#chordby button[aria-pressed=true]") || {}).textContent || "") : view === "treemap" ? ($("#tmsubs").getAttribute("aria-pressed") === "true" ? "Subfolders" : "Folders") : "");
+    { const th = $("#themeseg"), want = isPhone() ? thSec : thSlot; if (th.parentElement !== want) want.appendChild(th); thSec.hidden = !isPhone(); thSlot.hidden = isPhone(); }
+    { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
+      const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }
     const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) ; badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0);
   };
   const mo2 = new MutationObserver(() => syncTB());

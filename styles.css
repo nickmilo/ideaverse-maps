@@ -679,3 +679,20 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm.ivm.ivm.ivm #animdock #tldate{position:absolute;top:0;right:4px;min-width:0;font:600 10.5px var(--mono);letter-spacing:.04em;line-height:12px}
 .ivm.ivm.ivm.ivm.ivm #animdock #timebar input{min-width:0}
 .ivm-pick-note{font-size:var(--font-ui-small);color:var(--text-muted);padding:6px 14px 8px;border-bottom:1px solid var(--background-modifier-border)}
+/* Focus on active note and Sync: lit when on */
+.ivm header.tb2 #focusmode[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft);border-color:transparent}
+.ivm header.tb2 #focusmode{border-color:transparent;background:none}
+/* the counts at the map's top right */
+.ivm main .mapstats{position:absolute;top:12px;right:16px;z-index:2;pointer-events:none;font:500 11px var(--mono);opacity:.8}
+@container ivm (max-width:760px){.ivm main .mapstats{display:none}}
+.ivm.ivm main > .focusbar.mapfb{position:absolute;top:10px;transform:translateX(-50%);z-index:4;flex-basis:auto;order:0;max-width:calc(100% - 32px);background:color-mix(in srgb,var(--bg) 88%,var(--accent) 12%)}
+.ivm.ivm main > .focusbar.mapfb[hidden]{display:none}
+.ivm header.tb2 .thslot{display:flex;align-items:center;margin-left:6px}
+.ivm header.tb2 .thslot[hidden],.ivm header.tb2 .thsec[hidden]{display:none}
+.ivm header.tb2 .thslot #themeseg{border:0;background:none}
+.ivm .wm-name{font-size:19px}
+@container ivm (max-width:1100px){.ivm header.tb2 .search{flex:0 1 150px;min-width:100px}}
+@container ivm (max-width:960px){.ivm header.tb2 .search{flex:0 1 110px;min-width:80px}.ivm header.tb2 .thslot #themeseg button{padding:5px 6px}}
+.ivm header.tb2 #vsegms > #vseg{order:0}.ivm header.tb2 #vsegms > #vmore{order:1}
+.ivm main .mapstats{left:16px;right:auto}
+.ivm .wm-name{left:auto;right:16px}
