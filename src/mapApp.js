@@ -127,6 +127,7 @@ function baseOK(i){ const d = N[i];
     && !subHid[i]
     && collOK(d); }
 const visBase = baseOK;
+let NVIS = 0, NARROW = false, BOOST = 1;
 function computeVis(){ const fs = new Set(folders);
   for (let i=0;i<n;i++) { const d = N[i];
     vis[i] = ((!SCOPE || SCOPE[i]) && (!ARCH[i] || showArch)
@@ -134,7 +135,11 @@ function computeVis(){ const fs = new Set(folders);
       && !subHid[i]
       && collOK(d)
       && (!fset || fset[i])) ? 1 : 0; }
-  if (focus >= 0) vis[focus] = 1; }
+  if (focus >= 0) vis[focus] = 1;
+  // a filter, a collection or a base that leaves few notes: draw them bigger, so a small set never looks empty
+  let nv = 0; for (let i=0;i<n;i++) nv += vis[i]; NVIS = nv;
+  NARROW = colls.length > 0 || !!SCOPE || FOLD.some(f => !fs.has(f));
+  BOOST = NARROW && nv ? Math.max(1, Math.min(2.2, Math.pow(n / nv, .25))) : 1; }
 
 const XA = new Float32Array(n), XT = new Float32Array(n), X = new Float32Array(n), Y = new Float32Array(n), R = new Float32Array(n);
 
@@ -2184,7 +2189,7 @@ function visTarget(xs, ys){   // camera that frames every visible note, given wh
   const kk = Math.min(4, Math.max(.1, Math.min((vw - pad*2) / Math.max(x1-x0, 40), (vh - pad*2 - 40) / Math.max(y1-y0, 40))));
   return {k:kk, tx: vw/2 - (x0+x1)/2*kk, ty: (vh + 40)/2 - (y0+y1)/2*kk};
 }
-function rad(i){ if (view === "stars") return Math.max(.7, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1), 16)); return Math.max(view === "lincal" ? 1.8 : 1.1, Math.min(R[i]*Math.pow(k, .55)*(geo3On() ? DS3[i] : view === "lincal" ? 1.5 : 1), 30)); }   // 3D Geometric: nearer notes are bigger
+function rad(i){ if (view === "stars") return Math.max(.7*BOOST, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1)*BOOST, 16)); return Math.max((view === "lincal" ? 1.8 : 1.1)*BOOST, Math.min(R[i]*Math.pow(k, .55)*(geo3On() ? DS3[i] : view === "lincal" ? 1.5 : 1)*BOOST, 30)); }   // 3D Geometric: nearer notes are bigger
 
 function render(){
   raf = 0;
@@ -2479,8 +2484,9 @@ let LH = [];   // where labels were drawn last frame: [x, y, w, h, note], so a c
 function labels(lit){
   LH = [];
   if (view === "chord" && !lit && k < 2) return;   // the ring is named by its kinds; note names show for the note you're on and its links, or once zoomed in
-  let nv = 0; if (focus >= 0) for (let i=0;i<n;i++) nv += vis[i];
-  const minLv = (focus >= 0 && nv <= 400) ? 1 : k >= 9 ? 1 : k >= 5 ? 2 : k >= 2.2 ? 3 : k >= 1.25 ? 4 : 5;
+  const nv = NVIS;
+  // in focus, or with a filter that leaves few notes, name the low levels too
+  let minLv = ((focus >= 0 || NARROW) && nv <= 400) ? 1 : k >= 9 ? 1 : k >= 5 ? 2 : k >= 2.2 ? 3 : k >= 1.25 ? 4 : 5; if (NARROW && nv <= 2000) minLv = Math.min(minLv, 2);
   const taken = []; const fits = (x,y,w,h) => { for (const t of taken) if (x < t[0]+t[2] && x+w > t[0] && y < t[1]+t[3] && y+h > t[1]) return false; return true; };
   ctx.textBaseline = "middle";
   const must = [];
