@@ -3196,7 +3196,7 @@ function syncPlay(){
   const ht = root.querySelector("#ptrail"); if (ht) ht.closest("label").hidden = playMode !== "map";
   $("#pint").value = playSec; $("#pintv").textContent = playSec + "s";
 }
-root.querySelectorAll("#playseg button").forEach(b => b.onclick = () => { playMode = b.dataset.p; save("iv-pmode", playMode); syncPlay(); if (!playing) setPlaying(true); else { runSeen = new Set(); runStack = []; schedule(); } });
+root.querySelectorAll("#playseg button").forEach(b => b.onclick = () => { playMode = b.dataset.p; save("iv-pmode", playMode); syncPlay(); if (playing) { runSeen = new Set(); runStack = []; schedule(); } });   // picking a mode never starts Wander Mode; ▶ does
 $("#pint").addEventListener("input", e => { playSec = +e.target.value; save("iv-psec", playSec); syncPlay(); if (playing) schedule(); });
 $("#pplay").onclick = () => setPlaying(!playing);
 $("#ptrail").checked = playTrail; $("#ptrail").onchange = () => { playTrail = $("#ptrail").checked; save("iv-ptrail", playTrail); if (!playTrail) win.clearTimeout(trTimer); };
