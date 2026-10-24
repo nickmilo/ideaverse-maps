@@ -66,7 +66,8 @@ The score counts links in, links out, links both ways, and uplinks (the `up` and
 - **Follow note** (or the command **Toggle follow note**): the map follows whichever note you're editing, like a local graph linked to the active note. It works both ways: pick a note on the map (click, search, the note panel or the trail), or let a tour or Autoplay move along, and it opens in your editor, while the map keeps focus. Put the map in a split or the sidebar and it keeps up as you move through your notes. In Focus mode it shows just that note and its links.
 - **★ Saved** holds saved views and tours. Name the current view (map, axis, filters, zoom and position, selected note, where the time-lapse stands, Starfield's 3D angle) to come back to it. **Record a tour**, click through some notes, stop, and name it; play it back with ‹ › or let it run. Before your first save it asks which folder to keep them in (pick one or type a new one). They live in `Maps of the Ideaverse - saved views.json` there, a plain file you own, updated every time you save. The 📁 button moves it.
 - Filter by folder (drill into subfolders with ›) or by collection. Folder views use your top folders, whatever they're called; ACE folders (Atlas, Calendar, Efforts) get their symbols.
-- When notes change, the map offers a rescan.
+- **Inside a base** (Obsidian 1.10+): in any base, add a view and pick **Maps of the Ideaverse**. The map shows only the notes the base returns (one project, one book, everything tagged for a course), and updates as you change the base's filters. Levels still come from your whole vault, so a hub stays a hub. Turn on **Follow note** for a live map of the project you're working in.
+- When notes change, the map offers a rescan. Only notes that changed are read again.
 - Five themes: Play, Soft Paper, Dark, LYT Mode, or match your own Obsidian theme (the last swatch), which follows it as you switch.
 
 ![Focus mode: one note and everything it links to](docs/focus.png)
@@ -80,7 +81,7 @@ Notes are dated by their `created` property, or a date in the file name, or (if 
 
 ## Privacy
 
-Everything runs on your computer. The plugin reads your notes to draw the map and never changes them. The only file it writes is your saved-views file, in the folder you pick. It makes no network requests and sends nothing anywhere.
+Everything runs on your computer. The plugin reads your notes to draw the map and never changes them. It writes two files: your saved-views file, in the folder you pick, and a scan cache in the plugin's own folder (links and counts for each note, so the next scan only reads what changed; never note text). It makes no network requests and sends nothing anywhere.
 
 ## Notes
 

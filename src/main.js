@@ -1,5 +1,6 @@
 import { Plugin, TFile, normalizePath } from "obsidian";
 import { MapView, VIEW_TYPE } from "./view.js";
+import { registerBases } from "./bases.js";
 import { MapsSettingTab, detectDefaults } from "./settings.js";
 import { DEFAULTS, EXTRACT_VERSION, scanVault } from "./scan.js";
 
@@ -21,6 +22,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
       return true; } });
     this.addCommand({ id: "rescan", name: "Rescan the vault", callback: () => { void this.rescan(); } });
     this.addSettingTab(new MapsSettingTab(this.app, this));
+    registerBases(this);   // the map as a view inside any base (Obsidian 1.10+)
 
     // offer a rescan when notes change (watched only once the vault has loaded, so startup doesn't count)
     this.app.workspace.onLayoutReady(() => {
@@ -57,6 +59,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
     if (this.dirty || !this.graph) return;
     this.dirty = true;
     for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) if (leaf.view instanceof MapView) leaf.view.showStale();
+    for (const v of this.basesViews || []) v.showStale();
   }
 
   async openMap() {
@@ -69,7 +72,8 @@ export default class IdeaverseMapsPlugin extends Plugin {
   async rescan() {
     this.graph = null; this.dirty = false;
     const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE);
-    if (!leaves.length) { await this.openMap(); return; }   // no map open yet: opening one runs the scan
+    for (const v of this.basesViews || []) await v.reload();
+    if (!leaves.length) { if (!(this.basesViews && this.basesViews.size)) await this.openMap(); return; }   // no map open yet: opening one runs the scan
     for (const leaf of leaves) if (leaf.view instanceof MapView) await leaf.view.reload();
   }
 
