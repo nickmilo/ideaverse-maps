@@ -560,3 +560,4 @@ body.is-phone .ivm.kb header .results{max-height:min(320px, 45vh);overflow-y:aut
 .ivm #animdock{cursor:pointer}
 .ivm #animdock :is(button, input, select, label, .seg){cursor:auto}
 .ivm #animdock :is(button, label){cursor:pointer}
+.ivm #playbar .pmaps.locked{opacity:.75;cursor:default}

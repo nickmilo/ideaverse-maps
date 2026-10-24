@@ -3186,7 +3186,7 @@ function setPlaying(on){
 }
 function syncPlay(){
   root.querySelectorAll("#playseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === playMode)));
-  const hm = root.querySelector("#pmaps"); if (hm) hm.closest("label").hidden = playMode === "map";
+  const hm = root.querySelector("#pmaps"); if (hm) { const mm = playMode === "map"; hm.checked = mm || playMaps; hm.disabled = mm; hm.closest("label").classList.toggle("locked", mm); hm.closest("label").title = mm ? "Map mode always hops between maps" : ""; }   // Map mode always hops, so the toggle shows on
   const ht = root.querySelector("#ptrail"); if (ht) ht.closest("label").hidden = playMode !== "map";
   $("#pint").value = playSec; $("#pintv").textContent = playSec + "s";
 }
