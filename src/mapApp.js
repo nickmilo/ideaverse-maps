@@ -19,7 +19,7 @@ const html = el => ({ set v(h) { el.empty(); el.append(sanitizeHTMLToDom(h)); } 
 const PACKS0 = (D.settings && D.settings.packs) || "";
 const cv = $("#cv"), ctx = cv.getContext("2d");
 let placeAnitab = () => {};   // set by the Animations dock (below)
-let syncTB = () => {}, toggleMapOpts = () => {};   // set by the toolbar (below): labels, counts and which buttons show
+let syncTB = () => {}, toggleMapOpts = () => {}, lastDown = null;   // lastDown: where the last press landed on the map   // set by the toolbar (below): labels, counts and which buttons show
 
 const N = D.nodes, E = D.edges, n = N.length;
 const LEVELS = [
@@ -575,7 +575,8 @@ let GLOW = null, WEB = null, glowKey = "";
 function buildGlow(){
   const VG = i => vis[i] && (senseT == null || TV[i] <= senseT);   // the glow follows the timeline by step, not by each pop (so it is rebuilt once a step)
   let h = 0; for (let i=0;i<n;i++) if (VG(i)) h = (Math.imul(h, 31) + i) | 0;
-  const key = starVer + ":" + h + ":" + mode + ":" + fromY + ":" + fullY; if (key === glowKey && GLOW) return; glowKey = key;
+  const key = starVer + ":" + h + ":" + mode + ":" + fromY + ":" + fullY + ":" + (sTurn && !S3D ? Math.floor(turnA/4) : "s"); if (key === glowKey && GLOW) return; glowKey = key;
+  const PX = sTurn && !S3D ? X : SX, PY = sTurn && !S3D ? Y : SY;   // turning: the light follows the stars
   const ww = UB.x1 - UB.x0, wh = UB.y1 - UB.y0, gs = Math.min(1, (isPhone() ? 1400 : 2000)/Math.max(ww, wh));
   GLOW ||= doc.createElement("canvas"); GLOW.width = Math.ceil(ww*gs); GLOW.height = Math.ceil(wh*gs); GLOW.gs = gs;
   const c = GLOW.getContext("2d"); c.clearRect(0,0,GLOW.width,GLOW.height); c.globalCompositeOperation = "lighter";
@@ -603,7 +604,7 @@ function buildGlow(){
     // every note adds a little light where it sits: this is what draws the arms and the wisps
     const big = b.kind === "neb" ? 30 : b.kind === "old" ? 18 : 20;
     for (const i of b.members) { if (!VG(i)) continue; const lv = N[i].level, s = (lv >= 3 ? big*1.6 : big)*gs*2;
-      c.globalAlpha = b.kind === "neb" ? .08 : lv >= 3 ? .35 : .2; c.drawImage(sprite(b.kind === "neb" ? b.hue : SPAL[SC[i]]), gx(SX[i]) - s/2, gy(SY[i]) - s/2, s, s); }
+      c.globalAlpha = b.kind === "neb" ? .08 : lv >= 3 ? .35 : .2; c.drawImage(sprite(b.kind === "neb" ? b.hue : SPAL[SC[i]]), gx(PX[i]) - s/2, gy(PY[i]) - s/2, s, s); }
     c.globalAlpha = 1; }
 }
 // faraway stars behind everything, moving slower than the map
@@ -611,6 +612,18 @@ const BGS = (() => { let a = 1234567; const r = () => { a |= 0; a = a + 0x6D2B79
   return [{p:.05, T:640, n:230}, {p:.14, T:900, n:150}].map(L => ({...L, pts: Array.from({length:L.n}, () => [r()*L.T, r()*L.T, .4 + r()*r()*1.3, .15 + r()*.6, r() < .12])})); })();
 // Starfield's galaxy glow: Soft by default, so the stars (your notes) read over it; Normal and Bright for the full nebula look
 let sGlow = ["soft", "normal", "bright"].includes(pref("iv-sglow", "soft")) ? pref("iv-sglow", "soft") : "soft";
+// Turning galaxies (an option): each galaxy slowly turns in its own plane, the big ones slower; flat Starfield only
+let sTurn = pref("iv-sturn", false) === true, turnA = 0, turnLast = 0, turnRaf = 0;
+function turnFrame(now){ turnRaf = 0; if (dead || !sTurn || view !== "stars" || S3D) return;
+  if (morphing || doc.hidden || !(W > 0)) { turnLast = 0; turnRaf = RAF(turnFrame); return; }
+  if (turnLast && now - turnLast < 45) { turnRaf = RAF(turnFrame); return; }   // about 20 frames a second is plenty for something this slow
+  const dt = turnLast ? Math.min(.2, (now - turnLast)/1000) : 0; turnLast = now; turnA += dt;
+  for (const b of BODIES) { if (b.kind !== "gal" && b.kind !== "dwarf") continue; const w = 2*Math.PI/(260*Math.sqrt(Math.max(40, b.r)/120)) * (b.seed % 2 ? 1 : -1), a = w*turnA;
+    const cx = UC.x + b.x, cy = UC.y + b.y, c = Math.cos(a), s_ = Math.sin(a), pc = Math.cos(b.pa || 0), ps = Math.sin(b.pa || 0), q = b.q || 1;
+    for (const i of b.members) { const dx = SX[i] - cx, dy = SY[i] - cy, u = dx*pc + dy*ps, v = (-dx*ps + dy*pc)/q;   // into the disk's own plane
+      const u2 = u*c - v*s_, v2 = (u*s_ + v*c)*q; X[i] = cx + u2*pc - v2*ps; Y[i] = cy + u2*ps + v2*pc; } }
+  render(); turnRaf = RAF(turnFrame); }
+function turnSync(){ if (sTurn && view === "stars" && !S3D) { if (!turnRaf) { turnLast = 0; turnRaf = RAF(turnFrame); } } else if (turnRaf) { win.cancelAnimationFrame(turnRaf); turnRaf = 0; } }
 const GLOWF = () => ({ soft: .5, normal: 1, bright: 1.45 })[sGlow];
 function starsBg(){
   const g = ctx.createRadialGradient(W*.5, H*.45, 0, W*.5, H*.45, Math.hypot(W, H)*.65);
@@ -669,7 +682,7 @@ function starLabels(){
     ctx.font = `600 ${b.kind === "dwarf" ? 9.5 : 11}px ${css.mono}`; if (hasLS) ctx.letterSpacing = "2px";
     const tw = ctx.measureText(nm.toUpperCase()).width + 8, box = [cx - tw/2, y - 2, tw, 32];
     if (taken.some(t => box[0] < t[0]+t[2] && box[0]+box[2] > t[0] && box[1] < t[1]+t[3] && box[1]+box[3] > t[1])) { if (hasLS) ctx.letterSpacing = "0px"; continue; }
-    taken.push(box); if (b.core != null) LH.push([box[0], box[1], box[2], 30, b.core]);
+    taken.push(box); if (b.core != null) LH.push([box[0], box[1], box[2], 30, b.core, b.id]);
     ctx.lineWidth = 4; ctx.strokeStyle = "rgba(3,4,10,.85)"; ctx.strokeText(nm.toUpperCase(), cx, y);
     ctx.fillStyle = b.kind === "gal" ? "rgba(236,240,255,.92)" : "rgba(200,208,235,.75)"; ctx.fillText(nm.toUpperCase(), cx, y);
     if (hasLS) ctx.letterSpacing = "0px"; ctx.font = `500 9.5px ${css.mono}`; ctx.fillStyle = b.hue;
@@ -891,8 +904,22 @@ function drawPops(){
         const drop = Math.min(1, e/.18); y = hy - (1 - drop)*(1 - drop)*24; sc = 1 + (1 - drop)*.8;
         ctx.globalAlpha = .35 + .6*drop; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r*sc, 0, 6.2832); ctx.fill(); }
       fly.set(i, [x, y - r*sc - 4]); }
-    ctx.globalAlpha = 1; arrivalLabels(taken, fly); }
+    ctx.globalAlpha = 1; if (view === "stars") starFlares(now, few); arrivalLabels(taken, fly); }
 }
+// Starfield on the timeline: each new note flares like a star being born (a glow and four spikes, bigger for higher levels),
+// and a galaxy taking in new stars brightens for a moment at its core, more the more arrive
+function starFlares(now, few){
+  const F = popMs(), grow = new Map();
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  for (const i of few) { const e = (now - POP[i])/F; if (e < 0 || e > 1) continue; const lv = N[i].level, x = sx(X[i]), y = sy(Y[i]), col = SPAL[SC[i]];
+    const f = Math.pow(1 - e, 1.6), R = (5 + lv*3.2)*(.6 + .4*Math.sqrt(Math.min(1, e*6)));
+    ctx.globalAlpha = .55*f; ctx.drawImage(sprite(col), x - R*1.6, y - R*1.6, R*3.2, R*3.2);
+    ctx.globalAlpha = .7*f; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1; const L = R*(1.3 + lv*.25);
+    ctx.beginPath(); ctx.moveTo(x - L, y); ctx.lineTo(x + L, y); ctx.moveTo(x, y - L); ctx.lineTo(x, y + L); ctx.stroke();
+    if (BOD[i] >= 0) grow.set(BOD[i], (grow.get(BOD[i]) || 0) + 1 + (lv >= 3 ? 2 : 0)); }
+  for (const [bid, c] of grow) { const b = BODIES[bid]; if (!b || b.kind === "neb") continue; const [bx_, by_] = bodyPos(b), R = Math.max(30, b.r*k*.55);
+    ctx.globalAlpha = Math.min(.35, .03 + .025*Math.sqrt(c)); ctx.drawImage(sprite(b.hue), sx(bx_) - R, sy(by_) - R, R*2, R*2); }
+  ctx.restore(); }
 const senseDateLabel = t => { const d = new Date(t); return senseStep === "week" ? `${MON[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}` : `${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
 // ---- the timeline bar: ▶ / ❚❚, Month | Week, a scrubber, the date, and × to show everything ----
 let senseStep = pref("iv-sstep", "month") === "week" ? "week" : "month", senseFx = ["pop","comet","rain","swirl","swirlin"].includes(pref("iv-sfx", "pop")) ? pref("iv-sfx", "pop") : "pop", sensePlaying = false, senseTimer = 0;
@@ -2154,6 +2181,11 @@ function sphFace(i){   // a globe turns the note to face you instead of zooming 
   sphTurning = true; RAF(step); }
 function flyTo(i){
   if (sphOn()) { sphFace(i); return; }
+  if (view === "stars" && lastDown) {   // Starfield: a click on a galaxy's name glides into that galaxy and frames it
+    const g = LH.find(q => q[5] != null && q[4] === i && lastDown[0] >= q[0] && lastDown[0] <= q[0] + q[2] && lastDown[1] >= q[1] && lastDown[1] <= q[1] + q[3]);
+    if (g) { lastDown = null; const b = BODIES[g[5]], [bx_, by_] = bodyPos(b), phone = isPhone(), dw = phone ? 0 : sideW(), lc = phone ? 0 : 400, vw = W - dw - lc, vh = phone ? H*.48 : H;
+      const R = b.r*(S3D && B3[b.id] ? B3[b.id].s : 1), kk = Math.min(6, Math.max(.3, Math.min(vw, vh)*.42/Math.max(R, 20)));
+      animateTo({k: kk, tx: lc + vw/2 - bx_*kk, ty: vh/2 - by_*kk}); return; } }
   if (domeOn()) { domeYaw = DTH[i]; domePitch = Math.max(domeSphere() ? -1.45 : -.2, Math.min(1.45, DPH[i] - .08)); domeKeep(); const kk = k; morph(true, () => ({k: kk, tx: (W - (isPhone() ? 0 : sideW()))/2, ty: H/2})); return; }   // in a dome: turn to face it
   const phone = isPhone(), dw = phone ? 0 : sideW(), lc = !phone && (view === "sense" || view === "stars") ? 400 : 0, vw = W - dw - lc, vh = phone ? H*.48 : H, pad = phone ? 36 : 70;   // Sensemaking keeps its bars in a left column
   let x0 = X[i], x1 = X[i], y0 = Y[i], y1 = Y[i];
@@ -2641,7 +2673,7 @@ function pick(px, py){
 // ---------- interaction ----------
 const tip = $("#tip"); tip.addClass("ivm-tip"); doc.body.appendChild(tip);
 let drag = null, moved = false; const pts = new Map();
-cv.addEventListener("pointerdown", e => { driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, cyaw: csYaw, cpitch: csPitch, gyaw: g3Yaw, gpitch: g3Pitch, orbit: (s3dOn() || domeOn() || sphOn() || geo3On()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
+cv.addEventListener("pointerdown", e => { lastDown = [e.offsetX, e.offsetY]; driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, cyaw: csYaw, cpitch: csPitch, gyaw: g3Yaw, gpitch: g3Pitch, orbit: (s3dOn() || domeOn() || sphOn() || geo3On()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
 cv.addEventListener("contextmenu", e => e.preventDefault());   // right-drag pans (as in Miro); no menu on the map
 cv.addEventListener("pointermove", e => {
   if (pts.has(e.pointerId)) {
@@ -2680,7 +2712,7 @@ const end = e => { pts.delete(e.pointerId);
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY);
-  if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && isPhone()) flyTo(i); } toEditor(i); } drag = null; } };
+  if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (isPhone() || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hover = -1; shTape = -1; draw(); } tip.hidden = true; });
 function zoomAt(px, py, f){ if (domeOn() || sphOn()) { px = tx; py = ty; }   // a dome zooms about where you're looking
@@ -3639,6 +3671,24 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
   const lyt = m.createDiv({ cls: "wm wm-lyt", attr: { "aria-hidden": "true" } }); lyt.appendChild(root.querySelector(".brand .duo").cloneNode(true)); lyt.createSpan({ text: "Linking Your Thinking" });
   const nm = m.createDiv({ cls: "wm wm-name", attr: { "aria-hidden": "true" } }); nm.appendText("Maps of the "); nm.createEl("em", { text: "Ideaverse" }); }
 
+// Starfield twinkle: now and then (every few seconds) one star, rarely two, glints and fades. It draws on its own
+// thin canvas over the map, so the map never redraws for it.
+let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
+{ const tw = doc.createElement("canvas"); tw.className = "twinkle"; cv.after(tw); const tx_ = tw.getContext("2d"); let list = [], next = 0, raf = 0, tmo = 0;
+  const active = () => twOn && view === "stars" && !dead && !doc.hidden && W > 0 && senseT == null;
+  const pickStar = () => { for (let t = 0; t < 40; t++) { const i = Math.floor(Math.random()*n); if (!VV(i) || N[i].level < 2 || i === sel) continue; const x = sx(X[i]), y = sy(Y[i]); if (x > 20 && x < W - 20 && y > 20 && y < H - 20) return i; } return -1; };
+  const frame = now => { raf = 0; if (!active()) { list = []; tx_.clearRect(0, 0, tw.width, tw.height); return; }
+    const d = Math.min(2, win.devicePixelRatio || 1); if (tw.width !== Math.round(W*d) || tw.height !== Math.round(H*d)) { tw.width = Math.round(W*d); tw.height = Math.round(H*d); }
+    tw.style.left = cv.offsetLeft + "px"; tw.style.top = cv.offsetTop + "px"; tw.style.width = W + "px"; tw.style.height = H + "px";
+    if (now >= next) { const c = Math.random() < .2 ? 2 : 1; for (let q = 0; q < c; q++) { const i = pickStar(); if (i >= 0) list.push({ i, t0: now, dur: 1100 + Math.random()*700 }); } next = now + 3500 + Math.random()*4500; }
+    tx_.setTransform(d, 0, 0, d, 0, 0); tx_.clearRect(0, 0, W, H); tx_.globalCompositeOperation = "lighter";
+    list = list.filter(o => now - o.t0 < o.dur);
+    for (const o of list) { const e = (now - o.t0)/o.dur, a = Math.sin(e*Math.PI), x = sx(X[o.i]), y = sy(Y[o.i]), L = 4 + 3*N[o.i].level*a;
+      tx_.globalAlpha = .55*a; tx_.strokeStyle = "#ffffff"; tx_.lineWidth = .8; tx_.beginPath(); tx_.moveTo(x - L, y); tx_.lineTo(x + L, y); tx_.moveTo(x, y - L*.8); tx_.lineTo(x, y + L*.8); tx_.stroke();
+      tx_.globalAlpha = .35*a; tx_.drawImage(sprite(SPAL[SC[o.i]]), x - L, y - L, L*2, L*2); }
+    if (list.length) raf = RAF(frame); else { win.clearTimeout(tmo); tmo = win.setTimeout(() => { if (!raf) raf = RAF(frame); }, Math.max(200, next - performance.now())); } };
+  twWake = () => { if (!active()) { if (raf) { win.cancelAnimationFrame(raf); raf = 0; } win.clearTimeout(tmo); list = []; tx_.clearRect(0, 0, tw.width, tw.height); return; } if (!raf) { if (!next) next = performance.now() + 2500; raf = RAF(frame); } }; }
+
 // ---------- the toolbar: one row, the way Bases lays out its own ----------
 // Left: the two dots, the maps (the current map's tab opens its variants and options), and the counts.
 // Right: Arrange, Group (maps that group), Filter (with a count when on), Display, Find, Follow note, Saved.
@@ -3678,7 +3728,12 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
   for (const id of ["#emerpop", "#starpop", "#sensepop"]) { const el = $(id); el.classList.remove("mspop"); el.classList.add("mosec"); el.hidden = true; mo.appendChild(el); }
   { const g = $("#starpop").createDiv({ cls: "sglow" }); g.createSpan({ cls: "sgl", text: "Galaxy glow" }); const seg = g.createDiv({ cls: "seg", attr: { role: "group", "aria-label": "Galaxy glow" } });
     for (const [v, t] of [["soft", "Soft"], ["normal", "Normal"], ["bright", "Bright"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "data-g": v, "aria-pressed": String(v === sGlow) } });
-      b.onclick = e => { e.stopPropagation(); sGlow = v; save("iv-sglow", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.g === v))); draw(); }; } }
+      b.onclick = e => { e.stopPropagation(); sGlow = v; save("iv-sglow", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.g === v))); draw(); }; }
+    const tog = (label, get, set) => { const r = $("#starpop").createDiv({ cls: "sglow" }); r.createSpan({ cls: "sgl", text: label }); const sg = r.createDiv({ cls: "seg", attr: { role: "group", "aria-label": label } });
+      for (const [v, t] of [[false, "Off"], [true, "On"]]) { const b = sg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(get() === v) } });
+        b.onclick = e => { e.stopPropagation(); set(v); sg.querySelectorAll("button").forEach((x, j) => x.setAttribute("aria-pressed", String((j === 1) === v))); }; } };
+    tog("Twinkle", () => twOn, v => { twOn = v; save("iv-twinkle", v); twWake(); });
+    tog("Turning galaxies", () => sTurn, v => { sTurn = v; save("iv-sturn", v); turnSync(); if (!v && view === "stars") { glowKey = ""; morph(true); } }); }
   const moL = mo.createDiv({ cls: "pt mol", text: "This map" }); mo.appendChild($("#laygrp")); const moNone = mo.createDiv({ cls: "pn", text: "Nothing to set on this map." });
   const hasLay = () => [...$("#laygrp").children].some(el => !el.hidden && !el.classList.contains("glbl"));
   const variants = () => view === "emergence" || view === "spacetime" ? "#emerpop" : view === "stars" ? "#starpop" : view === "sense" && SAI ? "#sensepop" : null;
@@ -3739,6 +3794,7 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
     AR.w.hidden = ARR_OFF.has(view); AR.val.setText(axisName(mode));
     let g = false; for (const [w, el] of GS) { w.hidden = el.hidden; g = g || !el.hidden; } GR.w.hidden = !g;
     GR.val.setText(view === "shelf" ? (($("#shelfsort button[aria-pressed=true]") || {}).textContent || "") : view === "chord" ? (chOneFolder ? "Time · one folder" : (($("#chordby button[aria-pressed=true]") || {}).textContent || "")) : view === "treemap" ? ($("#tmsubs").getAttribute("aria-pressed") === "true" ? "Subfolders" : "Folders") : "");
+    turnSync(); twWake();
     { const th = $("#themeseg"), want = isPhone() ? thSec : thSlot; if (th.parentElement !== want) want.appendChild(th); thSec.hidden = !isPhone(); thSlot.hidden = isPhone(); }
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }

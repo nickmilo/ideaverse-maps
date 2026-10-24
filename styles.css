@@ -712,3 +712,4 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm[data-view="stars"] main .mapstats,.ivm[data-view="stars"] .wm-lyt{color:#aab4d6}
 .ivm[data-view="stars"] .mapstats b{color:#e6ebff}
 .ivm[data-view="stars"] .wm-name{color:#c9d2ff}
+.ivm main > canvas.twinkle{position:absolute;pointer-events:none;z-index:1}

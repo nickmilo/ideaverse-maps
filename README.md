@@ -24,7 +24,7 @@ The same levels as rings: home notes and hubs at the center, unlinked notes on t
 
 ### Starfield
 
-Your biggest hubs become galaxy cores. Every note joins the hub it reaches in the fewest links; maps sit in the bulge, linked notes trail out along the arms, and unlinked notes drift in nebulae, one per folder. Switch to 3D to orbit it, or turn on Drift for a slow screensaver.
+Your biggest hubs become galaxy cores. Every note joins the hub it reaches in the fewest links; maps sit in the bulge, linked notes trail out along the arms, and unlinked notes drift in nebulae, one per folder. Click a galaxy's name to fly into it. Starfield's own menu (click its tab) switches to 3D and sets the galaxy glow, a very occasional twinkle, and galaxies that slowly turn. On the Timelapse, each new note flares as it's born and its galaxy brightens. Orbit (in Animations) makes it a slow screensaver.
 
 ![Starfield in 3D: galaxies of notes around their hubs](docs/starfield.png)
 <sub>Starfield in 3D, Dark theme, panels tucked away. Each galaxy is a hub and the notes that reach it first.</sub>
