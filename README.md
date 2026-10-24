@@ -39,6 +39,10 @@ A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), P
 ![Sensemaking time-lapse: new notes swirl out to their places](docs/swirl.gif)
 <sub>The time-lapse on Sensemaking with Swirl out: each week's new notes spiral out to where they belong.</sub>
 
+### Posters (under More)
+
+For a smaller, targeted set: a collection, a folder, or a base view (your movies, your books, a learning pack). Each note becomes a card, laid out by its own properties. **Across** is a date or number (a release year, a rating, a date property, or the created date); **Lanes** are a category (genre, status, a director, or the base's own groups); **Size** is a number (your rating, the link score). If notes have an image property (a poster, a cover, a link to an image in your vault), the card shows it. The map picks sensible defaults from the properties your notes share; click the Posters tab to change them. Inside a base it follows the base: its Sort sets Across and its Group sets the lanes.
+
 ## The time-lapse
 
 In **Animations** (bottom left), pick **Timelapse** and press ▶ to replay your vault by month or by week. New notes arrive (comets, rain, or a swirl), and notes move up a level as their links arrive. Click a note at any point to pause and look around; Resume carries on.
@@ -82,7 +86,7 @@ Notes are dated by their `created` property (any capitalization; `createdAt`, `d
 
 ## Privacy
 
-Everything runs on your computer. The plugin reads your notes to draw the map and never changes them. It writes two files: your saved-views file, in the folder you pick, and a scan cache in the plugin's own folder (links and counts for each note, so the next scan only reads what changed; never note text). It makes no network requests and sends nothing anywhere.
+Everything runs on your computer. The plugin reads your notes to draw the map and never changes them. It writes two files: your saved-views file, in the folder you pick, and a scan cache in the plugin's own folder (links and counts for each note, so the next scan only reads what changed; never note text). It sends nothing anywhere. The one exception: in the Posters map, if a note's image property is a web address (a movie poster URL, say), the map loads that picture from the web to show it, the same way Obsidian shows it in a note. Pictures from your vault load locally.
 
 ## Notes
 

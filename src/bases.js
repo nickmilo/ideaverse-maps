@@ -40,10 +40,20 @@ const makeView = BasesView => class MapBasesView extends BasesView {
       isActive: () => this.hostEl.isConnected && this.hostEl.contains(document.activeElement || null),
       openNote: (p, t, b) => { this.noteLeaf = openBeside(this.app, null, this.noteLeaf, p, t, b); },
     });
-    if (this.map) this.map.setScope(this.paths || this.currentPaths());
+    if (this.map) { this.map.setBaseInfo && this.map.setBaseInfo(this.baseInfo()); this.map.setScope(this.paths || this.currentPaths()); }
+  }
+  /** The base's own Sort and Group, so maps like Posters can follow them. */
+  baseInfo() {
+    const d = this.data, strip = p => String(p || "").replace(/^note\./, "");
+    let sort = null; try { const s = this.config && this.config.getSort && this.config.getSort(); if (s && s[0]) sort = strip(s[0].property); } catch (e) {}
+    let groups = null, order = null;
+    try { const g = d && d.groupedData; if (Array.isArray(g) && g.length > 1 || (g && g[0] && g[0].hasKey && g[0].hasKey())) { groups = new Map(); order = [];
+      for (const grp of g) { const k = grp.hasKey && grp.hasKey() ? String(grp.key).replace(/^\[\[([^\]|]+)(\|[^\]]*)?\]\]$/, "$1") : "—"; order.push(k); for (const e of grp.entries || []) if (e && e.file) groups.set(e.file.path, k); } } } catch (e) {}
+    this.biv = (this.biv || 0) + 1;
+    return { sort, groups, order, v: this.biv };
   }
   currentPaths() { const d = this.data, rows = d && Array.isArray(d.data) ? d.data : []; return rows.map(e => e && e.file && e.file.path).filter(Boolean); }
-  onDataUpdated() { this.paths = this.currentPaths(); if (this.map) this.map.setScope(this.paths); }
+  onDataUpdated() { this.paths = this.currentPaths(); if (this.map) { this.map.setBaseInfo && this.map.setBaseInfo(this.baseInfo()); this.map.setScope(this.paths); } }
   /** Called by the plugin after a rescan. */
   async reload() { if (this.map) { this.map.destroy(); this.map = null; } await this.mount(); }
   showStale(c) { const b = this.staleBtn; if (!b) return; b.hidden = false; const t = `${c || "Some"} notes changed · rescan`; b.setAttribute("aria-label", t); b.title = t; const n = b.querySelector(".tbadge"); if (n) n.setText(String(c || "")); }

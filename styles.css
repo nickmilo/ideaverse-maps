@@ -716,3 +716,11 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm header.tb2 .ivm-stale{color:var(--accent);gap:4px;border-color:transparent}
 .ivm header.tb2 .ivm-stale[hidden]{display:none}
 .ivm header.tb2 .ivm-stale .tbadge:empty{display:none}
+
+/* Posters: Across, Lanes, Size in the map's own menu */
+.ivm .postctl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;align-items:center;padding:2px 2px 4px;min-width:240px}
+.ivm .postctl[hidden]{display:none}
+.ivm .postctl .prow{display:contents}
+.ivm .postctl .prow > span{font-size:var(--font-ui-small);color:var(--iv-muted,var(--text-muted))}
+.ivm .postctl select{width:100%;min-width:0}
+.ivm .postctl .pn{grid-column:1/-1;font-size:var(--font-ui-smaller);color:var(--iv-muted,var(--text-muted))}
