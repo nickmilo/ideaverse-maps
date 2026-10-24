@@ -1,58 +1,107 @@
 # Maps of the Ideaverse
 
-> **Early preview (0.1).** Four maps for now (Emergence, Gravity, Starfield, Sensemaking), with more to come. Expect frequent updates and some rough edges. Issues and ideas are welcome in GitHub issues.
+See your notes as maps. Every note in your vault gets a place, by what it is and how it's linked: from unlinked notes at the bottom up to your maps of maps and home notes at the top. Press play and watch your vault grow, month by month. Then try it another dozen ways: as rings, as galaxies, as a graph, as a bookshelf, as a wall of movie posters.
 
-See your notes as maps. Every note in your vault gets a place on four maps. Three of them sort notes by how they emerged: from unlinked notes at the bottom up to your maps of maps and home notes at the top. Then press play and watch your vault grow, month by month.
-
-Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinking, for anyone with an Obsidian vault (an "ideaverse").
+Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinking, for anyone with an Obsidian vault (an "ideaverse"). Free, open source, and it never changes your notes.
 
 ![Emergence: a map of content with links above and below](docs/emergence.png)
-<sub>Emergence in the LYT Mode theme: a map of content with links above it (pink, up to its maps and hubs) and below it (green, the notes it gathers). All screenshots use a made-up vault of 2,500 notes.</sub>
+<sub>Emergence in the LYT Mode theme: a map of content with links above it (up to its maps and hubs) and below it (the notes it gathers). All screenshots use a made-up vault of 2,500 notes and 160 made-up films.</sub>
 
 ## The maps
 
+Four main maps sit in the toolbar. Click a map's tab again for its variants and options.
+
 ### Emergence
 
-Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders. Click any note to light up its links: up to the maps above it, down to the notes it gathers.
+Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders. Click any note to light up its links: up to the maps above it, down to the notes it gathers. Its menu also has **Space-Time** (your top folders as rows) and **Planetarium** (stand inside it: Level 5 overhead).
 
 ### Gravity
 
-The same levels as rings: home notes and hubs at the center, unlinked notes on the rim. Time or folders go around the clock.
+The same levels as rings: home notes and hubs at the center, unlinked notes on the rim. Time or folders go around the circle.
 
-![Gravity by ACE: levels as rings, folders around the clock](docs/gravity.png)
+![Gravity by ACE: levels as rings, folders around the circle](docs/gravity.png)
 <sub>Gravity by ACE folders in the Play theme: a Level 3 map and its links, from the hubs at the center to notes out on the rim.</sub>
 
 ### Starfield
 
-Your biggest hubs become galaxy cores. Every note joins the hub it reaches in the fewest links; maps sit in the bulge, linked notes trail out along the arms, and unlinked notes drift in nebulae, one per folder. Click a galaxy's name to fly into it. Starfield's own menu (click its tab) switches to 3D and sets the galaxy glow, a very occasional twinkle, and galaxies that slowly turn. On the Timelapse, each new note flares as it's born and its galaxy brightens. Orbit (in Animations) makes it a slow screensaver.
+Your biggest hubs become galaxy cores. Every note joins the hub it reaches in the fewest links; maps sit in the bulge, linked notes trail out along the arms, and unlinked notes drift in nebulae, one per folder. Click a galaxy's name to fly into it. Starfield's own menu switches to 3D and sets the galaxy glow, a very occasional twinkle, and galaxies that slowly turn. On the Timelapse, each new note flares as it's born. Orbit (in Animations) makes it a slow screensaver.
 
 ![Starfield in 3D: galaxies of notes around their hubs](docs/starfield.png)
-<sub>Starfield in 3D, Dark theme, panels tucked away. Each galaxy is a hub and the notes that reach it first.</sub>
+<sub>Starfield in 3D, Dark theme. Each galaxy is a hub and the notes that reach it first.</sub>
 
 ### Sensemaking
 
-A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), Producer (expression, top-down), Inner Guide (reflection, bottom-up) and Creative (expression, bottom-up). Each note is placed by plain rules about where it lives and how it's written (folders, maps, headings and lists, checkboxes and due dates, first-person writing, questions). No AI. Click a note to see exactly which clues moved it. Choose which years it shows under Layout.
+A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), Producer (expression, top-down), Inner Guide (reflection, bottom-up) and Creative (expression, bottom-up). Each note is placed by plain rules about where it lives and how it's written (folders, maps, headings and lists, checkboxes and due dates, first-person writing, questions). No AI. Click a note to see exactly which clues moved it.
 
 ![Sensemaking: the four quadrants, with a note's reasons in the panel](docs/sensemaking.png)
 <sub>Sensemaking in the Soft Paper theme. The panel shows why this note is a Synthesizer.</sub>
 
-![Sensemaking time-lapse: new notes swirl out to their places](docs/swirl.gif)
-<sub>The time-lapse on Sensemaking with Swirl out: each week's new notes spiral out to where they belong.</sub>
+## More maps
 
-### Posters (under More)
+**More** holds the rest.
 
-For a smaller, targeted set: a collection, a folder, or a base view (your movies, your books, a learning pack). Each note becomes a card, laid out by its own properties. **Across** is a date or number (a release year, a rating, a date property, or the created date); **Lanes** are a category (genre, status, a director, or the base's own groups); **Size** is a number (your rating, the link score). If notes have an image property (a poster, a cover, a link to an image in your vault), the card shows it. The map picks sensible defaults from the properties your notes share; click the Posters tab to change them. Inside a base it follows the base: its Sort sets Across and its Group sets the lanes.
+### Graph
 
-Under each choice is a mini slider: a little histogram of that property's values, with two handles that keep only the notes in between (just the '90s, only your 4-star films). Lanes get chips instead, one per value with its count: click to switch a lane off, ⌥/⌘-click to show only that one.
+Like Obsidian's graph view: every note pushes the others away and its links pull it toward its neighbors, settling live as you watch. Drawn with the emergence symbols, so hubs and maps stand out, and with everything the other maps have: the Timelapse, Wander Mode, Focus mode, filters. Unlinked notes ring the outside.
 
-Its menu reads in plain words: **Layout** is Rows or Scatter; **Left to right** and **Rows by** (or, in Scatter, **Bottom to top**) place the cards; **Card size** scales them; a line under each says what it takes. Switch to **Scatter** and the rows give way to a second number up the side: your rating against the crowd's (a taste gap), or the year you watched something against the year it came out. When the two are the same kind of thing, a line marks where they agree (same score, same year), and the notes furthest from it get a ring.
+![Graph: a hub and its links](docs/graph.png)
+<sub>Graph in the Dark theme, zoomed in on a hub and its links.</sub>
+
+### Chord, Corona and Tesla
+
+Every note on a ring, in arcs by folder (or by year). Links between kinds cross the middle as bands that thicken as your vault grows. Hover an arc to light up where its links go. **Corona** puts the ring on a globe and arcs the links over the surface like solar prominences; **Tesla** sends them through a glass globe.
+
+![Chord: folders as arcs, links as bands](docs/chord.png)
+<sub>Chord in LYT Mode: each arc a folder, each band the links between two of them.</sub>
+
+![Corona: links arc over a globe](docs/corona.png)
+<sub>Corona in the Dark theme, with one hub's links arcing over the globe.</sub>
+
+### Treemap
+
+Every folder and note as a rectangle, sized by its score. Subfolders can be outlined and named.
+
+![Treemap: folders and notes as rectangles](docs/treemap.png)
+<sub>Treemap in Soft Paper.</sub>
+
+### Bookshelf
+
+Every note as a book on a double-wide shelf, shelved by call number (a decimal system that comes from your own linking), title, date or subfolder. An Index panel lists every call number, ready to copy as a Markdown list.
+
+![Bookshelf: notes as books](docs/bookshelf.png)
+<sub>Bookshelf in the Play theme, shelved by call number.</sub>
+
+### Posters
+
+For a smaller, targeted set: a collection, a folder, or a base view (your movies, your books, a learning pack). Each note becomes a card, laid out by its own properties, and if notes have an image property (a poster, a cover, a link to an image in your vault), the card shows it. Click the Posters tab for its menu:
+
+- **Layout:** **Rows** (one row per value of a category, like genre or status), **Scatter** (two numbers, one left to right and one bottom to top), or **Mosaic** (every card as a tile, no gaps, a block per category).
+- **Left to right** (a date or number), **Rows by** (a category) or **Bottom to top** (a second number), and **Card size** (a number). A line under each says what it takes.
+- Under each, a mini slider: a little histogram of that property's values, with two handles that keep only the notes in between (just the '90s, only your 4-star films). Rows get chips instead, one per value with its count: click to switch one off, ⌥/⌘-click to show only that one.
+
+The map picks sensible defaults from the properties your notes share. Inside a base it follows the base: its Sort sets left to right and its Group sets the rows.
+
+![Posters: films by year, a row per genre](docs/posters.png)
+<sub>Posters in the Dark theme: made-up films by release year, a row per genre, sized by rating.</sub>
+
+In **Scatter**, when the two numbers are the same kind of thing (two ratings, two years), a line marks where they agree, and the notes furthest from it get a ring: your rating against the crowd's shows your hidden gems above the line.
+
+![Scatter: your rating against the crowd's](docs/tastegap.png)
+<sub>Scatter: IMDb rating left to right, your own rating bottom to top, and the "same score" line.</sub>
+
+![Mosaic: posters as tiles, a block per genre](docs/mosaic.png)
+<sub>Mosaic: every film a tile, a block per genre, each tile sized by your rating.</sub>
+
+### Experimental
+
+Sketches still taking shape: **Geometric** (your top 25 notes placed by triangles: Square, Hexagon, Mandala, Octahedron, Shells), **Linear** (Linear Calendar, Spiral, Lifeline), **Planet** (the PKM Planet map: Flat, Tabletop, Globe) and **Unfinished** (Tree, Skyline).
 
 ## The time-lapse
 
 In **Animations** (bottom left), pick **Timelapse** and press ▶ to replay your vault by month or by week. New notes arrive (comets, rain, or a swirl), and notes move up a level as their links arrive. Click a note at any point to pause and look around; Resume carries on.
 
-![The time-lapse playing on Gravity, November 2023](docs/timelapse.png)
-<sub>The time-lapse mid-play on Gravity, LYT Mode theme: November 2023's new notes burst in around the clock.</sub>
+![Sensemaking time-lapse: new notes swirl out to their places](docs/swirl.gif)
+<sub>The time-lapse on Sensemaking with Swirl out: each week's new notes spiral out to where they belong.</sub>
 
 ## How notes get their level
 
@@ -70,7 +119,7 @@ The score counts links in, links out, links both ways, and uplinks (the `up` and
 
 - Open it from the ribbon (the orbit icon) or the command **Maps of the Ideaverse: Open map**.
 - Click a note to see its links; **Open note** opens it beside the map. Cmd/Ctrl-click opens it in a new tab.
-- One toolbar row: the maps on the left (click the current map's tab for its variants and options; **More** holds the rest), then **Arrange** (what left to right means: Time, ACE, a number, or one of your properties), **Group** (on maps that group), **Filter** (folders and collections, with a count when it's on), **Display** (links, theme, how scoring works), **Find**, **Focus on active note** (the note and its neighbors), **Sync active note with Obsidian editor** and **Saved**. The note and link counts sit at the map's top right.
+- One toolbar row: the maps on the left (click the current map's tab for its variants and options; **More** holds the rest), then **Arrange** (how notes are placed: left to right on Emergence, around the circle on Gravity, the stars' color on Starfield; by Time, ACE, a number, or one of your properties), **Group** (on maps that group), **Filter** (folders and collections, with a count when it's on), **Display** (links, theme, how scoring works), **Find**, **Focus on active note** (the note and its neighbors), **Sync active note with Obsidian editor** and **Saved**. The note and link counts sit at the map's top left.
 - Search with `/`. Drag to pan, scroll to zoom. **Focus** (the toolbar's target icon, or **Focus on its links** in a note's panel) shows one note and its neighbors. **Animations** (bottom left) holds the Timelapse, **Wander Mode** (wanders from note to linked note, or hops between maps) and **Orbit** (a slow drift; globes and 3D maps turn).
 - **Sync active note with Obsidian editor** (the toolbar's sync icon, or the command **Toggle follow note**): the map follows whichever note you're editing, like a local graph linked to the active note. It works both ways: pick a note on the map (click, search, the note panel or the trail), or let a tour or Autoplay move along, and it opens in your editor, while the map keeps focus. Put the map in a split or the sidebar and it keeps up as you move through your notes. In Focus mode it shows just that note and its links.
 - **★ Saved** holds saved views and tours. Name the current view (map, axis, filters, zoom and position, selected note, where the time-lapse stands, Starfield's 3D angle) to come back to it. **Record a tour**, click through some notes, stop, and name it; play it back with ‹ › or let it run. Before your first save it asks which folder to keep them in (pick one or type a new one). They live in `Maps of the Ideaverse - saved views.json` there, a plain file you own, updated every time you save. The 📁 button moves it.
@@ -80,7 +129,7 @@ The score counts links in, links out, links both ways, and uplinks (the `up` and
 - Five themes: Play, Soft Paper, Dark, LYT Mode, or match your own Obsidian theme (the last swatch), which follows it as you switch.
 
 ![Focus mode: one note and everything it links to](docs/focus.png)
-<sub>Focus mode on Emergence, Dark theme: one map and the 42 notes it links to, with the links among them drawn faintly.</sub>
+<sub>Focus mode on Emergence, Dark theme: one map and the 36 notes it links to, with the links among them drawn faintly.</sub>
 
 ## Settings
 
