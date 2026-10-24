@@ -39,12 +39,10 @@ const REL = new Set(); for (const [a,b,t] of E) if (t === 4) { REL.add(a*n + b);
 // a link's kind as written in the ACTIVE note: key a*n + b is the link from a to b, as a wrote it (its up, related or another property);
 // a link only the other note wrote (for example, a note whose up names this one) has no entry here and is placed by emergence
 const EKIND = new Map(); for (const [a,b,t] of E) { const key = a*n + b, o = EKIND.get(key); if (o == null || (t === 1 || t === 4 || t === 5) && !(o === 1 || o === 4)) EKIND.set(key, t); }
-// Link colors (Display → Link colors): "dir" up/down by level, related purple · "props" every frontmatter link purple · "each" up property yellow, related purple, other properties slate
-let linkCol = "dir";   // read from saved settings once they load (below)
+// Link colors: the up property yellow, related purple, other properties slate; links in the body go above (up) or below (down) by level
 function edgeColor(a, b, upward){ const k = EKIND.get(a*n + b);
-  if (linkCol === "props" && (k === 1 || k === 4 || k === 5)) return css.rel;
-  if (linkCol === "each") { if (k === 1) return css.upp; if (k === 4) return css.rel; if (k === 5) return css.prop; }
-  if (linkCol === "dir" && k === 4) return css.rel;   // k is the kind as the active note (a) wrote it
+  // k is the kind as the active note (a) wrote it: 1 up, 4 related, 5 any other property
+  if (k === 1) return css.upp; if (k === 4) return css.rel; if (k === 5) return css.prop;
   return upward ? css.up : css.down; }
 
 // ---------- stable pseudo-random per note ----------
@@ -3248,7 +3246,7 @@ function legend(){
   html($("#legend")).v = `<div class="lh"><span>${view === "spacetime" ? "Legend · Space-Time" : "Legend"}</span><span class="lc" id="legclose" aria-hidden="true" title="Click anywhere to collapse">‹</span></div>` + LEVELS.map(L => {
     const sw = L.lv >= 3 ? `background:linear-gradient(135deg,${GRAD[L.lv][0]},${GRAD[L.lv][1]});${L.lv===5?"border-radius:3px;":L.lv===4?"border-radius:1px;transform:rotate(45deg) scale(.8);":""}` : `background:${L.lv===2?css.l2:css.l1}`;
     return `<div><i style="${sw}"></i>${L.lv} · ${L.name} <span style="margin-left:auto;padding-left:10px">${(cnt[L.lv]||0).toLocaleString()}</span></div>`;
-  }).join("") + (showArch && hasArch ? `<div><i style="background:none;border:1.5px solid ${css.muted}"></i>Archive (rings)</div>` : "") + `<div style="margin-top:4px"><i class="ln" style="border-color:${css.up}"></i>links above</div><div><i class="ln" style="border-color:${css.down}"></i>links below</div>` + (linkCol === "props" ? `<div><i class="ln" style="border-color:${css.rel}"></i>from a property (up, related, any other)</div>` : linkCol === "each" ? `<div><i class="ln" style="border-color:${css.upp}"></i>up property</div><div><i class="ln" style="border-color:${css.rel}"></i>related property</div><div><i class="ln" style="border-color:${css.prop}"></i>other properties (actors, director, by, next…)</div>` : REL.size ? `<div><i class="ln" style="border-color:${css.rel}"></i>related (from the related property)</div>` : "") + (focus >= 0 ? `<div><i class="ln" style="border-color:${css.muted};opacity:.5;border-top-width:1px"></i>links between the other notes in focus</div>` : "");
+  }).join("") + (showArch && hasArch ? `<div><i style="background:none;border:1.5px solid ${css.muted}"></i>Archive (rings)</div>` : "") + `<div style="margin-top:4px"><i class="ln" style="border-color:${css.up}"></i>links above</div><div><i class="ln" style="border-color:${css.down}"></i>links below</div>` + (`<div><i class="ln" style="border-color:${css.upp}"></i>up property</div><div><i class="ln" style="border-color:${css.rel}"></i>related property</div><div><i class="ln" style="border-color:${css.prop}"></i>other properties (actors, director, by, next…)</div>`) + (focus >= 0 ? `<div><i class="ln" style="border-color:${css.muted};opacity:.5;border-top-width:1px"></i>links between the other notes in focus</div>` : "");
   if (view === "spacetime" && !domeOn()) $("#legend").createDiv({ text: "Time is on the x-axis. \u201cSpace,\u201d as represented by folder structure, is on the y-axis. In each row, higher levels sit higher.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
   if (expOn() && EXP[view].legend) $("#legend").createDiv({ text: EXP[view].legend, attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
   if (view === "shelf" && shelfHi.length) { const box = $("#legend").createDiv({ cls: "lghi" }); box.createDiv({ text: "Lit up (Efforts panel)", attr: { style: "color:var(--ink)" } });
@@ -3407,12 +3405,6 @@ root.querySelectorAll("#tlspeed button").forEach(b => b.onclick = () => { senseS
     $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; $("#tldate").textContent = "All time"; syncRange(); buildGrid(); draw(); legend(); };
   a.oninput = () => go(0); b.oninput = () => go(1); }
 POPS.push(["#sensebtn", "#sensepop2", "#sensems"]);
-POPS.push(["#lcolbtn", "#lcolpop", "#lcolms"]);
-$("#lcolbtn").onclick = e => { e.stopPropagation(); const el = $("#lcolpop"), open = el.hidden; closePops("#lcolpop"); el.hidden = !open; $("#lcolbtn").setAttribute("aria-expanded", String(open)); };
-linkCol = ["dir","props","each"].includes(pref("iv-lcol", "dir")) ? pref("iv-lcol", "dir") : "dir";
-const syncLcol = () => { root.querySelectorAll('input[name="lcol"]').forEach(r => r.checked = r.value === linkCol); $("#lcolbtn").classList.toggle("on", linkCol !== "dir"); };
-root.querySelectorAll('input[name="lcol"]').forEach(r => r.onchange = () => { if (!r.checked) return; linkCol = r.value; save("iv-lcol", linkCol); syncLcol(); legend(); draw(); });
-syncLcol();
 $("#sensebtn").onclick = e => { e.stopPropagation(); const el = $("#sensepop2"), open = el.hidden; closePops("#sensepop2"); el.hidden = !open; $("#sensebtn").setAttribute("aria-expanded", String(open)); };
 // Sensemaking: placed by the AI pass or by the rules (click the tab again to choose)
 const sBtn = $('#vseg button[data-v="sense"]');
