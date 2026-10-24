@@ -3,7 +3,7 @@
 import { sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 
-export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "graph"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
+export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "graph", "mosaic"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -2027,6 +2027,69 @@ EXP.posters = {
   legend: "Posters: the notes on screen laid out by their own properties. Across is a date or number (release year, created, your rating); lanes are a category (genre, status, this base's own groups); size is a number. Pick a Height and lanes give way to a second number up the side (your rating against the crowd's, the year you watched it against the year it came out), with a line where the two agree and rings on the notes furthest from it. Notes with an image property (a poster, a cover) show it once you zoom in. Click the map's tab for Across, Lanes and Size.",
 };
 
+// ---------- Mosaic: every note a tile, set like stones ----------
+// Emergence (the default): Level 5 tiles in the middle, each level a square frame around the one above it, out to the
+// unlinked notes at the edge. Within a frame, notes of a folder sit together, so folders show as patches of one color.
+// Scattered: the same tiles, set in no order at all. A tile's size comes from its link score; color from its level
+// (maps and hubs wear the level colors) or its folder.
+let MOS = pref("iv-mos", "emergence") === "scatter" ? "scatter" : "emergence"; const MOSF = [];
+function layoutMosaic2(){
+  for (let i=0;i<n;i++) RW[i] = RH[i] = 0; MOSF.length = 0;
+  const wt = i => .6 + Math.pow(Math.max(0, N[i].score), 1.35) * .35, fold = i => N[i].path.includes("/") ? N[i].path.slice(0, N[i].path.lastIndexOf("/")) : "";
+  const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i); if (!ids.length) { expBox = { x0: 0, y0: 0, x1: 100, y1: 100 }; return; }
+  const area = ids.reduce((a, i) => a + wt(i), 0), U = 1600 / Math.max(1, ids.reduce((a, i) => a + wt(i), 0) / ids.length);   // about 1,600 square units for an average tile
+  const set = (it, x, y, w, h) => { const i = it.i; RX[i] = x; RY[i] = y; RW[i] = w; RH[i] = h; EX[i] = x + w / 2; EY[i] = y + h / 2; };
+  // folder patches inside a region: a squarified block per folder, then the notes inside it
+  const fill = (items, x, y, w, h) => { if (!items.length || w <= 0 || h <= 0) return; const by = new Map(); for (const it of items) { const f = fold(it.i); let a = by.get(f); if (!a) by.set(f, a = []); a.push(it); }
+    const groups = [...by.values()].map(a => ({ items: a.sort((p, q) => q.v - p.v), v: a.reduce((t, it) => t + it.v, 0) })).sort((p, q) => q.v - p.v);
+    squarify(groups, x, y, w, h, (g, x2, y2, w2, h2) => squarify(g.items, x2, y2, w2, h2, set)); };
+  if (MOS === "scatter") {
+    // in no order, laid like a brick wall: each row as tall as it needs to be to fill the width; a tile is wider the higher its score
+    const items = ids.map(i => ({ i, a: .8 + 1.8 * Math.sqrt(Math.pow(Math.max(0, N[i].score), 1.35) * .35 / 3), r: hash(N[i].path, 97) })).sort((p, q) => p.r - q.r);
+    const S_ = Math.sqrt(area * U), h0 = Math.sqrt(U * 1.1); let y = -S_ / 2, row = [], sa = 0;
+    const flush = last => { const h = last ? Math.min(h0, S_ / Math.max(sa, 1e-9)) : S_ / sa; let x = -S_ / 2; for (const it of row) { const w = it.a * h; set(it, x, y, w, h); x += w; } y += h; row = []; sa = 0; };
+    for (const it of items) { row.push(it); sa += it.a; if (sa * h0 >= S_) flush(false); } if (row.length) flush(true);
+    expBox = { x0: -S_ / 2 - 20, y0: -S_ / 2 - 20, x1: S_ / 2 + 20, y1: y + 20 }; return; }
+  // emergence: concentric square frames, Level 5 at the heart
+  let inner = 0;
+  for (let L = 5; L >= 1; L--) { const items = ids.filter(i => N[i].level === L).map(i => ({ i, v: wt(i) * U })); if (!items.length) continue;
+    const a = items.reduce((t, it) => t + it.v, 0), outer = Math.sqrt(inner * inner + a), o = outer / 2, m = inner / 2, b = o - m;
+    MOSF.push({ L, s: outer, n: items.length });
+    if (!inner) { fill(items, -o, -o, outer, outer); inner = outer; continue; }
+    // the frame as four strips, clockwise from the top; the notes run around it in folder order
+    const strips = [[-o, -o, outer, b], [m, -m, b, inner], [-o, m, outer, b], [-o, -m, b, inner]], sa = strips.map(r => r[2] * r[3]), tot = sa.reduce((t, v) => t + v, 0);
+    items.sort((p, q) => fold(p.i) < fold(q.i) ? -1 : fold(p.i) > fold(q.i) ? 1 : q.v - p.v);
+    let k_ = 0, acc = 0; for (let r = 0; r < 4; r++) { const goal = sa[r] / tot * a, part = []; while (k_ < items.length && (acc < goal || r === 3)) { part.push(items[k_]); acc += items[k_].v; k_++; } acc -= goal;
+      const pv = part.reduce((t, it) => t + it.v, 0) || 1, [rx, ry, rw, rh] = strips[r]; for (const it of part) it.v *= rw * rh / pv; fill(part, rx, ry, rw, rh); }
+    inner = outer; }
+  expBox = { x0: -inner / 2 - 20 - inner * .32, y0: -inner / 2 - 20, x1: inner / 2 + 20, y1: inner / 2 + 20 }; }
+EXP.mosaic = {
+  layout: layoutMosaic2, pick: (x, y) => rectPick(x, y), ownLabels: true,
+  notes(lit, dim){ const gr = Math.max(.5, Math.min(2, k * 1.2));   // the grout between tiles
+    ctx.fillStyle = css.bg;
+    for (let i=0;i<n;i++) { if (!RW[i] || !VV(i)) continue; const x = sx(RX[i]), y = sy(RY[i]), w = RW[i]*k, h = RH[i]*k; if (x > W || y > H || x + w < 0 || y + h < 0) continue;
+      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .25 : .7) : 1; const d = N[i], j_ = (hash(d.path, 53) - .5) * .14;
+      if (w < 3 || h < 3) { ctx.fillStyle = d.level >= 3 ? GRAD[d.level][hash(d.path, 7) < .5 ? 0 : 1] : hexHsl(aceHue(d), j_, d.level === 1 ? -.3 : 0); ctx.fillRect(x, y, Math.max(.6, w - gr * .5), Math.max(.6, h - gr * .5)); continue; }
+      const g = ctx.createLinearGradient(x, y, x + w, y + h);   // each stone catches the light a little differently
+      if (d.level >= 3) { g.addColorStop(0, GRAD[d.level][0]); g.addColorStop(1, GRAD[d.level][1]); }
+      else { const base = aceHue(d); g.addColorStop(0, hexHsl(base, .14 + j_, 0)); g.addColorStop(1, hexHsl(base, -.18 + j_, d.level === 1 ? -.35 : 0)); }
+      ctx.fillStyle = g; const r = Math.min(w, h) * .12; ctx.beginPath(); ctx.roundRect(x + gr / 2, y + gr / 2, w - gr, h - gr, Math.min(r, 6)); ctx.fill();
+      if (i === sel) { ctx.strokeStyle = css.ink; ctx.lineWidth = 2; ctx.stroke(); }
+      if (w > 64 && h > 18) { ctx.fillStyle = d.level >= 3 ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.72)"; ctx.font = `500 ${Math.min(13, h * .3, w * .1)}px ${css.body}`; ctx.textBaseline = "top"; let t = d.title; while (t.length > 3 && ctx.measureText(t).width > w - 10) t = t.slice(0, -2); if (t !== d.title) t += "…"; ctx.fillText(t, x + 5, y + 5); } }
+    ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; overLinks(lit); },
+  guides(){ if (MOS !== "emergence") return;   // each level's frame, named at its top left corner
+    ctx.textBaseline = "bottom"; ctx.textAlign = "left";
+    // names to the left of the mosaic, each beside its frame's top edge, nudged down when frames are thin
+    let lastY = -Infinity; const lx = sx(-(MOSF.length ? MOSF[MOSF.length - 1].s : 0) / 2) - 12;
+    for (const f of [...MOSF].reverse()) { const x = sx(-f.s / 2), y = sy(-f.s / 2), w = f.s * k; if (w < 30) continue;
+      ctx.strokeStyle = css.line; ctx.globalAlpha = .9; ctx.lineWidth = 1; ctx.strokeRect(x - 2, y - 2, w + 4, w + 4);
+      const ly = Math.max(y + 4, lastY + 15); lastY = ly; ctx.textAlign = "right"; ctx.textBaseline = "top"; ctx.fillStyle = css.muted; ctx.font = `500 10.5px ${css.mono}`;
+      ctx.fillText(`${f.L} · ${LV[f.L].name}`.toUpperCase() + `  ${f.n.toLocaleString()}`, lx, ly); ctx.globalAlpha = .5; ctx.beginPath(); ctx.moveTo(lx + 4, ly + 6); ctx.lineTo(x - 2, y + Math.min(6, w / 2)); ctx.stroke(); }
+    ctx.textAlign = "left";
+    ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; },
+  legend: "Mosaic: every note a tile, set like stones. Emergence (the default) puts Level 5 at the heart and each level in a square frame around the one above it, out to the unlinked notes at the edge; inside a frame, a folder's notes sit together as a patch of color. Scattered sets the same tiles in no order. A tile's size is its link score; maps and hubs wear their level colors. Click the Mosaic tab to switch.",
+};
+
 // ---------- Graph: our take on Obsidian's graph view ----------
 // Notes as dots pulled together by their links and pushed apart by each other, like the core graph, but drawn with
 // the Idea Emergence symbols, so hubs and maps stand out, and with everything the other maps have (time-lapse, Wander, Focus).
@@ -3206,9 +3269,9 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
-  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } }
-  if (lay) { $("#startms").hidden = ptv || sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", msv = view === "mosaic", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
+  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv; }
+  if (lay) { $("#startms").hidden = msv || ptv || sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -4080,7 +4143,15 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     $("#goshelf").after(gp); gp.onclick = () => { closePops(); driftStop(); setView("posters"); };
     // Graph: our take on the core graph view, first in the list
     const gg = doc.createElement("button"); gg.className = "chip"; gg.id = "gograph"; gg.textContent = "Graph"; gg.setAttribute("aria-label", "Like Obsidian's graph view: notes pulled together by their links, drawn with the emergence symbols");
-    $("#gochord").before(gg); gg.onclick = () => { closePops(); driftStop(); setView("graph"); }; }
+    $("#gochord").before(gg); gg.onclick = () => { closePops(); driftStop(); setView("graph"); };
+    // Mosaic: every note a tile, after Treemap
+    const gm = doc.createElement("button"); gm.className = "chip"; gm.id = "gomosaic"; gm.textContent = "Mosaic"; gm.setAttribute("aria-label", "Every note a tile, set like stones: Level 5 at the heart, each level a frame around it");
+    $("#gotreemap").after(gm); gm.onclick = () => { closePops(); driftStop(); setView("mosaic"); }; }
+  // Mosaic's own option: Emergence or Scattered
+  { const ms_ = $("#laygrp").createDiv({ cls: "seg", attr: { id: "mosseg", role: "group", "aria-label": "Mosaic" } }); ms_.hidden = true;
+    for (const [v, t, tip] of [["emergence", "Emergence", "Level 5 at the heart, each level a frame around it"], ["scatter", "Scattered", "The same tiles, in no order"]]) {
+      const b = ms_.createEl("button", { text: t, attr: { type: "button", "data-ms": v, "aria-label": tip, "aria-pressed": String(MOS === v) } });
+      b.onclick = e => { e.stopPropagation(); MOS = v; save("iv-mos", v); ms_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.ms === v))); morph(true, () => fitTarget()); legend(); }; } }
   // Posters' own options, in its map menu: Across, Lanes, Size
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "postctl" } }); pc.hidden = true;
     // Rows (a category per row) or Scatter (a second number bottom to top)
@@ -4101,7 +4172,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
   const VN = () => ({ emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemaking", arc: "Arc",
     chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
-    shelf: "Bookshelf", posters: "Posters", graph: "Graph", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
+    shelf: "Bookshelf", posters: "Posters", graph: "Graph", mosaic: "Mosaic", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "gravity", "stars", "sense"]);
   // the current map's menu: its variants (Emergence, Starfield) and the options that belong to it alone
   const mo = $("#vsegms").createDiv({ cls: "mspop mapopts", attr: { id: "mapopts", role: "dialog", "aria-label": "This map" } }); mo.hidden = true;
@@ -4172,7 +4243,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     st.createSpan({ cls: "tbadge", text: c ? String(c) : "" }); const t = `${c || "Some"} notes changed · rescan`; st.setAttribute("aria-label", t); st.title = t; right.appendChild(st); } }
   const thSlot = right.createDiv({ cls: "thslot" }); thSlot.appendChild($("#themeseg"));
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
-  const ARR_OFF = new Set(["graph", "posters", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
+  const ARR_OFF = new Set(["mosaic", "graph", "posters", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   syncTB = () => {
     const core = CORE.has(view); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
     $("#vmore").classList.toggle("on", false);

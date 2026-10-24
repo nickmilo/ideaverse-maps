@@ -64,6 +64,10 @@ Every folder and note as a rectangle, sized by its score. Subfolders can be outl
 ![Treemap: folders and notes as rectangles](docs/treemap.png)
 <sub>Treemap in Soft Paper.</sub>
 
+### Mosaic
+
+Every note a tile, set like stones. **Emergence** puts your Level 5 notes at the heart and each level in a square frame around the one above it, out to the unlinked notes at the edge; inside a frame, a folder's notes sit together as a patch of color. **Scattered** lays the same tiles like a brick wall, in no order. A tile's size comes from its link score, and maps and hubs wear their level colors.
+
 ### Bookshelf
 
 Every note as a book on a double-wide shelf, shelved by call number (a decimal system that comes from your own linking), title, date or subfolder. An Index panel lists every call number, ready to copy as a Markdown list.
