@@ -3944,7 +3944,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // the note and link counts sit at the map's top left (the plugin's name sits at the top right, clear of the note panel)
   { const st = $("#stats"); st.classList.add("mapstats"); cv.parentElement.appendChild(st); }
   // a tab for the current map when it lives under More (Corona, Bookshelf, Spiral…), and More itself
-  const vcur = $("#vseg").createEl("button", { cls: "vcur", attr: { id: "vcur", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } }); $("#vseg").insertBefore(vcur, $("#vmore"));
+  // it sits outside the scrolling tabs, beside More, so it never scrolls out of sight
+  const vcurSeg = $("#vsegms").createDiv({ cls: "seg vcurseg" }), vcur = vcurSeg.createEl("button", { cls: "vcur", attr: { id: "vcur", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
   $("#vmore").setText("More ▾"); $("#vmore").setAttribute("aria-label", "More maps");
   $("#vsegms").insertBefore($("#vmore"), $("#vseg").nextSibling);   // More sits outside the tabs, so it never scrolls out of sight
   // More: Chord, Corona, Tesla, Treemap and Bookshelf straight away; Geometric, Linear, Planet and Unfinished under Experimental
@@ -4033,7 +4034,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
   const ARR_OFF = new Set(["posters", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   syncTB = () => {
-    const core = CORE.has(view); vcur.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
+    const core = CORE.has(view); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
     $("#vmore").classList.toggle("on", false);
     root.dataset.mo = variants() || hasLay() ? "1" : "";
     AR.w.hidden = ARR_OFF.has(view); AR.val.setText(axisName(mode));
