@@ -1027,25 +1027,34 @@ function arcHeaders(yTop){
 const CHX = new Float32Array(n), CHY = new Float32Array(n), CHC = new Int16Array(n);
 const CH_C = {x: WW/2, y: WH/2}, CH_R = 820;
 const CH_HUE = {"+":"#d99a2b", "Atlas":"#3f7fd0", "Calendar":"#2f9f78", "Efforts":"#d0503f", "x":"#8b8b95"};
-const CHCAT = (() => {
+let chordBy = pref("iv-chordby", "folders") === "time" ? "time" : "folders";   // Chord, Corona and Tesla: arcs by folder, or by year (clockwise from 12 o'clock)
+const CHCAT_F = (() => {
   const by = new Map(); const key = d => d.archive ? "x/z archive" : d.sub || d.ace;
   for (const d of N) by.set(key(d), (by.get(key(d)) || 0) + 1);
   const name = d => { const k_ = key(d); return d.archive || by.get(k_) >= 60 ? k_ : `${d.ace} · other`; };
   const cats = new Map(); N.forEach((d,i) => { const nm = name(d); if (!cats.has(nm)) cats.set(nm, {name:nm, ace: d.archive ? "x" : d.ace, ids:[]}); cats.get(nm).ids.push(i); });
   const order = ["+","Atlas","Calendar","Efforts","x"], list = [...cats.values()].sort((a,b) => order.indexOf(a.ace) - order.indexOf(b.ace) || (a.name.endsWith("· other") - b.name.endsWith("· other")) || b.ids.length - a.ids.length);
-  list.forEach((c, j) => { c.id = j; c.short = c.name === "x/z archive" ? c.name : c.name === "+" ? "+" : c.name === "+ · other" ? "+ · other" : c.name.includes(" · other") ? c.name : c.name.split("/").pop(); for (const i of c.ids) CHC[i] = j; });
+  list.forEach((c, j) => { c.id = j; c.short = c.name === "x/z archive" ? c.name : c.name === "+" ? "+" : c.name === "+ · other" ? "+ · other" : c.name.includes(" · other") ? c.name : c.name.split("/").pop(); });
   return list; })();
+const CHCAT_T = (() => {   // one arc a year, oldest first; undated notes at the end
+  const ys = new Map(); N.forEach((d, i) => { const y = isNaN(TV[i]) ? "No date" : String(new Date(TV[i]).getUTCFullYear()); if (!ys.has(y)) ys.set(y, []); ys.get(y).push(i); });
+  const keys = [...ys.keys()].sort((a, b) => (a === "No date") - (b === "No date") || a.localeCompare(b)), nums = keys.filter(k => k !== "No date").map(Number), y0 = Math.min(...nums), y1 = Math.max(...nums);
+  return keys.map((k, j) => { const f = k === "No date" ? -1 : (Number(k) - y0)/Math.max(1, y1 - y0);
+    return {id: j, name: k, short: k, ace: k === "No date" ? "x" : "t", hue: f < 0 ? "#8b8b95" : `hsl(${Math.round(205 - 175*f)}, 58%, ${Math.round(50 + 6*f)}%)`, ids: ys.get(k)}; }); })();
+let ribKey = null, CH_RIB = [];
+let CHCAT = chordBy === "time" ? CHCAT_T : CHCAT_F;
+function chSetCats(){ CHCAT = chordBy === "time" ? CHCAT_T : CHCAT_F; for (const c of CHCAT) for (const i of c.ids) CHC[i] = c.id; ribKey = null; }
+chSetCats();
 // angles: share by count^0.6 so the big folders don't swallow the ring; small gaps between kinds, bigger between ACE folders.
 // Only the kinds with notes showing get a share: switch folders off and the rest close up to fill the whole ring.
 function chAngles(){
   const m = CHCAT.map(c => { let v = 0; for (const i of c.ids) if (vis[i]) v++; return v; }), on = CHCAT.filter((c, j) => m[j] > 0);
   const gapIn = .012, gapAce = .05; let tot = 0; on.forEach(c => tot += Math.pow(m[c.id], .6));
   let gaps = 0; on.forEach((c, j) => gaps += j && on[j-1].ace !== c.ace ? gapAce : j ? gapIn : 0); gaps += gapAce;
-  let a = Math.PI + gapAce/2; const room = 2*Math.PI - gaps;
+  let a = (chordBy === "time" ? -Math.PI/2 : Math.PI) + gapAce/2; const room = 2*Math.PI - gaps;
   for (const c of CHCAT) { if (m[c.id] === 0) { c.a0 = c.a1 = a; continue; } const j = on.indexOf(c); if (j) a += on[j-1].ace !== c.ace ? gapAce : gapIn; c.a0 = a; a += room*Math.pow(m[c.id], .6)/tot; c.a1 = a; }
 }
 // bundled ribbons between kinds (body, up and related links): drawn faintly as the default picture
-let ribKey = null, CH_RIB = [];
 function chRibbons(){   // counted among the notes shown (and, on the timeline, born by then), so the ribbons grow with the vault
   let nv = 0; for (let i=0;i<n;i++) if (vis[i]) nv++;
   const key_ = (senseT == null ? "all" : senseT) + ":" + nv; if (key_ === ribKey) return CH_RIB; ribKey = key_;
@@ -1059,7 +1068,7 @@ function layoutChord(){
       const r = CH_R*(lv >= 3 ? 1.0 + .012*(lv - 3) : lv === 2 ? .955 + .03*h : .91 + .035*h);   // higher levels sit on the outer edge of the band
       CHX[i] = CH_C.x + r*Math.cos(a); CHY[i] = CH_C.y + r*Math.sin(a); }); }
 }
-const chHue = c => CH_HUE[c.ace] || "#888";
+const chHue = c => c.hue || CH_HUE[c.ace] || "#888";
 
 // ---------- Chord Sphere (experimental): the chord ring wrapped onto a globe you orbit from outside ----------
 // Each kind is a wedge from pole to pole (Level 5 toward the North Pole, Level 1 toward the South); the bundled ribbons
@@ -2767,9 +2776,9 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), lay = sv || shv || tmv || lcv || lrv || pgv || csv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); $("#laygrp").previousElementSibling.hidden = !lay;
-  if (lay) { $("#startms").hidden = sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || pgv || csv || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); }
+  if (lay) { $("#startms").hidden = sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || pgv || csv || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); }
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -2908,6 +2917,9 @@ root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if 
 syncEmd();
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
 $("#gochord").onclick = () => goChord("");
+function syncCB(){ root.querySelectorAll("#chordby button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cb === chordBy))); }
+root.querySelectorAll("#chordby button").forEach(b => b.onclick = () => { if (b.dataset.cb === chordBy) return; chordBy = b.dataset.cb; save("iv-chordby", chordBy); syncCB(); chSetCats(); chPin = -1; chArc = -1; if (view === "chord") { morph(true, () => fitTarget()); legend(); } });
+syncCB();
 function syncLR(){ const [a, b] = datedYears(), [y0, y1] = yearRange(), opts = sel_ => Array.from({length: b - a + 1}, (_, j) => a + j).map(y => `<option value="${y}"${y === sel_ ? " selected" : ""}>${y}</option>`).join("");
   html($("#lr0")).v = opts(y0); html($("#lr1")).v = opts(y1); }
 for (const id of ["#lr0", "#lr1"]) $(id).onchange = () => { let y0 = +$("#lr0").value, y1 = +$("#lr1").value; if (id === "#lr0" && y1 < y0) y1 = y0; if (id === "#lr1" && y0 > y1) y0 = y1;
@@ -3239,6 +3251,7 @@ function legend(){
   if (expOn() && EXP[view].about) { const det = $("#legend").createEl("details", { cls: "lgabout" }); det.createEl("summary", { text: "How this map works" });   // the long explanation, folded away
     for (const para of EXP[view].about) det.createEl("p", { text: para }); det.addEventListener("click", e => e.stopPropagation()); }
   if (csphOn()) $("#legend").createDiv({ text: CSPH === "out" ? "Corona: every kind is a wedge of the globe (Level 5 toward the North Pole); the links between kinds arc out over the surface. Drag to turn it, scroll to zoom." : "Tesla: every kind is a wedge of a glass globe (Level 5 toward the North Pole); the links between kinds cross through the inside. Drag to turn it, scroll to zoom.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
+  if (view === "chord") $("#legend").createDiv({ text: chordBy === "time" ? "Arcs by year, clockwise from 12 o'clock (Layout → Folders for one arc per folder)." : "Arcs by folder (Layout → Time for one arc per year).", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
   if (domeOn()) $("#legend").createDiv({ text: view === "emergence" ? "Planetarium: you stand at the center. Level 5 is the North Pole, Level 1 the South Pole; " + (mode === "ace" ? "your folders" : "time") + " runs around you. Drag to look around, scroll to zoom, ⤢ to face forward." : view === "gravity" ? "Dome: you stand at the center. Home and the hubs are overhead; the levels drop toward the horizon. Drag to look around, scroll to zoom, ⤢ to face forward." : "Dome: you stand at the center. Time runs around you; folders run from the North Pole (+) to the South Pole (x), with the equator halfway through your notes. Drag to look around, scroll to zoom, ⤢ to face forward.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
 }
 $("#legend").addEventListener("click", () => setLegend(false));   // a click anywhere on the legend tucks it away
