@@ -1515,7 +1515,7 @@ EXP.shelf = {
 // ---------- Tree: Home is the trunk, the hubs and maps branch from it, notes are leaves ----------
 // Every note hangs from the path it reaches Home by in the fewest links. Leaves are colored by age: new growth green,
 // older notes turning to autumn. Notes Home never reaches are fallen leaves on the ground.
-const TR = {trunk: 380, step: 110, span: [-Math.PI*.93, -Math.PI*.07]};
+const TR = {trunk: 130, step: 110, span: [-Math.PI*.93, -Math.PI*.07]};
 let TREE = {root: -1, par: null, kids: null, w: null, depth: null};
 function layoutTree(){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
@@ -4410,9 +4410,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Display: links, theme, how scoring works
   const DI = popBtn("disp", "Display", "display");
   const dsec = (title, el) => { const w = DI.p.createDiv({ cls: "fsec" }); w.createDiv({ cls: "pt", text: title }); w.appendChild(el); };
-  dsec("Links", $("#alllinks")); const thSec = DI.p.createDiv({ cls: "fsec thsec" }); thSec.createDiv({ cls: "pt", text: "Theme" }); dsec("Scoring", $("#scorebtn")); $("#scorebtn").setText("How notes are scored");
+  // Display: a short list, no headings: a switch for every link, then how scoring works
+  DI.p.classList.add("dlist"); const hold = DI.p.createDiv({ cls: "dhold" }); hold.hidden = true; hold.appendChild($("#alllinks"));
+  const alSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Draw every link on the map, faintly" } }); const alCb = alSw.createEl("input", { type: "checkbox" }); alSw.createEl("i", { cls: "sw" }); alSw.createSpan({ text: "Show all links" });
+  alCb.onchange = () => { if (alCb.checked !== showAll) $("#alllinks").click(); };
+  const thSec = DI.p.createDiv({ cls: "fsec thsec" }); thSec.createDiv({ cls: "pt", text: "Theme" });
+  DI.p.appendChild($("#scorebtn")); $("#scorebtn").className = "drow dlink"; $("#scorebtn").setText("How notes are scored ›");
   $("#scorebtn").addEventListener("click", () => closePops());
-  opener(DI);
+  opener(DI, () => { alCb.checked = showAll; });
   // Find, Follow note (an icon), Saved, and the ︿ that tucks the bar away
   right.appendChild(root.querySelector("header .search"));
   // Focus on active note (the note and its neighbors), then Sync active note with the Obsidian editor
