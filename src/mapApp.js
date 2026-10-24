@@ -2062,7 +2062,7 @@ function layoutMosaic2(){
     let k_ = 0, acc = 0; for (let r = 0; r < 4; r++) { const goal = sa[r] / tot * a, part = []; while (k_ < items.length && (acc < goal || r === 3)) { part.push(items[k_]); acc += items[k_].v; k_++; } acc -= goal;
       const pv = part.reduce((t, it) => t + it.v, 0) || 1, [rx, ry, rw, rh] = strips[r]; for (const it of part) it.v *= rw * rh / pv; fill(part, rx, ry, rw, rh); }
     inner = outer; }
-  expBox = { x0: -inner / 2 - 20 - inner * .32, y0: -inner / 2 - 20, x1: inner / 2 + 20, y1: inner / 2 + 20 }; }
+  expBox = { x0: -inner / 2 - 20, y0: -inner / 2 - 20, x1: inner / 2 + 20, y1: inner / 2 + 20 }; }
 EXP.mosaic = {
   layout: layoutMosaic2, pick: (x, y) => rectPick(x, y), ownLabels: true,
   notes(lit, dim){ const gr = Math.max(.5, Math.min(2, k * 1.2));   // the grout between tiles
@@ -2079,15 +2079,10 @@ EXP.mosaic = {
     ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; overLinks(lit); },
   guides(){ if (MOS !== "emergence") return;   // each level's frame, named at its top left corner
     ctx.textBaseline = "bottom"; ctx.textAlign = "left";
-    // names to the left of the mosaic, each beside its frame's top edge, nudged down when frames are thin
-    let lastY = -Infinity; const lx = sx(-(MOSF.length ? MOSF[MOSF.length - 1].s : 0) / 2) - 12;
-    for (const f of [...MOSF].reverse()) { const x = sx(-f.s / 2), y = sy(-f.s / 2), w = f.s * k; if (w < 30) continue;
-      ctx.strokeStyle = css.line; ctx.globalAlpha = .9; ctx.lineWidth = 1; ctx.strokeRect(x - 2, y - 2, w + 4, w + 4);
-      const ly = Math.max(y + 4, lastY + 15); lastY = ly; ctx.textAlign = "right"; ctx.textBaseline = "top"; ctx.fillStyle = css.muted; ctx.font = `500 10.5px ${css.mono}`;
-      ctx.fillText(`${f.L} · ${LV[f.L].name}`.toUpperCase() + `  ${f.n.toLocaleString()}`, lx, ly); ctx.globalAlpha = .5; ctx.beginPath(); ctx.moveTo(lx + 4, ly + 6); ctx.lineTo(x - 2, y + Math.min(6, w / 2)); ctx.stroke(); }
-    ctx.textAlign = "left";
+    // each level's frame, a faint outline; the level names and counts live in the legend
+    for (const f of MOSF) { const x = sx(-f.s / 2), y = sy(-f.s / 2), w = f.s * k; if (w < 30) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .9; ctx.lineWidth = 1; ctx.strokeRect(x - 2, y - 2, w + 4, w + 4); }
     ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; },
-  legend: "Mosaic: every note a tile, set like stones. Emergence (the default) puts Level 5 at the heart and each level in a square frame around the one above it, out to the unlinked notes at the edge; inside a frame, a folder's notes sit together as a patch of color. Scattered sets the same tiles in no order. A tile's size is its link score; maps and hubs wear their level colors. Click the Mosaic tab to switch.",
+  legend: "Mosaic: every note a tile, set like stones. Emergence (the default) puts Level 5 at the heart and each level in a square frame around the one above it (the levels and counts above, from the middle out), out to the unlinked notes at the edge; inside a frame, a folder's notes sit together as a patch of color. Scattered sets the same tiles in no order. A tile's size is its link score; maps and hubs wear their level colors. Click the Mosaic tab to switch.",
 };
 
 // ---------- Graph: our take on Obsidian's graph view ----------
