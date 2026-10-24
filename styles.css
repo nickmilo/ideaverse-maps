@@ -753,3 +753,9 @@ body.is-phone .ivm .wm-name{display:none}
 /* Menus: a little see-through, so the map shows faintly underneath (blurred just enough to keep the text easy to read) */
 .ivm .mspop:not(.seethru),.ivm #mapopts{background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 .ivm .mspop .mspop:not(.seethru){background:color-mix(in srgb,var(--bg) 92%,transparent)}
+/* More: a plain list, no pills, so it's shorter (hover still lights a row) */
+.ivm #vmorepop{gap:0}
+.ivm.ivm #vmorepop .chip{border:none;background:none;box-shadow:none;border-radius:6px;padding:5px 10px;min-height:0;height:auto;line-height:1.35}
+.ivm.ivm #vmorepop .chip:hover{background:color-mix(in srgb,var(--ink) 9%,transparent)}
+.ivm.ivm #vmorepop .chip[aria-pressed="true"],.ivm.ivm #vmorepop .chip.on{background:color-mix(in srgb,var(--ink) 12%,transparent)}
+.ivm #vmorepop .mexp summary{padding:6px 10px 4px}
