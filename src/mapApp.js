@@ -1942,7 +1942,7 @@ function showArcTip(a){   // the arc tooltip, set beside the ring on the arc's o
       html(tip).v = `<b>${esc(c.short)}</b><span>${c.ids.filter(j => VV(j)).length.toLocaleString()} notes · ${tot.toLocaleString()} links to other kinds</span>` + rows.slice(0, 12).map(([nm, ct]) => `<span class="trow"><i>${esc(nm)}</i><b>${ct.toLocaleString()}</b></span>`).join("") + (rows.length > 12 ? `<span>+ ${rows.length - 12} more kinds</span>` : "");
       tip.hidden = false; tip.classList.add("arc");   // set it beside the ring on the arc's own side, never over the ribbons
       const r = cv.getBoundingClientRect(), cx = r.left + sx(CH_C.x), cy = r.top + sy(CH_C.y), R0 = CH_R*k*1.45, am = (c.a0 + c.a1)/2, tw = tip.offsetWidth, th = tip.offsetHeight;
-      let barB = 0; for (const id of ["timebar", "playbar", "driftbar"]) { const el = $("#" + id); if (el && !el.hidden && el.offsetParent) barB = Math.max(barB, el.getBoundingClientRect().bottom); }
+      let barB = 0; for (const id of ["animdock"]) { const el = $("#" + id); if (el && !el.hidden && el.offsetParent) barB = Math.max(barB, el.getBoundingClientRect().bottom); }
       const yGuess = Math.max(r.top + 8, Math.min(cy + Math.sin(am)*CH_R*k - th/2, win.innerHeight - th - 8)), lc = isPhone() || yGuess > barB + 6 ? 8 : 410, roomR = win.innerWidth - 8 - (cx + R0), roomL = (cx - R0) - lc, right = Math.cos(am) >= 0 ? true : roomL < tw && roomR > roomL;   // the arc's own side; the right only if the left has no room   // the side with room, clear of the bars at the left
       let x = right ? cx + R0 : cx - R0 - tw; const y = Math.max(r.top + 8, Math.min(cy + Math.sin(am)*CH_R*k - th/2, win.innerHeight - th - 8));
       x = Math.max(8, Math.min(win.innerWidth - tw - 8, x));   // no room beside the ring: hug the window edge
@@ -3198,16 +3198,26 @@ $("#pmaps").checked = playMaps; $("#pmaps").onchange = () => { playMaps = $("#pm
 onKey(e => { if (e.key === "Escape" && playing) setPlaying(false); });
 root.querySelectorAll("#playseg button").forEach(b => b.addEventListener("click", () => { if (tourRun) { tourRun = null; syncTour(); } }));   // picking Random/Thread leaves the tour
 syncPlay();
-// the timeline tucks down to its ▶ and date
-{ const tb = $("#timebar"), b = tb.createEl("button", { cls: "tcol" });
-  const set = c => { tb.classList.toggle("collapsed", c); b.setText(c ? "›" : "‹"); b.setAttribute("aria-label", c ? "Show the timeline" : "Tuck the timeline away"); b.title = c ? "Show the timeline" : "Tuck the timeline away"; save("iv-tcol", c); win.setTimeout(placePlaybar, 0); };
-  b.onclick = () => set(!tb.classList.contains("collapsed"));
-  set(pref("iv-tcol", false) === true); }
-// Autoplay tucks down to a small pill (its ▶ stays, so a running autoplay can still be stopped)
-{ const pb = $("#playbar"), b = pb.createEl("button", { cls: "pcol" });
-  const set = c => { pb.classList.toggle("collapsed", c); b.setText(c ? "›" : "‹"); b.setAttribute("aria-label", c ? "Show autoplay" : "Tuck autoplay away"); b.title = c ? "Show autoplay" : "Tuck autoplay away"; save("iv-pcol", c); win.setTimeout(placePlaybar, 0); };
-  b.onclick = () => set(!pb.classList.contains("collapsed"));
-  set(pref("iv-pcol", isPhone() || doc.body.classList.contains("is-mobile")) === true); }   // tucked away by default on phones and tablets
+// Animations: Timelapse (the years), Wander Mode (autoplay) and Orbit (drift) share one dock at the bottom left.
+// One shows at a time; a dot marks any that is running; the dock tucks down to the shown one's ▶.
+{ const dock = cv.parentElement.createDiv({ cls: "animdock", attr: { id: "animdock", role: "group", "aria-label": "Animations" } });
+  const head = dock.createDiv({ cls: "anihead" }); head.createSpan({ cls: "pl", text: "Animations" });
+  const tabs = head.createDiv({ cls: "seg anitabs", attr: { "aria-label": "Animation" } }), body = dock.createDiv({ cls: "anibody" });
+  const SECS = [["time", "Timelapse", $("#timebar"), $("#tlplay")], ["wander", "Wander Mode", $("#playbar"), $("#pplay")], ["orbit", "Orbit", $("#driftbar"), $("#dplay")]];
+  for (const s_ of SECS) { s_.push(tabs.createEl("button", { text: s_[1], attr: { "data-a": s_[0], "aria-pressed": "false" } })); body.appendChild(s_[2]); s_[2].classList.add("anisec"); }
+  const col = head.createEl("button", { cls: "acol" });
+  let cur = pref("iv-anim", "time");
+  const avail = s_ => !s_[2].hidden, running = s_ => /❚❚|■/.test(s_[3].textContent);
+  const sync = () => { if ($("#playbar").classList.contains("touring")) cur = "wander";
+    let a = SECS.find(s_ => s_[0] === cur); if (!a || !avail(a)) a = SECS.find(avail) || SECS[0];
+    for (const s_ of SECS) { const t = s_[4], h = !avail(s_), on = s_ === a, r = running(s_);
+      if (t.hidden !== h) t.hidden = h; if (t.getAttribute("aria-pressed") !== String(on)) t.setAttribute("aria-pressed", String(on)); if (t.classList.contains("run") !== r) t.classList.toggle("run", r); }
+    if (dock.dataset.a !== a[0]) dock.dataset.a = a[0]; const r = SECS.some(running); if (dock.classList.contains("running") !== r) dock.classList.toggle("running", r); };
+  for (const s_ of SECS) s_[4].onclick = () => { cur = s_[0]; save("iv-anim", cur); sync(); win.setTimeout(placePlaybar, 0); };
+  const mo = new MutationObserver(sync); for (const s_ of SECS) { mo.observe(s_[3], { childList: true, characterData: true, subtree: true }); mo.observe(s_[2], { attributes: true, attributeFilter: ["hidden", "class"] }); }
+  const setC = c => { dock.classList.toggle("collapsed", c); col.setText(c ? "›" : "‹"); const t = c ? "Show animations" : "Tuck animations away"; col.setAttribute("aria-label", t); col.title = t; save("iv-acol", c); };
+  col.onclick = () => setC(!dock.classList.contains("collapsed"));
+  setC(pref("iv-acol", doc.body.classList.contains("is-mobile")) === true); sync(); }   // tucked away by default on phones and tablets
 
 // ---------- header, legend, theme ----------
 const cnt = {};
