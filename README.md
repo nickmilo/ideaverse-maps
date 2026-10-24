@@ -96,6 +96,10 @@ In **Scatter**, when the two numbers are the same kind of thing (two ratings, tw
 ![Mosaic: posters as tiles, a block per genre](docs/mosaic.png)
 <sub>Mosaic: every film a tile, a block per genre, each tile sized by your rating.</sub>
 
+### People
+
+The people your notes name, in properties like director, actors, author or guests, become stars, sized by how many notes name them. Lines join people who share notes (a director and the actors they keep casting), brighter the more they share. Each note orbits its main person, on the side facing the others it names; zoom in to see pictures. A person needs no note of their own; if they have one, it sits at their star. Click the People tab to choose which properties count and how many people to show.
+
 ### Experimental
 
 Sketches still taking shape: **Geometric** (your top 25 notes placed by triangles: Square, Hexagon, Mandala, Octahedron, Shells), **Linear** (Linear Calendar, Spiral, Lifeline), **Planet** (the PKM Planet map: Flat, Tabletop, Globe) and **Unfinished** (Tree, Skyline).
