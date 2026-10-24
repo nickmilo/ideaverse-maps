@@ -779,3 +779,5 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .dlist .drow input:checked + .sw::after{left:13px;background:var(--bg)}
 .ivm .dlist .drow input:focus-visible + .sw{outline:2px solid var(--accent);outline-offset:2px}
 .ivm .dlist .thsec[hidden]{display:none}
+/* Tree's own key in the legend: one row each */
+.ivm .legend .lgtree{flex-direction:column;align-items:stretch;gap:2px;margin-top:4px}
