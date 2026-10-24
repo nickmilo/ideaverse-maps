@@ -11,7 +11,7 @@ const WORD = /[\p{L}\p{N}_]+/gu;
 const KEYS = /^([A-Za-z_][\w-]*):/gm;
 
 /** Everything the scan needs from one note's text, so a note's text is read only when it changes (see adapter.cache). */
-export const EXTRACT_VERSION = 2;
+export const EXTRACT_VERSION = 4;
 function extractNote(t){
   const [fm, body0] = splitFm(t), body = body0.replace(FENCE, ""), lines = nonEmptyLines(body);
   const keys = []; KEYS.lastIndex = 0; let km; while ((km = KEYS.exec(fm))) if (!keys.includes(km[1])) keys.push(km[1]);
@@ -22,11 +22,12 @@ function extractNote(t){
   { const m = /^\s*(-?\d{1,4})\b/.exec(fmScalar(fm, "lifespan")); if (m) props.born = parseInt(m[1], 10); }
   props.w = words(body); props.kb = kb(t); props.sf = senseFeatures(fm, body0, lines);
   const num = {}; for (const key of keys) { const v = fmScalar(fm, key).replace(/%+$/, ""); if (v !== "" && /^-?[\d.,]+$/.test(v)) { const f = Number(v.replace(/,/g, "")); if (isFinite(f)) num[key] = Math.round(f*100)/100; } }   // every number-valued property, for the By → More… axes
-  return { num, B: links(body), U: links(fmField(fm, "up")), R: links(fmField(fm, "related")), P, C: links(fmField(fm, "collections")),
-    rank: fmScalar(fm, "rank"), created: fmScalar(fm, "created").slice(0, 10), lines: lines.length, linkLines: lines.filter(l => l.includes("[[")).length, props }; }
+  const dates = dateFields(fm);
+  return { num, dates, B: links(body), U: links(fmField(fm, "up")), R: links(fmField(fm, "related")), P, C: links(fmField(fm, "collections")),
+    rank: fmScalar(fm, "rank"), lines: lines.length, linkLines: lines.filter(l => l.includes("[[")).length, props }; }
 function extractArchive(t, isMd){
   const [fm, b0] = isMd ? splitFm(t) : ["", t], b = b0.replace(FENCE, ""), ls = nonEmptyLines(b);
-  return { B: links(b), created: fmScalar(fm, "created").slice(0, 10), w: words(b), kb: kb(t), sf: senseFeatures(fm, b0, ls), density: ls.length ? r3(ls.filter(l => l.includes("[[")).length / ls.length) : 0 }; }
+  return { B: links(b), dates: dateFields(fm), w: words(b), kb: kb(t), sf: senseFeatures(fm, b0, ls), density: ls.length ? r3(ls.filter(l => l.includes("[[")).length / ls.length) : 0 }; }
 
 export const DEFAULTS = {
   exclude: [],            // folders left off the map entirely
@@ -34,7 +35,8 @@ export const DEFAULTS = {
   packs: "",              // a folder on the map but off by default, never scored against the rest (Nick's learning packs)
   privateFolders: [],     // only big maps (Level 3+) from these folders appear
   homeNotes: [],          // always Level 5
-  axisProps: ["year"],    // number properties offered under By → More… (as well as the built-in axes)
+  axisProps: ["year"],
+  dateProps: ["created"],  // the property that says when a note was made; the first one a note has wins (any capitalization)    // number properties offered under By → More… (as well as the built-in axes)
   mapFolders: [],         // every note in these folders counts as a map
   mapCollections: ["Maps", "Views"],   // notes listed in these collections count as maps
   fileDates: true,        // a note with no created date and no date in its name is dated by when its file was made
@@ -57,6 +59,21 @@ function fmField(fm, key) {
   const m = new RegExp("^" + esc(key) + ":([\\s\\S]*?)(?=^[A-Za-z_][\\w-]*:|(?![\\s\\S]))", "m").exec(fm);
   return m ? m[1] : "";
 }
+/** Every property whose value looks like it holds a date (a four-digit year), keyed in lower case, so the date property can be chosen in Settings without reading notes again. */
+function dateFields(fm) { const d = {}, re = /^([^\s:#-][^:\n]*?)\s*:[ \t]*(\S.*)$/gm; let m; while ((m = re.exec(fm))) { const k = m[1].trim().replace(/^["']|["']$/g, "").toLowerCase(), v = m[2].trim().replace(/^["']+|["']+$/g, ""); if (!(k in d) && v.length < 64 && /\d{4}/.test(v)) d[k] = v; } return d; }
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+/** A date as YYYY-MM-DD from the shapes people write: 2024-05-01, 2024/5/1, [[2024-05-01]], 2024-05-01T09:30, 20240501…, May 1, 2024, 1 May 2024, 5/1/2024 (day first when the first number is over 12). */
+export function parseDay(v) {
+  if (v == null) return ""; let t = String(v).trim().replace(/^\[\[|\]\]$/g, "").replace(/\|.*$/, "").replace(/^["']+|["']+$/g, "").trim();
+  const ok = (y, m, d) => { y = +y; m = +m; d = +d; if (!(y >= 1000 && y <= 2999 && m >= 1 && m <= 12 && d >= 1 && d <= 31)) return ""; return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`; };
+  let m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(t); if (m) return ok(m[1], m[2], m[3]);
+  m = /^(\d{4})(\d{2})(\d{2})(?:\d{2,6})?$/.exec(t); if (m) return ok(m[1], m[2], m[3]);
+  m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})/.exec(t); if (m) return +m[1] > 12 ? ok(m[3], m[2], m[1]) : ok(m[3], m[1], m[2]);
+  m = /^([A-Za-z]{3,})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})/.exec(t); if (m) { const i = MONTHS.indexOf(m[1].slice(0, 3).toLowerCase()); if (i >= 0) return ok(m[3], i + 1, m[2]); }
+  m = /^(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,})\.?,?\s+(\d{4})/.exec(t); if (m) { const i = MONTHS.indexOf(m[2].slice(0, 3).toLowerCase()); if (i >= 0) return ok(m[3], i + 1, m[1]); }
+  return ""; }
+/** The note's created date: the first of the date properties (Settings) it has, any capitalization. */
+const createdOf = (e, C) => { const d = e.dates || {}; for (const k of C.dateProps && C.dateProps.length ? C.dateProps : ["created"]) { const v = parseDay(d[String(k).toLowerCase()]); if (v) return v; } return e.created ? parseDay(e.created) : ""; };
 function fmScalar(fm, key) {
   const m = new RegExp("^" + esc(key) + ":[ \\t]*(.*)$", "m").exec(fm);
   return m ? m[1].trim().replace(/^["']+|["']+$/g, "") : "";
@@ -141,8 +158,8 @@ export async function scanVault(adapter, settings, onProgress) {
     const props = Object.assign({}, e.props); { const nm = {}; for (const k of C.axisProps || []) if (e.num && e.num[k] != null) nm[k] = e.num[k]; if (Object.keys(nm).length) props.n = nm; }
     const lines = { length: e.lines }, linkLines = e.linkLines;
     let rank = e.rank; rank = rank === "" || !isFinite(Number(rank)) ? null : Number(rank);
-    const created = e.created;
-    let date = /^\d{4}-\d{2}-\d{2}$/.test(created) ? created : "";
+    const created = createdOf(e, C);
+    let date = created;
     if (!date) { const m = /(\d{4}-\d{2}-\d{2})/.exec(title); date = m ? m[1] : ""; }
     if (!date && C.fileDates && ctime.get(p)) date = new Date(ctime.get(p)).toISOString().slice(0, 10);   // no date in the note: when the file was made
     info.set(p, { title, created, date, rank, collections: colls, lines: lines.length, props,
@@ -219,7 +236,7 @@ export async function scanVault(adapter, settings, onProgress) {
     const aOut = S(), aIn = S(), aInfo = new Map();
     for (const p of arch) { const e = ex.get(p), name = stem(p);
       for (const l of e.B) { const q = aResolve(l); if (q && q !== p) { add(aOut, p, q); if (aSet.has(q)) add(aIn, q, p); } }
-      aInfo.set(p, { title: name, date: aDate(name, e.created), w: e.w, kb: e.kb, sf: e.sf, density: e.density, named_map: /\bMOC\b|\bIndex\b/.test(name) }); }
+      aInfo.set(p, { title: name, date: aDate(name, createdOf(e, C)), w: e.w, kb: e.kb, sf: e.sf, density: e.density, named_map: /\bMOC\b|\bIndex\b/.test(name) }); }
     const aIdx = new Map(); arch.forEach((p, j) => aIdx.set(p, nodes.length + j));
     const aIsMap = p => { const i = aInfo.get(p); return i.named_map || (get(aOut, p).size >= C.l3MinOut && i.density >= C.l3Density); };
     for (const p of arch) { const i = aInfo.get(p), j = aIdx.get(p), bi = Math.log1p(get(aIn, p).size), bo = Math.log1p(get(aOut, p).size);
@@ -234,7 +251,7 @@ export async function scanVault(adapter, settings, onProgress) {
   }
 
   return { generated: new Date().toISOString().slice(0, 19), vault: adapter.vaultName || "Vault",
-    settings: { axis_props: C.axisProps || [], exclude: C.exclude, moc_only: C.privateFolders, home_notes: C.homeNotes, l5_top: L5, l4_map_links: C.l4MapLinks, l3_min_out: C.l3MinOut,
+    settings: { axis_props: C.axisProps || [], date_props: C.dateProps || ["created"], exclude: C.exclude, moc_only: C.privateFolders, home_notes: C.homeNotes, l5_top: L5, l4_map_links: C.l4MapLinks, l3_min_out: C.l3MinOut,
       l3_density: C.l3Density, promote_l4: C.promoteL4, promote_l3: C.promoteL3, nav_jaccard: C.navJaccard, weights: W, map_folders: C.mapFolders,
       map_collections: C.mapCollections, packs: PACKS, archive: ARCHIVE },
     nodes, edges, unresolved, dropped: dropped.length };
