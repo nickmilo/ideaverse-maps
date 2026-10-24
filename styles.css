@@ -678,3 +678,4 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm #animdock .aniwrap[data-a="time"]{position:relative}
 .ivm.ivm.ivm.ivm.ivm #animdock #tldate{position:absolute;top:0;right:4px;min-width:0;font:600 10.5px var(--mono);letter-spacing:.04em;line-height:12px}
 .ivm.ivm.ivm.ivm.ivm #animdock #timebar input{min-width:0}
+.ivm-pick-note{font-size:var(--font-ui-small);color:var(--text-muted);padding:6px 14px 8px;border-bottom:1px solid var(--background-modifier-border)}

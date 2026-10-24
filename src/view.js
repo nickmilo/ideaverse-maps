@@ -9,6 +9,9 @@ class FolderPicker extends FuzzySuggestModal {
     this.setPlaceholder("Where should saved views and tours live? Pick a folder or type a new one");
     this.setInstructions([{ command: "↵", purpose: "choose" }, { command: "esc", purpose: "cancel" }]);
   }
+  onOpen() { super.onOpen();
+    const note = createDiv({ cls: "ivm-pick-note", text: "You can change this later in Settings → Maps of the Ideaverse → Saved views and tours." });
+    const box = this.inputEl.closest(".prompt-input-container") || this.inputEl.parentElement; box.after(note); }
   getItems() { return this.app.vault.getAllLoadedFiles().filter(f => f instanceof TFolder); }
   getItemText(f) { return f.create ? `+ New folder: ${f.create}` : f.isRoot() ? "/ (vault root)" : f.path; }
   getSuggestions(query) {
