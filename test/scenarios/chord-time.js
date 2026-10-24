@@ -7,8 +7,8 @@ module.exports = async ({ page, sleep, shot }) => {
   await q('#vmore').click(); await sleep(300); await q('#mexp > summary').click(); await sleep(200);
   await q('#gochord').click(); await sleep(2500);
   console.log('switch visible:', await q('#chordby').isVisible());
-  await q('#chordby button[data-cb="time"]').click(); await sleep(2500); await shot('chord-time');
+  await page.evaluate(s => __ivReveal(s), '#chordby'); await sleep(250); await q('#chordby button[data-cb="time"]').click(); await sleep(2500); await shot('chord-time');
   await q('#vmore').click(); await sleep(300); await q('#gocso').click(); await sleep(2500); await shot('corona-time');
-  await q('#chordby button[data-cb="folders"]').click(); await sleep(2000); await shot('corona-folders');
+  await page.evaluate(s => __ivReveal(s), '#chordby'); await sleep(250); await q('#chordby button[data-cb="folders"]').click(); await sleep(2000); await shot('corona-folders');
   console.log('errors:', errs.length ? errs.slice(0, 3).join(' | ') : 'none');
 };

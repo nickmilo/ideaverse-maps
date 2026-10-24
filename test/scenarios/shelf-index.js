@@ -6,7 +6,7 @@ module.exports = async ({ page, sleep, shot }) => {
   console.log('Index on Emergence:', await q('#callbtn').isVisible());
   await q('#vmore').click(); await sleep(300); await q('#mexp > summary').click(); await sleep(200);
   await q('#goshelf').click(); await sleep(2500);
-  await q('#callbtn').click(); await sleep(600); console.log('summary:', await q('#callsum').textContent()); await q('#callwhy > summary').click(); await sleep(300); await shot('index');
+  await page.evaluate(s => __ivReveal(s), '#callbtn'); await sleep(250); await q('#callbtn').click(); await sleep(600); console.log('summary:', await q('#callsum').textContent()); await q('#callwhy > summary').click(); await sleep(300); await shot('index');
   console.log('rows:', await page.locator('.ivm #calllist [data-cm]').count(), '| hubs:', await page.locator('.ivm #calllist h6').count());
   await page.locator('.ivm #calllist [data-cm]').nth(3).click(); await sleep(1200); await shot('index-click');
   const md = await page.evaluate(() => app.workspace.getLeavesOfType('ideaverse-maps')[0].view.debug.__ivCallMd()); console.log('md:\n' + md.split('\n').slice(0, 8).join('\n'));

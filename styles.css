@@ -562,3 +562,91 @@ body.is-phone .ivm.kb header .results{max-height:min(320px, 45vh);overflow-y:aut
 .ivm #animdock :is(button, label){cursor:pointer}
 .ivm #playbar .pmaps.locked{opacity:.75;cursor:default}
 .ivm #playbar .pmaps[hidden]{display:none}
+/* ---------- the toolbar: one row (header.tb2) ---------- */
+.ivm header.tb2{flex-wrap:wrap;gap:8px 10px;padding:8px 14px;align-items:center}
+.ivm header.tb2 > .brand,.ivm header.tb2 > .views,.ivm header.tb2 > .range,.ivm header.tb2 > .spacer,.ivm header.tb2 > #yearschip{display:none}
+.ivm header.tb2 .tbl{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
+.ivm header.tb2 .tbr{display:flex;align-items:center;gap:4px;flex:0 1 auto;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+.ivm header.tb2 .duo{flex:none;margin:0 2px 0 2px}
+.ivm header.tb2 #vsegms{order:0;flex:0 1 auto;min-width:0}
+.ivm header.tb2 #vseg{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.ivm header.tb2 #vseg::-webkit-scrollbar{display:none}
+.ivm header.tb2 #vseg button{white-space:nowrap}
+.ivm header.tb2 #vseg .vburied{display:none !important}
+.ivm header.tb2 #vseg .vcur[hidden]{display:none}
+.ivm header.tb2 #vseg .vcar{display:none !important;font-size:10px;margin-left:3px}
+.ivm[data-mo="1"] header.tb2 #vseg button[aria-pressed="true"] .vcar{display:inline !important}
+.ivm header.tb2 #vmore{font:500 12px var(--mono)}
+.ivm header.tb2 #stats{order:1;font-size:11px}
+.ivm header.tb2 .focusbar{order:2}
+.ivm header.tb2 .tbms[hidden]{display:none}
+.ivm header.tb2 .tbb{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;background:none;color:var(--muted);font:500 12.5px var(--body);padding:6px 9px;border-radius:8px;cursor:pointer;white-space:nowrap;box-shadow:none}
+.ivm header.tb2 .tbb:hover{color:var(--ink);background:var(--panel);border-color:var(--line)}
+.ivm header.tb2 .tbb[aria-expanded="true"]{color:var(--ink);background:var(--panel);border-color:var(--line)}
+.ivm header.tb2 .tbb b{color:var(--ink);font-weight:600}
+.ivm header.tb2 .tbb b:empty{display:none}
+.ivm header.tb2 .tbb.lit{color:var(--accent)}
+.ivm header.tb2 .tbadge{font:600 10.5px var(--mono);background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:1px 7px}
+.ivm header.tb2 .tbadge[hidden]{display:none}
+.ivm header.tb2 .tbi{padding:6px 7px}
+.ivm header.tb2 #follownote[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft);border-color:transparent}
+.ivm header.tb2 #viewbtn{border-color:transparent;background:none}
+.ivm header.tb2 .search{order:0;flex:0 1 200px;min-width:140px;max-width:220px;margin:0 4px}
+.ivm header.tb2 .search input{padding:6px 12px}
+.ivm header.tb2 .hcol{margin-left:2px}
+.ivm header.tb2 .tbpop{left:auto;right:0;width:280px;padding:10px}
+.ivm header.tb2 #arrpop{left:0;right:auto}
+.ivm header.tb2 .tbpop .pt,.ivm header.tb2 .mapopts .pt{margin:4px 0 2px}
+.ivm header.tb2 .orow{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:13px var(--body);padding:6px 8px;border-radius:7px;cursor:pointer;box-shadow:none}
+.ivm header.tb2 .orow:hover{background:var(--accent-soft)}
+.ivm header.tb2 .orow .rd{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--muted);box-sizing:border-box;flex:none}
+.ivm header.tb2 .orow.on .rd{border:4px solid var(--accent)}
+.ivm header.tb2 .fsec,.ivm header.tb2 .gsec{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.ivm header.tb2 .gsec[hidden]{display:none}
+.ivm header.tb2 .fsec + .fsec,.ivm header.tb2 .gsec + .gsec:not([hidden]){border-top:1px solid var(--line);padding-top:8px}
+.ivm header.tb2 .fsec > .ms{width:100%}
+.ivm header.tb2 .fsec .mspop{position:absolute;top:calc(100% + 4px);left:0}
+.ivm header.tb2 .fsec #themeseg{order:0}
+.ivm header.tb2 .tbpop .pn,.ivm header.tb2 .mapopts .pn{font-size:12px;color:var(--muted);margin:4px 2px 0}
+/* the current map's menu: its variants, then its own options */
+.ivm header.tb2 .mapopts{width:300px;overflow:visible;max-height:none}
+.ivm header.tb2 .mapopts .mosec{position:static;display:flex;flex-direction:column;gap:4px;border:0;padding:0;box-shadow:none;background:none;width:auto;max-height:none;translate:none}
+.ivm header.tb2 .mapopts .mosec[hidden]{display:none}
+.ivm header.tb2 .mapopts .mosec > .pt{display:none}
+.ivm header.tb2 .mapopts .mol{border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
+.ivm header.tb2 .mapopts .mol[hidden],.ivm header.tb2 .mapopts > .pn[hidden]{display:none}
+.ivm header.tb2 .mapopts #laygrp{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.ivm header.tb2 .mapopts #laygrp > .glbl{display:none}
+.ivm header.tb2 .mapopts #laygrp [hidden]{display:none}
+@container ivm (max-width:760px){
+.ivm header.tb2{padding:8px 10px}
+.ivm header.tb2 .tbl{flex:1 1 100%}
+.ivm header.tb2 #stats{display:none}
+.ivm header.tb2 .tbr{flex:1 1 100%;justify-content:flex-start}
+.ivm header.tb2 .tbb .tbl2{display:none}
+.ivm header.tb2 .search{flex:1 1 120px;max-width:none}
+}
+/* Animations: every ▶ leads its row, as Timelapse's does */
+.ivm #animdock #pplay,.ivm #animdock #dplay{order:-1}
+.ivm header.tb2 .orow{justify-content:flex-start}
+.ivm header.tb2 .tbpop{width:auto;min-width:260px;max-width:min(420px,calc(100cqw - 24px))}
+.ivm header.tb2 .fsec > .chip,.ivm header.tb2 .fsec > button{margin-left:0}
+.ivm.ivm.ivm header.tb2 #vseg #vmore{background:none;color:var(--muted)}
+.ivm.ivm.ivm header.tb2 #vseg #vmore:hover{color:var(--ink)}
+body.is-phone .ivm.kb header.tb2 > .tbr{display:flex !important;flex:1 1 100%}
+body.is-phone .ivm.kb header.tb2 > .tbr > :not(.search){display:none !important}
+body.is-phone .ivm.kb header.tb2 .search{flex:1 1 100%;max-width:none;margin:0}
+@container ivm (max-width:760px){
+.ivm header.tb2 .tbr{flex-wrap:nowrap;gap:2px}
+.ivm header.tb2 .search{flex:1 1 auto;min-width:0;width:auto}
+.ivm header.tb2 #viewbtn span{display:none}
+.ivm header.tb2 .tbb{padding:6px 7px}
+}
+@container ivm (max-width:760px){
+.ivm header.tb2 .hcol{display:none}
+.ivm header.tb2 .search{flex:1 1 60px}
+.ivm header.tb2 .search input{min-width:0}
+}
+@container ivm (max-width:760px){.ivm header.tb2 .tbr{min-width:0;max-width:100%}.ivm header.tb2 .search input{width:100%}}
+.ivm .app{grid-template-columns:minmax(0,1fr)}
+.ivm .app > header.tb2{min-width:0}

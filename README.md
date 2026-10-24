@@ -62,10 +62,11 @@ The score counts links in, links out, links both ways, and uplinks (the `up` and
 
 - Open it from the ribbon (the orbit icon) or the command **Maps of the Ideaverse: Open map**.
 - Click a note to see its links; **Open note** opens it beside the map. Cmd/Ctrl-click opens it in a new tab.
-- Search with `/`. Drag to pan, scroll to zoom. **Focus mode** shows one note and its neighbors. **Animations** (bottom left) holds the Timelapse, **Wander Mode** (wanders from note to linked note, or hops between maps) and **Orbit** (a slow drift; globes and 3D maps turn).
+- One toolbar row: the maps on the left (click the current map's tab for its variants and options; **More** holds the rest), then **Arrange** (what left to right means: Time, ACE, a number, or one of your properties), **Group** (on maps that group), **Filter** (folders and collections, with a count when it's on), **Display** (links, theme, how scoring works), **Find**, **Follow note** and **Saved**.
+- Search with `/`. Drag to pan, scroll to zoom. **Focus on its links** (in a note's panel) shows one note and its neighbors. **Animations** (bottom left) holds the Timelapse, **Wander Mode** (wanders from note to linked note, or hops between maps) and **Orbit** (a slow drift; globes and 3D maps turn).
 - **Follow note** (or the command **Toggle follow note**): the map follows whichever note you're editing, like a local graph linked to the active note. It works both ways: pick a note on the map (click, search, the note panel or the trail), or let a tour or Autoplay move along, and it opens in your editor, while the map keeps focus. Put the map in a split or the sidebar and it keeps up as you move through your notes. In Focus mode it shows just that note and its links.
 - **★ Saved** holds saved views and tours. Name the current view (map, axis, filters, zoom and position, selected note, where the time-lapse stands, Starfield's 3D angle) to come back to it. **Record a tour**, click through some notes, stop, and name it; play it back with ‹ › or let it run. Before your first save it asks which folder to keep them in (pick one or type a new one). They live in `Maps of the Ideaverse - saved views.json` there, a plain file you own, updated every time you save. The 📁 button moves it.
-- Filter by folder (drill into subfolders with ›) or by collection. Folder views use your top folders, whatever they're called; ACE folders (Atlas, Calendar, Efforts) get their symbols.
+- **Filter** by folder (drill into subfolders with ›) or by collection. Folder views use your top folders, whatever they're called; ACE folders (Atlas, Calendar, Efforts) get their symbols.
 - **Inside a base** (Obsidian 1.10+): in any base, add a view and pick **Maps of the Ideaverse**. The map shows only the notes the base returns (one project, one book, everything tagged for a course), and updates as you change the base's filters. Levels still come from your whole vault, so a hub stays a hub. Turn on **Follow note** for a live map of the project you're working in. Each base remembers its own map settings (which map, theme, filters, Follow note) inside its `.base` file, so your project's map is set up the way you left it, and the main map tab keeps its own.
 - When notes change, the map offers a rescan. Only notes that changed are read again.
 - Five themes: Play, Soft Paper, Dark, LYT Mode, or match your own Obsidian theme (the last swatch), which follows it as you switch.
@@ -85,7 +86,7 @@ Everything runs on your computer. The plugin reads your notes to draw the map an
 
 ## Notes
 
-- Works on desktop, tablets and phones. On a phone the toolbars fold into **Options**, the legend and Animations start tucked away, and tapping a note opens its panel from the bottom. Large vaults (10,000+ notes) take a while to scan the first time; after that only changed notes are read.
+- Works on desktop, tablets and phones. On a phone the toolbar keeps to two short rows, the legend and Animations start tucked away, and tapping a note opens its panel from the bottom. Large vaults (10,000+ notes) take a while to scan the first time; after that only changed notes are read.
 - Works best with folders. Vaults with few or no folders still get Emergence and Starfield; folder views will be thin.
 
 ## License
