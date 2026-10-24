@@ -3456,6 +3456,7 @@ syncSenseSrc();
 root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : "";
 win.setTimeout(() => { const b = root.querySelector(`#vseg button[data-v="${view}"]`); if (b && isPhone()) b.scrollIntoView({inline:"nearest", block:"nearest"}); }, 50);
 dbg.__ivArc = nm => { const c = CHCAT.find(c => c.short === nm); if (!c) return null; const a = (c.a0 + c.a1)/2, r = $("#cv").getBoundingClientRect(); return [r.left + sx(CH_C.x) + Math.cos(a)*CH_R*k*1.07, r.top + sy(CH_C.y) + Math.sin(a)*CH_R*k*1.07]; };
+dbg.__ivYaw = () => [view, csYaw, sphOn()];
 dbg.__ivLHall = () => { const r = $("#cv").getBoundingClientRect(); return LH.map(b => [b[0] + r.left, b[1] + r.top, b[2], b[3], N[b[4]].title]); };
 dbg.__ivLH = () => { const r = $("#cv").getBoundingClientRect(), b = LH[LH.length - 1]; return b ? [b[0] + r.left, b[1] + r.top, b[2], b[3], N[b[4]].title] : null; };
 dbg.__ivSense = { set: i => senseSet(i, true), steps: () => SSTEPS.length, trail: () => senseTrail.length, t: () => senseT };
