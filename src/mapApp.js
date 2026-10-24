@@ -1643,10 +1643,10 @@ EXP.skyline = {
 const yOf = t => new Date(t).getUTCFullYear(), yStart = y => Date.UTC(y, 0, 1), yFrac = t => { const y = yOf(t); return (t - yStart(y))/(yStart(y + 1) - yStart(y)); };
 function datedYears(){ let a = Infinity, b = -Infinity; for (let i=0;i<n;i++) if (vis[i] && !isNaN(TV[i])) { const y = yOf(TV[i]); if (y < a) a = y; if (y > b) b = y; } return isFinite(a) ? [a, b] : [NOW_Y, NOW_Y]; }
 // Spiral and Lifeline show a range of years (Layout → from – to); every year by default
-let LR = Array.isArray(pref("iv-lrange", null)) ? pref("iv-lrange", null) : null;
-// Spiral keeps its own range, defaulting to the most recent year plus the two before it.
+// Lifeline and Spiral each keep their own range: Lifeline defaults to the latest two years, Spiral to the latest three.
+let LR = Array.isArray(pref("iv-llrange", null)) ? pref("iv-llrange", null) : null;
 let LRS = Array.isArray(pref("iv-srange", null)) ? pref("iv-srange", null) : null;
-function yearRange(){ const [a, b] = datedYears(), R = view === "spiral" ? (LRS || [b - 2, b]) : LR; if (!R) return [a, b]; const y0 = Math.max(a, Math.min(b, R[0])), y1 = Math.max(y0, Math.min(b, R[1])); return [y0, y1]; }
+function yearRange(){ const [a, b] = datedYears(), R = view === "spiral" ? (LRS || [b - 2, b]) : (LR || [b - 1, b]); const y0 = Math.max(a, Math.min(b, R[0])), y1 = Math.max(y0, Math.min(b, R[1])); return [y0, y1]; }
 const inRange = (i, y0, y1) => { const y = yOf(TV[i]); return y >= y0 && y <= y1; };
 const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -2933,7 +2933,7 @@ syncCB();
 function syncLR(){ const [a, b] = datedYears(), [y0, y1] = yearRange(), opts = sel_ => Array.from({length: b - a + 1}, (_, j) => a + j).map(y => `<option value="${y}"${y === sel_ ? " selected" : ""}>${y}</option>`).join("");
   html($("#lr0")).v = opts(y0); html($("#lr1")).v = opts(y1); }
 for (const id of ["#lr0", "#lr1"]) $(id).onchange = () => { let y0 = +$("#lr0").value, y1 = +$("#lr1").value; if (id === "#lr0" && y1 < y0) y1 = y0; if (id === "#lr1" && y0 > y1) y0 = y1;
-  const [a, b] = datedYears(); if (view === "spiral") { LRS = [y0, y1]; save("iv-srange", LRS); } else { LR = y0 === a && y1 === b ? null : [y0, y1]; save("iv-lrange", LR); } syncLR(); if (view === "spiral" || view === "lifeline") morph(true, () => fitTarget()); };
+  const [a, b] = datedYears(); if (view === "spiral") { LRS = [y0, y1]; save("iv-srange", LRS); } else { LR = [y0, y1]; save("iv-llrange", LR); } syncLR(); if (view === "spiral" || view === "lifeline") morph(true, () => fitTarget()); };
 function syncLC(){ root.querySelectorAll("#lcseg button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.ly === "all") === LCALL))); $("#lcyear").textContent = LCALL ? "All years" : String(LCY || NOW_Y); $("#lcprev").disabled = $("#lcnext").disabled = LCALL; }
 root.querySelectorAll("#lcseg button").forEach(b => b.onclick = () => { LCALL = b.dataset.ly === "all"; save("iv-lcall", LCALL); syncLC(); if (view === "lincal") morph(true, () => fitTarget()); });
 for (const [id, d] of [["#lcprev", -1], ["#lcnext", 1]]) $(id).onclick = () => { const [a, b] = datedYears(); LCY = Math.max(a, Math.min(b, (LCY || NOW_Y) + d)); save("iv-lcyear", LCY); syncLC(); if (view === "lincal") morph(true, () => fitTarget()); };
