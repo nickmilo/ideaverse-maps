@@ -119,15 +119,17 @@ if (!pref("iv-packs1", false)) { if (FT.has(PACKS)) subOff.add(PACKS); save("iv-
 subCompute();
 
 // every filter except focus: archive, folders, collection (years no longer hide notes: older ones gather in Time's "Before" strip)
+// a base (Obsidian Bases) can scope the map to the notes its query returns; scores still come from the whole vault
+let SCOPE = null;
 function baseOK(i){ const d = N[i];
-  return (!ARCH[i] || showArch)
+  return (!SCOPE || SCOPE[i]) && (!ARCH[i] || showArch)
     && (folders.includes(d.ace) || !FOLD.includes(d.ace))
     && !subHid[i]
     && collOK(d); }
 const visBase = baseOK;
 function computeVis(){ const fs = new Set(folders);
   for (let i=0;i<n;i++) { const d = N[i];
-    vis[i] = ((!ARCH[i] || showArch)
+    vis[i] = ((!SCOPE || SCOPE[i]) && (!ARCH[i] || showArch)
       && (fs.has(d.ace) || !FOLD.includes(d.ace))    // vault-root notes always show
       && !subHid[i]
       && collOK(d)
@@ -2075,7 +2077,7 @@ function syncCls(){ const m = root.querySelector("main"), hd = root.querySelecto
   if (m) { m.toggleClass("has-drawer", !!a && !a.hidden); m.toggleClass("legend-open", !!lg && !lg.classList.contains("collapsed")); }
   if (hd && fb) hd.toggleClass("has-fb", !fb.hidden);
   root.querySelectorAll(".ms").forEach(ms => { const x = ms.querySelector(":scope > .qx"); ms.toggleClass("has-x", !!x && !x.hidden); }); }
-function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(2, win.devicePixelRatio||1); const cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); draw(); }
+function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(2, win.devicePixelRatio||1); const firstSize = !(W > 0) && r.width > 0, cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); if (firstSize || !isFinite(k) || !isFinite(tx)) { const f = fitTarget(); if (isFinite(f.k) && f.k > 0) { k = f.k; tx = f.tx; ty = f.ty; } } draw(); }   // opened while hidden (a base still laying out): fit once it has a size
 function fitTarget(){ const pad = 56;
   if (globeOn()) { const lc = isPhone() ? 0 : 400, vw = W - sideW() - lc; return {k: .44*Math.min(vw, H)/(CS_R*1.08), tx: lc + vw/2, ty: H/2}; }
   if (expOn()) { const lc = isPhone() ? 0 : 400, vw = W - sideW() - lc, b = expBox, bw = b.x1 - b.x0, bh = b.y1 - b.y0, kk = Math.min((vw - pad)/bw, (H - pad)/bh);   // beside the bars' column
@@ -3567,6 +3569,7 @@ return {
     win.clearTimeout(senseTimer); win.clearTimeout(pTimer); driftStop(); tip.remove(); },
   openNote(path){ const i = PIDX.get(path); if (i != null) navTo(i); },
   follow(path){ followPath(path); },
+  setScope(paths){ if (paths == null) SCOPE = null; else { SCOPE = new Uint8Array(n); for (const p of paths) { const i = PIDX.get(p); if (i != null) SCOPE[i] = 1; } } if (!dead) relayout(!!W, false, () => fitTarget()); },
   toggleFollow(){ setFollowing(!following); return following; },
   themeChanged(){ const t = pref("iv-theme", null); if (t == null) setTheme(autoTheme()); else if (t === "obsidian") setTheme("obsidian"); },   // Obsidian's theme or mode changed
 };

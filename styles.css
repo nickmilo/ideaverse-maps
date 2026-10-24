@@ -518,3 +518,6 @@
 .ivm #lcprev:disabled,.ivm #lcnext:disabled{opacity:.35;cursor:default}
 .ivm #lrctl select{font:600 12px var(--mono);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:3px 8px}
 .ivm #lrctl .lrl{font:500 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+/* the map inside a base (Bases view): fill the view's area */
+.ivm-bases{position:relative;height:100%;min-height:520px;display:flex;flex-direction:column}
+.ivm-bases > .ivm{flex:1;min-height:0}
