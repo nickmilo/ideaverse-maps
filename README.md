@@ -86,7 +86,9 @@ The score counts links in, links out, links both ways, and uplinks (the `up` and
 
 The first time it runs, the plugin looks for home notes (named Home, Home Base or Home Pro) and folders named Maps. In **Settings → Maps of the Ideaverse** you can also leave folders out, mark an archive folder (shown as its own layer), keep a folder hidden until you pick it, and choose how many notes reach Level 5.
 
-Notes are dated by their `created` property (any capitalization; `createdAt`, `date created` and similar names work too, and you can add your own in Settings → Date property), or a date in the file name, or (if you leave it on) when the file was made.
+Notes are dated by their `created` property (any capitalization; `createdAt`, `date created`, `date` and similar names work too, and you can add your own or reorder them in Settings → Date property; the first one a note has wins), or a date in the file name, or (if you leave it on) when the file was made. A month or year alone (`2024-05`, `2024`) counts as its first day. If your files' dates come from git checkouts or a sync, turn off Dates from files and point at your own property instead.
+
+Links are `[[wikilinks]]` and markdown links to notes (`[text](folder/Note.md)`).
 
 ## Privacy
 
