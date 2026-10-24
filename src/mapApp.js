@@ -3981,7 +3981,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const variants = () => view === "emergence" || view === "spacetime" ? "#emerpop" : view === "stars" ? "#starpop" : view === "sense" && SAI ? "#sensepop" : null;
   toggleMapOpts = b => { const open = mo.hidden; closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!open) { mo.hidden = true; b.setAttribute("aria-expanded", "false"); return; }
     const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop"]) $(id).hidden = id !== v_; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
-    moT.setText(VN()); const l = hasLay(); moL.hidden = !l || !v_; moNone.hidden = l || !!v_;
+    syncRange(); moT.setText(VN()); const l = hasLay(); moL.hidden = !l || !v_; moNone.hidden = l || !!v_;
     mo.style.left = Math.max(0, b.offsetLeft - 4) + "px"; mo.hidden = false; b.setAttribute("aria-expanded", "true"); };
   POPS.push(["#vcur", "#mapopts", "#vsegms"]);
   vcur.onclick = e => { e.stopPropagation(); toggleMapOpts(vcur); };
