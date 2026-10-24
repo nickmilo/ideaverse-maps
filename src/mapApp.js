@@ -609,6 +609,9 @@ function buildGlow(){
 // faraway stars behind everything, moving slower than the map
 const BGS = (() => { let a = 1234567; const r = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   return [{p:.05, T:640, n:230}, {p:.14, T:900, n:150}].map(L => ({...L, pts: Array.from({length:L.n}, () => [r()*L.T, r()*L.T, .4 + r()*r()*1.3, .15 + r()*.6, r() < .12])})); })();
+// Starfield's galaxy glow: Soft by default, so the stars (your notes) read over it; Normal and Bright for the full nebula look
+let sGlow = ["soft", "normal", "bright"].includes(pref("iv-sglow", "soft")) ? pref("iv-sglow", "soft") : "soft";
+const GLOWF = () => ({ soft: .5, normal: 1, bright: 1.45 })[sGlow];
 function starsBg(){
   const g = ctx.createRadialGradient(W*.5, H*.45, 0, W*.5, H*.45, Math.hypot(W, H)*.65);
   g.addColorStop(0, "#0c1126"); g.addColorStop(.6, "#060814"); g.addColorStop(1, "#020307");
@@ -620,11 +623,11 @@ function starsBg(){
         ctx.globalAlpha = a; ctx.fillStyle = blue ? "#b8ccff" : "#ffffff"; ctx.fillRect(px, py, s, s); } }
   ctx.globalAlpha = 1;
   colorStars();
-  const bgDim = sel >= 0 ? .22 : focus >= 0 ? .7 : 1;   // a selected note dims the galaxies so its links read clearly
+  const bgDim = (sel >= 0 ? .22 : focus >= 0 ? .7 : 1)*GLOWF();   // a selected note dims the galaxies so its links read clearly
   if (S3D) { halos3D(bgDim); return; }
   buildGlow();
-  ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = bgDim;
-  ctx.drawImage(GLOW, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k);
+  ctx.globalCompositeOperation = "lighter";
+  for (let a = bgDim; a > .001; a -= 1) { ctx.globalAlpha = Math.min(1, a); ctx.drawImage(GLOW, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
   const wf = Math.max(0, Math.min(1, (.7 - k)/.45));   // the cosmic web fades out as you zoom into a galaxy
   if (wf > 0 && showAll) { ctx.globalAlpha = wf*bgDim; ctx.drawImage(WEB, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
@@ -2261,10 +2264,14 @@ function render(){
   if (hl >= 0) {
     lit = new Set([hl]);
     const nb = new Set([...out[hl], ...inn[hl]].filter(j => VV(j) || (sphOn() && vis[j] && shownAt(j))));   // Corona: links to the far side of the globe still draw
+    const many = Math.min(1, Math.max(.22, Math.sqrt(80 / Math.max(1, nb.size))));   // a hub's hundreds of links each draw fainter, so they don't fuse into solid beams
+    // Starfield: a hub's links to the small stars of one galaxy travel as one bundle, ending where those stars sit
+    const bundle = view === "stars" && nb.size > 60 ? new Map() : null;
     for (const j of nb) {
       lit.add(j);
+      if (bundle && N[j].level < 5 && BOD[j] >= 0) { const g = bundle.get(BOD[j]) || bundle.set(BOD[j], []).get(BOD[j]); g.push(j); continue; }
       const upward = N[j].level > N[hl].level || (N[j].level === N[hl].level && Y[j] < Y[hl]);
-      ctx.strokeStyle = edgeColor(hl, j, upward); ctx.globalAlpha = sel >= 0 ? .75 : .5; ctx.lineWidth = sel >= 0 ? 1.4 : 1;
+      ctx.strokeStyle = edgeColor(hl, j, upward); ctx.globalAlpha = (sel >= 0 ? .75 : .5)*many; ctx.lineWidth = sel >= 0 ? 1.4 : 1;
       const x1 = sx(X[hl]), y1 = sy(Y[hl]), x2 = sx(X[j]), y2 = sy(Y[j]);
       let mx = (x1+x2)/2, my = (y1+y2)/2 - (view === "planet" ? Math.hypot(x2-x1, y2-y1)*.55 : Math.abs(x2-x1)*.12);   // PKM Planet: links arc up off the table
       if (view === "chord") { const cx = sx(CH_C.x), cy = sy(CH_C.y); mx = cx + ((x1+x2)/2 - cx)*.25; my = cy + ((y1+y2)/2 - cy)*.25; }
@@ -2276,6 +2283,13 @@ function render(){
         continue; }
       ctx.beginPath(); ctx.moveTo(x1,y1); ctx.quadraticCurveTo(mx,my,x2,y2); ctx.stroke();
     }
+    if (bundle) { const x1 = sx(X[hl]), y1 = sy(Y[hl]);
+      for (const g of bundle.values()) { let cx = 0, cy = 0; for (const j of g) { cx += sx(X[j]); cy += sy(Y[j]); } cx /= g.length; cy /= g.length;
+        const up = N[g[0]].level > N[hl].level, mx = (x1+cx)/2, my = (y1+cy)/2 - Math.abs(cx-x1)*.12;
+        ctx.strokeStyle = edgeColor(hl, g[0], up); ctx.globalAlpha = sel >= 0 ? .55 : .4; ctx.lineWidth = Math.min(7, 1 + 1.3*Math.log2(g.length));
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(mx, my, cx, cy); ctx.stroke();
+        ctx.globalAlpha = (sel >= 0 ? .3 : .2); ctx.lineWidth = .8; ctx.beginPath();   // and fans out, faintly, to each star
+        for (const j of g) { ctx.moveTo(cx, cy); ctx.lineTo(sx(X[j]), sy(Y[j])); } ctx.stroke(); } }
     ctx.globalAlpha = 1;
   }
 
@@ -3662,6 +3676,9 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
   const mo = $("#vsegms").createDiv({ cls: "mspop mapopts", attr: { id: "mapopts", role: "dialog", "aria-label": "This map" } }); mo.hidden = true;
   const moT = mo.createDiv({ cls: "pt" });
   for (const id of ["#emerpop", "#starpop", "#sensepop"]) { const el = $(id); el.classList.remove("mspop"); el.classList.add("mosec"); el.hidden = true; mo.appendChild(el); }
+  { const g = $("#starpop").createDiv({ cls: "sglow" }); g.createSpan({ cls: "sgl", text: "Galaxy glow" }); const seg = g.createDiv({ cls: "seg", attr: { role: "group", "aria-label": "Galaxy glow" } });
+    for (const [v, t] of [["soft", "Soft"], ["normal", "Normal"], ["bright", "Bright"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "data-g": v, "aria-pressed": String(v === sGlow) } });
+      b.onclick = e => { e.stopPropagation(); sGlow = v; save("iv-sglow", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.g === v))); draw(); }; } }
   const moL = mo.createDiv({ cls: "pt mol", text: "This map" }); mo.appendChild($("#laygrp")); const moNone = mo.createDiv({ cls: "pn", text: "Nothing to set on this map." });
   const hasLay = () => [...$("#laygrp").children].some(el => !el.hidden && !el.classList.contains("glbl"));
   const variants = () => view === "emergence" || view === "spacetime" ? "#emerpop" : view === "stars" ? "#starpop" : view === "sense" && SAI ? "#sensepop" : null;
