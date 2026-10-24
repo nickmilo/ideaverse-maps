@@ -549,7 +549,7 @@ function layoutStars(){
         const ax = (hash(fs, 1)-.5)*1.6*b.r, ay = (hash(fs, 2)-.5)*1.6*b.r, bx = (hash(fs, 3)-.5)*1.6*b.r, by = (hash(fs, 4)-.5)*1.6*b.r, cx = (hash(fs, 5)-.5)*1.2*b.r, cy = (hash(fs, 6)-.5)*1.2*b.r;
         let lx = (1-u)*(1-u)*ax + 2*(1-u)*u*cx + u*u*bx, ly = (1-u)*(1-u)*ay + 2*(1-u)*u*cy + u*u*by;
         const wdt = b.r*(.05 + .12*Math.sin(Math.PI*u)) * (hash(p, 49) < .25 ? 3.2 : 1);
-        lx += g1*wdt; ly += g2*wdt; const m = Math.hypot(lx, ly); if (m > b.r) { lx *= b.r/m; ly *= b.r/m; }
+        lx += g1*wdt; ly += g2*wdt; const m = Math.hypot(lx, ly), soft = .75*b.r; if (m > soft) { const m2 = soft + (b.r - soft)*(1 - Math.exp(-(m - soft)/(b.r - soft))); lx *= m2/m; ly *= m2/m; }   // past three-quarters out, ease toward the edge instead of piling up on it
         SX[i] = UC.x + b.x + lx; SY[i] = UC.y + b.y + ly; continue; }
     } }
   for (let i=0;i<n;i++) { const lv = N[i].level;
@@ -2051,7 +2051,9 @@ function build3D(){
     return {b, z, flat, M: mul(mul(Rz(cf, sf), Rx), Rz(cf, -sf))}; });
   for (let i=0;i<n;i++) { const bi = BOD[i], b = bi >= 0 ? BODIES[bi] : null, bx = b ? UC.x + b.x : UC.x, by = b ? UC.y + b.y : UC.y, h = hash(N[i].path, 34) - .5;
     L3[3*i] = SX[i] - bx; L3[3*i+1] = SY[i] - by;
-    L3[3*i+2] = !b ? h*80 : B3[bi].flat ? h*b.r*(N[i].level >= 3 ? .05 : .12) : h*b.r*.9; }   // thin disks for galaxies, deep clouds for nebulae
+    // thin disks for galaxies; nebulae and the old elliptical are round clouds: depth thins toward the edge, and clusters near the middle (so no side of them is ever straight)
+    if (!b || B3[bi].flat) L3[3*i+2] = !b ? h*80 : h*b.r*(N[i].level >= 3 ? .05 : .12);
+    else { const d = Math.hypot(L3[3*i], L3[3*i+1]), room = Math.sqrt(Math.max((.95*b.r)**2 - d*d, (.18*b.r)**2)), g = (hash(N[i].path, 35) + hash(N[i].path, 36) + hash(N[i].path, 37) - 1.5)/1.5; L3[3*i+2] = g*room; } }
 }
 function project3D(){
   build3D();
@@ -3688,6 +3690,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       tx_.globalAlpha = .35*a; tx_.drawImage(sprite(SPAL[SC[o.i]]), x - L, y - L, L*2, L*2); }
     if (list.length) raf = RAF(frame); else { win.clearTimeout(tmo); tmo = win.setTimeout(() => { if (!raf) raf = RAF(frame); }, Math.max(200, next - performance.now())); } };
   twWake = () => { if (!active()) { if (raf) { win.cancelAnimationFrame(raf); raf = 0; } win.clearTimeout(tmo); list = []; tx_.clearRect(0, 0, tw.width, tw.height); return; } if (!raf) { if (!next) next = performance.now() + 2500; raf = RAF(frame); } }; }
+
+// hover hints: Obsidian's own quick tooltip, not the browser's slow one. Every title becomes an aria-label (which Obsidian shows
+// as its tooltip), now and whenever one is set later.
+{ const quick = el => { if (el.getAttribute && el.getAttribute("aria-label") && el.getAttribute("data-tooltip-delay") !== "500") el.setAttribute("data-tooltip-delay", "500"); };   // half Obsidian's usual wait
+  const move = el => { quick(el); const t = el.getAttribute("title"); if (t == null) return; el.removeAttribute("title"); if (t && !el.getAttribute("aria-label")) el.setAttribute("aria-label", t); else if (t && el.getAttribute("aria-label") !== t && el.dataset.tipFromTitle) el.setAttribute("aria-label", t); el.dataset.tipFromTitle = "1"; quick(el); };
+  root.querySelectorAll("[title], [aria-label]").forEach(move);
+  new MutationObserver(ms => { for (const m of ms) if (m.type === "attributes") move(m.target); else for (const nd of m.addedNodes) if (nd.nodeType === 1) { move(nd); nd.querySelectorAll && nd.querySelectorAll("[title], [aria-label]").forEach(move); } })
+    .observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ["title", "aria-label"] }); }
 
 // ---------- the toolbar: one row, the way Bases lays out its own ----------
 // Left: the two dots, the maps (the current map's tab opens its variants and options), and the counts.
