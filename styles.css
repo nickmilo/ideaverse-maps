@@ -523,3 +523,8 @@
 body.is-phone .workspace-leaf-content .view-content.ivm-host{padding-bottom:calc(var(--safe-area-inset-bottom, 0px) + 92px);box-sizing:border-box}
 body.is-phone .ivm div main.has-drawer .playbar{display:none}
 @container ivm (max-width:760px){.ivm .playbar.collapsed{right:auto}}
+/* phones, while Find a note has focus (keyboard up): just the search box, results scroll, no room kept for the toolbar */
+body.is-phone .workspace-leaf-content .view-content.ivm-host.kb{padding-bottom:0}
+body.is-phone .ivm.kb header > :not(.search){display:none !important}
+body.is-phone .ivm.kb header .search{flex:1 1 100%;width:100%}
+body.is-phone .ivm.kb header .results{max-height:min(320px, 45vh);overflow-y:auto;-webkit-overflow-scrolling:touch}
