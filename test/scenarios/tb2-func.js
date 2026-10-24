@@ -28,7 +28,7 @@ module.exports = async ({ page, sleep, shot }) => {
   // Display
   await C('#dispbtn'); await C('#alllinks'); ok('All links toggles', await E(() => document.querySelector('.ivm #alllinks').getAttribute('aria-pressed') === 'true')); await C('#alllinks');
   await E(() => document.querySelector('.ivm #themeseg button:first-child').click()); await sleep(400); ok('Theme changes', await E(() => document.querySelector('.ivm').dataset.theme), await E(() => document.querySelector('.ivm').dataset.theme));
-  await E(() => document.querySelector('.ivm #themeseg button:nth-child(3)').click()); await sleep(300);
+  await E(() => document.querySelector('.ivm #themeseg button[data-th=dark]').click()); await sleep(300);
   await C('#scorebtn'); ok('Scoring panel opens, Display closes', (await shown('#scorepanel')) && !(await shown('#disppop'))); await E(() => document.querySelector('.ivm #spx').click());
   // Follow, Saved, collapse
   await C('#follownote'); ok('Follow note toggles', await E(() => document.querySelector('.ivm #follownote').getAttribute('aria-pressed') === 'true')); await C('#follownote');
