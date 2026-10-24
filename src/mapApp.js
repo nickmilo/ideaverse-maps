@@ -3200,12 +3200,12 @@ onKey(e => { if (e.key === "Escape" && playing) setPlaying(false); });
 root.querySelectorAll("#playseg button").forEach(b => b.addEventListener("click", () => { if (tourRun) { tourRun = null; syncTour(); } }));   // picking Random/Thread leaves the tour
 syncPlay();
 // Animations: Timelapse (the years), Wander Mode (autoplay) and Orbit (drift) share one dock at the bottom left.
-// One shows at a time; a dot marks any that is running; the dock tucks down to the shown one's ▶.
+// All three show together, each under its name (so a running one never hides behind another); Orbit only on 3D maps.
 { const dock = cv.parentElement.createDiv({ cls: "animdock", attr: { id: "animdock", role: "group", "aria-label": "Animations" } });
   const head = dock.createDiv({ cls: "anihead" }); head.createSpan({ cls: "pl", text: "Animations" });
-  const tabs = head.createDiv({ cls: "seg anitabs", attr: { "aria-label": "Animation" } }), body = dock.createDiv({ cls: "anibody" });
+  const body = dock.createDiv({ cls: "anibody" });
   const SECS = [["time", "Timelapse", $("#timebar"), $("#tlplay")], ["wander", "Wander Mode", $("#playbar"), $("#pplay")], ["orbit", "Orbit", $("#driftbar"), $("#dplay")]];
-  for (const s_ of SECS) { s_.push(tabs.createEl("button", { text: s_[1], attr: { "data-a": s_[0], "aria-pressed": "false" } })); body.appendChild(s_[2]); s_[2].classList.add("anisec"); }
+  for (const s_ of SECS) { const w = body.createDiv({ cls: "aniwrap", attr: { "data-a": s_[0] } }); w.createDiv({ cls: "anilbl", text: s_[1] }); w.appendChild(s_[2]); s_[2].classList.add("anisec"); s_.push(w); }
   const col = head.createEl("button", { cls: "acol" });
   // tucked: a vertical tab like the legend's, just above it (or above the open legend)
   const atab = cv.parentElement.createEl("button", { cls: "legtab anitab", text: "Animations", attr: { id: "anitab", "aria-label": "Show animations", "aria-expanded": "false" } });
@@ -3214,14 +3214,9 @@ syncPlay();
     if (lt && !lt.hidden && lt.offsetParent) b = m.bottom - lt.getBoundingClientRect().top + 8;
     else if (lg && !lg.classList.contains("collapsed") && lg.offsetParent) b = m.bottom - lg.getBoundingClientRect().top + 8;
     atab.style.bottom = Math.round(b) + "px"; };
-  let cur = pref("iv-anim", "time");
   const avail = s_ => !s_[2].hidden, running = s_ => /❚❚|■/.test(s_[3].textContent);
-  const sync = () => { if ($("#playbar").classList.contains("touring")) cur = "wander";
-    let a = SECS.find(s_ => s_[0] === cur); if (!a || !avail(a)) a = SECS.find(avail) || SECS[0];
-    for (const s_ of SECS) { const t = s_[4], h = !avail(s_), on = s_ === a, r = running(s_);
-      if (t.hidden !== h) t.hidden = h; if (t.getAttribute("aria-pressed") !== String(on)) t.setAttribute("aria-pressed", String(on)); if (t.classList.contains("run") !== r) t.classList.toggle("run", r); }
-    if (dock.dataset.a !== a[0]) dock.dataset.a = a[0]; const r = SECS.some(running); if (dock.classList.contains("running") !== r) { dock.classList.toggle("running", r); atab.classList.toggle("running", r); } };
-  for (const s_ of SECS) s_[4].onclick = () => { cur = s_[0]; save("iv-anim", cur); sync(); win.setTimeout(placePlaybar, 0); };
+  const sync = () => { for (const s_ of SECS) { const w = s_[4], h = !avail(s_), r = running(s_); if (w.hidden !== h) w.hidden = h; if (w.classList.contains("run") !== r) w.classList.toggle("run", r); }
+    const r = SECS.some(running); if (dock.classList.contains("running") !== r) { dock.classList.toggle("running", r); atab.classList.toggle("running", r); } };
   const mo = new MutationObserver(sync); for (const s_ of SECS) { mo.observe(s_[3], { childList: true, characterData: true, subtree: true }); mo.observe(s_[2], { attributes: true, attributeFilter: ["hidden", "class"] }); }
   const setC = c => { dock.classList.toggle("collapsed", c); dock.hidden = c; atab.hidden = !c; if (c) placeAnitab(); col.setText(c ? "›" : "‹"); const t = c ? "Show animations" : "Tuck animations away"; col.setAttribute("aria-label", t); col.title = t; save("iv-acol", c); };
   col.onclick = () => setC(!dock.classList.contains("collapsed"));
@@ -3453,7 +3448,6 @@ root.querySelectorAll('input[name="ssrc"]').forEach(r => r.onchange = () => { if
   if (senseT != null) { senseTrail = []; senseSet(+$("#tlrange").value, true); }
   syncSenseSrc(); legend(); morph(true); if (sel >= 0) win.setTimeout(() => select(sel, true), 0); });
 syncSenseSrc();
-$("#tlall").onclick = senseClear;
 root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : "";
 win.setTimeout(() => { const b = root.querySelector(`#vseg button[data-v="${view}"]`); if (b && isPhone()) b.scrollIntoView({inline:"nearest", block:"nearest"}); }, 50);
 dbg.__ivArc = nm => { const c = CHCAT.find(c => c.short === nm); if (!c) return null; const a = (c.a0 + c.a1)/2, r = $("#cv").getBoundingClientRect(); return [r.left + sx(CH_C.x) + Math.cos(a)*CH_R*k*1.07, r.top + sy(CH_C.y) + Math.sin(a)*CH_R*k*1.07]; };

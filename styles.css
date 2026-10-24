@@ -529,28 +529,26 @@ body.is-phone .ivm.kb header > :not(.search){display:none !important}
 body.is-phone .ivm.kb header .search{flex:1 1 100%;width:100%}
 body.is-phone .ivm.kb header .results{max-height:min(320px, 45vh);overflow-y:auto;-webkit-overflow-scrolling:touch}
 /* Animations: Timelapse, Wander Mode and Orbit in one dock at the bottom left */
-.ivm #animdock{position:absolute;left:34px;bottom:14px;z-index:3;display:flex;flex-direction:column;gap:6px;width:max-content;max-width:min(430px, calc(100% - 110px));background:color-mix(in srgb,var(--bg) 94%,transparent);border:1px solid var(--line);border-radius:18px;padding:6px 10px 8px 8px;box-sizing:border-box}
+.ivm #animdock[hidden]{display:none}
+.ivm #animdock{position:absolute;max-height:calc(100% - 28px);overflow-y:auto;left:34px;bottom:14px;z-index:3;display:flex;flex-direction:column;gap:6px;width:max-content;max-width:min(430px, calc(100% - 110px));background:color-mix(in srgb,var(--bg) 94%,transparent);border:1px solid var(--line);border-radius:18px;padding:6px 10px 8px 8px;box-sizing:border-box}
 .ivm #animdock.running{border-color:var(--accent)}
 .ivm #animdock .anihead{display:flex;align-items:center;gap:8px}
 .ivm #animdock .anihead .pl{font:500 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding-left:4px}
-.ivm #animdock .anitabs button{padding:4px 9px;font-size:11px;white-space:nowrap}
-.ivm #animdock .anitabs button[hidden]{display:none}
-.ivm #animdock .anitabs button.run::after{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:6px;vertical-align:middle}
 .ivm #animdock .acol{margin-left:auto;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font:500 12px var(--mono);color:var(--muted);cursor:pointer;flex:none;background:none}
 .ivm #animdock .acol:hover{color:var(--ink);border-color:var(--ink)}
 .ivm.ivm.ivm.ivm.ivm #animdock .anisec{position:static !important;transform:none !important;inset:auto !important;width:auto !important;max-width:none !important;background:none !important;border:0 !important;border-radius:0 !important;padding:0 2px !important;margin:0 !important;box-shadow:none !important;display:none !important;flex-wrap:wrap;align-items:center;gap:6px 8px;row-gap:6px}
-.ivm.ivm.ivm.ivm.ivm #animdock[data-a="time"] #timebar:not([hidden]),.ivm.ivm.ivm.ivm.ivm #animdock[data-a="wander"] #playbar:not([hidden]),.ivm.ivm.ivm.ivm.ivm #animdock[data-a="orbit"] #driftbar:not([hidden]){display:flex !important}
+.ivm.ivm.ivm.ivm.ivm #animdock .anisec:not([hidden]){display:flex !important}
+.ivm #animdock .anibody{display:flex;flex-direction:column;gap:8px}
+.ivm #animdock .aniwrap[hidden]{display:none}
+.ivm #animdock .aniwrap + .aniwrap:not([hidden]){border-top:1px solid var(--line);padding-top:7px}
+.ivm #animdock .anilbl{font:500 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 5px 4px}
+.ivm #animdock .aniwrap.run .anilbl{color:var(--accent)}
+.ivm #animdock .aniwrap.run .anilbl::after{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:6px;vertical-align:middle}
 .ivm.ivm.ivm.ivm.ivm #animdock .anisec > .pl{display:none}
 .ivm.ivm.ivm.ivm.ivm #animdock #timebar input{width:auto !important;flex:1;min-width:120px}
 .ivm.ivm.ivm.ivm.ivm #animdock .tlopts{display:flex;flex-wrap:wrap;gap:6px 8px;width:100%}
-/* tucked: the dock's name, the shown animation and its ▶ */
-.ivm #animdock.collapsed{flex-direction:row;align-items:center;flex-wrap:nowrap;width:auto;padding:5px 8px}
-.ivm #animdock.collapsed .anitabs button:not([aria-pressed="true"]){display:none}
-.ivm #animdock.collapsed .anibody{order:-1}
-.ivm.ivm.ivm.ivm.ivm #animdock.collapsed .anisec > :not(.pbtn):not(.pprog):not(#tourctl){display:none !important}
 @container ivm (min-width:761px){.ivm .app main.legend-open #animdock{left:390px}}
 @container ivm (max-width:760px){.ivm #animdock{left:34px;right:56px;max-width:none;width:auto}
-.ivm #animdock.collapsed{right:auto}
 .ivm #animdock .anihead .pl{display:none}
 .ivm div main.has-drawer #animdock{display:none}}
 /* Animations tucked: a vertical tab like the legend's, just above it */
