@@ -2910,7 +2910,7 @@ function syncColl(){
   $("#collcount").textContent = colls.length ? `${colls.length} checked` : "";
 }
 function closeColl(){ $("#collpop").hidden = true; $("#collbtn").setAttribute("aria-expanded", "false"); }
-$("#collbtn").onclick = e => { e.stopPropagation(); closePops(); const p = $("#collpop"); p.hidden = !p.hidden; $("#collbtn").setAttribute("aria-expanded", String(!p.hidden)); if (!p.hidden) { renderCollList(true); $("#collq").focus(); } };
+$("#collbtn").onclick = e => { e.stopPropagation(); { const anc = $("#collms").parentElement.closest(".mspop"); closePops(anc && anc.id ? "#" + anc.id : undefined); } const p = $("#collpop"); p.hidden = !p.hidden; $("#collbtn").setAttribute("aria-expanded", String(!p.hidden)); if (!p.hidden) { renderCollList(true); $("#collq").focus(); } };
 $("#collq").addEventListener("input", () => renderCollList(true));
 root.querySelectorAll("#collmode button").forEach(x => x.onclick = () => { if (collMode === x.dataset.m) return; collMode = x.dataset.m; save("iv-collmode", collMode); syncColl(); if (colls.length > 1) relayout(true); });
 $("#collclear").onclick = () => { colls = []; save("iv-coll", colls); syncColl(); renderCollList(true); relayout(true); };
@@ -3678,7 +3678,7 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
   // Filter: folders, collections, Efforts
   const FI = popBtn("filt", "Filter", "filter"); const badge = FI.b.createSpan({ cls: "tbadge" });
   const fsec = (title, el) => { const w = FI.p.createDiv({ cls: "fsec" }); w.createDiv({ cls: "pt", text: title }); w.appendChild(el); };
-  fsec("Folders", $("#foldms")); fsec("Collections", $("#collms")); fsec("Efforts", $("#effbtn")); $("#effbtn").setText("Light up areas and projects");
+  fsec("Select folders", $("#foldms")); fsec("Select collections", $("#collms")); fsec("Efforts", $("#effbtn")); $("#effbtn").setText("Light up areas and projects");
   opener(FI);
   // Display: links, theme, how scoring works
   const DI = popBtn("disp", "Display", "display");
