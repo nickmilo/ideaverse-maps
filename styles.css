@@ -750,3 +750,6 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .postctl .pmode > span{font-size:var(--font-ui-small);color:var(--muted)}
 .ivm .postctl .phint{grid-column:1/-1;font-size:var(--font-ui-smaller);color:var(--muted);margin:-3px 0 2px;line-height:1.35}
 .ivm .postctl .phint[hidden]{display:none}
+/* Menus: a little see-through, so the map shows faintly underneath (blurred just enough to keep the text easy to read) */
+.ivm .mspop:not(.seethru),.ivm #mapopts{background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.ivm .mspop .mspop:not(.seethru){background:color-mix(in srgb,var(--bg) 92%,transparent)}
