@@ -7,6 +7,6 @@ module.exports = async ({ page, sleep, shot }) => {
   if (await q('.dtab').isVisible()) { await q('.dtab').click(); await sleep(500); }
   await q('#dfocus').click(); await sleep(1500); console.log('btn:', await q('#dfocus').textContent());
   await q('#dfocus').click(); await sleep(1500); console.log('btn after exit:', await q('#dfocus').textContent());
-  await q('.timebar .tcol').click(); await sleep(600); await shot('tl-collapsed');
+  
   await page.evaluate(async () => { const leaf = app.workspace.getLeaf('split', 'vertical'); await leaf.openFile(app.vault.getMarkdownFiles()[0]); }); await sleep(1200); await shot('narrow');
 };

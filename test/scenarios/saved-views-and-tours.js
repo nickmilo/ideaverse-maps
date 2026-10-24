@@ -3,7 +3,7 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.waitForSelector('.ivm canvas', { timeout: 120000 }); await sleep(1500);
   const q = s => page.locator('.ivm ' + s).first();
   if (await q('.htab').isVisible()) await q('.htab').click();
-  await q('#xseg button[data-x="ace"]').click(); await sleep(1200);
+  await page.evaluate(() => document.querySelector('.ivm #xseg button[data-x="ace"]').click()); await sleep(1200);
   await q('#viewbtn').click(); await sleep(300);
   await q('#vname').fill('Atlas by folder'); await q('#vsave').click(); await sleep(600);
   if (await page.locator('.prompt').isVisible().catch(() => false)) { await page.keyboard.type('Atlas/Map Views'); await sleep(300); await page.keyboard.press('Enter'); await sleep(800); }   // first save asks for a folder
@@ -14,7 +14,7 @@ module.exports = async ({ page, sleep, shot }) => {
   await q('#recx').click(); await sleep(500); await q('#tname').fill('Three hubs'); await q('#tsavebtn').click(); await sleep(400);
   await shot('saved-pop');
   console.log('folder chip:', await q('#vexport').textContent()); await page.keyboard.press('Escape'); await page.evaluate(() => document.body.click()); await sleep(300);
-  await q('#xseg button[data-x="time"]').click(); await sleep(900);
+  await page.evaluate(() => document.querySelector('.ivm #xseg button[data-x="time"]').click()); await sleep(900);
   await q('#viewbtn').click(); await sleep(300); await page.locator('.ivm #vlist .vgo', { hasText: 'Atlas by folder' }).first().click(); await sleep(1200);
   console.log('after applying view, ACE pressed:', await q('#xseg button[data-x="ace"]').getAttribute('aria-pressed'));
   await q('#viewbtn').click(); await sleep(300); await q('#tlist .vgo').first().click(); await sleep(2500);

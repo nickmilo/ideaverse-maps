@@ -29,6 +29,11 @@ const SHOTS = process.env.SHOTS || path.join(require('os').tmpdir(), 'ivm-shots'
   await page.evaluate(() => { const l = app.workspace.leftSplit; if (l && !l.collapsed) l.collapse(); });
   await page.evaluate(async () => { if (!app.plugins.isEnabled()) await app.plugins.setEnable(true); if (!app.plugins.plugins['ideaverse-maps']) await app.plugins.enablePluginAndSave('ideaverse-maps'); });
   await sleep(500);
+  await page.evaluate(() => { for (const l of app.workspace.getLeavesOfType('bases')) l.detach(); });   // start with no stray base tabs (each holds its own map)
+  // tests: open whichever toolbar menu holds a control (the current map's menu, or Arrange/Group/Filter/Display)
+  await page.evaluate(() => { window.__ivReveal = sel => { const el = document.querySelector('.ivm ' + sel); if (!el) return false; const r = el.getBoundingClientRect(); if (r.width > 0) return true;
+    const mo = el.closest('#mapopts'), tp = el.closest('.tbpop'); if (mo && mo.hidden) { const b = document.querySelector('.ivm #vcur:not([hidden])') || document.querySelector('.ivm #vseg button[aria-pressed="true"]'); b && b.click(); }
+    if (tp && tp.hidden) { const b = tp.parentElement.querySelector('.tbb'); b && b.click(); } return el.getBoundingClientRect().width > 0; }; });
   const shot = async name => { await page.screenshot({ path: path.join(SHOTS, `${name}.png`) }); console.log('shot', name); };
   fs.mkdirSync(SHOTS, { recursive: true });
   try { await require(path.resolve(scen))({ page, sleep, shot, log: () => log }); }

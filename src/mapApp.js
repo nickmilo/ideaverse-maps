@@ -19,6 +19,7 @@ const html = el => ({ set v(h) { el.empty(); el.append(sanitizeHTMLToDom(h)); } 
 const PACKS0 = (D.settings && D.settings.packs) || "";
 const cv = $("#cv"), ctx = cv.getContext("2d");
 let placeAnitab = () => {};   // set by the Animations dock (below)
+let syncTB = () => {}, toggleMapOpts = () => {};   // set by the toolbar (below): labels, counts and which buttons show
 
 const N = D.nodes, E = D.edges, n = N.length;
 const LEVELS = [
@@ -922,7 +923,7 @@ function sensePlay(){ if (sensePlaying) { senseStop(); return; }
 function placePlaybar(){ const pb = $("#playbar"), tb = $("#timebar");   // Sensemaking and Starfield (desktop): autoplay sits just under the timeline bar, however many rows it wraps to
   pb.style.top = !isPhone() && !tb.hidden && (view === "sense" || view === "stars" || view === "gravity" || view === "chord" || expOn()) ? (tb.offsetTop + tb.offsetHeight + 8) + "px" : "";
   const db = $("#driftbar"); db.hidden = false;   // Orbit runs on every map (Earth, a fixed tilt, shows only on 3D maps)
-  db.style.top = !isPhone() && pb.style.top ? (pb.offsetTop + pb.offsetHeight + 8) + "px" : ""; }
+  db.style.top = !isPhone() && pb.style.top ? (pb.offsetTop + pb.offsetHeight + 8) + "px" : ""; syncTB(); }
 on(win, "resize", () => { placePlaybar(); placeAnitab(); });
 function syncTimebar(){ const on = true; win.setTimeout(placePlaybar, 0);
   root.querySelectorAll("#tlstep button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === senseStep)));
@@ -2796,8 +2797,8 @@ function syncRange(){
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
   const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
-  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); $("#laygrp").previousElementSibling.hidden = !lay;
-  if (lay) { $("#startms").hidden = sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || pgv || csv || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); }
+  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true;
+  if (lay) { $("#startms").hidden = sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = sv || shv || tmv || pgv || csv || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -2873,7 +2874,7 @@ $("#foldnone").onclick = () => { folders = []; subOff = defSubs(); save("iv-subs
 $("#foldall").onclick = () => { folders = [...FOLD]; subOff = defSubs(); save("iv-subsoff", [...subOff]); subCompute(); save("iv-folders", folders); renderFoldList(); syncRange(); relayout(true); };
 // small popovers on the options row: Folders, Years, Layout (Collections has its own, below)
 const POPS = [["#foldbtn","#foldpop","#foldms", renderFoldList], ["#startbtn","#startpop","#startms"]];
-function closePops(except){ for (const [b,p] of POPS) if (p !== except && !$(p).hidden) { $(p).hidden = true; $(b).setAttribute("aria-expanded", "false"); } }
+function closePops(except){ const ex = except && $(except); for (const [b,p] of POPS) if (p !== except && !$(p).hidden && !(ex && ($(p).contains(ex) || ex.contains($(p))))) { $(p).hidden = true; $(b).setAttribute("aria-expanded", "false"); } }
 for (const [b,p,,onOpen] of POPS) $(b).onclick = e => { e.stopPropagation(); const el = $(p), open = el.hidden; closePops(p); if (typeof closeColl === "function") closeColl(); el.hidden = !open; $(b).setAttribute("aria-expanded", String(open)); if (open && onOpen) onOpen(); };
 $("#folddone").onclick = () => closePops();
 on(doc, "pointerdown", e => { for (const [b,p,w] of POPS) if (!$(p).hidden && !$(w).contains(e.target)) { $(p).hidden = true; $(b).setAttribute("aria-expanded", "false"); } });
@@ -2966,9 +2967,7 @@ $("#gocso").onclick = () => goChord("out");
 $("#gocsi").onclick = () => goChord("in");
 
 root.querySelectorAll("#vseg button[data-v]").forEach(b => b.onclick = e => {
-  if (b.dataset.v === "stars" && view === "stars") { e.stopPropagation(); const el = $("#starpop"), open = el.hidden; closePops("#starpop"); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
-  if (b.dataset.v === "sense" && view === "sense" && SAI) { e.stopPropagation(); const el = $("#sensepop"), open = el.hidden; closePops("#sensepop"); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
-  if (b.dataset.v === "emergence" && (view === "emergence" || view === "spacetime")) { e.stopPropagation(); const el = $("#emerpop"), open = el.hidden; closePops("#emerpop"); syncEmd(); el.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
+  if (b.dataset.v === view || (b.dataset.v === "emergence" && view === "spacetime")) { e.stopPropagation(); toggleMapOpts(b); return; }   // the current map's tab opens its own menu: variants and options
   setView(b.dataset.v); });
 
 // scoring panel
@@ -3602,6 +3601,99 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
   const flip = c => { set(c); win.setTimeout(() => { resize(); if (sel >= 0) flyTo(sel); else fit(true); }, 30); };   // reframe for the new height
   hb.onclick = () => flip(true); tab.onclick = () => flip(false);
   set(pref("iv-hcol", false) === true); }
+
+// ---------- the toolbar: one row, the way Bases lays out its own ----------
+// Left: the two dots, the maps (the current map's tab opens its variants and options), and the counts.
+// Right: Arrange, Group (maps that group), Filter (with a count when on), Display, Find, Follow note, Saved.
+// The controls are the same elements as before, moved into place, so everything they did still works.
+{ const hd = root.querySelector("header"); hd.classList.add("tb2");
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const icon = parts => { const s_ = doc.createElementNS(SVGNS, "svg"); s_.setAttribute("width", "15"); s_.setAttribute("height", "15"); s_.setAttribute("viewBox", "0 0 16 16"); s_.setAttribute("aria-hidden", "true");
+    for (const [tag, at] of parts) { const e = doc.createElementNS(SVGNS, tag); for (const k in at) e.setAttribute(k, at[k]); e.setAttribute("stroke", "currentColor"); if (!at.fill) e.setAttribute("fill", "none"); e.setAttribute("stroke-width", "1.4"); e.setAttribute("stroke-linecap", "round"); e.setAttribute("stroke-linejoin", "round"); s_.appendChild(e); }
+    return s_; };
+  const I = {
+    arrange: [["path", { d: "M2 4h9M2 8h6M2 12h3M13 3v10M10.5 10.5L13 13l2.5-2.5" }]],
+    group: [["rect", { x: "2", y: "2.5", width: "12", height: "4", rx: "1" }], ["rect", { x: "2", y: "9.5", width: "12", height: "4", rx: "1" }]],
+    filter: [["path", { d: "M2 3h12l-4.5 5.5V13l-3-1.5v-3z" }]],
+    display: [["path", { d: "M2 4h12M2 8h12M2 12h12" }], ["circle", { cx: "5", cy: "4", r: "1.6", fill: "var(--bg)" }], ["circle", { cx: "11", cy: "8", r: "1.6", fill: "var(--bg)" }], ["circle", { cx: "7", cy: "12", r: "1.6", fill: "var(--bg)" }]],
+    follow: [["circle", { cx: "8", cy: "8", r: "5.5" }], ["circle", { cx: "8", cy: "8", r: "1.8", fill: "currentColor" }], ["path", { d: "M8 1v2M8 13v2M1 8h2M13 8h2" }]],
+    star: [["path", { d: "M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z" }]],
+  };
+  const left = hd.createDiv({ cls: "tbl" }), right = hd.createDiv({ cls: "tbr" });
+  left.appendChild(root.querySelector(".brand .duo")); left.appendChild($("#vsegms")); left.appendChild($("#stats")); left.appendChild($("#focusbar"));
+  // a tab for the current map when it lives under More (Corona, Bookshelf, Spiral…), and More itself
+  const vcur = $("#vseg").createEl("button", { cls: "vcur", attr: { id: "vcur", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } }); $("#vseg").insertBefore(vcur, $("#vmore"));
+  $("#vmore").setText("More ▾"); $("#vmore").setAttribute("aria-label", "More maps");
+  const VN = () => ({ emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemaking", arc: "Arc",
+    chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
+    shelf: "Bookshelf", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
+  const CORE = new Set(["emergence", "spacetime", "gravity", "stars", "sense"]);
+  // the current map's menu: its variants (Emergence, Starfield) and the options that belong to it alone
+  const mo = $("#vsegms").createDiv({ cls: "mspop mapopts", attr: { id: "mapopts", role: "dialog", "aria-label": "This map" } }); mo.hidden = true;
+  const moT = mo.createDiv({ cls: "pt" });
+  for (const id of ["#emerpop", "#starpop", "#sensepop"]) { const el = $(id); el.classList.remove("mspop"); el.classList.add("mosec"); el.hidden = true; mo.appendChild(el); }
+  const moL = mo.createDiv({ cls: "pt mol", text: "This map" }); mo.appendChild($("#laygrp")); const moNone = mo.createDiv({ cls: "pn", text: "Nothing to set on this map." });
+  const hasLay = () => [...$("#laygrp").children].some(el => !el.hidden && !el.classList.contains("glbl"));
+  const variants = () => view === "emergence" || view === "spacetime" ? "#emerpop" : view === "stars" ? "#starpop" : view === "sense" && SAI ? "#sensepop" : null;
+  toggleMapOpts = b => { const open = mo.hidden; closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!open) { mo.hidden = true; b.setAttribute("aria-expanded", "false"); return; }
+    const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop"]) $(id).hidden = id !== v_; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
+    moT.setText(VN()); const l = hasLay(); moL.hidden = !l || !v_; moNone.hidden = l || !!v_;
+    mo.style.left = Math.max(0, b.offsetLeft - 4) + "px"; mo.hidden = false; b.setAttribute("aria-expanded", "true"); };
+  POPS.push(["#vcur", "#mapopts", "#vsegms"]);
+  vcur.onclick = e => { e.stopPropagation(); toggleMapOpts(vcur); };
+  // a button and its popover, closed by a click outside or Escape like the others
+  const popBtn = (id, label, ic, cls) => { const w = right.createDiv({ cls: "ms tbms", attr: { id: id + "ms" } }), b = w.createEl("button", { cls: "tbb" + (cls ? " " + cls : ""), attr: { id: id + "btn", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
+    b.appendChild(icon(I[ic])); b.createSpan({ cls: "tbl2", text: label }); const val = b.createEl("b"); const p = w.createDiv({ cls: "mspop tbpop", attr: { id: id + "pop", role: "dialog", "aria-label": label } }); p.hidden = true;
+    POPS.push(["#" + id + "btn", "#" + id + "pop", "#" + id + "ms"]); return { w, b, p, val }; };
+  const opener = (P, onOpen) => P.b.onclick = e => { e.stopPropagation(); const open = P.p.hidden; closePops("#" + P.p.id); if (typeof closeColl === "function") closeColl(); P.p.hidden = !open; P.b.setAttribute("aria-expanded", String(open)); if (open && onOpen) onOpen(); };
+  // Arrange: what left-to-right means (Time, ACE, a number, one of your properties)
+  const AR = popBtn("arr", "Arrange", "arrange");
+  const axisName = m => m === "time" ? "Time" : m === "ace" ? ($('#xseg button[data-x="ace"]').textContent || "ACE") : m === "rank" ? "Rank" : (AXES[m] && AXES[m].name) || (($(`#xmore option[value="${CSS.escape(m)}"]`) || {}).textContent) || m;
+  const fillArr = () => { AR.p.empty(); AR.p.createDiv({ cls: "pt", text: "Arrange notes by · left to right" });
+    const row = (m, txt) => { const r = AR.p.createEl("button", { cls: "orow" + (m === mode ? " on" : ""), attr: { type: "button", role: "menuitemradio", "aria-checked": String(m === mode) } }); r.createSpan({ cls: "rd" }); r.createSpan({ text: txt }); r.onclick = () => { closePops(); setMode(m); }; };
+    row("time", "Time"); row("ace", axisName("ace")); { const rb = $('#xseg button[data-x="rank"]'); if (rb && !rb.hidden) row("rank", rb.textContent); }
+    const opts = [...root.querySelectorAll("#xmore option")].filter(o => o.value);
+    const nums = opts.filter(o => !o.value.startsWith("n:")), props_ = opts.filter(o => o.value.startsWith("n:"));
+    if (nums.length) { AR.p.createDiv({ cls: "pt", text: "Numbers" }); for (const o of nums) row(o.value, o.textContent); }
+    if (props_.length) { AR.p.createDiv({ cls: "pt", text: "Your properties" }); for (const o of props_) row(o.value, o.textContent); }
+    AR.p.createDiv({ cls: "pn", text: "Add number properties in Settings → Properties to plot." }); };
+  opener(AR, fillArr);
+  // Group: only on maps that group (Bookshelf, Chord, Treemap)
+  const GR = popBtn("grp", "Group", "group");
+  const gsec = (title, id) => { const w = GR.p.createDiv({ cls: "gsec" }); w.createDiv({ cls: "pt", text: title }); w.appendChild($(id)); return [w, $(id)]; };
+  const GS = [gsec("Shelve books by", "#shelfsort"), gsec("Arcs by", "#chordby"), gsec("Subfolders", "#tmsubs")];
+  opener(GR);
+  // Filter: folders, collections, Efforts
+  const FI = popBtn("filt", "Filter", "filter"); const badge = FI.b.createSpan({ cls: "tbadge" });
+  const fsec = (title, el) => { const w = FI.p.createDiv({ cls: "fsec" }); w.createDiv({ cls: "pt", text: title }); w.appendChild(el); };
+  fsec("Folders", $("#foldms")); fsec("Collections", $("#collms")); fsec("Efforts", $("#effbtn")); $("#effbtn").setText("Light up areas and projects");
+  opener(FI);
+  // Display: links, theme, how scoring works
+  const DI = popBtn("disp", "Display", "display");
+  const dsec = (title, el) => { const w = DI.p.createDiv({ cls: "fsec" }); w.createDiv({ cls: "pt", text: title }); w.appendChild(el); };
+  dsec("Links", $("#alllinks")); dsec("Theme", $("#themeseg")); dsec("Scoring", $("#scorebtn")); $("#scorebtn").setText("How notes are scored");
+  $("#scorebtn").addEventListener("click", () => closePops());
+  opener(DI);
+  // Find, Follow note (an icon), Saved, and the ︿ that tucks the bar away
+  right.appendChild(root.querySelector("header .search"));
+  const fb = $("#follownote"); fb.empty(); fb.appendChild(icon(I.follow)); fb.classList.add("tbb", "tbi"); fb.setAttribute("aria-label", "Follow note: the map follows the note you're editing"); fb.title = "Follow note"; right.appendChild(fb);
+  right.appendChild($("#viewms")); { const vb = $("#viewbtn"); const t = vb.textContent.replace(/^★\s*/, ""); vb.empty(); vb.appendChild(icon(I.star)); vb.createSpan({ text: t || "Saved" }); vb.classList.add("tbb"); }
+  const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
+  const ARR_OFF = new Set(["spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
+  syncTB = () => {
+    const core = CORE.has(view); vcur.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
+    $("#vmore").classList.toggle("on", false);
+    root.dataset.mo = variants() || hasLay() ? "1" : "";
+    AR.w.hidden = ARR_OFF.has(view); AR.val.setText(axisName(mode));
+    let g = false; for (const [w, el] of GS) { w.hidden = el.hidden; g = g || !el.hidden; } GR.w.hidden = !g;
+    GR.val.setText(view === "shelf" ? (($("#shelfsort button[aria-pressed=true]") || {}).textContent || "") : view === "chord" ? (($("#chordby button[aria-pressed=true]") || {}).textContent || "") : view === "treemap" ? ($("#tmsubs").getAttribute("aria-pressed") === "true" ? "Subfolders" : "Folders") : "");
+    const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) ; badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0);
+  };
+  const mo2 = new MutationObserver(() => syncTB());
+  for (const id of ["#foldx", "#collx"]) mo2.observe($(id), { attributes: true, attributeFilter: ["hidden"] });
+  for (const id of ["#shelfsort", "#chordby"]) mo2.observe($(id), { attributes: true, subtree: true, attributeFilter: ["aria-pressed", "hidden"] });
+  mo2.observe($("#tmsubs"), { attributes: true, attributeFilter: ["aria-pressed", "hidden"] });
+  syncTB(); }
 
 if (following) win.setTimeout(() => followPath(host.activePath && host.activePath(), true), 400);   // opened while following: start on the active note
 
