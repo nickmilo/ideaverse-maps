@@ -698,3 +698,9 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .wm-name{left:auto;right:16px}
 .ivm header.tb2 .mapopts #subctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;max-width:100%;border:0;background:none;padding:0}
 .ivm header.tb2 .mapopts #subctl[hidden]{display:none}
+/* tuck and untuck the bar from the same spot: the ︿ at the bar's far right becomes a ﹀ right where it was */
+.ivm header.tb2 .hcol{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;padding:0;margin-left:4px;border:1px solid transparent;border-radius:8px;background:none;color:var(--muted);font:500 13px/1 var(--mono);cursor:pointer;box-shadow:none;flex:none}
+.ivm header.tb2 .hcol:hover{color:var(--ink);background:var(--panel);border-color:var(--line)}
+.ivm.ivm .htab{left:auto;right:14px;top:11px;transform:none;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:1px solid var(--line);border-radius:8px;font:500 13px/1 var(--mono);letter-spacing:0}
+.ivm.ivm .htab[hidden]{display:none}
+.ivm .app:has(> header[hidden]) .wm-name{margin-right:40px}
