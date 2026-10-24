@@ -2769,6 +2769,11 @@ function runSearch(){
 }
 function go(i){ res.hidden = true; q.blur(); navTo(i); toEditor(i); }
 q.addEventListener("input", runSearch);
+// phones: the keyboard leaves little room, so while Find a note has focus the header shrinks to the search box alone
+// and the space kept for Obsidian's toolbar (hidden behind the keyboard) goes to the map. Leaving waits a beat so a tapped result still lands.
+let kbT = 0; const kbHost = () => root.closest(".ivm-host") || root.parentElement;
+q.addEventListener("focus", () => { if (!doc.body.classList.contains("is-phone")) return; clearTimeout(kbT); root.classList.add("kb"); kbHost() && kbHost().classList.add("kb"); });
+q.addEventListener("blur", () => { clearTimeout(kbT); kbT = setTimeout(() => { root.classList.remove("kb"); kbHost() && kbHost().classList.remove("kb"); }, 250); });
 q.addEventListener("keydown", e => {
   if (res.hidden || !hits.length) return;
   if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); hi = (hi + (e.key === "ArrowDown" ? 1 : hits.length-1)) % hits.length; res.querySelectorAll("button").forEach((b,j) => b.classList.toggle("on", j===hi)); }
