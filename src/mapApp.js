@@ -147,7 +147,7 @@ function computeVis(){ const fs = new Set(folders);
       && (fs.has(d.ace) || !FOLD.includes(d.ace))    // vault-root notes always show
       && !subHid[i]
       && collOK(d)
-      && (!fset || fset[i])) ? 1 : 0; }
+      && (!fset || fset[i] || curV() === "people")) ? 1 : 0; }
   if (YRV.has(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
   if (focus >= 0) vis[focus] = 1;
   // a filter, a collection or a base that leaves few notes: draw them bigger, so a small set never looks empty
@@ -2063,7 +2063,7 @@ EXP.posters = {
 // pulled together by the notes they share (a director and the actors they keep casting). Each note orbits its main
 // person, on the side facing the others it names. A person needs no note to become a hub; if they have one, that note
 // sits at the hub's heart. Notes that name nobody leave the map.
-const PPL = { props: pref("iv-pplprops", null), max: pref("iv-pplmax", 40), hubs: [], pairs: [], np: new Map(), cand: [], key: "" };
+const PPL = { pick: -1, act: null, props: pref("iv-pplprops", null), max: pref("iv-pplmax", 40), hubs: [], pairs: [], np: new Map(), cand: [], key: "" };
 const PPL_RX = /^(directors?|actors?|cast|stars?|authors?|writers?|by|creators?|artists?|hosts?|guests?|speakers?|people|persons?|with|composers?|producers?|editors?|illustrators?|narrators?|interviewees?|teachers?|mentors?|characters?)$/i;
 function peopleDetect(){
   const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
@@ -2124,21 +2124,37 @@ function pplOptsUI(){ const box = $("#pplctl"); if (!box) return; const cand = P
     for (const c of cand) { const b = list.createEl("button", { cls: "pchip" + (act.has(c.id) ? "" : " off") }); b.createSpan({ text: c.id }); b.createEl("b", { text: c.n.toLocaleString() }); b.setAttribute("aria-pressed", String(act.has(c.id)));
       b.onclick = ev => { ev.stopPropagation(); const s_ = new Set(PPL.active || []); if (s_.has(c.id)) s_.delete(c.id); else s_.add(c.id); PPL.props = [...s_]; save("iv-pplprops", PPL.props); morph(true, () => fitTarget()); legend(); }; } }
   const r = box.querySelector("input"), v = box.querySelector(".pplv"); if (r && document.activeElement !== r) r.value = PPL.max; if (v) v.setText(`${PPL.max} people · ${(PPL.shown || 0).toLocaleString()} notes`); }
+// a person on the map: the star under the pointer (people with no note of their own can be clicked too)
+function pplHubAt(px, py){ let best = -1, bd = Infinity; for (const h of PPL.hubs) { const d = Math.hypot(sx(h.x) - px, sy(h.y) - py), r = Math.max(8, h.r * k * .55 + 4); if (d < r && d < bd) { bd = d; best = h.h; } } return best; }
+function pplClick(i, px, py){ if (i >= 0) { PPL.pick = -1; return false; } const h = pplHubAt(px, py);
+  if (h < 0) { if (PPL.pick >= 0) { PPL.pick = -1; draw(); } return false; }
+  const hub = PPL.hubs[h]; if (hub.note >= 0) { PPL.pick = -1; return false; }   // they have a note: pick it like any other
+  PPL.pick = PPL.pick === h ? -1 : h; select(-1); draw(); return true; }
+// what's lit: a picked person (with or without a note), or a picked/focused note and its people; in Focus mode, two steps
+// also bring in the other notes those people share
+function pplActive(){ let hub = PPL.pick >= 0 ? PPL.pick : -1; const f = focus >= 0 ? focus : sel >= 0 ? sel : hover; if (hub < 0 && f >= 0) { const hh = PPL.hubs.find(h => h.note === f); if (hh) hub = hh.h; }
+  if (hub < 0 && (f < 0 || !PPL.np.has(f))) return null;
+  const hubs = new Set(), notes = new Set(), deep = focus >= 0 && fDepth >= 2;
+  if (hub >= 0) { hubs.add(hub); for (const [i, hs] of PPL.np) if (hs.includes(hub)) { notes.add(i); if (deep) for (const o of hs) hubs.add(o); } }
+  else { notes.add(f); for (const o of PPL.np.get(f)) hubs.add(o); if (deep) for (const [i, hs] of PPL.np) if (hs.some(o => hubs.has(o))) notes.add(i); }
+  return { hub, hubs, notes }; }
 EXP.people = {
   layout: layoutPeople, ownLabels: true,
-  guides(){ const gd = sel >= 0 || hover >= 0 ? .45 : 1, hl = sel >= 0 ? sel : hover;
-    // shared notes between two people: the more they share, the brighter the line
-    ctx.lineCap = "round"; for (const [a, b, w] of PPL.pairs) { ctx.strokeStyle = "#c7a6ff"; ctx.globalAlpha = Math.min(.75, .14 + w * .07) * gd; ctx.lineWidth = Math.min(8, 1 + w * .6) * Math.min(1.6, Math.max(.6, k)); ctx.beginPath(); ctx.moveTo(sx(a.x), sy(a.y)); ctx.lineTo(sx(b.x), sy(b.y)); ctx.stroke(); }
+  guides(){ const act = pplActive(), hl = sel >= 0 ? sel : hover, gd = act ? .5 : 1; PPL.act = act;
+    // shared notes between two people: the more they share, the brighter the line; with something picked, only its ties stay bright
+    ctx.lineCap = "round"; for (const [a, b, w] of PPL.pairs) { const on = !act || (act.hubs.has(a.h) && act.hubs.has(b.h)); ctx.strokeStyle = "#c7a6ff"; ctx.globalAlpha = Math.min(.75, .14 + w * .07) * (on ? 1 : .12) * (act && on ? 1.6 : gd); ctx.lineWidth = Math.min(8, 1 + w * .6) * Math.min(1.6, Math.max(.6, k)); ctx.beginPath(); ctx.moveTo(sx(a.x), sy(a.y)); ctx.lineTo(sx(b.x), sy(b.y)); ctx.stroke(); }
+    // a picked person's notes, each tied to them
+    if (act && act.hub >= 0) { const p_ = PPL.hubs[act.hub]; ctx.strokeStyle = css.accent; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.beginPath(); for (const i of act.notes) { if (!VV(i)) continue; ctx.moveTo(sx(p_.x), sy(p_.y)); ctx.lineTo(sx(X[i]), sy(Y[i])); } ctx.stroke(); }
     // the picked note's people
     if (hl >= 0 && PPL.np.has(hl)) { ctx.strokeStyle = css.accent; ctx.globalAlpha = .85; ctx.lineWidth = 1.5; ctx.beginPath(); for (const h of PPL.np.get(hl)) { const p_ = PPL.hubs[h]; ctx.moveTo(sx(X[hl]), sy(Y[hl])); ctx.lineTo(sx(p_.x), sy(p_.y)); } ctx.stroke(); }
     for (const h of PPL.hubs) { const x = sx(h.x), y = sy(h.y), r = Math.max(3, h.r * k * .55); if (x < -200 || x > W + 200 || y < -200 || y > H + 200) continue; const col = PPL.col[h.prop] || css.accent;
-      const lit = hl >= 0 && PPL.np.has(hl) && PPL.np.get(hl).includes(h.h);
-      const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3.2); g.addColorStop(0, col); g.addColorStop(.3, col + "55"); g.addColorStop(1, col + "00"); ctx.globalAlpha = (lit ? 1 : .85) * (hl >= 0 && !lit ? .5 : 1); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = hl >= 0 && !lit ? .55 : 1; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+      const lit = act ? act.hubs.has(h.h) : false;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3.2); g.addColorStop(0, col); g.addColorStop(.3, col + "55"); g.addColorStop(1, col + "00"); ctx.globalAlpha = (lit ? 1 : .85) * (act && !lit ? .22 : 1); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = act && !lit ? .3 : 1; if (act && act.hub === h.h) { ctx.strokeStyle = css.ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, r + 4, 0, Math.PI * 2); ctx.stroke(); } ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
     ctx.globalAlpha = 1; ctx.lineCap = "butt"; },
   notes(lit, dim){ const r = Math.max(2, Math.min(6, 3.4 * Math.sqrt(k))), big = 10 * k;
     for (let i=0;i<n;i++) { if (!VV(i) || !PPL.np.has(i)) continue; const x = sx(X[i]), y = sy(Y[i]); if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
-      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .2 : .55) : .9;
+      const act = PPL.act; ctx.globalAlpha = act ? (act.notes.has(i) ? 1 : .1) : lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .2 : .55) : .9;
       const img = big >= 14 && PST.img ? posterImg(i) : null;
       if (img) { const w = big * .8, h = big * 1.2; ctx.drawImage(img, x - w / 2, y - h / 2, w, h); if (i === sel) { ctx.strokeStyle = css.accent; ctx.lineWidth = 2; ctx.strokeRect(x - w / 2, y - h / 2, w, h); } }
       else { ctx.fillStyle = i === sel ? css.accent : css.ink; ctx.beginPath(); ctx.arc(x, y, i === sel ? r * 1.8 : r, 0, Math.PI * 2); ctx.fill(); } }
@@ -2147,8 +2163,11 @@ EXP.people = {
     for (const h of [...PPL.hubs].sort((a, b) => b.n - a.n)) { const x = sx(h.x), y = sy(h.y) + Math.max(3, h.r * k * .55) + 6; if (x < -100 || x > W + 100 || y < -40 || y > H + 40) continue;
       const fs = Math.max(10, Math.min(15, 9 + Math.sqrt(h.n) * 1.1)); ctx.font = `600 ${fs}px ${css.body}`; const w = ctx.measureText(h.name).width;
       if (placed.some(p_ => Math.abs(p_[0] - x) < (p_[2] + w) / 2 + 4 && Math.abs(p_[1] - y) < fs + 10)) continue; placed.push([x, y, w]);
-      ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.fillStyle = css.ink; ctx.strokeText(h.name, x, y); ctx.fillText(h.name, x, y);
+      ctx.globalAlpha = PPL.act && !PPL.act.hubs.has(h.h) ? .35 : 1; ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.fillStyle = css.ink; ctx.strokeText(h.name, x, y); ctx.fillText(h.name, x, y);
       ctx.font = `400 ${fs * .72}px ${css.mono}`; ctx.fillStyle = css.muted; const t = `${h.n} · ${h.prop}`; ctx.strokeText(t, x, y + fs + 2); ctx.fillText(t, x, y + fs + 2); }
+    ctx.globalAlpha = 1;
+    // a picked person's notes are named when there's room
+    if (PPL.act && PPL.act.hub >= 0 && PPL.act.notes.size <= 60) { ctx.font = `500 11px ${css.body}`; ctx.fillStyle = css.ink; ctx.lineWidth = 3; ctx.strokeStyle = css.bg; for (const i of PPL.act.notes) { if (!VV(i)) continue; const x = sx(X[i]), y = sy(Y[i]) + 6; if (x < 0 || x > W || y < 0 || y > H) continue; ctx.strokeText(N[i].title, x, y); ctx.fillText(N[i].title, x, y); } }
     if (sel >= 0 && VV(sel)) { ctx.font = `600 12px ${css.body}`; ctx.fillStyle = css.ink; ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.strokeText(N[sel].title, sx(X[sel]), sy(Y[sel]) + 8); ctx.fillText(N[sel].title, sx(X[sel]), sy(Y[sel]) + 8); }
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
   legend: "People: the people your notes name in properties like director, actors, author or guests, as stars sized by how many notes name them. Lines join people who share notes, brighter the more they share. Each note orbits its main person, on the side facing the others it names; zoom in to see pictures. Click the People tab to pick which properties count and how many people to show.",
@@ -3231,6 +3250,7 @@ cv.addEventListener("pointermove", e => {
   }
   const i = pick(e.offsetX, e.offsetY);
   if (i !== hover) { hover = i; cv.classList.toggle("hot", i >= 0); draw(); }
+  if (view === "people" && i < 0) cv.classList.toggle("hot", pplHubAt(e.offsetX, e.offsetY) >= 0);
   if (i < 0 && view === "chord" && !csphOn()) { const a = chordArcAt(e.offsetX, e.offsetY);   // hovering an arc: its ribbons light up, with the counts
     if (a !== chArc) { chArc = a; draw(); }
     if (a >= 0) { showArcTip(a); return; }
@@ -3247,7 +3267,7 @@ cv.addEventListener("pointermove", e => {
 const end = e => { pts.delete(e.pointerId);
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
-  if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY);
+  if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (view === "people" && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (isPhone() || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hover = -1; shTape = -1; draw(); } tip.hidden = true; });
@@ -4279,7 +4299,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     $("#gotreemap").after(gm); gm.onclick = () => { closePops(); driftStop(); setView("mosaic"); };
     // People: a constellation of the people your notes name, after Posters
     const gpp = doc.createElement("button"); gpp.className = "chip"; gpp.id = "gopeople"; gpp.textContent = "People"; gpp.setAttribute("aria-label", "The people your notes name (director, actors, author, guests) as stars, joined by the notes they share");
-    $("#goposters").after(gpp); gpp.onclick = () => { closePops(); driftStop(); setView("people"); }; }
+    gpp.onclick = () => { closePops(); driftStop(); setView("people"); };
+    // Posters and People are for targeted sets (a base of films, a collection of books): Experimental → Specialized
+    { const exp_ = pop.querySelector(":scope > details"), sp = doc.createElement("details"); sp.className = "mexp mexp2"; sp.id = "mspec"; const su = doc.createElement("summary"); su.textContent = "Specialized"; sp.appendChild(su);
+      sp.appendChild(gp); sp.appendChild(gpp); if (exp_) exp_.appendChild(sp); else pop.appendChild(sp); } }
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "pplctl" } }); pc.hidden = true;
     pc.createDiv({ cls: "phint", text: "People from these properties:" }); pc.createDiv({ cls: "plchips pplchips" });
     const row = pc.createEl("label", { cls: "prow" }); row.createSpan({ text: "Show" }); const r = row.createEl("input", { type: "range" }); r.min = "5"; r.max = "150"; r.step = "5"; r.value = String(PPL.max);

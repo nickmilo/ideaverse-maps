@@ -79,7 +79,7 @@ Every note as a book on a double-wide shelf, shelved by call number (a decimal s
 ![Bookshelf: notes as books](docs/bookshelf.png)
 <sub>Bookshelf in the Play theme, shelved by call number.</sub>
 
-### Posters
+### Posters (More → Experimental → Specialized)
 
 For a smaller, targeted set: a collection, a folder, or a base view (your movies, your books, a learning pack). Each note becomes a card, laid out by its own properties, and if notes have an image property (a poster, a cover, a link to an image in your vault), the card shows it. Click the Posters tab for its menu:
 
@@ -100,9 +100,9 @@ In **Scatter**, when the two numbers are the same kind of thing (two ratings, tw
 ![Mosaic: posters as tiles, a block per genre](docs/mosaic.png)
 <sub>Mosaic: every film a tile, a block per genre, each tile sized by your rating.</sub>
 
-### People
+### People (More → Experimental → Specialized)
 
-The people your notes name, in properties like director, actors, author or guests, become stars, sized by how many notes name them. Lines join people who share notes (a director and the actors they keep casting), brighter the more they share. Each note orbits its main person, on the side facing the others it names; zoom in to see pictures. A person needs no note of their own; if they have one, it sits at their star. Click the People tab to choose which properties count and how many people to show.
+The people your notes name, in properties like director, actors, author or guests, become stars, sized by how many notes name them. Lines join people who share notes (a director and the actors they keep casting), brighter the more they share. Each note orbits its main person, on the side facing the others it names; zoom in to see pictures. A person needs no note of their own; if they have one, it sits at their star. Click any star, even a person with no note, to light up their notes and the people they share them with. In Focus mode, one step shows a note and its people; two steps adds the other notes those people share. Click the People tab to choose which properties count and how many people to show.
 
 ### Experimental
 
