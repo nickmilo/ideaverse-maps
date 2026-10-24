@@ -13,7 +13,7 @@ Four main maps sit in the toolbar. Click a map's tab again for its variants and 
 
 ### Emergence
 
-Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders. Its menu sets the **years shown**: drag either end to keep only, say, 2022 to 2024 (every map of the whole vault shares it: Gravity, Starfield, Sensemaking, Graph, Chord, Treemap, Mosaic and the rest; Posters and People have their own sliders). Notes from other years and notes with no date stay off the map unless you turn on **Show notes outside the date range**, which puts them in No date, Before and After strips at the edges. Click any note to light up its links: up to the maps above it, down to the notes it gathers. Its menu also has **Space-Time** (your top folders as rows) and **Planetarium** (stand inside it: Level 5 overhead).
+Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders. **Filter** sets the **years shown**: drag either end to keep only, say, 2022 to 2024 (every map of the whole vault shares it: Gravity, Starfield, Sensemaking, Graph, Chord, Treemap, Mosaic and the rest; Posters and People have their own sliders). Notes from other years and notes with no date wait in No date, Before and After strips at the edges; turn off **Show notes outside the date range** to leave them off the map. Click any note to light up its links: up to the maps above it, down to the notes it gathers. Its menu also has **Space-Time** (your top folders as rows) and **Planetarium** (stand inside it: Level 5 overhead).
 
 ### Gravity
 
