@@ -921,7 +921,7 @@ function sensePlay(){ if (sensePlaying) { senseStop(); return; }
   sensePlaying = true; $("#tlplay").textContent = "❚❚"; $("#tlplay").setAttribute("aria-label", "Pause"); senseTimer = win.setTimeout(senseTick, 300); }
 function placePlaybar(){ const pb = $("#playbar"), tb = $("#timebar");   // Sensemaking and Starfield (desktop): autoplay sits just under the timeline bar, however many rows it wraps to
   pb.style.top = !isPhone() && !tb.hidden && (view === "sense" || view === "stars" || view === "gravity" || view === "chord" || expOn()) ? (tb.offsetTop + tb.offsetHeight + 8) + "px" : "";
-  const db = $("#driftbar"); db.hidden = !(s3dOn() || sphOn() || geo3On()); if (db.hidden) driftStop();
+  const db = $("#driftbar"); db.hidden = false;   // Orbit runs on every map (Earth, a fixed tilt, shows only on 3D maps)
   db.style.top = !isPhone() && pb.style.top ? (pb.offsetTop + pb.offsetHeight + 8) + "px" : ""; }
 on(win, "resize", () => { placePlaybar(); placeAnitab(); });
 function syncTimebar(){ const on = true; win.setTimeout(placePlaybar, 0);
@@ -2029,6 +2029,11 @@ function driftPick(){ const gals = BODIES.filter(b => b.kind === "gal" && b.memb
   let r = Math.random()*tot; for (const b of gals) { r -= Math.sqrt(b.members.length); if (r <= 0 && b.id !== driftGal) return b.id; } return gals[0].id; }
 function driftFrame(now){
   if (!drifting) return; driftRaf = RAF(driftFrame);
+  if (!(s3dOn() || sphOn() || geo3On())) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; if (!dt || morphing) return;   // flat maps: a slow glide and a gentle in-and-out, faster at Lively
+    const sp = DRIFT[driftSpeed === "earth" ? "slow" : driftSpeed][0]/.035, t = (now - driftT0)/1000*sp;
+    if (domeOn()) { domeYaw += .03*sp*dt; domeProject(); X.set(DX); Y.set(DY); }
+    else { const px = 9*sp*Math.sin(t*.23), py = 6*sp*Math.cos(t*.17); tx += px*dt; ty += py*dt; const f = 1 + .012*Math.cos(t*.5)*sp*dt, cx = W/2, cy = H/2; tx = cx - (cx - tx)*f; ty = cy - (cy - ty)*f; k *= f; }
+    render(); return; }
   if (geo3On()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;
     g3Yaw -= spin*1.6*dt; g3Pitch = driftSpeed === "earth" ? 20*Math.PI/180 : .35 + .3*Math.sin(t*2*Math.PI/((breath || 30)*1.4)); geoProj(); X.set(EX); Y.set(EY); render(); return; }
   if (sphOn()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;   // the globe turns slowly, tilting as it goes
@@ -2046,10 +2051,10 @@ function driftFrame(now){
   const cxw = (vx - tx)/k, cyw = (vy - ty)/k, e = Math.min(1, dt*1.6);
   const ncx = cxw + (gx - cxw)*e, ncy = cyw + (gy - cyw)*e; k = k + (kk - k)*e; tx = vx - ncx*k; ty = vy - ncy*k;
   render(); }
-function driftStart(){ if (drifting || !(s3dOn() || sphOn() || geo3On())) return; drifting = true; driftK0 = fitTarget().k*.95; driftT0 = driftLast = performance.now(); driftCyc = -1;
+function driftStart(){ if (drifting) return; drifting = true; driftK0 = fitTarget().k*.95; driftT0 = driftLast = performance.now(); driftCyc = -1;
   $("#dplay").textContent = "❚❚"; $("#dplay").setAttribute("aria-label", "Stop drifting"); driftRaf = RAF(driftFrame); }
 function driftStop(){ if (!drifting) return; drifting = false; win.cancelAnimationFrame(driftRaf); const b = $("#dplay"); if (b) { b.textContent = "▶"; b.setAttribute("aria-label", "Drift"); }
-  buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else save("iv-cam3", [yaw3, pitch3]); draw(); }
+  buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (s3dOn()) save("iv-cam3", [yaw3, pitch3]); draw(); }
 function bodyPos(b){ if (s3dOn() && B3[b.id]) return [B3[b.id].px, B3[b.id].py]; return [UC.x + b.x, UC.y + b.y]; }
 function halos3D(dim){   // in 3D the cached glow can't follow the camera: each galaxy gets a soft halo, flattened as its disk turns edge-on
   ctx.globalCompositeOperation = "lighter";
@@ -2944,7 +2949,7 @@ for (const [id, d] of [["#lcprev", -1], ["#lcnext", 1]]) $(id).onclick = () => {
 syncLC();
 function syncPG(){ root.querySelectorAll("#planetseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pg === PMODE))); }
 function setPMode(m){ if (!["flat", "table", "globe"].includes(m)) return; driftStop(); PMODE = m; PGLOBE = m === "globe"; save("iv-planetmode", m); syncPG();
-  if (view !== "planet") { setView("planet"); return; } root.dataset.dome = sphOn() ? "1" : ""; $("#driftbar").hidden = !sphOn(); morph(true, () => fitTarget()); legend(); placePlaybar(); }
+  if (view !== "planet") { setView("planet"); return; } root.dataset.dome = sphOn() ? "1" : ""; morph(true, () => fitTarget()); legend(); placePlaybar(); }
 for (const m of ["flat", "table", "globe"]) { const b = root.querySelector("#gopl" + m); if (b) b.onclick = () => { closePops(); setPMode(m); }; }
 syncPG();
 root.querySelectorAll("#planetseg button").forEach(b => b.onclick = () => { if (b.dataset.pg !== PMODE) setPMode(b.dataset.pg); });
@@ -3165,7 +3170,8 @@ function schedule(){
   pTimer = win.setTimeout(playStep, playSec * 1000);
 }
 // Autoplay can also drift a little: globes and 3D maps turn slowly (like Lively drift), flat maps glide and breathe
-let playDrift = pref("iv-pdrift", false) === true, apdRaf = 0, apdLast = 0, apdT = 0;
+let playDrift = false,   // "drift a little" moved to Orbit, which runs on every map
+    apdRaf = 0, apdLast = 0, apdT = 0;
 function apdFrame(now){
   if (!playing || !playDrift || dead) { apdRaf = 0; return; } apdRaf = RAF(apdFrame);
   const dt = Math.min(.1, (now - (apdLast || now))/1000); apdLast = now; apdT += dt; if (!dt) return;
@@ -3186,7 +3192,7 @@ function setPlaying(on){
 }
 function syncPlay(){
   root.querySelectorAll("#playseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === playMode)));
-  const hm = root.querySelector("#pmaps"); if (hm) { const mm = playMode === "map"; hm.checked = mm || playMaps; hm.disabled = mm; hm.closest("label").classList.toggle("locked", mm); hm.closest("label").title = mm ? "Map mode always hops between maps" : ""; }   // Map mode always hops, so the toggle shows on
+  const hm = root.querySelector("#pmaps"); if (hm) { const mm = playMode === "map"; hm.checked = mm || playMaps; hm.disabled = mm; hm.closest("label").classList.toggle("locked", mm); hm.closest("label").title = mm ? "Maps always hops between maps" : ""; }   // Map mode always hops, so the toggle shows on
   const ht = root.querySelector("#ptrail"); if (ht) ht.closest("label").hidden = playMode !== "map";
   $("#pint").value = playSec; $("#pintv").textContent = playSec + "s";
 }
@@ -3194,7 +3200,6 @@ root.querySelectorAll("#playseg button").forEach(b => b.onclick = () => { playMo
 $("#pint").addEventListener("input", e => { playSec = +e.target.value; save("iv-psec", playSec); syncPlay(); if (playing) schedule(); });
 $("#pplay").onclick = () => setPlaying(!playing);
 $("#ptrail").checked = playTrail; $("#ptrail").onchange = () => { playTrail = $("#ptrail").checked; save("iv-ptrail", playTrail); if (!playTrail) win.clearTimeout(trTimer); };
-$("#pdrift").checked = playDrift; $("#pdrift").onchange = () => { playDrift = $("#pdrift").checked; save("iv-pdrift", playDrift); apdSync(); };
 $("#pmaps").checked = playMaps; $("#pmaps").onchange = () => { playMaps = $("#pmaps").checked; save("iv-pmaps", playMaps); hopIn = 0; };
 onKey(e => { if (e.key === "Escape" && playing) setPlaying(false); });
 root.querySelectorAll("#playseg button").forEach(b => b.addEventListener("click", () => { if (tourRun) { tourRun = null; syncTour(); } }));   // picking Random/Thread leaves the tour
