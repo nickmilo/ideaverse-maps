@@ -1286,12 +1286,14 @@ function quinSeeds(m){
 // ---------- Geometric · Octahedron (3D): the same rule in space ----------
 // #1 at the core, #2–7 on the six points; then each tetrahedron (a face of the octahedron and the core) gets a note
 // at its center, the emptiest first, which splits it in four. Other notes gather in a small cloud around their top note.
-const geo3On = () => view === "quincunx" && (GEO === "octa" || GEO === "shells");
+// the Obsidian map in 3D uses the same turntable camera as the 3D Geometric sketches
+let GR3D = pref("iv-gr3d", false) === true, GR3F = 2000;
+const geo3On = () => (view === "quincunx" && (GEO === "octa" || GEO === "shells")) || (view === "graph" && GR3D);
 let g3Yaw = .55, g3Pitch = .42; { const c = pref("iv-g3cam", null); if (Array.isArray(c)) { g3Yaw = +c[0] || g3Yaw; g3Pitch = +c[1] || g3Pitch; } }
 const G3 = new Float32Array(3*n); let G3P = [], G3E = [];
 const g3Keep = () => save("iv-g3cam", [+g3Yaw.toFixed(3), +g3Pitch.toFixed(3)]);
 function g3Cam(x, y, z){ const cy = Math.cos(g3Yaw), sy_ = Math.sin(g3Yaw), cp = Math.cos(g3Pitch), sp = Math.sin(g3Pitch);
-  const x1 = x*cy + z*sy_, z1 = -x*sy_ + z*cy, y2 = y*cp - z1*sp, z2 = y*sp + z1*cp, f = QS*4.5, sc = f/(f + z2); return [x1*sc, y2*sc, z2, sc]; }
+  const x1 = x*cy + z*sy_, z1 = -x*sy_ + z*cy, y2 = y*cp - z1*sp, z2 = y*sp + z1*cp, f = view === "graph" ? GR3F : QS*4.5, sc = f/Math.max(f*.15, f + z2); return [x1*sc, y2*sc, z2, sc]; }
 function geoProj(){ for (let i=0;i<n;i++) { const q = g3Cam(G3[3*i], G3[3*i+1], G3[3*i+2]); EX[i] = q[0]; EY[i] = q[1]; DS3[i] = Math.max(.45, Math.min(2.2, q[3]*q[3])); } }
 function octaSeeds(m){
   const P = [[0, 0, 0], [0, -QS, 0], [QS, 0, 0], [0, 0, QS], [-QS, 0, 0], [0, 0, -QS], [0, QS, 0]], pts = P.slice(0, Math.min(m, 7));
@@ -2247,53 +2249,57 @@ EXP.mosaic = {
 const GPH = { key: "", x: null, y: null, run: 0 };
 function layoutGraph(){
   const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
-  const key = ids.length + ":" + ids.reduce((a, i) => (a * 31 + i) | 0, 7);
+  const key = (GR3D ? "3d:" : "") + ids.length + ":" + ids.reduce((a, i) => (a * 31 + i) | 0, 7);
   if (GPH.key !== key) graphSim(ids, key);
+  if (GR3D) { for (let i=0;i<n;i++) { G3[3*i] = GPH.x[i]; G3[3*i+1] = GPH.y[i]; G3[3*i+2] = GPH.z ? GPH.z[i] : 0; } geoProj(); }
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (let i=0;i<n;i++) { EX[i] = GPH.x[i]; EY[i] = GPH.y[i]; if (vis[i]) { if (EX[i] < x0) x0 = EX[i]; if (EX[i] > x1) x1 = EX[i]; if (EY[i] < y0) y0 = EY[i]; if (EY[i] > y1) y1 = EY[i]; } }
+  for (let i=0;i<n;i++) { if (!GR3D) { EX[i] = GPH.x[i]; EY[i] = GPH.y[i]; } if (vis[i]) { if (EX[i] < x0) x0 = EX[i]; if (EX[i] > x1) x1 = EX[i]; if (EY[i] < y0) y0 = EY[i]; if (EY[i] > y1) y1 = EY[i]; } }
   if (!isFinite(x0)) { x0 = y0 = -100; x1 = y1 = 100; } expBox = { x0: x0 - 40, y0: y0 - 40, x1: x1 + 40, y1: y1 + 40 }; }
 // d3-force style: many-body (Barnes–Hut) + links + centering, velocity Verlet with alpha cooling
-function graphForce(m, EA, EB, x, y, act) {   // act: Int32Array of node indices that move
-  const vx = new Float64Array(m), vy = new Float64Array(m), cnt = new Int32Array(m), ne = EA.length;
+function graphForce(m, EA, EB, x, y, act, z) {   // act: Int32Array of node indices that move; z: a third axis for 3D (optional)
+  const D3 = !!z, K = D3 ? 8 : 4;
+  const vx = new Float64Array(m), vy = new Float64Array(m), vz = new Float64Array(m), cnt = new Int32Array(m), ne = EA.length; if (!z) z = new Float64Array(m);
   for (let e = 0; e < ne; e++) { cnt[EA[e]]++; cnt[EB[e]]++; }
   const str = new Float64Array(ne), bias = new Float64Array(ne);
   for (let e = 0; e < ne; e++) { const a = cnt[EA[e]], b = cnt[EB[e]]; str[e] = 1 / Math.min(a, b); bias[e] = a / (a + b); }
-  const na = act.length, cap = na * 4 + 8;
-  // quadtree as flat arrays: children 4 per node, mass, cx, cy, leaf point
-  const ch = new Int32Array(cap * 4), qm = new Float64Array(cap), qx = new Float64Array(cap), qy = new Float64Array(cap), qp = new Int32Array(cap);
-  let nq = 0, X0, Y0, S0;
+  const na = act.length, cap = na * (D3 ? 6 : 4) + 8;
+  // quadtree (octree in 3D) as flat arrays: K children per node, mass, center of mass, leaf point
+  const ch = new Int32Array(cap * K), qm = new Float64Array(cap), qx = new Float64Array(cap), qy = new Float64Array(cap), qz = new Float64Array(cap), qp = new Int32Array(cap);
+  let nq = 0, S0;
   const STR = -30, TH2 = .81, LD = 30;
   let alpha = 1; const aMin = .001, aDecay = 1 - Math.pow(aMin, 1 / (na > 5000 ? 220 : 300)), vDecay = .6;
-  const newQ = () => { const q = nq++; ch[q * 4] = ch[q * 4 + 1] = ch[q * 4 + 2] = ch[q * 4 + 3] = -1; qm[q] = 0; qx[q] = qy[q] = 0; qp[q] = -1; return q; };
-  function build() { nq = 0; let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
-    for (let k = 0; k < na; k++) { const j = act[k]; if (x[j] < a) a = x[j]; if (x[j] > c) c = x[j]; if (y[j] < b) b = y[j]; if (y[j] > d) d = y[j]; }
-    S0 = Math.max(c - a, d - b) + 1; X0 = a; Y0 = b; const root = newQ();
-    for (let k = 0; k < na; k++) { const j = act[k]; let q = root, x0 = X0, y0 = Y0, s = S0, depth = 0;
-      for (;;) { if (nq >= cap - 4) break;
-        if (qp[q] === -1 && ch[q * 4] === -1 && ch[q * 4 + 1] === -1 && ch[q * 4 + 2] === -1 && ch[q * 4 + 3] === -1 && qm[q] === 0) { qp[q] = j; qm[q] = 1; qx[q] = x[j]; qy[q] = y[j]; break; }
-        // internal or occupied leaf: push existing leaf down
-        if (qp[q] !== -1) { const o = qp[q]; qp[q] = -1; if (depth > 40 || (x[o] === x[j] && y[o] === y[j])) { qp[q] = o; qm[q]++; break; }
-          const h = s / 2, ix = x[o] >= x0 + h ? 1 : 0, iy = y[o] >= y0 + h ? 1 : 0, c4 = q * 4 + iy * 2 + ix; const nn = newQ(); ch[c4] = nn; qp[nn] = o; qm[nn] = 1; qx[nn] = x[o]; qy[nn] = y[o]; }
-        const h = s / 2, ix = x[j] >= x0 + h ? 1 : 0, iy = y[j] >= y0 + h ? 1 : 0, c4 = q * 4 + iy * 2 + ix; qm[q]++; 
-        if (ch[c4] === -1) { const nn = newQ(); ch[c4] = nn; qp[nn] = j; qm[nn] = 1; qx[nn] = x[j]; qy[nn] = y[j]; break; }
-        q = ch[c4]; x0 += ix * h; y0 += iy * h; s = h; depth++; } }
+  const isLeaf = q => { for (let c = 0; c < K; c++) if (ch[q * K + c] !== -1) return false; return true; };
+  const newQ = () => { const q = nq++; for (let c = 0; c < K; c++) ch[q * K + c] = -1; qm[q] = 0; qx[q] = qy[q] = qz[q] = 0; qp[q] = -1; return q; };
+  const oct = (j, x0, y0, z0, h) => (x[j] >= x0 + h ? 1 : 0) + (y[j] >= y0 + h ? 2 : 0) + (D3 && z[j] >= z0 + h ? 4 : 0);
+  function build() { nq = 0; let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity, e0 = Infinity, e1 = -Infinity;
+    for (let k = 0; k < na; k++) { const j = act[k]; if (x[j] < a) a = x[j]; if (x[j] > c) c = x[j]; if (y[j] < b) b = y[j]; if (y[j] > d) d = y[j]; if (z[j] < e0) e0 = z[j]; if (z[j] > e1) e1 = z[j]; }
+    S0 = Math.max(c - a, d - b, D3 ? e1 - e0 : 0) + 1; const X0 = a, Y0 = b, Z0 = D3 ? e0 : 0, root = newQ();
+    for (let k = 0; k < na; k++) { const j = act[k]; let q = root, x0 = X0, y0 = Y0, z0 = Z0, s = S0, depth = 0;
+      for (;;) { if (nq >= cap - K) break;
+        if (qp[q] === -1 && qm[q] === 0 && isLeaf(q)) { qp[q] = j; qm[q] = 1; qx[q] = x[j]; qy[q] = y[j]; qz[q] = z[j]; break; }
+        // an occupied leaf: push its note down a level first
+        if (qp[q] !== -1) { const o = qp[q]; qp[q] = -1; if (depth > 40 || (x[o] === x[j] && y[o] === y[j] && z[o] === z[j])) { qp[q] = o; qm[q]++; break; }
+          const h = s / 2, c8 = q * K + oct(o, x0, y0, z0, h); const nn = newQ(); ch[c8] = nn; qp[nn] = o; qm[nn] = 1; qx[nn] = x[o]; qy[nn] = y[o]; qz[nn] = z[o]; }
+        const h = s / 2, oc = oct(j, x0, y0, z0, h), c8 = q * K + oc; qm[q]++;
+        if (ch[c8] === -1) { const nn = newQ(); ch[c8] = nn; qp[nn] = j; qm[nn] = 1; qx[nn] = x[j]; qy[nn] = y[j]; qz[nn] = z[j]; break; }
+        q = ch[c8]; x0 += (oc & 1) * h; y0 += (oc >> 1 & 1) * h; z0 += (oc >> 2 & 1) * h; s = h; depth++; } }
     // centers of mass, bottom-up (children have higher indices than parents)
-    for (let q = nq - 1; q >= 0; q--) { if (ch[q * 4] === -1 && ch[q * 4 + 1] === -1 && ch[q * 4 + 2] === -1 && ch[q * 4 + 3] === -1) continue; let m_ = 0, sx = 0, sy = 0;
-      if (qp[q] !== -1) { m_ += 1; sx += x[qp[q]]; sy += y[qp[q]]; }
-      for (let c = 0; c < 4; c++) { const k = ch[q * 4 + c]; if (k < 0) continue; m_ += qm[k]; sx += qx[k] * qm[k]; sy += qy[k] * qm[k]; } qm[q] = m_; qx[q] = sx / m_; qy[q] = sy / m_; } }
+    for (let q = nq - 1; q >= 0; q--) { if (isLeaf(q)) continue; let m_ = 0, sx = 0, sy = 0, sz_ = 0;
+      if (qp[q] !== -1) { m_ += 1; sx += x[qp[q]]; sy += y[qp[q]]; sz_ += z[qp[q]]; }
+      for (let c = 0; c < K; c++) { const k = ch[q * K + c]; if (k < 0) continue; m_ += qm[k]; sx += qx[k] * qm[k]; sy += qy[k] * qm[k]; sz_ += qz[k] * qm[k]; } qm[q] = m_; qx[q] = sx / m_; qy[q] = sy / m_; qz[q] = sz_ / m_; } }
   const stack = new Int32Array(cap), sz = new Float64Array(cap);
   function charge() { build(); for (let k = 0; k < na; k++) { const j = act[k]; let sp = 0; stack[sp] = 0; sz[sp++] = S0;
-      while (sp) { const q = stack[--sp], s = sz[sp]; if (qm[q] === 0) continue; let dx = qx[q] - x[j], dy = qy[q] - y[j], l = dx * dx + dy * dy;
-        const leaf = ch[q * 4] === -1 && ch[q * 4 + 1] === -1 && ch[q * 4 + 2] === -1 && ch[q * 4 + 3] === -1;
-        if (leaf || s * s / TH2 < l) { if (leaf && qp[q] === j && qm[q] === 1) continue; if (l === 0) { dx = ((j * 7919) % 1000 / 1000 - .5) * 1e-3; dy = ((j * 7919) % 1000 / 1000 - .5) * 1e-3; l = dx * dx + dy * dy; } if (l < 1) l = Math.sqrt(l);
-          const w = STR * alpha * (leaf && qp[q] === j ? qm[q] - 1 : qm[q]) / l; vx[j] += dx * w; vy[j] += dy * w; continue; }
-        for (let c = 0; c < 4; c++) { const kq = ch[q * 4 + c]; if (kq >= 0) { stack[sp] = kq; sz[sp++] = s / 2; } } } } }
-  function links() { for (let e = 0; e < ne; e++) { const s = EA[e], t = EB[e]; let dx = x[t] + vx[t] - x[s] - vx[s] || 1e-6, dy = y[t] + vy[t] - y[s] - vy[s] || 1e-6, l = Math.sqrt(dx * dx + dy * dy);
-      l = (l - LD) / l * alpha * str[e]; dx *= l; dy *= l; const b = bias[e]; vx[t] -= dx * b; vy[t] -= dy * b; vx[s] += dx * (1 - b); vy[s] += dy * (1 - b); } }
-  function center() { for (let k = 0; k < na; k++) { const j = act[k]; vx[j] += (0 - x[j]) * .05 * alpha * 2; vy[j] += (0 - y[j]) * .05 * alpha * 2; } }
+      while (sp) { const q = stack[--sp], s = sz[sp]; if (qm[q] === 0) continue; let dx = qx[q] - x[j], dy = qy[q] - y[j], dz = qz[q] - z[j], l = dx * dx + dy * dy + dz * dz;
+        const leaf = isLeaf(q);
+        if (leaf || s * s / TH2 < l) { if (leaf && qp[q] === j && qm[q] === 1) continue; if (l === 0) { dx = ((j * 7919) % 1000 / 1000 - .5) * 1e-3; dy = ((j * 104729) % 997 / 997 - .5) * 1e-3; dz = D3 ? ((j * 31) % 89 / 89 - .5) * 1e-3 : 0; l = dx * dx + dy * dy + dz * dz; } if (l < 1) l = Math.sqrt(l);
+          const w = STR * alpha * (leaf && qp[q] === j ? qm[q] - 1 : qm[q]) / l; vx[j] += dx * w; vy[j] += dy * w; vz[j] += dz * w; continue; }
+        for (let c = 0; c < K; c++) { const kq = ch[q * K + c]; if (kq >= 0) { stack[sp] = kq; sz[sp++] = s / 2; } } } } }
+  function links() { for (let e = 0; e < ne; e++) { const s = EA[e], t = EB[e]; let dx = x[t] + vx[t] - x[s] - vx[s] || 1e-6, dy = y[t] + vy[t] - y[s] - vy[s] || 1e-6, dz = D3 ? z[t] + vz[t] - z[s] - vz[s] : 0, l = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      l = (l - LD) / l * alpha * str[e]; dx *= l; dy *= l; dz *= l; const b = bias[e]; vx[t] -= dx * b; vy[t] -= dy * b; vz[t] -= dz * b; vx[s] += dx * (1 - b); vy[s] += dy * (1 - b); vz[s] += dz * (1 - b); } }
+  function center() { for (let k = 0; k < na; k++) { const j = act[k]; vx[j] -= x[j] * .1 * alpha; vy[j] -= y[j] * .1 * alpha; if (D3) vz[j] -= z[j] * .1 * alpha; } }
   // dragging: a pinned note follows the pointer; the rest stays warm (alphaTarget) until it's let go, then cools again
   const pin = new Uint8Array(m), fxp = new Float64Array(m), fyp = new Float64Array(m); let aT = 0;
-  return { step() { alpha += (aT - alpha) * aDecay; links(); charge(); center(); for (let k = 0; k < na; k++) { const j = act[k]; if (pin[j]) { x[j] = fxp[j]; y[j] = fyp[j]; vx[j] = vy[j] = 0; continue; } vx[j] *= vDecay; vy[j] *= vDecay; x[j] += vx[j]; y[j] += vy[j]; } return alpha > aMin || aT > 0; },
+  return { step() { alpha += (aT - alpha) * aDecay; links(); charge(); center(); for (let k = 0; k < na; k++) { const j = act[k]; if (pin[j]) { x[j] = fxp[j]; y[j] = fyp[j]; vx[j] = vy[j] = vz[j] = 0; continue; } vx[j] *= vDecay; vy[j] *= vDecay; vz[j] *= vDecay; x[j] += vx[j]; y[j] += vy[j]; if (D3) z[j] += vz[j]; } return alpha > aMin || aT > 0; },
     fix(j, px, py){ pin[j] = 1; fxp[j] = px; fyp[j] = py; x[j] = px; y[j] = py; }, free(j){ pin[j] = 0; }, heat(t){ aT = t; if (alpha < t) alpha = t; }, get alpha() { return alpha; } };
 }
 // The physics settles live, a few steps a frame, so you watch the graph find its shape (like the core graph): the same
@@ -2304,15 +2310,19 @@ function graphSim(ids, key){
   const ea = [], eb = [], seen = new Set();
   for (const [a, b] of E) { const p = loc[a], q = loc[b]; if (p < 0 || q < 0 || p === q) continue; const kk = p < q ? p * m + q : q * m + p; if (seen.has(kk)) continue; seen.add(kk); ea.push(p); eb.push(q); }
   const deg = new Int32Array(m); for (let e = 0; e < ea.length; e++) { deg[ea[e]]++; deg[eb[e]]++; }
-  const x = new Float64Array(m), y = new Float64Array(m), lk = []; for (let j = 0; j < m; j++) if (deg[j]) lk.push(j);
+  const x = new Float64Array(m), y = new Float64Array(m), z = GR3D ? new Float64Array(m) : null, lk = []; for (let j = 0; j < m; j++) if (deg[j]) lk.push(j);
   lk.sort((a, b) => N[ids[b]].score - N[ids[a]].score || (N[ids[a]].path < N[ids[b]].path ? -1 : 1));
-  lk.forEach((j, q) => { const r = 10 * Math.sqrt(.5 + q), a = q * Math.PI * (3 - Math.sqrt(5)); x[j] = r * Math.cos(a); y[j] = r * Math.sin(a); });
-  const F = graphForce(m, Int32Array.from(ea), Int32Array.from(eb), x, y, Int32Array.from(lk));
+  // a spiral to start from (a ball in 3D), the highest-scoring notes in the middle
+  lk.forEach((j, q) => { if (!z) { const r = 10 * Math.sqrt(.5 + q), a = q * Math.PI * (3 - Math.sqrt(5)); x[j] = r * Math.cos(a); y[j] = r * Math.sin(a); return; }
+    const r = 14 * Math.cbrt(.5 + q), u = 1 - 2 * ((q * .618034) % 1), a = q * Math.PI * (3 - Math.sqrt(5)), w = Math.sqrt(1 - u * u); x[j] = r * w * Math.cos(a); y[j] = r * u; z[j] = r * w * Math.sin(a); });
+  const F = graphForce(m, Int32Array.from(ea), Int32Array.from(eb), x, y, Int32Array.from(lk), z);
   const lone = []; for (let j = 0; j < m; j++) if (!deg[j]) lone.push(j); lone.sort((a, b) => N[ids[a]].path < N[ids[b]].path ? -1 : 1);
-  const place = () => { const rs = lk.map(j => Math.hypot(x[j], y[j])).sort((a, b) => a - b); const R = (rs.length ? rs[Math.floor(rs.length * .97)] : 0) + 90;
+  const place = () => { const rs = lk.map(j => Math.hypot(x[j], y[j], z ? z[j] : 0)).sort((a, b) => a - b); const R = (rs.length ? rs[Math.floor(rs.length * .97)] : 0) + 90;
     const ring = Math.max(120, lone.length * 900 * .5 / (2 * Math.PI * R));
-    lone.forEach((j, q) => { const a = q * 2.39996, r = R + ring * Math.sqrt((q + .5) / Math.max(1, lone.length)); x[j] = Math.cos(a) * r; y[j] = Math.sin(a) * r; });
-    if (!GPH.x || GPH.x.length !== n) { GPH.x = new Float32Array(n); GPH.y = new Float32Array(n); } for (let j = 0; j < m; j++) { GPH.x[ids[j]] = x[j]; GPH.y[ids[j]] = y[j]; } };
+    if (!z) lone.forEach((j, q) => { const a = q * 2.39996, r = R + ring * Math.sqrt((q + .5) / Math.max(1, lone.length)); x[j] = Math.cos(a) * r; y[j] = Math.sin(a) * r; });
+    else { const R3 = (rs.length ? Math.sqrt(rs.reduce((t, v) => Math.max(t, v), 0) * rs[Math.floor(rs.length * .97)]) : 0) + 120; GR3F = R3 * 3.2;   // 3D: unlinked notes on a sphere around the rest
+      lone.forEach((j, q) => { const u = 1 - 2 * (q + .5) / lone.length, a = q * 2.39996, w = Math.sqrt(1 - u * u), r = R3 * (1 + .08 * hash(N[ids[j]].path, 5)); x[j] = r * w * Math.cos(a); y[j] = r * u; z[j] = r * w * Math.sin(a); }); }
+    if (!GPH.x || GPH.x.length !== n) { GPH.x = new Float32Array(n); GPH.y = new Float32Array(n); GPH.z = new Float32Array(n); } for (let j = 0; j < m; j++) { GPH.x[ids[j]] = x[j]; GPH.y[ids[j]] = y[j]; GPH.z[ids[j]] = z ? z[j] : 0; } };
   let more = true; GPH.it = 0; const step = () => { more = F.step(); GPH.it++; GPH.its = more ? Math.max(GPH.it + 1, GPH.its || 0) : GPH.it; };
   // a first stretch right away, so the map opens close to its shape; the rest plays out on screen
   const t0 = performance.now(); while (more && performance.now() - t0 < 250) step(); place();
@@ -2323,7 +2333,7 @@ function graphSim(ids, key){
   const frame = now => { const gapMs = lastF ? now - lastF : 16; lastF = now; if (run !== GPH.run || dead || view !== "graph") { looping = false; if (run === GPH.run && more && !GPH.drag) GPH.key = ""; return; }
     // slow frames get more physics each, so the settle takes about the same time on any machine
     const f0 = performance.now(), bud = Math.min(400, Math.max(14, gapMs * .6)); while (more && performance.now() - f0 < bud) step(); GPH.stepMs = performance.now() - f0; place();
-    for (let i=0;i<n;i++) if (vis[i]) { EX[i] = GPH.x[i]; EY[i] = GPH.y[i]; }
+    if (GR3D) { for (let i=0;i<n;i++) if (vis[i]) { G3[3*i] = GPH.x[i]; G3[3*i+1] = GPH.y[i]; G3[3*i+2] = GPH.z[i]; } geoProj(); } else for (let i=0;i<n;i++) if (vis[i]) { EX[i] = GPH.x[i]; EY[i] = GPH.y[i]; }
     const d0 = performance.now(); if (!morphing) { X.set(EX); Y.set(EY); if (!GPH.touched) { layoutGraph(); const t = fitTarget(); k = t.k; tx = t.tx; ty = t.ty; } draw(); } GPH.drawMs = performance.now() - d0; GPH.morph = morphing;
     if (more) RAF(frame); else { looping = false; layoutGraph(); buildGrid(); if (!GPH.touched) fit(true); } };
   // the view follows the settling graph until you zoom or drag it yourself
@@ -2339,7 +2349,7 @@ EXP.graph = {
     ctx.strokeStyle = css["edge-faint"]; ctx.globalAlpha = (sel >= 0 || hover >= 0 ? .5 : 1) * Math.min(1, .45 + .55 / stp); ctx.lineWidth = 1; ctx.beginPath();
     for (let q = 0; q < on.length; q += stp) { const [a, b] = E[on[q]]; ctx.moveTo(sx(X[a]), sy(Y[a])); ctx.lineTo(sx(X[b]), sy(Y[b])); }
     ctx.stroke(); ctx.globalAlpha = 1; },
-  legend: "Obsidian: every note pulled toward the notes it links to and pushed away from the rest, like Obsidian's graph view, drawn with the emergence symbols so hubs and maps stand out. Unlinked notes ring the outside. Drag a note and its links tug the rest along; let go and it settles. Click a note to light up its links; the Timelapse grows it, and Focus mode and Wander Mode work here too.",
+  legend: "Obsidian: every note pulled toward the notes it links to and pushed away from the rest, like Obsidian's graph view, drawn with the emergence symbols so hubs and maps stand out. Unlinked notes ring the outside. Drag a note and its links tug the rest along; let go and it settles. In 3D (click the Obsidian tab) it's a ball: drag to turn it, scroll to fly in. Click a note to light up its links; the Timelapse grows it, and Focus mode and Wander Mode work here too.",
 };
 
 // ---------- PKM Planet: the six domains of personal knowledge as a world map on a table ----------
@@ -3245,7 +3255,7 @@ function pick(px, py){
 const tip = $("#tip"); tip.addClass("ivm-tip"); doc.body.appendChild(tip);
 let drag = null, moved = false; const pts = new Map();
 cv.addEventListener("pointerdown", e => { lastDown = [e.offsetX, e.offsetY]; GPH.drag = null;
-  if (view === "graph" && e.button === 0 && !e.shiftKey && GPH.F) { const i = pick(e.offsetX, e.offsetY), j = i >= 0 ? GPH.loc[i] : -1; if (j >= 0 && GPH.deg[j] > 0) GPH.drag = { i, j }; } driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, cyaw: csYaw, cpitch: csPitch, gyaw: g3Yaw, gpitch: g3Pitch, orbit: (s3dOn() || domeOn() || sphOn() || geo3On()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
+  if (view === "graph" && !GR3D && e.button === 0 && !e.shiftKey && GPH.F) { const i = pick(e.offsetX, e.offsetY), j = i >= 0 ? GPH.loc[i] : -1; if (j >= 0 && GPH.deg[j] > 0) GPH.drag = { i, j }; } driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, cyaw: csYaw, cpitch: csPitch, gyaw: g3Yaw, gpitch: g3Pitch, orbit: (s3dOn() || domeOn() || sphOn() || geo3On()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
 cv.addEventListener("contextmenu", e => e.preventDefault());   // right-drag pans (as in Miro); no menu on the map
 cv.addEventListener("pointermove", e => {
   if (pts.has(e.pointerId)) {
@@ -3436,8 +3446,8 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", msv = view === "mosaic", ppv = view === "people", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view)));   // the Layout section shows only where there are layout settings
-  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv; const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } }
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", msv = view === "mosaic", ppv = view === "people", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view))) || view === "graph";   // the Layout section shows only where there are layout settings
+  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv; const g3s = $("#gr3seg"); if (g3s) g3s.hidden = view !== "graph"; const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } }
   if (lay) { $("#startms").hidden = true; $("#sensems").hidden = true; $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = true; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
@@ -4333,6 +4343,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const row = pc.createEl("label", { cls: "prow" }); row.createSpan({ text: "Show" }); const r = row.createEl("input", { type: "range" }); r.min = "5"; r.max = "150"; r.step = "1"; r.value = String(PPL.max);
     pc.createDiv({ cls: "phint pplv" }); let t_ = 0;
     r.oninput = () => { PPL.max = +r.value; win.clearTimeout(t_); t_ = win.setTimeout(() => { save("iv-pplmax", PPL.max); morph(true, () => fitTarget()); }, 180); }; }
+  // the Obsidian map: flat, or a ball to turn in your hand
+  { const gs = $("#laygrp").createDiv({ cls: "seg", attr: { id: "gr3seg", role: "group", "aria-label": "Obsidian map in 2D or 3D" } }); gs.hidden = true;
+    for (const [v, t, tip] of [[false, "2D", "Flat, like Obsidian's graph: drag a note and the rest follow"], [true, "3D", "A ball of notes: drag to turn it, scroll to fly in"]]) {
+      const b = gs.createEl("button", { text: t, attr: { type: "button", "aria-label": tip, "aria-pressed": String(GR3D === v) } });
+      b.onclick = e => { e.stopPropagation(); if (GR3D === v) return; GR3D = v; save("iv-gr3d", v); gs.querySelectorAll("button").forEach((x, j) => x.setAttribute("aria-pressed", String((j === 1) === v))); root.dataset.dome = geo3On() ? "1" : ""; GPH.key = ""; morph(true, () => fitTarget()); legend(); }; } }
   // Mosaic's own option: Emergence or Scattered
   { const ms_ = $("#laygrp").createDiv({ cls: "seg", attr: { id: "mosseg", role: "group", "aria-label": "Mosaic" } }); ms_.hidden = true;
     for (const [v, t, tip] of [["emergence", "Emergence", "Level 5 at the heart, each level a frame around it"], ["scatter", "Scattered", "The same tiles, in no order"]]) {
