@@ -45,7 +45,7 @@ For a smaller, targeted set: a collection, a folder, or a base view (your movies
 
 Under each choice is a mini slider: a little histogram of that property's values, with two handles that keep only the notes in between (just the '90s, only your 4-star films). Lanes get chips instead, one per value with its count: click to switch a lane off, ⌥/⌘-click to show only that one.
 
-Pick a **Height** and the lanes give way to a second number up the side: your rating against the crowd's (a taste gap), or the year you watched something against the year it came out. When the two are the same kind of thing, a line marks where they agree (same score, same year), and the notes furthest from it get a ring.
+Its menu reads in plain words: **Layout** is Rows or Scatter; **Left to right** and **Rows by** (or, in Scatter, **Bottom to top**) place the cards; **Card size** scales them; a line under each says what it takes. Switch to **Scatter** and the rows give way to a second number up the side: your rating against the crowd's (a taste gap), or the year you watched something against the year it came out. When the two are the same kind of thing, a line marks where they agree (same score, same year), and the notes furthest from it get a ring.
 
 ## The time-lapse
 

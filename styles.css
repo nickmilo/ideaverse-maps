@@ -745,3 +745,8 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm header.tb2 #vsegms > #vmore{order:2}
 .ivm header.tb2 .vcurseg button{white-space:nowrap}
 .ivm header.tb2 .vcurseg .vcar{font-size:10px;margin-left:3px}
+/* Posters menu: Rows or Scatter, and a plain line under each choice */
+.ivm .postctl .pmode{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.ivm .postctl .pmode > span{font-size:var(--font-ui-small);color:var(--muted)}
+.ivm .postctl .phint{grid-column:1/-1;font-size:var(--font-ui-smaller);color:var(--muted);margin:-3px 0 2px;line-height:1.35}
+.ivm .postctl .phint[hidden]{display:none}
