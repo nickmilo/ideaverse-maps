@@ -76,6 +76,15 @@ let showArch = !!pref("iv-arch", true), fromY = +pref("iv-from", 2016);
     host.store.set("iv-full", undefined); save("iv-mig-full", true); } }
 fromY = Math.max(SLMIN, Math.min(NOW_Y, fromY));
 let fullY = fromY;   // kept equal to the start: every shown year at full scale
+// Years shown (Emergence, Space-Time, Planetarium, Gravity, Starfield): two handles, first year to last; notes outside leave
+// the map, whatever Arrange is set to. It replaces the old "Starts" control, whose older notes gathered in a Before strip.
+let YR0 = Math.max(SLMIN, Math.min(NOW_Y, +pref("iv-yr0", SLMIN))), YR1 = Math.max(SLMIN, Math.min(NOW_Y, +pref("iv-yr1", NOW_Y))); if (YR0 > YR1) [YR0, YR1] = [YR1, YR0];
+fromY = fullY = YR0;
+const YRV = new Set(["emergence", "spacetime", "gravity", "stars"]);
+// (the first layout runs before the map's view is set up, so it reads the saved one)
+const curV = () => { try { return view; } catch (e) { return pref("iv-view", "emergence"); } };
+const yrEnd = () => YRV.has(curV()) ? YR1 : NOW_Y;
+const yrNarrow = () => YR0 > SLMIN || YR1 < NOW_Y, yrOn = () => YRV.has(curV()) && yrNarrow();
 let subOff = new Set(Array.isArray(pref("iv-subsoff", null)) ? pref("iv-subsoff", null) : []);   // subfolders switched off inside a shown folder (the buried › in Folders)
 let folders = pref("iv-folders", null); if (!Array.isArray(folders)) folders = [...FOLD]; folders = folders.filter(f => FOLD.includes(f));
 let colls = pref("iv-coll", []); if (!Array.isArray(colls)) colls = colls ? [String(colls).toLowerCase()] : [];
@@ -136,6 +145,7 @@ function computeVis(){ const fs = new Set(folders);
       && !subHid[i]
       && collOK(d)
       && (!fset || fset[i])) ? 1 : 0; }
+  if (yrOn()) for (let i=0;i<n;i++) if (vis[i] && !isNaN(TV[i])) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; }
   if (focus >= 0) vis[focus] = 1;
   // a filter, a collection or a base that leaves few notes: draw them bigger, so a small set never looks empty
   let nv = 0; for (let i=0;i<n;i++) nv += vis[i]; NVIS = nv;
@@ -270,12 +280,13 @@ const xTime = v => X0T + units(v)/UT * (WW - X0T);
 const dayFull = () => (WW - X0T)/UT/365.2425;   // world width of one day at full scale
 function layoutTime(){
   TF = Date.UTC(fromY,0,1); TS = Date.UTC(fullY,0,1);
-  let tmin = Infinity; for (let i=0;i<n;i++) if (TV[i] < tmin) tmin = TV[i];
+  let tmin = Infinity; for (let i=0;i<n;i++) if (TV[i] < tmin && (vis[i] || !yrOn())) tmin = TV[i];
   ER = tmin < TF ? [140, 300] : null; X0T = ER ? 340 : 170;
-  UT = Math.max(units(T1), .5);
+  UT = Math.max(units(YRV.has(curV()) && YR1 < NOW_Y ? Date.UTC(YR1 + 1, 0, 1) : T1), .5);
   const d1 = dayFull();
   for (let i=0;i<n;i++) { const j = hash(N[i].path, 13);
     if (isNaN(TV[i])) XT[i] = ND[0] + 8 + j*(ND[1]-ND[0]-16);
+    else if (TV[i] < TF && !ER) XT[i] = X0T - 20;   // outside the years shown: off the map anyway
     else if (TV[i] < TF) XT[i] = ER[0] + 8 + Math.sqrt((TV[i] - tmin)/Math.max(TF - tmin, 1))*(ER[1]-ER[0]-16) + (j - .5)*6;   // kept in date order, older to the left
     else XT[i] = xTime(TV[i]) + (j - .5) * d1 * (TV[i] < TS ? COMP : 1) * 3; }   // ±1.5 days, so same-day notes stay a stripe
 }
@@ -1005,6 +1016,7 @@ function setView(v){
   ungrow(); view = v; save("iv-view", v); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
   root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === (view === "spacetime" ? "emergence" : view))));
   root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : "";
+  if (yrNarrow()) { computeVis(); layoutACE(); layoutTime(); layoutProp(); updateCounts(); }
   syncRange(); legend(); morph(true, () => fitTarget());
   { const bb = root.querySelector(`#vseg button[data-v="${view}"]`); if (bb && isPhone()) bb.scrollIntoView({inline:"nearest", block:"nearest"}); }
 }
@@ -1521,6 +1533,8 @@ function layoutTree(){
     const h1 = hash(N[i].path, 47), h2 = hash(N[i].path, 53);   // fallen leaves
     EX[i] = (h1 - .5)*TR.step*9; EY[i] = 30 + h2*90; }
   TREE = {root, par, kids, w, depth}; expBounds(60); }
+// the path from a note back to the root, through each note it hangs from
+const treeChain = i => { const out_ = []; if (i < 0 || !TREE.par || TREE.par[i] === -2) return out_; let g = 0; while (i >= 0 && g++ < 200) { out_.push(i); i = TREE.par[i]; } return out_; };
 const leafCol = i => { const t = TV[i]; if (isNaN(t)) return "hsl(40,25%,45%)"; const y = (T1 - t)/YEAR; const hue = y < 1 ? 110 : y < 2 ? 90 : y < 4 ? 55 : y < 7 ? 32 : 18, l = y < 1 ? 52 : y < 4 ? 50 : 42; return `hsl(${hue},${y > 7 ? 35 : 55}%,${l}%)`; };
 EXP.tree = {
   layout: layoutTree,
@@ -1534,6 +1548,17 @@ EXP.tree = {
       if ((x1 < -50 && x2 < -50) || (x1 > W + 50 && x2 > W + 50) || (y1 < -50 && y2 < -50) || (y1 > H + 50 && y2 > H + 50)) continue;
       ctx.lineWidth = Math.max(.5, Math.min(tw*.8, Math.sqrt(w[i])*.6*k)); ctx.globalAlpha = TREE.kids[i].length ? .5 : .22;
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(x1 + (x2 - x1)*.15, y1 + (y2 - y1)*.75, x2, y2); ctx.stroke(); }
+    // the picked note's way home: every branch from it back down to the trunk, lit, like degrees of separation
+    const hl = sel >= 0 ? sel : hover, chain = treeChain(hl);
+    if (chain.length > 1) { ctx.lineCap = "round";
+      for (const [col, lw, al] of [[css.bg, 7, .7], [css.accent, 3.2, .95]]) { ctx.strokeStyle = col; ctx.globalAlpha = al * (sel >= 0 ? 1 : .7); ctx.lineWidth = lw; ctx.beginPath();
+        for (let q = 0; q < chain.length - 1; q++) { const i = chain[q], p = chain[q + 1], x1 = sx(EX[p]), y1 = sy(EY[p]), x2 = sx(EX[i]), y2 = sy(EY[i]); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(x1 + (x2 - x1)*.15, y1 + (y2 - y1)*.75, x2, y2); }
+        ctx.moveTo(sx(0), sy(-TR.trunk)); ctx.quadraticCurveTo(sx(-20), sy(-TR.trunk*.5), sx(0), sy(0)); ctx.stroke(); }
+      ctx.globalAlpha = 1; ctx.fillStyle = css.accent; ctx.strokeStyle = css.bg; ctx.lineWidth = 2;
+      for (const i of chain) { ctx.beginPath(); ctx.arc(sx(EX[i]), sy(EY[i]), i === hl ? 5.5 : 4, 0, 6.2832); ctx.fill(); ctx.stroke(); }
+      // how far it is from the root
+      const d = chain.length - 1, t = `${d} ${d === 1 ? "link" : "links"} from ${N[chain[chain.length - 1]].title}`; ctx.font = `600 11px ${css.mono}`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      const x = sx(EX[hl]) + 12, y = sy(EY[hl]) - 16, tw = ctx.measureText(t).width; ctx.globalAlpha = .9; ctx.fillStyle = css.bg; ctx.fillRect(x - 4, y - 9, tw + 8, 18); ctx.globalAlpha = 1; ctx.fillStyle = css.accent; ctx.fillText(t, x, y); ctx.textBaseline = "alphabetic"; }
     ctx.globalAlpha = 1; ctx.lineCap = "butt"; },
   notes(lit, dim){ const r0 = Math.max(1.2, 2.2*Math.pow(k, .55));
     for (let i=0;i<n;i++) { if (!VV(i)) continue; const x = sx(EX[i]), y = sy(EY[i]); if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
@@ -1542,8 +1567,8 @@ EXP.tree = {
       const fallen = TREE.par[i] === -2, a = hash(N[i].path, 59)*Math.PI; ctx.fillStyle = fallen ? "hsl(28,30%,38%)" : leafCol(i);
       ctx.beginPath(); ctx.ellipse(x, y, r0*1.5, r0*.8, fallen ? 0 : a, 0, 6.2832); ctx.fill(); }
     ctx.globalAlpha = 1; },
-  mustLabel: () => TREE.root >= 0 && VV(TREE.root) ? [TREE.root] : [],
-  legend: "Tree: Home is the trunk; every note hangs from the path it reaches Home by in the fewest links, so hubs and maps carry the branches. Leaves show age: new growth green, older notes turning to autumn. Notes Home never reaches lie fallen on the ground.",
+  mustLabel: () => { const m = TREE.root >= 0 && VV(TREE.root) ? [TREE.root] : []; const c = treeChain(sel >= 0 ? sel : hover); for (const i of c) if (VV(i)) m.push(i); return m; },
+  legend: "Tree: Home is the trunk; every note hangs from the path it reaches Home by in the fewest links, so hubs and maps carry the branches. Click any leaf to light its way home, branch by branch, with how many links it takes. Leaves show age: new growth green, older notes turning to autumn. Notes Home never reaches lie fallen on the ground.",
 };
 
 // Maps that fill the whole plane with shapes (Treemap) would hide the link lines drawn beneath them, so they draw them again on top
@@ -2879,7 +2904,7 @@ function domeGuides(){
     else LEVELS.forEach((L, j) => { if (j) domePath(domeCircle(stPhiC((bandY[L.lv].y0 - GAP_Y/2)/WH), a0, a1)); });
     ctx.stroke();
     ctx.setLineDash([2, 4]); ctx.beginPath();
-    if (byTime) { for (let yr = fromY; yr <= NOW_Y; yr++) { if (yr < fullY && yr % 5 && yr !== fromY) continue; domePath(domeMeridian(stTheta(xTime(Date.UTC(yr, 0, 1))), -P, P)); } }
+    if (byTime) { for (let yr = fromY; yr <= yrEnd(); yr++) { if (yr < fullY && yr % 5 && yr !== fromY) continue; domePath(domeMeridian(stTheta(xTime(Date.UTC(yr, 0, 1))), -P, P)); } }
     else if (mode === "ace") cols.forEach((c, j) => { if (j) domePath(domeMeridian(stTheta(c.x0 - 30), -P, P)); });
     ctx.stroke(); ctx.setLineDash([]);
     ctx.strokeStyle = css.accent; ctx.globalAlpha = .55; ctx.beginPath(); for (const th of [a0, a1]) domePath(domeMeridian(th, -P, P)); ctx.stroke();   // the seam: start | today
@@ -2888,7 +2913,7 @@ function domeGuides(){
   } else {
     ctx.beginPath(); for (const L of LEVELS) { const a = RING[L.lv][0]; if (a > 0) domePath(domeCircle(grPhi(a - .015))); } domePath(domeCircle(grPhi(1))); ctx.stroke();
     ctx.setLineDash([2, 4]); ctx.beginPath();
-    if (mode === "time") { for (let yr = fromY; yr <= NOW_Y; yr++) { if (yr < fullY && yr % 5 && yr !== fromY) continue; domePath(domeMeridian(angOf(xTime(Date.UTC(yr, 0, 1))), grPhi(1), grPhi(.15))); } }
+    if (mode === "time") { for (let yr = fromY; yr <= yrEnd(); yr++) { if (yr < fullY && yr % 5 && yr !== fromY) continue; domePath(domeMeridian(angOf(xTime(Date.UTC(yr, 0, 1))), grPhi(1), grPhi(.15))); } }
     else for (const c of cols) domePath(domeMeridian(angOf(c.x0), grPhi(1), grPhi(.15)));
     ctx.stroke(); ctx.setLineDash([]);
   }
@@ -2903,13 +2928,13 @@ function domeLabels(){   // band names ride along the left of your view; years (
     if (view === "spacetime") for (const r of ROWS) put(rowName(r.key), thL, Math.min(88*DG, stPhiC(r.c0) - 2*DG), big, css.ink, "left");
     else for (const L of LEVELS) put(`${L.lv} · ${L.name.toUpperCase()}`, thL, Math.min(86*DG, stPhiC(bandY[L.lv].y0/WH) - 3*DG), small, css.accent, "left");
     const ph = Math.abs(domePitch) > 1.15 ? Math.sign(domePitch)*68*DG : domePitch - 6*DG;   // year names run across the middle of your view; at a pole they ring it like a clock
-    if (view === "spacetime" || mode === "time") for (let yr = fromY; yr <= NOW_Y; yr++) { const comp = yr < fullY; if (comp && yr % 5 && yr !== fromY) continue;
+    if (view === "spacetime" || mode === "time") for (let yr = fromY; yr <= yrEnd(); yr++) { const comp = yr < fullY; if (comp && yr % 5 && yr !== fromY) continue;
       put(String(yr), stTheta(xTime(Date.UTC(yr, comp ? 0 : 6, 1))), ph, comp ? small : `${css.dw} 15px ${css.display}`, css.muted); }
     else if (mode === "ace") for (const c of cols) put(rowName(c.ace), stTheta((c.x0 + c.x1)/2), ph, `${css.dw} 16px ${css.display}`, css.muted);
     put("start", -Math.PI + STGAP/2 + 2*DG, ph + 4*DG, small, css.accent, "left"); put("today", Math.PI - STGAP/2 - 2*DG, ph + 4*DG, small, css.accent, "right");
   } else {
     for (const L of LEVELS) { const [a, b] = RING[L.lv]; put(`${L.lv} · ${L.name.toUpperCase()}`, thL, grPhi((a + b)/2), small, css.accent, "left"); }
-    if (mode === "time") { for (let yr = fromY; yr <= NOW_Y; yr++) { const comp = yr < fullY; if (comp && yr % 5 && yr !== fromY) continue; put(String(yr), angOf(xTime(Date.UTC(yr, comp ? 0 : 6, 1))), 4*DG, comp ? small : big, comp ? css.muted : css.ink); } }
+    if (mode === "time") { for (let yr = fromY; yr <= yrEnd(); yr++) { const comp = yr < fullY; if (comp && yr % 5 && yr !== fromY) continue; put(String(yr), angOf(xTime(Date.UTC(yr, comp ? 0 : 6, 1))), 4*DG, comp ? small : big, comp ? css.muted : css.ink); } }
     else for (const c of cols) put(rowName(c.ace), angOf((c.x0 + c.x1)/2), 4*DG, big, css.ink);
   }
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
@@ -2943,7 +2968,7 @@ function gravityGuides(){
     ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, b*R0, 0, 6.2832); ctx.stroke(); });
   ctx.strokeStyle = css.line; ctx.setLineDash([2,4]); ctx.beginPath();
   const spoke = x => { const a = angOf(x); ctx.moveTo(cx + Math.cos(a)*R0*.13, cy + Math.sin(a)*R0*.13); ctx.lineTo(cx + Math.cos(a)*R0*1.02, cy + Math.sin(a)*R0*1.02); };
-  if (mode === "time") { spoke(ND[1] + 30); if (ER) spoke(ER[1] + 20); for (let yr = fromY; yr <= NOW_Y; yr++) { if (yr < fullY && yr % 5 && yr !== fromY) continue; spoke(xTime(Date.UTC(yr,0,1))); } }
+  if (mode === "time") { spoke(ND[1] + 30); if (ER) spoke(ER[1] + 20); for (let yr = fromY; yr <= yrEnd(); yr++) { if (yr < fullY && yr % 5 && yr !== fromY) continue; spoke(xTime(Date.UTC(yr,0,1))); } }
   else if (PA) { spoke(ND[1] + 30); for (const tk of propTicks()) spoke(xOfU(tk.u)); }
   else for (const c of cols) { spoke(c.x0); spoke(c.x1); }
   ctx.stroke(); ctx.setLineDash([]);
@@ -2967,7 +2992,7 @@ function gravityLabels(){
     at("No date", ND[1]/2, `500 11px ${css.mono}`, css.muted, 1.06);
     if (ER) at(`Before ${fromY}`, (ER[0] + ER[1])/2, `500 11px ${css.mono}`, css.muted, 1.06);
     const fw = k * dayFull() * 365 * GR / WW * aS();   // rough on-screen arc length of a full year
-    for (let yr = fromY; yr <= NOW_Y; yr++) { const comp = yr < fullY; if (comp && yr % 5 && yr !== fromY) continue;
+    for (let yr = fromY; yr <= yrEnd(); yr++) { const comp = yr < fullY; if (comp && yr % 5 && yr !== fromY) continue;
       const mid = xTime(Date.UTC(yr, comp ? 0 : 6, comp ? 1 : 1));
       at(fw > 60 && !comp ? String(yr) : "'" + String(yr).slice(2), mid, comp ? `500 11px ${css.mono}` : `${css.dw} ${fw > 60 ? 18 : 13}px ${css.display}`, comp ? css.muted : css.ink, 1.07); }
   } else if (PA) {
@@ -3008,14 +3033,14 @@ function timeGuides(){
   ctx.moveTo(v(ND[1]+30), top); ctx.lineTo(v(ND[1]+30), bot);
   if (ER) { ctx.moveTo(v(ER[1]+20), top); ctx.lineTo(v(ER[1]+20), bot); }
   const cw = k * dayFull() * 365 * COMP;            // on-screen width of one compressed year
-  for (let yr = fromY; yr <= NOW_Y; yr++) {
+  for (let yr = fromY; yr <= yrEnd(); yr++) {
     if (yr < fullY && cw < 14 && yr % 5 && yr !== fromY) continue;
     const x = v(xTime(Date.UTC(yr,0,1))); ctx.moveTo(x, top); ctx.lineTo(x, bot);
   }
   ctx.stroke(); ctx.setLineDash([]);
   if (k * dayFull() * 30 > 34) { // month lines in full-scale years when zoomed in
     ctx.strokeStyle = css["edge-faint"]; ctx.beginPath();
-    for (let yr = fullY; yr <= NOW_Y; yr++) for (let m = 1; m < 12; m++) { const x = v(xTime(Date.UTC(yr,m,1))); if (x < 0 || x > W) continue; ctx.moveTo(x, sy(0)); ctx.lineTo(x, bot); }
+    for (let yr = fullY; yr <= yrEnd(); yr++) for (let m = 1; m < 12; m++) { const x = v(xTime(Date.UTC(yr,m,1))); if (x < 0 || x > W) continue; ctx.moveTo(x, sy(0)); ctx.lineTo(x, bot); }
     ctx.stroke();
   }
 }
@@ -3092,7 +3117,7 @@ function axisLabels(){
       else { ctx.font = small; ctx.lineWidth = 5; ctx.strokeStyle = css.bg; ctx.fillStyle = css.muted; ctx.strokeText(bt, bx, yTop + 16); ctx.fillText(bt, bx, yTop + 16); } }
     const fw = k * dayFull() * 365, cw = fw * COMP;   // on-screen widths of a full and a compressed year
     const yearLbl = (yr, w) => w > 50 ? [String(yr), big] : w > 24 ? ["'" + String(yr).slice(2), small] : null;
-    for (let yr = fromY; yr <= NOW_Y; yr++) {
+    for (let yr = fromY; yr <= yrEnd(); yr++) {
       const comp = yr < fullY, x = sx(xTime(Date.UTC(yr,0,1))); if (x > W || x < -80) continue;
       let L = yearLbl(yr, comp ? cw : fw);
       if (!L && comp && (yr === fromY || (yr % 5 === 0 && sx(xTime(TS)) - x > 48))) L = [String(yr), small];     // squeezed years: label every fifth (unless it would crowd the first full-scale year)
@@ -3109,7 +3134,7 @@ function axisLabels(){
     const wl = wx(0);
     if (wl > xTime(TS)) { const tl = TS + ((wl - X0T)/(WW - X0T)*UT - (TS - TF)/YEAR*COMP) * YEAR, yr = new Date(tl).getUTCFullYear();
       if (yr >= fullY && sx(xTime(Date.UTC(yr+1,0,1))) > 90) put(String(yr), 8, big, css.ink); }
-    if (k * dayFull() * 30 > 34) for (let yr = fullY; yr <= NOW_Y; yr++) for (let m = 1; m < 12; m++) { const x = sx(xTime(Date.UTC(yr,m,1))); if (x < 0 || x > W) continue; ctx.font = small; ctx.fillStyle = css.muted; ctx.fillText(MON[m], x + 3, yTop + 16); }
+    if (k * dayFull() * 30 > 34) for (let yr = fullY; yr <= yrEnd(); yr++) for (let m = 1; m < 12; m++) { const x = sx(xTime(Date.UTC(yr,m,1))); if (x < 0 || x > W) continue; ctx.font = small; ctx.fillStyle = css.muted; ctx.fillText(MON[m], x + 3, yTop + 16); }
   } else
   // ACE column names, pinned to the top of the canvas
   for (const c of cols) {
@@ -3356,13 +3381,16 @@ q.addEventListener("blur", () => win.setTimeout(() => res.hidden = true, 120));
 const fromIn = $("#from");
 fromIn.min = SLMIN; fromIn.max = NOW_Y;
 $("#fromlo").textContent = SLMIN; $("#fromhi").textContent = NOW_Y;
+function syncYr(){ const yc = $("#yrctl"); if (!yc) return; const [a, b] = yc.querySelectorAll("input"); if (document.activeElement !== a && document.activeElement !== b) { a.value = YR0; b.value = YR1; }
+  const f = y => (y - SLMIN) / Math.max(1, NOW_Y - SLMIN), fill = yc.querySelector(".fill"); fill.style.left = `calc(9px + (100% - 18px)*${f(YR0)})`; fill.style.width = `calc((100% - 18px)*${f(YR1) - f(YR0)})`;
+  yc.querySelector(".yrv").setText(!yrNarrow() ? `All (${SLMIN}–${NOW_Y})` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
 function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", msv = view === "mosaic", ppv = view === "people", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", msv = view === "mosaic", ppv = view === "people", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view)));   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv; const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } }
-  if (lay) { $("#startms").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
+  if (lay) { $("#startms").hidden = true; { const yc = $("#yrctl"); if (yc) { yc.hidden = !YRV.has(view) || csv || expOn(); syncYr(); } } $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -3891,7 +3919,7 @@ function viewSummary(v){
   return bits.join(" · ");
 }
 function snapView(name){
-  return {name, view, mode, folders:[...folders], subsOff:[...subOff], arch:showArch, from:fromY, full:fullY, colls:[...colls], collMode, lanes, subOrder, links:showAll,
+  return {name, view, mode, folders:[...folders], subsOff:[...subOff], arch:showArch, from:fromY, full:fullY, yr:[YR0, YR1], colls:[...colls], collMode, lanes, subOrder, links:showAll,
     focus: focus >= 0 ? N[focus].path : null, fDir, fDepth, sel: sel >= 0 ? N[sel].path : null,
     tl: senseT != null ? {t: senseStepStart, step: senseStep} : null,   // where the time-lapse stands (null = all time)
     dome: domeOn() ? {yaw: +domeYaw.toFixed(3), pitch: +domePitch.toFixed(3)} : null,
@@ -3914,7 +3942,9 @@ function applySaved(v){
   modeKeep = null; mode = (v.mode === "time" || v.mode === "ace" || AXES[v.mode]) ? v.mode : "time"; if (view === "spacetime") mode = "time"; else save("iv-x", mode);
   folders = (v.folders || FOLD).filter(f => FOLD.includes(f)); if (!folders.length) folders = [...FOLD]; save("iv-folders", folders); subOff = Array.isArray(v.subsOff) ? new Set(v.subsOff) : defSubs(); save("iv-subsoff", [...subOff]); subCompute();
   showArch = v.arch !== false; save("iv-arch", showArch);
-  { const f = +v.from || fromY, u = +v.full || 0; fromY = Math.max(SLMIN, Math.min(NOW_Y, u > f && u <= NOW_Y ? u : f)); fullY = fromY; save("iv-from", fromY); }   // older views: their full-scale year becomes the start
+  { const f = +v.from || fromY, u = +v.full || 0; fromY = Math.max(SLMIN, Math.min(NOW_Y, u > f && u <= NOW_Y ? u : f)); fullY = fromY; save("iv-from", fromY); }
+  // the years shown (views saved before 0.4.14 show every year)
+  { const yr = Array.isArray(v.yr) ? v.yr : [SLMIN, NOW_Y]; YR0 = Math.max(SLMIN, Math.min(NOW_Y, +yr[0] || SLMIN)); YR1 = Math.max(YR0, Math.min(NOW_Y, +yr[1] || NOW_Y)); fromY = fullY = YR0; save("iv-yr0", YR0); save("iv-yr1", YR1); }   // older views: their full-scale year becomes the start
   colls = (v.colls || []).filter(c => COLLNAME[c]); collMode = v.collMode === "all" ? "all" : "any"; save("iv-coll", colls); save("iv-collmode", collMode);
   if (v.lanes) { lanes = v.lanes; save("iv-lanes", lanes); } if (v.subOrder) { subOrder = v.subOrder; save("iv-suborder", subOrder); }
   showAll = !!v.links; $("#alllinks").setAttribute("aria-pressed", String(showAll));
@@ -4251,6 +4281,16 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     for (const [v, t, tip] of [["emergence", "Emergence", "Level 5 at the heart, each level a frame around it"], ["scatter", "Scattered", "The same tiles, in no order"]]) {
       const b = ms_.createEl("button", { text: t, attr: { type: "button", "data-ms": v, "aria-label": tip, "aria-pressed": String(MOS === v) } });
       b.onclick = e => { e.stopPropagation(); MOS = v; save("iv-mos", v); ms_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.ms === v))); morph(true, () => fitTarget()); legend(); }; } }
+  // Years shown: two handles from the first note's year to this year
+  { const yc = $("#laygrp").createDiv({ cls: "postctl yrctl", attr: { id: "yrctl" } }); yc.hidden = true;
+    const hd = yc.createDiv({ cls: "prow" }); hd.createSpan({ text: "Years shown" }); hd.createEl("b", { cls: "yrv" });
+    const box = yc.createDiv({ cls: "prng" }), d = box.createDiv({ cls: "dual" }); d.createSpan({ cls: "trk" }); d.createSpan({ cls: "fill" });
+    const a = d.createEl("input", { type: "range", attr: { "aria-label": "First year shown" } }), b = d.createEl("input", { type: "range", attr: { "aria-label": "Last year shown" } });
+    for (const x of [a, b]) { x.min = SLMIN; x.max = NOW_Y; x.step = 1; } const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ text: String(SLMIN) }); lb.createSpan({ text: String(NOW_Y) });
+    yc.createDiv({ cls: "phint", text: "Drag either end. Notes from other years leave the map, however it's arranged. Notes with no date stay." });
+    let t_ = 0; const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; syncYr();
+      win.clearTimeout(t_); if (commit) { save("iv-yr0", YR0); save("iv-yr1", YR1); } t_ = win.setTimeout(() => relayout(false), commit ? 0 : 90); };
+    a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true); }
   // Posters' own options, in its map menu: Across, Lanes, Size
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "postctl" } }); pc.hidden = true;
     // Rows (a category per row) or Scatter (a second number bottom to top)

@@ -13,7 +13,7 @@ Four main maps sit in the toolbar. Click a map's tab again for its variants and 
 
 ### Emergence
 
-Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders. Click any note to light up its links: up to the maps above it, down to the notes it gathers. Its menu also has **Space-Time** (your top folders as rows) and **Planetarium** (stand inside it: Level 5 overhead).
+Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders. Its menu sets the **years shown**: drag either end to keep only, say, 2022 to 2024 (Gravity and Starfield have it too). Click any note to light up its links: up to the maps above it, down to the notes it gathers. Its menu also has **Space-Time** (your top folders as rows) and **Planetarium** (stand inside it: Level 5 overhead).
 
 ### Gravity
 
@@ -67,6 +67,10 @@ Every folder and note as a rectangle, sized by its score. Subfolders can be outl
 ### Mosaic
 
 Every note a tile, set like stones. **Emergence** puts your Level 5 notes at the heart and each level in a square frame around the one above it, out to the unlinked notes at the edge; inside a frame, a folder's notes sit together as a patch of color. **Scattered** lays the same tiles like a brick wall, in no order. A tile's size comes from its link score, and maps and hubs wear their level colors.
+
+### Tree (under Experimental)
+
+Home is the trunk; every note hangs from the path it reaches Home by in the fewest links. Click any leaf to light its way home, branch by branch, with how many links it takes: degrees of separation for your notes.
 
 ### Bookshelf
 
