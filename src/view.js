@@ -120,6 +120,9 @@ export async function mountInto(owner, el, opts) {
     // PKM Planet's map art: a full-size image from the vault if one is set in Settings, otherwise the small built-in one
     creatorSrc: () => { const v = plugin.settings.creatorImage; if (v) { const f = app.vault.getAbstractFileByPath(normalizePath(v)); if (f instanceof TFile) return {src: app.vault.getResourcePath(f), disc: false}; } return {src: CREATOR_IMG, disc: true}; },
     planetSrc: () => { const v = plugin.settings.planetImage; if (v) { const f = app.vault.getAbstractFileByPath(normalizePath(v)); if (f instanceof TFile) return app.vault.getResourcePath(f); } return PLANET_IMG; },
+    // Posters: a note's properties, and a picture a note links to (wikilink or vault path)
+    frontmatter: (path) => { const f = app.vault.getAbstractFileByPath(path); return f instanceof TFile ? (app.metadataCache.getFileCache(f)?.frontmatter || null) : null; },
+    resource: (link, from) => { if (!link) return null; const f = app.metadataCache.getFirstLinkpathDest(link, from || "") || app.vault.getAbstractFileByPath(normalizePath(link)); return f instanceof TFile ? app.vault.getResourcePath(f) : null; },
     savedFolder: () => plugin.settings.viewsFolder || null,
     pickSavedFolder: async () => {
       const dir = await new Promise(res => new FolderPicker(app, res).open());
