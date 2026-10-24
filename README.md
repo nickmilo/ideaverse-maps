@@ -78,7 +78,7 @@ The score counts links in, links out, links both ways, and uplinks (the `up` and
 
 The first time it runs, the plugin looks for home notes (named Home, Home Base or Home Pro) and folders named Maps. In **Settings → Maps of the Ideaverse** you can also leave folders out, mark an archive folder (shown as its own layer), keep a folder hidden until you pick it, and choose how many notes reach Level 5.
 
-Notes are dated by their `created` property (any capitalization; pick another property, or several, in Settings → Date property), or a date in the file name, or (if you leave it on) when the file was made.
+Notes are dated by their `created` property (any capitalization; `createdAt`, `date created` and similar names work too, and you can add your own in Settings → Date property), or a date in the file name, or (if you leave it on) when the file was made.
 
 ## Privacy
 
