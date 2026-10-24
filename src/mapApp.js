@@ -3629,6 +3629,10 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
   // a tab for the current map when it lives under More (Corona, Bookshelf, Spiral…), and More itself
   const vcur = $("#vseg").createEl("button", { cls: "vcur", attr: { id: "vcur", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } }); $("#vseg").insertBefore(vcur, $("#vmore"));
   $("#vmore").setText("More ▾"); $("#vmore").setAttribute("aria-label", "More maps");
+  $("#vsegms").insertBefore($("#vmore"), $("#vseg").nextSibling);   // More sits outside the tabs, so it never scrolls out of sight
+  // More: Chord, Corona, Tesla, Treemap and Bookshelf straight away; Geometric, Linear, Planet and Unfinished under Experimental
+  { const pop = $("#vmorepop"), ex = $("#mexp"), sk = ex.querySelector(":scope > details"); for (const b of [...ex.querySelectorAll(":scope > button")]) pop.insertBefore(b, ex);
+    if (sk) { sk.classList.remove("mexp2"); sk.querySelector(":scope > summary").setText("Experimental"); pop.insertBefore(sk, ex); } ex.remove(); }
   const VN = () => ({ emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemaking", arc: "Arc",
     chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
     shelf: "Bookshelf", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
