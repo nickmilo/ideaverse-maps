@@ -1138,8 +1138,9 @@ function csGuides(){
     const mer = []; for (let ph = -1.45; ph <= 1.45; ph += .05) mer.push(csCam(c.a0, ph, CS_R)); ctx.globalAlpha = .18; ctx.lineWidth = 1; ctx.beginPath(); csStroke(mer); ctx.stroke(); }
   ctx.globalAlpha = 1;
   // ribbons between kinds: out over the surface, or through the glass
-  const hl = sel >= 0 ? sel : hover, fade = hl >= 0 ? .25 : 1, mx = 900;
-  if (csBands) for (const r of chRibbons()) { const A = CHCAT[r.p], B = CHCAT[r.q];
+  // with a note picked, its own kind's bands stay bright and the rest step back (not out)
+  const hl = sel >= 0 ? sel : hover, hk = hl >= 0 ? CHC[hl] : -1, mx = 900;
+  if (csBands) for (const r of chRibbons()) { const A = CHCAT[r.p], B = CHCAT[r.q], fade = hk < 0 || r.p === hk || r.q === hk ? 1 : .4;
     ctx.strokeStyle = chHue(A); ctx.globalAlpha = (.08 + .3*Math.sqrt(r.c/mx))*fade; ctx.lineWidth = Math.max(.7, Math.sqrt(r.c/mx)*rs*(CSPH === "out" ? .045 : .07));
     const ca = CSC[A.id], cb = CSC[B.id]; if (!ca || !cb) continue; ctx.beginPath(); csStroke(csArc(ca[0], ca[1], cb[0], cb[1], 28)); ctx.stroke(); }
   ctx.globalAlpha = 1; ctx.lineCap = "round";
