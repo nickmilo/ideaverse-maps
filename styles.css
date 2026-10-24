@@ -604,7 +604,7 @@ body.is-phone .ivm.kb header .results{max-height:min(320px, 45vh);overflow-y:aut
 .ivm header.tb2 .fsec,.ivm header.tb2 .gsec{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .ivm header.tb2 .gsec[hidden]{display:none}
 .ivm header.tb2 .fsec + .fsec,.ivm header.tb2 .gsec + .gsec:not([hidden]){border-top:1px solid var(--line);padding-top:8px}
-.ivm header.tb2 .fsec > .ms{width:100%}
+.ivm header.tb2 .fsec > .ms{width:fit-content}
 .ivm header.tb2 .fsec .mspop{position:absolute;top:calc(100% + 4px);left:0}
 .ivm header.tb2 .fsec #themeseg{order:0}
 .ivm header.tb2 .tbpop .pn,.ivm header.tb2 .mapopts .pn{font-size:12px;color:var(--muted);margin:4px 2px 0}
