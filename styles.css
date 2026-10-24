@@ -696,3 +696,5 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm header.tb2 #vsegms > #vseg{order:0}.ivm header.tb2 #vsegms > #vmore{order:1}
 .ivm main .mapstats{left:16px;right:auto}
 .ivm .wm-name{left:auto;right:16px}
+.ivm header.tb2 .mapopts #subctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;max-width:100%;border:0;background:none;padding:0}
+.ivm header.tb2 .mapopts #subctl[hidden]{display:none}
