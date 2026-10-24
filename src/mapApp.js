@@ -1822,7 +1822,8 @@ EXP.lifeline = {
 // the card shows it once you zoom in. The map reads the properties itself, so it works on any dataset.
 const PST = { across: pref("iv-pacross", null), lanes: pref("iv-planes", null), size: pref("iv-psize", null), height: pref("iv-pheight", null), mosaic: !!pref("iv-pmosaic", false), mbox: [], mosaicOn: false, rng: pref("iv-prng", null) || {}, lhide: pref("iv-plhide", null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" };
 let BASEINFO = null;   // from a base: its sort property and each note's group
-const FMC = new Map(); const fmOf = i => { let f = FMC.get(i); if (f === undefined) { f = (host.frontmatter && host.frontmatter(N[i].path)) || null; FMC.set(i, f); } return f; };
+// (a note whose properties Obsidian hasn't read yet, right after it starts, is asked again next time instead of remembered as empty)
+const FMC = new Map(); const fmOf = i => { let f = FMC.get(i); if (f === undefined) { f = (host.frontmatter && host.frontmatter(N[i].path)) || null; if (f) FMC.set(i, f); } return f; };
 const linkName = v => String(v).replace(/^!?\[\[|\]\]$/g, "").replace(/\|.*$/, "").trim();
 const isLink = v => typeof v === "string" && /^!?\[\[[^\]]+\]\]$/.test(v.trim());
 const asNum = v => typeof v === "number" ? (isFinite(v) ? v : null) : typeof v === "string" && /^-?\d+(\.\d+)?$/.test(v.trim()) ? +v : null;
@@ -2090,7 +2091,7 @@ function layoutPeople(){
     for (const k_ of props) { const v = fm[k_]; const vs = Array.isArray(v) ? v : v == null ? [] : [v];
       for (const x of vs) { if (typeof x !== "string" || !x.trim() || x.length > 80) continue; const nm = linkName(x); const key = nm.toLowerCase(); if (got.some(g => g[0] === key)) continue; got.push([key, nm, k_]); } }
     if (!got.length) continue; np.set(i, got); for (const [key, nm, k_] of got) { const c = cnt.get(key); if (c) c.n++; else cnt.set(key, { n: 1, name: nm, prop: k_ }); } }
-  let ranked = [...cnt].sort((a, b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : 1)); const two = ranked.filter(r => r[1].n >= 2); if (two.length >= 3) ranked = two;
+  let ranked = [...cnt].sort((a, b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : 1)); PPL.named = ranked.length; const two = ranked.filter(r => r[1].n >= 2); if (two.length >= 3) ranked = two; PPL.avail = ranked.length;
   const hubs = ranked.slice(0, Math.max(3, PPL.max)).map(([key, c], h) => ({ key, name: c.name, prop: c.prop, n: c.n, h })), hix = new Map(hubs.map(h => [h.key, h.h])), H = hubs.length;
   // which notes stay: those naming at least one hub; their main person is the most-named one
   const keep = new Map(); const pair = new Map();
@@ -2128,7 +2129,9 @@ function pplOptsUI(){ const box = $("#pplctl"); if (!box) return; const cand = P
     if (!cand.length) list.createSpan({ cls: "pn", text: "No people properties found in these notes (director, actors, author, guests…)." });
     for (const c of cand) { const b = list.createEl("button", { cls: "pchip" + (act.has(c.id) ? "" : " off") }); b.createSpan({ text: c.id }); b.createEl("b", { text: c.n.toLocaleString() }); b.setAttribute("aria-pressed", String(act.has(c.id)));
       b.onclick = ev => { ev.stopPropagation(); const s_ = new Set(PPL.active || []); if (s_.has(c.id)) s_.delete(c.id); else s_.add(c.id); PPL.props = [...s_]; save("iv-pplprops", PPL.props); morph(true, () => fitTarget()); legend(); }; } }
-  const r = box.querySelector("input"), v = box.querySelector(".pplv"); if (r && document.activeElement !== r) r.value = PPL.max; if (v) v.setText(`${PPL.max} people · ${(PPL.shown || 0).toLocaleString()} notes`); }
+  const r = box.querySelector("input"), v = box.querySelector(".pplv"); const top = Math.min(1000, PPL.avail || 0); if (r) { r.max = String(Math.max(5, top)); if (document.activeElement !== r) r.value = Math.min(PPL.max, top); }
+  // how many of the people are on the map: those named in two or more notes are the ones the slider can reach
+  if (v) v.setText(`${Math.min(PPL.max, PPL.avail || 0).toLocaleString()} of ${(PPL.avail || 0).toLocaleString()} people named in 2+ notes${PPL.named > (PPL.avail || 0) ? ` (${(PPL.named - PPL.avail).toLocaleString()} more named once)` : ""} · ${(PPL.shown || 0).toLocaleString()} notes`); }
 // a person on the map: the star under the pointer (people with no note of their own can be clicked too)
 function pplHubAt(px, py){ let best = -1, bd = Infinity; for (const h of PPL.hubs) { const d = Math.hypot(sx(h.x) - px, sy(h.y) - py), r = Math.max(8, h.r * k * .55 + 4); if (d < r && d < bd) { bd = d; best = h.h; } } return best; }
 function pplClick(i, px, py){ if (i >= 0) { PPL.pick = -1; return false; } const h = pplHubAt(px, py);
@@ -4312,7 +4315,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       sp.appendChild(gp); sp.appendChild(gpp); if (exp_) exp_.appendChild(sp); else pop.appendChild(sp); } }
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "pplctl" } }); pc.hidden = true;
     pc.createDiv({ cls: "phint", text: "People from these properties:" }); pc.createDiv({ cls: "plchips pplchips" });
-    const row = pc.createEl("label", { cls: "prow" }); row.createSpan({ text: "Show" }); const r = row.createEl("input", { type: "range" }); r.min = "5"; r.max = "150"; r.step = "5"; r.value = String(PPL.max);
+    const row = pc.createEl("label", { cls: "prow" }); row.createSpan({ text: "Show" }); const r = row.createEl("input", { type: "range" }); r.min = "5"; r.max = "150"; r.step = "1"; r.value = String(PPL.max);
     pc.createDiv({ cls: "phint pplv" }); let t_ = 0;
     r.oninput = () => { PPL.max = +r.value; win.clearTimeout(t_); t_ = win.setTimeout(() => { save("iv-pplmax", PPL.max); morph(true, () => fitTarget()); }, 180); }; }
   // Mosaic's own option: Emergence or Scattered
