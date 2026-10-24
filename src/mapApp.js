@@ -3416,7 +3416,7 @@ $("#vexport").onclick = async e => { e.stopPropagation();   // pick (or move to)
 POPS.push(["#viewbtn", "#viewpop", "#viewms", () => { renderViewList(); $("#vname").focus(); }]);
 $("#viewbtn").onclick = e => { e.stopPropagation(); const el = $("#viewpop"), open = el.hidden; closePops("#viewpop"); closeColl(); el.hidden = !open; $("#viewbtn").setAttribute("aria-expanded", String(open)); if (open) { renderViewList(); if (typeof renderTourList === "function") renderTourList(); $("#vname").focus(); } };
 $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
-$("#tlrange").addEventListener("input", e => { senseStop(); senseSet(+e.target.value, true); });
+$("#tlrange").addEventListener("input", e => { senseStop(); if (+e.target.value >= SSTEPS.length - 1) senseClear(); else senseSet(+e.target.value, true); });   // all the way right is All time: every note
 $("#tlplay").onclick = sensePlay;
 root.querySelectorAll("#tlstep button").forEach(b => b.onclick = () => { if (senseStep === b.dataset.s) return;
   const t = senseT, was = sensePlaying; senseStop(); senseStep = b.dataset.s; save("iv-sstep", senseStep); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; syncTimebar();
