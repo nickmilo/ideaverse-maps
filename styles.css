@@ -673,3 +673,8 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm header.tb2 #vsegms > #vmore:hover{color:var(--ink)}
 .ivm header.tb2 #vseg{min-width:0;flex:0 1 auto}
 .ivm header.tb2 #vmorepop > .chip{width:100%;text-align:left}
+/* Animations: a line under the panel's name; Timelapse's date sits above the slider's right end, so the slider gets the whole row */
+.ivm #animdock .anihead{border-bottom:1px solid var(--line);padding-bottom:6px}
+.ivm #animdock .aniwrap[data-a="time"]{position:relative}
+.ivm.ivm.ivm.ivm.ivm #animdock #tldate{position:absolute;top:0;right:4px;min-width:0;font:600 10.5px var(--mono);letter-spacing:.04em;line-height:12px}
+.ivm.ivm.ivm.ivm.ivm #animdock #timebar input{min-width:0}
