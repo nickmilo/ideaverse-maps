@@ -739,3 +739,9 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .postctl .pchip.off{opacity:.38;text-decoration:line-through}
 .ivm .postctl .pchip.pall{border-style:dashed}
 .ivm .postctl .plchips .pn{flex-basis:100%}
+/* the current More map's tab: outside the scrolling tabs, between them and More */
+.ivm header.tb2 #vsegms > .vcurseg{order:1;flex:none}
+.ivm header.tb2 #vsegms > .vcurseg[hidden]{display:none}
+.ivm header.tb2 #vsegms > #vmore{order:2}
+.ivm header.tb2 .vcurseg button{white-space:nowrap}
+.ivm header.tb2 .vcurseg .vcar{font-size:10px;margin-left:3px}
