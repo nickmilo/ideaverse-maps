@@ -54,7 +54,7 @@ export class MapView extends ItemView {
     this.map = await mountInto(this, this.contentEl, { isActive: () => this.app.workspace.getActiveViewOfType(MapView) === this, openNote: (p, t, b) => this.openNote(p, t, b) });
   }
 
-  showStale() { if (this.staleBtn) this.staleBtn.hidden = false; }
+  showStale(c) { const b = this.staleBtn; if (!b) return; b.hidden = false; const t = `${c || "Some"} notes changed · rescan`; b.setAttribute("aria-label", t); b.title = t; const n = b.querySelector(".tbadge"); if (n) n.setText(String(c || "")); }
 
   /** Where the saved views and tours file lives (null until a folder is picked). */
   savedPath() {
@@ -102,7 +102,7 @@ export async function mountInto(owner, el, opts) {
   const root = el.createDiv({ cls: "ivm" });
   buildUI(root, UI);
   const stale = root.querySelector("header").createEl("button", { cls: "chip ivm-stale", text: "↻ Notes changed · rescan" });
-  stale.hidden = !plugin.dirty;
+  stale.hidden = !plugin.dirty; stale.dataset.count = String(plugin.changed ? plugin.changed.size : 0);
   stale.addEventListener("click", () => { void plugin.rescan(); });
   owner.staleBtn = stale;
   if (owner.mapEvents) owner.removeChild(owner.mapEvents);
