@@ -43,6 +43,10 @@ A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), P
 
 For a smaller, targeted set: a collection, a folder, or a base view (your movies, your books, a learning pack). Each note becomes a card, laid out by its own properties. **Across** is a date or number (a release year, a rating, a date property, or the created date); **Lanes** are a category (genre, status, a director, or the base's own groups); **Size** is a number (your rating, the link score). If notes have an image property (a poster, a cover, a link to an image in your vault), the card shows it. The map picks sensible defaults from the properties your notes share; click the Posters tab to change them. Inside a base it follows the base: its Sort sets Across and its Group sets the lanes.
 
+Under each choice is a mini slider: a little histogram of that property's values, with two handles that keep only the notes in between (just the '90s, only your 4-star films). Lanes get chips instead, one per value with its count: click to switch a lane off, ⌥/⌘-click to show only that one.
+
+Pick a **Height** and the lanes give way to a second number up the side: your rating against the crowd's (a taste gap), or the year you watched something against the year it came out. When the two are the same kind of thing, a line marks where they agree (same score, same year), and the notes furthest from it get a ring.
+
 ## The time-lapse
 
 In **Animations** (bottom left), pick **Timelapse** and press ▶ to replay your vault by month or by week. New notes arrive (comets, rain, or a swirl), and notes move up a level as their links arrive. Click a note at any point to pause and look around; Resume carries on.

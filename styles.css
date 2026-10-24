@@ -721,6 +721,21 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .postctl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;align-items:center;padding:2px 2px 4px;min-width:240px}
 .ivm .postctl[hidden]{display:none}
 .ivm .postctl .prow{display:contents}
-.ivm .postctl .prow > span{font-size:var(--font-ui-small);color:var(--iv-muted,var(--text-muted))}
+.ivm .postctl .prow[hidden]{display:none}
+.ivm .postctl .prow > span{font-size:var(--font-ui-small);color:var(--muted)}
 .ivm .postctl select{width:100%;min-width:0}
-.ivm .postctl .pn{grid-column:1/-1;font-size:var(--font-ui-smaller);color:var(--iv-muted,var(--text-muted))}
+.ivm .postctl .pn{grid-column:1/-1;font-size:var(--font-ui-smaller);color:var(--muted)}
+/* Posters: each variable's mini slider (a histogram of its values) and the lane chips */
+.ivm .postctl .prng,.ivm .postctl .plchips{grid-column:1/-1;margin:-2px 0 6px}
+.ivm .postctl .prng[hidden],.ivm .postctl .plchips[hidden]{display:none}
+.ivm .postctl .phist{display:flex;align-items:flex-end;gap:1px;height:22px;margin:0 9px -6px}
+.ivm .postctl .phist i{flex:1;background:var(--accent);opacity:.55;border-radius:1px 1px 0 0;min-height:0}
+.ivm .postctl .phist i.off{opacity:.14}
+.ivm .postctl .prng .dual{margin:0 0 0;height:26px}
+.ivm .postctl .prng .srange{display:flex;justify-content:space-between;font:400 10.5px var(--mono);color:var(--muted);margin:-4px 4px 0}
+.ivm .postctl .plchips{display:flex;flex-wrap:wrap;gap:4px;max-height:132px;overflow:auto}
+.ivm .postctl .pchip{display:inline-flex;align-items:center;gap:5px;font-size:var(--font-ui-smaller);padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:none;color:inherit;cursor:pointer;height:auto;box-shadow:none}
+.ivm .postctl .pchip b{font-weight:400;opacity:.6;font-size:.9em}
+.ivm .postctl .pchip.off{opacity:.38;text-decoration:line-through}
+.ivm .postctl .pchip.pall{border-style:dashed}
+.ivm .postctl .plchips .pn{flex-basis:100%}

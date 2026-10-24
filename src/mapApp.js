@@ -1784,7 +1784,7 @@ EXP.lifeline = {
 // Across: a date or number property (year, rating, created…). Lanes: a category (genre, status, a base's own groups).
 // Size: a number (your rank). Each note is a card, and when the note has an image property (a poster, a cover),
 // the card shows it once you zoom in. The map reads the properties itself, so it works on any dataset.
-const PST = { across: pref("iv-pacross", null), lanes: pref("iv-planes", null), size: pref("iv-psize", null), opts: null, key: "", lanesOut: [], ticks: [], img: "" };
+const PST = { across: pref("iv-pacross", null), lanes: pref("iv-planes", null), size: pref("iv-psize", null), height: pref("iv-pheight", null), rng: pref("iv-prng", null) || {}, lhide: pref("iv-plhide", null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" };
 let BASEINFO = null;   // from a base: its sort property and each note's group
 const FMC = new Map(); const fmOf = i => { let f = FMC.get(i); if (f === undefined) { f = (host.frontmatter && host.frontmatter(N[i].path)) || null; FMC.set(i, f); } return f; };
 const linkName = v => String(v).replace(/^!?\[\[|\]\]$/g, "").replace(/\|.*$/, "").trim();
@@ -1821,25 +1821,44 @@ function postersDetect(){
   PST.opts = { across, lanes, size, img, defLane: BASEINFO && BASEINFO.groups && BASEINFO.groups.size ? "@base" : dl ? dl.id : "" }; return PST.opts; }
 function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o = postersDetect();
   const fill = (sel_, list, cur) => { sel_.empty(); for (const it of list) sel_.createEl("option", { value: it.id, text: it.name }); sel_.value = list.some(it => it.id === cur) ? cur : list[0].id; };
-  fill($("#pacross"), o.across, PST.across ?? o.across[0].id); fill($("#planes"), o.lanes, PST.lanes != null && o.lanes.some(l => l.id === PST.lanes) ? PST.lanes : o.defLane);
-  fill($("#psize"), o.size, PST.size != null && o.size.some(z => z.id === PST.size) ? PST.size : (o.size.find(s_ => /^(rank|rating|stars|score|my.?rating)$/i.test(s_.id)) || o.size[0]).id);
+  const cu = PST.cur; fill($("#pacross"), o.across, cu ? cu.acrossId : PST.across ?? o.across[0].id); fill($("#pheight"), [{ id: "", name: "None (lanes)" }, ...o.across], cu ? cu.heightId : "");
+  { const hr = $("#planes").closest(".prow"); if (hr) hr.hidden = !!(PST.cur && PST.cur.heightId); }
+  for (const key of ["across", "height", "size"]) postersSlider(key); postersLaneChips(); fill($("#planes"), o.lanes, cu ? cu.laneId : o.defLane);
+  fill($("#psize"), o.size, cu ? cu.sizeId : "");
   $("#pimg").setText(o.img ? `Pictures from ${o.img}` : "No image property found"); }
 function layoutPosters(){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0; FMC.clear();
   const o = postersDetect(), acrossId = (o.across.find(a => a.id === PST.across) || o.across.find(a => a.id === (BASEINFO && BASEINFO.sort)) || o.across[0]).id;
   const ac = o.across.find(a => a.id === acrossId);
   const laneId = PST.lanes != null && o.lanes.some(l => l.id === PST.lanes) ? PST.lanes : o.defLane;
-  const sizeId = PST.size != null && o.size.some(s_ => s_.id === PST.size) ? PST.size : (o.size.find(s_ => /^(rank|rating|stars|score|my.?rating)$/i.test(s_.id)) || o.size[0]).id;
-  PST.cur = { acrossId, laneId, sizeId, kind: ac.kind };
-  const val = i => { if (acrossId === "@created") return isNaN(TV[i]) ? null : yOf(TV[i]) + yFrac(TV[i]); const v = fmOf(i) && fmOf(i)[acrossId]; if (v == null) return null;
-    if (ac.kind === "date") { const d = parseDay(Array.isArray(v) ? v[0] : v); if (!d) return null; const t = Date.parse(d); return yOf(t) + yFrac(t); } const x = asNum(Array.isArray(v) ? v[0] : v); return x == null ? null : x + (ac.kind === "year" ? .5 : 0); };
+  const hgt = PST.height ? o.across.find(a => a.id === PST.height && a.id !== acrossId) : null, heightId = hgt ? hgt.id : "";
+  const sizeId = PST.size != null && o.size.some(s_ => s_.id === PST.size) ? PST.size : (o.size.find(s_ => /^(rank|rating|stars|score|my.?rating|runtime|pages|length)$/i.test(s_.id) && s_.id !== heightId && s_.id !== acrossId) || o.size[0]).id;
+  PST.cur = { acrossId, laneId, sizeId, heightId, kind: ac.kind };
+  const valBy = (id, kind, i) => { if (id === "@created") return isNaN(TV[i]) ? null : yOf(TV[i]) + yFrac(TV[i]); const v = fmOf(i) && fmOf(i)[id]; if (v == null) return null;
+    if (kind === "date") { const d = parseDay(Array.isArray(v) ? v[0] : v); if (!d) return null; const t = Date.parse(d); return yOf(t) + yFrac(t); } const x = asNum(Array.isArray(v) ? v[0] : v); return x == null ? null : x + (kind === "year" ? .5 : 0); };
+  const val = i => valBy(acrossId, ac.kind, i);
   const laneOf = i => { if (!laneId) return ""; if (laneId === "@folder") return N[i].ace === "(root)" ? "Root" : N[i].ace; if (laneId === "@base") return (BASEINFO.groups.get(N[i].path)) ?? "—";
     const v = fmOf(i) && fmOf(i)[laneId]; if (v == null || v === "") return "—"; const f = Array.isArray(v) ? v[0] : v; return f == null ? "—" : isLink(String(f)) ? linkName(f) : String(f).trim(); };
   const szOf = i => { if (!sizeId) return null; if (sizeId === "@score") return N[i].score; const v = fmOf(i) && fmOf(i)[sizeId]; return asNum(Array.isArray(v) ? v[0] : v); };
-  const ids = [], V = new Float64Array(n).fill(NaN), S = new Float64Array(n).fill(NaN); let v0 = Infinity, v1 = -Infinity, s0 = Infinity, s1 = -Infinity; const cnt = new Map(), lab = new Array(n);
-  for (let i=0;i<n;i++) { if (!vis[i]) continue; ids.push(i); const v = val(i); if (v != null && isFinite(v)) { V[i] = v; if (v < v0) v0 = v; if (v > v1) v1 = v; }
-    const z = szOf(i); if (z != null && isFinite(z)) { S[i] = z; if (z < s0) s0 = z; if (z > s1) s1 = z; } const L_ = laneOf(i); lab[i] = L_; cnt.set(L_, (cnt.get(L_) || 0) + 1); }
+  // every variable's full spread (for its mini slider), then only the notes inside each slider's range
+  const all = []; for (let i=0;i<n;i++) if (vis[i]) all.push(i);
+  const ext = {}, mk = (key, id, kind, f) => { if (!id) return null; const a = new Float64Array(n).fill(NaN); let lo = Infinity, hi = -Infinity;
+    for (const i of all) { const v = f(i); if (v != null && isFinite(v)) { a[i] = v; if (v < lo) lo = v; if (v > hi) hi = v; } } if (!isFinite(lo)) return a;
+    const B = 28, bins = new Array(B).fill(0); for (const i of all) if (!isNaN(a[i])) bins[Math.min(B - 1, Math.floor((a[i] - lo) / ((hi - lo) || 1) * B))]++;
+    ext[key] = { id, kind, lo, hi, bins }; return a; };
+  const AV = mk("across", acrossId, ac.kind, val), AS = mk("size", sizeId, "num", szOf), AH = heightId ? mk("height", heightId, hgt.kind, i => valBy(heightId, hgt.kind, i)) : null;
+  PST.ext = ext;
+  const inR = (key, a, i) => { const e = ext[key], r = e && PST.rng[e.id]; if (!r || !a || isNaN(a[i])) return true; const v = e.kind === "year" ? Math.floor(a[i]) : a[i]; return v >= r[0] - 1e-9 && v <= r[1] + 1e-9; };
+  const lab = new Array(n), cntAll = new Map(); if (!heightId) for (const i of all) { const L_ = laneOf(i); lab[i] = L_; cntAll.set(L_, (cntAll.get(L_) || 0) + 1); }
+  PST.laneAll = laneId && !heightId ? [...cntAll].sort((a, b) => (a[0] === "—") - (b[0] === "—") || b[1] - a[1]) : [];
+  const lh = new Set(laneId && !heightId ? PST.lhide[laneId] || [] : []);
+  const ids = [], V = new Float64Array(n).fill(NaN), S = new Float64Array(n).fill(NaN); let v0 = Infinity, v1 = -Infinity, s0 = Infinity, s1 = -Infinity; const cnt = new Map();
+  for (const i of all) { if (!inR("across", AV, i) || !inR("size", AS, i) || !inR("height", AH, i) || (lh.size && lh.has(lab[i]))) continue; ids.push(i);
+    const v = AV ? AV[i] : NaN; if (!isNaN(v)) { V[i] = v; if (v < v0) v0 = v; if (v > v1) v1 = v; }
+    const z = AS ? AS[i] : NaN; if (!isNaN(z)) { S[i] = z; if (z < s0) s0 = z; if (z > s1) s1 = z; } if (!heightId) cnt.set(lab[i], (cnt.get(lab[i]) || 0) + 1); }
   if (!isFinite(v0)) { v0 = 0; v1 = 1; } if (v1 - v0 < 1e-9) v1 = v0 + 1;
+  PST.scatter = !!heightId; PST.diag = PST.rings = null; PST.yticks = [];
+  if (heightId) { layoutPostersXY(ids, V, S, v0, v1, s0, s1, ac, hgt, i => AH[i], o); postersOptsUI(); return; }
   // lanes: the base's own order, else biggest first; past 14, the rest share "Other"
   let order = [...cnt.keys()]; if (laneId === "@base" && BASEINFO.order) order.sort((a, b) => BASEINFO.order.indexOf(a) - BASEINFO.order.indexOf(b)); else order.sort((a, b) => (a === "—") - (b === "—") || cnt.get(b) - cnt.get(a) || String(a).localeCompare(String(b)));
   if (order.length > 14) { const keep = new Set(order.slice(0, 13)); for (const i of ids) if (!keep.has(lab[i])) lab[i] = "Other"; order = [...order.slice(0, 13), "Other"]; cnt.set("Other", ids.filter(i => lab[i] === "Other").length); }
@@ -1859,6 +1878,78 @@ function layoutPosters(){
   for (let t = Math.ceil(v0 / tk) * tk; t <= v1 + 1e-9; t += tk) ticks.push({ x: xOf(ac.kind === "year" || ac.kind === "date" ? t : t), t: ac.kind === "year" || ac.kind === "date" ? String(Math.round(t)) : String(+t.toFixed(2)) });
   PST.lanesOut = lanesOut; PST.ticks = ticks; PST.WD = WD; PST.H = y; PST.img = o.img; PST.hasNo = ids.some(i => isNaN(V[i]));
   expBox = { x0: (PST.hasNo ? NOV - 40 : -40) - 150, y0: -60, x1: WD + 40, y1: y + 20 }; postersOptsUI(); }
+// each variable's mini slider: its spread as a little histogram, and two handles that keep only the notes in between
+const prngFmt = (v, kind) => kind === "year" ? String(Math.round(v)) : kind === "date" ? String(Math.floor(v)) : String(+v.toFixed(Math.abs(v) < 10 ? 1 : 0));
+let prngRaf = 0; const prngRelayout = fit => { if (fit) { morph(true, () => fitTarget()); legend(); return; } if (prngRaf) return; prngRaf = RAF(() => { prngRaf = 0; morph(false); }); };
+function postersSlider(key){ const box = $("#rng-" + key); if (!box) return; const e = PST.ext[key];
+  if (!e || e.hi - e.lo < 1e-9) { box.hidden = true; box.dataset.sig = ""; return; } box.hidden = false;
+  const yr = e.kind === "year", lo = yr ? Math.floor(e.lo) : e.lo, hi = yr ? Math.floor(e.hi) : e.hi, step = yr ? 1 : (hi - lo) / 200, sig = e.id + "|" + lo + "|" + hi + "|" + e.bins.join(",");
+  const r = PST.rng[e.id] || [lo, hi];
+  if (box.dataset.sig !== sig) { box.dataset.sig = sig; box.empty();
+    const hist = box.createDiv({ cls: "phist" }), mx = Math.max(...e.bins); e.bins.forEach(b => hist.createEl("i").style.height = (b ? 8 + 92 * b / mx : 0) + "%");
+    const d = box.createDiv({ cls: "dual" }); d.createSpan({ cls: "trk" }); d.createSpan({ cls: "fill" });
+    const a = d.createEl("input", { type: "range" }), b = d.createEl("input", { type: "range" }); a.setAttribute("aria-label", `Lowest ${e.id}`); b.setAttribute("aria-label", `Highest ${e.id}`);
+    for (const x of [a, b]) { x.min = lo; x.max = hi; x.step = step; }
+    const labs = box.createDiv({ cls: "srange" }); labs.createSpan(); labs.createSpan();
+    const upd = (commit) => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; const full = p <= lo + step / 2 && q >= hi - step / 2;
+      if (full) delete PST.rng[e.id]; else PST.rng[e.id] = [p, q]; postersSliderPaint(box, e, lo, hi); if (commit) save("iv-prng", { ...PST.rng }); prngRelayout(commit); };
+    a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true); }
+  const [a, b] = box.querySelectorAll("input"); a.value = r[0]; b.value = r[1]; postersSliderPaint(box, e, lo, hi); }
+function postersSliderPaint(box, e, lo, hi){ const [a, b] = box.querySelectorAll("input"); let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p];
+  const f = v => (v - lo) / ((hi - lo) || 1), fill = box.querySelector(".fill"); fill.style.left = `calc(9px + (100% - 18px)*${f(p)})`; fill.style.width = `calc((100% - 18px)*${f(q) - f(p)})`;
+  box.querySelectorAll(".phist i").forEach((el, j, all) => { const c = (j + .5) / all.length; el.classList.toggle("off", c < f(p) - .5 / all.length || c > f(q) + .5 / all.length); });
+  const [l0, l1] = box.querySelectorAll(".srange span"); l0.setText(prngFmt(p, e.kind)); l1.setText(prngFmt(q, e.kind)); }
+// Lanes: a category has no range, so its values are chips to switch off and on
+function postersLaneChips(){ const box = $("#rng-lanes"); if (!box) return; const id = PST.cur && PST.cur.laneId, L = PST.laneAll;
+  if (!id || !L.length || L.length < 2) { box.hidden = true; box.dataset.sig = ""; return; } box.hidden = false;
+  const hid = new Set(PST.lhide[id] || []), sig = id + "|" + L.map(x => x[0] + ":" + x[1]).join(",") + "|" + [...hid].join(",");
+  if (box.dataset.sig === sig) return; box.dataset.sig = sig; box.empty();
+  const show = L.slice(0, 24);
+  for (const [v, c] of show) { const ch = box.createEl("button", { cls: "pchip" + (hid.has(v) ? " off" : "") }); ch.createSpan({ text: v === "—" ? "No value" : v }); ch.createEl("b", { text: c.toLocaleString() });
+    ch.setAttribute("aria-pressed", String(!hid.has(v)));
+    ch.onclick = ev => { ev.stopPropagation(); const h = new Set(PST.lhide[id] || []);
+      if (ev.altKey || ev.metaKey) { const only = !(h.size === L.length - 1 && !h.has(v)); h.clear(); if (only) for (const [w] of L) if (w !== v) h.add(w); }   // ⌥/⌘-click: only this one (again: all)
+      else if (h.has(v)) h.delete(v); else if (h.size < L.length - 1) h.add(v);
+      if (h.size) PST.lhide[id] = [...h]; else delete PST.lhide[id]; save("iv-plhide", { ...PST.lhide }); prngRelayout(true); }; }
+  if (L.length > 24) box.createSpan({ cls: "pn", text: `+${L.length - 24} more in Other` });
+  if (hid.size) { const all_ = box.createEl("button", { cls: "pchip pall", text: "Show all" }); all_.onclick = ev => { ev.stopPropagation(); delete PST.lhide[id]; save("iv-plhide", { ...PST.lhide }); prngRelayout(true); }; } }
+
+// Posters with Height: a number up the side too, so each card sits at (Across, Height). When the two are the same kind
+// of thing (two ratings, two years) a line marks where they agree, and the cards furthest from it get a ring.
+const niceStep = (span, k_) => { const raw = span / k_, mag = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 5, 10].map(m => m * mag).find(t => t >= raw) || 10 * mag; };
+function layoutPostersXY(ids, V, S, v0, v1, s0, s1, ac, hgt, hv, o){
+  const Hh = new Float64Array(n).fill(NaN); let h0 = Infinity, h1 = -Infinity; const dist = new Set();
+  for (const i of ids) { const h = hv(i); if (h != null && isFinite(h)) { Hh[i] = h; if (h < h0) h0 = h; if (h > h1) h1 = h; dist.add(h); } }
+  if (!isFinite(h0)) { h0 = 0; h1 = 1; } if (h1 - h0 < 1e-9) h1 = h0 + 1;
+  const WD = Math.max(560, Math.min(5200, Math.sqrt(ids.length) * 90)), HT = WD * .58, PW = 12, PH = 18, NOV = -80;
+  const pv = (v1 - v0) * .03, ph = (h1 - h0) * .04, X0 = v0 - pv, X1 = v1 + pv, Y0 = h0 - ph, Y1 = h1 + ph;
+  const xOf = v => (v - X0) / (X1 - X0) * WD, yOfH = h => HT - (h - Y0) / (Y1 - Y0) * HT;
+  // spread cards that share a value (half-star ratings, whole years) across part of the gap to the next value
+  const dv = [...dist].sort((a, b) => a - b); let gap = Infinity; if (dv.length <= 40) for (let q = 1; q < dv.length; q++) gap = Math.min(gap, dv[q] - dv[q - 1]);
+  const jy = isFinite(gap) ? gap / (Y1 - Y0) * HT * .38 : PH * .4;
+  const sc = i => isNaN(S[i]) || s1 <= s0 ? 1 : .7 + .8 * (S[i] - s0) / (s1 - s0);
+  const MISS = HT + 70; let miss = 0, missX = new Map();
+  for (const i of ids) { const s_ = sc(i), w = PW * s_, h = PH * s_; let x, y;
+    if (!isNaN(V[i]) && !isNaN(Hh[i])) { x = xOf(V[i]) + (hash(N[i].path, 7) - .5) * PW * 1.1; y = yOfH(Hh[i]) + (hash(N[i].path, 9) - .5) * 2 * jy; }
+    else if (!isNaN(Hh[i])) { x = NOV + (hash(N[i].path, 7) - .5) * PW; y = yOfH(Hh[i]); }
+    else { miss++; x = isNaN(V[i]) ? NOV : xOf(V[i]); const c = Math.round(x / (PW * .9)), k_ = missX.get(c) || 0; missX.set(c, k_ + 1); y = MISS + k_ * PH * .42; }
+    RX[i] = x - w / 2; RY[i] = y - h / 2; RW[i] = w; RH[i] = h; EX[i] = x; EY[i] = y; }
+  const yr = k_ => k_ === "year" || k_ === "date", lab = (t, k_) => yr(k_) ? String(Math.round(t)) : String(+t.toFixed(2));
+  const tx = niceStep(v1 - v0, 9), ty = niceStep(h1 - h0, 6), ticks = [], yticks = [];
+  for (let t = Math.ceil(v0 / tx) * tx; t <= v1 + 1e-9; t += tx) ticks.push({ x: xOf(t), t: lab(t, ac.kind) });
+  for (let t = Math.ceil(h0 / ty) * ty; t <= h1 + 1e-9; t += ty) yticks.push({ y: yOfH(t), t: lab(t, hgt.kind) });
+  // where the two agree: the same year, or the same score once both are read on their own scale (5 stars vs 10 points)
+  const top = m => [1, 5, 10, 100, 1000].find(c => c >= m - 1e-9) || m;
+  let f = null, dlab = "";
+  if (yr(ac.kind) && yr(hgt.kind)) { f = x => x; dlab = "same year"; }
+  else if (ac.kind === "num" && hgt.kind === "num" && v0 >= 0 && h0 >= 0) { const r = top(h1) / top(v1); f = x => x * r; dlab = "same score"; }
+  if (f) { const pts = []; for (let q = 0; q <= 200; q++) { const x = X0 + (X1 - X0) * q / 200, h = f(x); if (h >= Y0 && h <= Y1) pts.push([xOf(x), yOfH(h)]); }
+    if (pts.length > 1) PST.diag = { a: pts[0], b: pts[pts.length - 1], label: dlab, above: `${hgt.name} higher`, below: `${ac.name} higher`, yr: yr(ac.kind) };
+    const res = ids.filter(i => !isNaN(V[i]) && !isNaN(Hh[i])).map(i => [i, (Hh[i] - f(V[i])) / (Y1 - Y0)]).filter(r => Math.abs(r[1]) > .18).sort((a, b) => b[1] - a[1]);
+    PST.rings = new Set([...res.slice(0, 4), ...res.slice(-4)].map(r => r[0])); }
+  PST.lanesOut = []; PST.ticks = ticks; PST.yticks = yticks; PST.WD = WD; PST.H = HT; PST.img = o.img; PST.hasNo = ids.some(i => isNaN(V[i]) && !isNaN(Hh[i])); PST.miss = miss ? MISS : 0;
+  PST.axes = { x: ac.name, y: hgt.name };
+  expBox = { x0: (PST.hasNo ? NOV - 30 : -20) - 70, y0: -60, x1: WD + 40, y1: (miss ? MISS + 60 : HT + 40) }; }
 // pictures: loaded only for cards on screen and big enough to see, a few at a time
 const PIMG = new Map(); let pimgBusy = 0, pimgRaf = 0;
 function posterImg(i){ if (!PST.img) return null; const fm = fmOf(i); let v = fm && fm[PST.img]; if (Array.isArray(v)) v = v[0]; if (!v || typeof v !== "string") return null; v = v.trim();
@@ -1873,6 +1964,19 @@ EXP.posters = {
   layout: layoutPosters, pick: (x, y) => rectPick(x, y), ownLabels: true,
   guides(){ const gd = sel >= 0 ? .55 : 1;
     ctx.textBaseline = "middle"; ctx.lineWidth = 1;
+    if (PST.scatter) { ctx.font = `400 10.5px ${css.mono}`; ctx.textAlign = "right";
+      for (const t of PST.yticks) { const y = sy(t.y); if (y < -20 || y > H + 20) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(sx(0), y); ctx.lineTo(sx(PST.WD), y); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillStyle = css.muted; ctx.fillText(t.t, Math.max(sx(0) - 8, 40), y); }
+      ctx.textAlign = "left"; ctx.fillStyle = css.muted; ctx.globalAlpha = gd;
+      ctx.save(); ctx.translate(Math.max(sx(0) - 52, 14), sy(PST.H / 2)); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillText(String(PST.axes.y).toUpperCase() + " →", 0, 0); ctx.restore();
+      ctx.textAlign = "center"; ctx.fillText(String(PST.axes.x).toUpperCase() + " →", sx(PST.WD / 2), sy(PST.H) + 30);
+      if (PST.miss) { ctx.textAlign = "left"; ctx.fillText("MISSING " + String(PST.axes.y).toUpperCase(), sx(0), sy(PST.miss) - 30); }
+      const d = PST.diag; if (d) { ctx.save(); ctx.beginPath(); ctx.rect(sx(0), sy(0), PST.WD * k, PST.H * k); ctx.clip(); ctx.strokeStyle = css.accent; ctx.globalAlpha = .55 * gd; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(sx(d.a[0]), sy(d.a[1])); ctx.lineTo(sx(d.b[0]), sy(d.b[1])); ctx.stroke(); ctx.restore();
+        ctx.globalAlpha = gd; ctx.fillStyle = css.accent; ctx.font = `400 11px ${css.mono}`; ctx.textAlign = "right"; ctx.fillText(d.label, sx(d.b[0]) - 6, sy(d.b[1]) + 14);
+        if (!d.yr) { ctx.font = `400 18px ${css.display}`; ctx.fillStyle = css.ink; ctx.globalAlpha = .6 * gd; ctx.textAlign = "left"; ctx.fillText(d.above, sx(PST.WD * .03), sy(PST.H * .06)); ctx.textAlign = "right"; ctx.fillText(d.below, sx(PST.WD * .97), sy(PST.H * .94)); } }
+      ctx.textAlign = "center"; ctx.font = `400 15px ${css.display}`; ctx.globalAlpha = gd; ctx.fillStyle = css.ink;
+      for (const t of PST.ticks) { const x = sx(t.x); if (x < -40 || x > W + 40) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(x, sy(0)); ctx.lineTo(x, sy(PST.H)); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillText(t.t, x, Math.min(sy(PST.H) + 14, H - 20)); }
+      if (PST.hasNo) { ctx.fillStyle = css.muted; ctx.font = `500 10.5px ${css.mono}`; ctx.fillText("NO " + String(PST.axes.x).toUpperCase(), sx(-80), sy(-24)); }
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.globalAlpha = 1; return; }
     for (const L_ of PST.lanesOut) { const y0 = sy(L_.y0), y1 = sy(L_.y1); if (y1 < 0 || y0 > H) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .8 * gd; ctx.beginPath(); ctx.moveTo(0, y1); ctx.lineTo(W, y1); ctx.stroke();
       ctx.globalAlpha = gd; ctx.font = `600 11px ${css.mono}`; ctx.fillStyle = css.ink; const lx = Math.max(12, sx(expBox.x0 + 10)), ly = Math.max(y0 + 14, Math.min(y1 - 22, 70));
       ctx.lineWidth = 4; ctx.strokeStyle = css.bg; const t = String(L_.name).toUpperCase(); ctx.strokeText(t, lx, y0 + 16); ctx.fillText(t, lx, y0 + 16); ctx.font = `400 10.5px ${css.mono}`; ctx.fillStyle = css.muted; ctx.strokeText(L_.n.toLocaleString(), lx, y0 + 30); ctx.fillText(L_.n.toLocaleString(), lx, y0 + 30); ctx.lineWidth = 1; }
@@ -1891,9 +1995,10 @@ EXP.posters = {
           const words = N[i].title.split(/\s+/), lines = []; let cur = ""; for (const wd of words) { const t = cur ? cur + " " + wd : wd; if (ctx.measureText(t).width > w - 8 && cur) { lines.push(cur); cur = wd; } else cur = t; } if (cur) lines.push(cur);
           const lh = Math.min(13, w * .12) * 1.15; lines.slice(-4).forEach((t, j, a) => ctx.fillText(t, x + 4, y + h - 4 - (a.length - 1 - j) * lh)); ctx.restore(); } }
       ctx.strokeStyle = i === sel ? css.accent : "rgba(0,0,0,.45)"; ctx.lineWidth = i === sel ? 2.5 : 1; ctx.strokeRect(x + .5, y + .5, w - 1, h - 1);
+      if (PST.rings && PST.rings.has(i)) { const p = Math.max(3, w * .18); ctx.strokeStyle = css.ink; ctx.globalAlpha *= .8; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(x - p, y - p, w + 2 * p, h + 2 * p, p * 1.4); ctx.stroke(); }
       if (w >= 60 && img) { ctx.fillStyle = css.ink; ctx.font = `500 ${Math.min(12, w * .1)}px ${css.body}`; ctx.textBaseline = "top"; let t = N[i].title; while (t.length > 3 && ctx.measureText(t).width > w) t = t.slice(0, -2); if (t !== N[i].title) t += "…"; ctx.fillText(t, x, y + h + 3); ctx.textBaseline = "alphabetic"; } }
     ctx.globalAlpha = 1; },
-  legend: "Posters: the notes on screen laid out by their own properties. Across is a date or number (release year, created, your rating); lanes are a category (genre, status, this base's own groups); size is a number. Notes with an image property (a poster, a cover) show it once you zoom in. Click the map's tab for Across, Lanes and Size.",
+  legend: "Posters: the notes on screen laid out by their own properties. Across is a date or number (release year, created, your rating); lanes are a category (genre, status, this base's own groups); size is a number. Pick a Height and lanes give way to a second number up the side (your rating against the crowd's, the year you watched it against the year it came out), with a line where the two agree and rings on the notes furthest from it. Notes with an image property (a poster, a cover) show it once you zoom in. Click the map's tab for Across, Lanes and Size.",
 };
 
 // ---------- PKM Planet: the six domains of personal knowledge as a world map on a table ----------
@@ -3850,9 +3955,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     $("#goshelf").after(gp); gp.onclick = () => { closePops(); driftStop(); setView("posters"); }; }
   // Posters' own options, in its map menu: Across, Lanes, Size
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "postctl" } }); pc.hidden = true;
-    for (const [id, lab_, pk, key] of [["pacross", "Across", "iv-pacross", "across"], ["planes", "Lanes", "iv-planes", "lanes"], ["psize", "Size", "iv-psize", "size"]]) {
+    for (const [id, lab_, pk, key] of [["pacross", "Across", "iv-pacross", "across"], ["pheight", "Height", "iv-pheight", "height"], ["planes", "Lanes", "iv-planes", "lanes"], ["psize", "Size", "iv-psize", "size"]]) {
       const row = pc.createEl("label", { cls: "prow" }); row.createSpan({ text: lab_ }); const sel_ = row.createEl("select", { attr: { id } });
-      sel_.onchange = () => { PST[key] = sel_.value; save(pk, sel_.value); morph(true, () => fitTarget()); legend(); }; }
+      sel_.onchange = () => { PST[key] = sel_.value; save(pk, sel_.value); morph(true, () => fitTarget()); legend(); };
+      const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
   const VN = () => ({ emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemaking", arc: "Arc",
     chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
