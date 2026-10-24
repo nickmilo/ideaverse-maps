@@ -3597,7 +3597,7 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
 
 // the whole top bar (title, maps, filters, options) can tuck away; a small tab brings it back
 { const hd = root.querySelector("header"), hb = hd.querySelector("h1").createEl("button", { cls: "hcol", text: "︿", attr: { "aria-label": "Hide the top bar", title: "Hide the top bar" } });
-  const tab = $("#main").createEl("button", { cls: "htab", text: "﹀  Maps of the Ideaverse", attr: { "aria-label": "Show the top bar", title: "Show the top bar" } });
+  const tab = $("#main").createEl("button", { cls: "htab", text: "﹀", attr: { "aria-label": "Show the top bar", title: "Show the top bar" } });
   const set = c => { hd.hidden = c; tab.hidden = !c; save("iv-hcol", c); };
   const flip = c => { set(c); win.setTimeout(() => { resize(); if (sel >= 0) flyTo(sel); else fit(true); }, 30); };   // reframe for the new height
   hb.onclick = () => flip(true); tab.onclick = () => flip(false);
