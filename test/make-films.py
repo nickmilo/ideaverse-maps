@@ -30,6 +30,9 @@ def poster(path, title, year, pal, kind):
     d.text((W / 2 - 20, H - 36), str(year), font=fb(16), fill="#ffffff")
     im.save(path)
 used, names = set(), []
+castR = random.Random(5)   # its own stream, so the films and posters stay the same
+ACT = ["Mae Corrigan","Jonah Weller","Priya Sandoval","Leo Marchetti","Ruth Okonkwo","Felix Haddad","Ana Lindgren","Omar Castillo","Greta Novak","Hugo Ashby","Ivy Tremaine","Dev Malhotra","Clara Beaumont","Silas Varga","Yuki Morrow","Tobias Fenn","Noor Aziz","Camille Ortega","Ezra Holt","Beatrix Lowe","Marco Ilic","Sadie Kerr","Rowan Pike","Lena Fischer"]
+FAV = {d: castR.sample(ACT, 4) for d in dirs}
 for k in range(160):
     while True:
         t = random.choice(A) + " " + random.choice(B)
@@ -38,7 +41,9 @@ for k in range(160):
     imdb = round(min(9.3, max(4.8, random.gauss(7.2, .8))), 1); rank = max(1, min(5, round((imdb / 2 + random.gauss(0, .6)) * 2) / 2))
     fn = f"p{k:03d}.png"; poster(os.path.join(D, "posters", fn), t, year, random.choice(pals), random.randint(0, 3))
     status = "watched" if random.random() < .8 else "unwatched"
-    open(os.path.join(D, t + ".md"), "w").write(f'---\nup:\n  - "[[Films]]"\nyear: {year}\ngenre: {g}\ndirector: "[[{dr}]]"\nimdbRating: {imdb}\nrank: {rank}\nstatus: {status}\nimage: "[[{fn}]]"\ncreated: {year + random.randint(0, 1)}-0{random.randint(1, 9)}-1{random.randint(0, 9)}\n---\nA film by [[{dr}]].\n')
+    cast = list(dict.fromkeys(castR.sample(FAV[dr], castR.randint(1, 2)) + castR.sample(ACT, castR.randint(1, 2))))
+    castY = "".join(f'  - "[[{a}]]"\n' for a in cast)
+    open(os.path.join(D, t + ".md"), "w").write(f'---\nup:\n  - "[[Films]]"\nyear: {year}\ngenre: {g}\ndirector: "[[{dr}]]"\ncast:\n{castY}imdbRating: {imdb}\nrank: {rank}\nstatus: {status}\nimage: "[[{fn}]]"\ncreated: {year + random.randint(0, 1)}-0{random.randint(1, 9)}-1{random.randint(0, 9)}\n---\nA film by [[{dr}]].\n')
     names.append(t)
 open(os.path.join(D, "Films.md"), "w").write("---\ncreated: 2024-02-01\n---\n# Films\n\n" + "\n".join(f"- [[{n}]]" for n in names) + "\n")
 open(os.path.join(V, "Films.base"), "w").write('filters:\n  and:\n    - file.inFolder("Atlas/Films")\n    - file.ext == "md"\n    - file.name != "Films"\nviews:\n  - type: ideaverse-map\n    name: Posters\n    sort:\n      - property: note.year\n        direction: ASC\n    maps-of-the-ideaverse:\n      iv-view: posters\n')

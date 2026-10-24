@@ -3,7 +3,7 @@
 import { sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 
-export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "graph", "mosaic"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
+export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "graph", "mosaic", "people"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -1976,8 +1976,8 @@ function posterImg(i){ if (!PST.img) return null; const fm = fmOf(i); let v = fm
   let src = /^https?:\/\//.test(v) ? v : (host.resource ? host.resource(linkName(v), N[i].path) : null); if (!src) return null;
   let e = PIMG.get(src); if (e) return e.ok ? e.img : null; if (pimgBusy >= 8) return null;
   e = { img: new Image(), ok: false }; PIMG.set(src, e); pimgBusy++; e.img.decoding = "async"; e.img.referrerPolicy = "no-referrer";
-  e.img.onload = () => { pimgBusy--; e.ok = true; if (!pimgRaf) pimgRaf = RAF(() => { pimgRaf = 0; if (view === "posters") draw(); }); };
-  e.img.onerror = () => { pimgBusy--; if (!pimgRaf) pimgRaf = RAF(() => { pimgRaf = 0; if (view === "posters") draw(); }); };
+  e.img.onload = () => { pimgBusy--; e.ok = true; if (!pimgRaf) pimgRaf = RAF(() => { pimgRaf = 0; if (view === "posters" || view === "people") draw(); }); };
+  e.img.onerror = () => { pimgBusy--; if (!pimgRaf) pimgRaf = RAF(() => { pimgRaf = 0; if (view === "posters" || view === "people") draw(); }); };
   e.img.src = src; return null; }
 const PPAL = ["#c9563c", "#d9a441", "#3f7cac", "#5b8c5a", "#8d5a97", "#c77d9b", "#2f6f8a", "#e0b07a", "#6b9ac4", "#a33b3b", "#4f8f80", "#b8763e"];
 EXP.posters = {
@@ -2025,6 +2025,102 @@ EXP.posters = {
       if (w >= 60 && img && !PST.mosaicOn) { ctx.fillStyle = css.ink; ctx.font = `500 ${Math.min(12, w * .1)}px ${css.body}`; ctx.textBaseline = "top"; let t = N[i].title; while (t.length > 3 && ctx.measureText(t).width > w) t = t.slice(0, -2); if (t !== N[i].title) t += "…"; ctx.fillText(t, x, y + h + 3); ctx.textBaseline = "alphabetic"; } }
     ctx.globalAlpha = 1; },
   legend: "Posters: the notes on screen laid out by their own properties. Across is a date or number (release year, created, your rating); lanes are a category (genre, status, this base's own groups); size is a number. Pick a Height and lanes give way to a second number up the side (your rating against the crowd's, the year you watched it against the year it came out), with a line where the two agree and rings on the notes furthest from it. Notes with an image property (a poster, a cover) show it once you zoom in. Click the map's tab for Across, Lanes and Size.",
+};
+
+// ---------- People: a constellation of the people your notes name ----------
+// The people in properties like director, actors, author or guests become hubs, sized by how many notes name them, and
+// pulled together by the notes they share (a director and the actors they keep casting). Each note orbits its main
+// person, on the side facing the others it names. A person needs no note to become a hub; if they have one, that note
+// sits at the hub's heart. Notes that name nobody leave the map.
+const PPL = { props: pref("iv-pplprops", null), max: pref("iv-pplmax", 40), hubs: [], pairs: [], np: new Map(), cand: [], key: "" };
+const PPL_RX = /^(directors?|actors?|cast|stars?|authors?|writers?|by|creators?|artists?|hosts?|guests?|speakers?|people|persons?|with|composers?|producers?|editors?|illustrators?|narrators?|interviewees?|teachers?|mentors?|characters?)$/i;
+function peopleDetect(){
+  const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
+  const key = ids.length + ":" + (ids[0] ?? -1) + ":" + (ids[ids.length - 1] ?? -1); if (PPL.key === key) return PPL.cand; PPL.key = key;
+  const step = Math.max(1, Math.floor(ids.length / 3000)), st = new Map(); let sampled = 0;
+  for (let q = 0; q < ids.length; q += step) { sampled++; const fm = fmOf(ids[q]); if (!fm) continue;
+    for (const k_ of Object.keys(fm)) { if (/^(up|related|collections|tags|aliases|cssclasses|position)$/i.test(k_)) continue; const v = fm[k_]; const vs = Array.isArray(v) ? v : v == null ? [] : [v];
+      let o = st.get(k_); const good = vs.filter(x => typeof x === "string" && x.trim() && x.length <= 80 && !/^\d/.test(x.trim()) && !/^https?:/.test(x) && !/\.(png|jpe?g|webp|gif|avif|svg|pdf|md)\]*$/i.test(x.trim())); if (!good.length) continue;
+      if (!o) st.set(k_, o = { n: 0, link: 0, vals: new Set() }); o.n++; for (const x of good) { if (isLink(x)) o.link++; o.vals.add(linkName(x).toLowerCase()); } } }
+  PPL.cand = [...st].filter(([k_, o]) => o.n >= Math.max(3, sampled * .05) && o.vals.size >= 3).map(([k_, o]) => ({ id: k_, n: o.n, d: o.vals.size, def: PPL_RX.test(k_) }))
+    .filter(c => c.def || c.d >= 12).sort((a, b) => b.def - a.def || b.n - a.n).slice(0, 10);
+  return PPL.cand; }
+function layoutPeople(){
+  for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
+  const cand = peopleDetect(), props = (PPL.props && PPL.props.length ? cand.filter(c => PPL.props.includes(c.id)) : cand.filter(c => c.def)).map(c => c.id);
+  PPL.active = props; PST.img = postersDetect().img; const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
+  const np = new Map(), cnt = new Map(), propOf = new Map();
+  for (const i of ids) { const fm = fmOf(i); if (!fm) continue; const got = [];
+    for (const k_ of props) { const v = fm[k_]; const vs = Array.isArray(v) ? v : v == null ? [] : [v];
+      for (const x of vs) { if (typeof x !== "string" || !x.trim() || x.length > 80) continue; const nm = linkName(x); const key = nm.toLowerCase(); if (got.some(g => g[0] === key)) continue; got.push([key, nm, k_]); } }
+    if (!got.length) continue; np.set(i, got); for (const [key, nm, k_] of got) { const c = cnt.get(key); if (c) c.n++; else cnt.set(key, { n: 1, name: nm, prop: k_ }); } }
+  let ranked = [...cnt].sort((a, b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : 1)); const two = ranked.filter(r => r[1].n >= 2); if (two.length >= 3) ranked = two;
+  const hubs = ranked.slice(0, Math.max(3, PPL.max)).map(([key, c], h) => ({ key, name: c.name, prop: c.prop, n: c.n, h })), hix = new Map(hubs.map(h => [h.key, h.h])), H = hubs.length;
+  // which notes stay: those naming at least one hub; their main person is the most-named one
+  const keep = new Map(); const pair = new Map();
+  for (const [i, got] of np) { const hs = got.map(g => hix.get(g[0])).filter(h => h != null); if (!hs.length) continue; hs.sort((a, b) => hubs[b].n - hubs[a].n || a - b); keep.set(i, hs);
+    const lim = hs.slice(0, 12); for (let a = 0; a < lim.length; a++) for (let b = a + 1; b < lim.length; b++) { const p_ = Math.min(lim[a], lim[b]), q_ = Math.max(lim[a], lim[b]), k2 = p_ * H + q_; pair.set(k2, (pair.get(k2) || 0) + 1); } }
+  // place the people: the same physics as Graph, people pulled together by the notes they share
+  const x = new Float64Array(H), y = new Float64Array(H); hubs.forEach((h, q) => { const r = 10 * Math.sqrt(.5 + q), a = q * Math.PI * (3 - Math.sqrt(5)); x[q] = r * Math.cos(a); y[q] = r * Math.sin(a); });
+  const EA = [], EB = []; for (const k2 of pair.keys()) { EA.push(Math.floor(k2 / H)); EB.push(k2 % H); }
+  if (H > 1) { const F = graphForce(H, Int32Array.from(EA), Int32Array.from(EB), x, y, Int32Array.from(hubs.map(h => h.h))); let guard = 0; while (F.step() && guard++ < 400); }
+  // room for each person's orbit, then nudge apart any that overlap
+  const RING = 15, PER = r => Math.max(6, Math.floor(2 * Math.PI * r / 13));
+  const orbit = new Array(H).fill(0); for (const hs of keep.values()) orbit[hs[0]]++;
+  for (const h of hubs) { h.r = 9 + Math.sqrt(h.n) * 4.2; let left = orbit[h.h], r = h.r + RING; while (left > 0) { left -= PER(r); r += RING; } h.R = r + 6; }
+  let sc = 1; { let md = Infinity; for (let e = 0; e < EA.length; e++) { const a = hubs[EA[e]], b = hubs[EB[e]], d = Math.hypot(x[a.h] - x[b.h], y[a.h] - y[b.h]) / (a.R + b.R); if (d < md) md = d; } sc = isFinite(md) && md > 0 ? Math.max(1, 1.15 / md) : 6; sc = Math.min(sc, 40); }
+  for (const h of hubs) { h.x = x[h.h] * sc; h.y = y[h.h] * sc; }
+  for (let it = 0; it < 80; it++) { let moved = false; for (let a = 0; a < H; a++) for (let b = a + 1; b < H; b++) { const A = hubs[a], B = hubs[b]; let dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || .01; const need = A.R + B.R + 8; if (d >= need) continue;
+      const push = (need - d) / 2; dx /= d; dy /= d; A.x -= dx * push; A.y -= dy * push; B.x += dx * push; B.y += dy * push; moved = true; } if (!moved) break; }
+  // each note orbits its main person, on the side facing the others it names
+  const byHub = hubs.map(() => []); for (const [i, hs] of keep) { const h = hubs[hs[0]]; let ax = 0, ay = 0; for (const o of hs.slice(1)) { ax += hubs[o].x - h.x; ay += hubs[o].y - h.y; }
+    const want = hs.length > 1 ? Math.atan2(ay, ax) : hash(N[i].path, 77) * Math.PI * 2; byHub[hs[0]].push({ i, a: want, far: hs.length > 1 ? 0 : 1 }); }
+  const tit = new Map(); for (let i=0;i<n;i++) if (vis[i]) tit.set(N[i].title.toLowerCase(), i);
+  for (let i=0;i<n;i++) EHID[i] = 1;
+  for (const h of hubs) { const list = byHub[h.h].sort((p_, q_) => p_.far - q_.far || p_.a - q_.a); let r = h.r + RING, k_ = 0;
+    while (k_ < list.length) { const cap = PER(r), part = list.slice(k_, k_ + cap); part.sort((p_, q_) => p_.a - q_.a); const off = part.length ? part[0].a : 0;
+      part.forEach((it, j) => { const aa = off + j * 2 * Math.PI / cap; EX[it.i] = h.x + Math.cos(aa) * r; EY[it.i] = h.y + Math.sin(aa) * r; EHID[it.i] = 0; }); k_ += cap; r += RING; }
+    const own = tit.get(h.key); h.note = own != null ? own : -1; if (own != null) { EX[own] = h.x; EY[own] = h.y; EHID[own] = 0; } }
+  // lines only for the strongest ties when there are many, so the picture doesn't fill in
+  let prs = [...pair].map(([k2, w]) => [hubs[Math.floor(k2 / H)], hubs[k2 % H], w]).sort((a, b) => b[2] - a[2]); if (prs.length > H * 2.5) prs = prs.slice(0, Math.round(H * 2.5));
+  PPL.hubs = hubs; PPL.pairs = prs; PPL.np = keep; PPL.shown = keep.size;
+  const props_ = [...new Set(hubs.map(h => h.prop))]; PPL.col = Object.fromEntries(props_.map((p_, j) => [p_, ["#f2c14e", "#6fb7ff", "#ef8a62", "#7bd389", "#c7a6ff", "#f28fb5", "#5fd0d0", "#d9b26f", "#9fb4ff", "#e07070"][j % 10]]));
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const h of hubs) { x0 = Math.min(x0, h.x - h.R); x1 = Math.max(x1, h.x + h.R); y0 = Math.min(y0, h.y - h.R); y1 = Math.max(y1, h.y + h.R + 24); }
+  if (!isFinite(x0)) { x0 = y0 = -100; x1 = y1 = 100; } expBox = { x0: x0 - 20, y0: y0 - 20, x1: x1 + 20, y1: y1 + 20 }; pplOptsUI(); }
+function pplOptsUI(){ const box = $("#pplctl"); if (!box) return; const cand = PPL.cand || [], act = new Set(PPL.active || []), list = box.querySelector(".pplchips"); if (!list) return;
+  const sig = cand.map(c => c.id + (act.has(c.id) ? "+" : "")).join(","); if (list.dataset.sig !== sig) { list.dataset.sig = sig; list.empty();
+    if (!cand.length) list.createSpan({ cls: "pn", text: "No people properties found in these notes (director, actors, author, guests…)." });
+    for (const c of cand) { const b = list.createEl("button", { cls: "pchip" + (act.has(c.id) ? "" : " off") }); b.createSpan({ text: c.id }); b.createEl("b", { text: c.n.toLocaleString() }); b.setAttribute("aria-pressed", String(act.has(c.id)));
+      b.onclick = ev => { ev.stopPropagation(); const s_ = new Set(PPL.active || []); if (s_.has(c.id)) s_.delete(c.id); else s_.add(c.id); PPL.props = [...s_]; save("iv-pplprops", PPL.props); morph(true, () => fitTarget()); legend(); }; } }
+  const r = box.querySelector("input"), v = box.querySelector(".pplv"); if (r && document.activeElement !== r) r.value = PPL.max; if (v) v.setText(`${PPL.max} people · ${(PPL.shown || 0).toLocaleString()} notes`); }
+EXP.people = {
+  layout: layoutPeople, ownLabels: true,
+  guides(){ const gd = sel >= 0 || hover >= 0 ? .45 : 1, hl = sel >= 0 ? sel : hover;
+    // shared notes between two people: the more they share, the brighter the line
+    ctx.lineCap = "round"; for (const [a, b, w] of PPL.pairs) { ctx.strokeStyle = "#c7a6ff"; ctx.globalAlpha = Math.min(.75, .14 + w * .07) * gd; ctx.lineWidth = Math.min(8, 1 + w * .6) * Math.min(1.6, Math.max(.6, k)); ctx.beginPath(); ctx.moveTo(sx(a.x), sy(a.y)); ctx.lineTo(sx(b.x), sy(b.y)); ctx.stroke(); }
+    // the picked note's people
+    if (hl >= 0 && PPL.np.has(hl)) { ctx.strokeStyle = css.accent; ctx.globalAlpha = .85; ctx.lineWidth = 1.5; ctx.beginPath(); for (const h of PPL.np.get(hl)) { const p_ = PPL.hubs[h]; ctx.moveTo(sx(X[hl]), sy(Y[hl])); ctx.lineTo(sx(p_.x), sy(p_.y)); } ctx.stroke(); }
+    for (const h of PPL.hubs) { const x = sx(h.x), y = sy(h.y), r = Math.max(3, h.r * k * .55); if (x < -200 || x > W + 200 || y < -200 || y > H + 200) continue; const col = PPL.col[h.prop] || css.accent;
+      const lit = hl >= 0 && PPL.np.has(hl) && PPL.np.get(hl).includes(h.h);
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3.2); g.addColorStop(0, col); g.addColorStop(.3, col + "55"); g.addColorStop(1, col + "00"); ctx.globalAlpha = (lit ? 1 : .85) * (hl >= 0 && !lit ? .5 : 1); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = hl >= 0 && !lit ? .55 : 1; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+    ctx.globalAlpha = 1; ctx.lineCap = "butt"; },
+  notes(lit, dim){ const r = Math.max(2, Math.min(6, 3.4 * Math.sqrt(k))), big = 10 * k;
+    for (let i=0;i<n;i++) { if (!VV(i) || !PPL.np.has(i)) continue; const x = sx(X[i]), y = sy(Y[i]); if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
+      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .2 : .55) : .9;
+      const img = big >= 14 && PST.img ? posterImg(i) : null;
+      if (img) { const w = big * .8, h = big * 1.2; ctx.drawImage(img, x - w / 2, y - h / 2, w, h); if (i === sel) { ctx.strokeStyle = css.accent; ctx.lineWidth = 2; ctx.strokeRect(x - w / 2, y - h / 2, w, h); } }
+      else { ctx.fillStyle = i === sel ? css.accent : css.ink; ctx.beginPath(); ctx.arc(x, y, i === sel ? r * 1.8 : r, 0, Math.PI * 2); ctx.fill(); } }
+    ctx.globalAlpha = 1; },
+  labels(){ ctx.textAlign = "center"; ctx.textBaseline = "top"; const placed = [];
+    for (const h of [...PPL.hubs].sort((a, b) => b.n - a.n)) { const x = sx(h.x), y = sy(h.y) + Math.max(3, h.r * k * .55) + 6; if (x < -100 || x > W + 100 || y < -40 || y > H + 40) continue;
+      const fs = Math.max(10, Math.min(15, 9 + Math.sqrt(h.n) * 1.1)); ctx.font = `600 ${fs}px ${css.body}`; const w = ctx.measureText(h.name).width;
+      if (placed.some(p_ => Math.abs(p_[0] - x) < (p_[2] + w) / 2 + 4 && Math.abs(p_[1] - y) < fs + 10)) continue; placed.push([x, y, w]);
+      ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.fillStyle = css.ink; ctx.strokeText(h.name, x, y); ctx.fillText(h.name, x, y);
+      ctx.font = `400 ${fs * .72}px ${css.mono}`; ctx.fillStyle = css.muted; const t = `${h.n} · ${h.prop}`; ctx.strokeText(t, x, y + fs + 2); ctx.fillText(t, x, y + fs + 2); }
+    if (sel >= 0 && VV(sel)) { ctx.font = `600 12px ${css.body}`; ctx.fillStyle = css.ink; ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.strokeText(N[sel].title, sx(X[sel]), sy(Y[sel]) + 8); ctx.fillText(N[sel].title, sx(X[sel]), sy(Y[sel]) + 8); }
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
+  legend: "People: the people your notes name in properties like director, actors, author or guests, as stars sized by how many notes name them. Lines join people who share notes, brighter the more they share. Each note orbits its main person, on the side facing the others it names; zoom in to see pictures. Click the People tab to pick which properties count and how many people to show.",
 };
 
 // ---------- Mosaic: every note a tile, set like stones ----------
@@ -3264,9 +3360,9 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", msv = view === "mosaic", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
-  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv; }
-  if (lay) { $("#startms").hidden = msv || ptv || sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", msv = view === "mosaic", ppv = view === "people", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace"));   // the Layout section shows only where there are layout settings
+  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv; const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } }
+  if (lay) { $("#startms").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || expOn() || mode !== "time"; $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -4141,7 +4237,15 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     $("#gochord").before(gg); gg.onclick = () => { closePops(); driftStop(); setView("graph"); };
     // Mosaic: every note a tile, after Treemap
     const gm = doc.createElement("button"); gm.className = "chip"; gm.id = "gomosaic"; gm.textContent = "Mosaic"; gm.setAttribute("aria-label", "Every note a tile, set like stones: Level 5 at the heart, each level a frame around it");
-    $("#gotreemap").after(gm); gm.onclick = () => { closePops(); driftStop(); setView("mosaic"); }; }
+    $("#gotreemap").after(gm); gm.onclick = () => { closePops(); driftStop(); setView("mosaic"); };
+    // People: a constellation of the people your notes name, after Posters
+    const gpp = doc.createElement("button"); gpp.className = "chip"; gpp.id = "gopeople"; gpp.textContent = "People"; gpp.setAttribute("aria-label", "The people your notes name (director, actors, author, guests) as stars, joined by the notes they share");
+    $("#goposters").after(gpp); gpp.onclick = () => { closePops(); driftStop(); setView("people"); }; }
+  { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "pplctl" } }); pc.hidden = true;
+    pc.createDiv({ cls: "phint", text: "People from these properties:" }); pc.createDiv({ cls: "plchips pplchips" });
+    const row = pc.createEl("label", { cls: "prow" }); row.createSpan({ text: "Show" }); const r = row.createEl("input", { type: "range" }); r.min = "5"; r.max = "150"; r.step = "5"; r.value = String(PPL.max);
+    pc.createDiv({ cls: "phint pplv" }); let t_ = 0;
+    r.oninput = () => { PPL.max = +r.value; win.clearTimeout(t_); t_ = win.setTimeout(() => { save("iv-pplmax", PPL.max); morph(true, () => fitTarget()); }, 180); }; }
   // Mosaic's own option: Emergence or Scattered
   { const ms_ = $("#laygrp").createDiv({ cls: "seg", attr: { id: "mosseg", role: "group", "aria-label": "Mosaic" } }); ms_.hidden = true;
     for (const [v, t, tip] of [["emergence", "Emergence", "Level 5 at the heart, each level a frame around it"], ["scatter", "Scattered", "The same tiles, in no order"]]) {
@@ -4167,7 +4271,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
   const VN = () => ({ emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemaking", arc: "Arc",
     chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
-    shelf: "Bookshelf", posters: "Posters", graph: "Graph", mosaic: "Mosaic", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
+    shelf: "Bookshelf", posters: "Posters", graph: "Graph", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "gravity", "stars", "sense"]);
   // the current map's menu: its variants (Emergence, Starfield) and the options that belong to it alone
   const mo = $("#vsegms").createDiv({ cls: "mspop mapopts", attr: { id: "mapopts", role: "dialog", "aria-label": "This map" } }); mo.hidden = true;
@@ -4238,7 +4342,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     st.createSpan({ cls: "tbadge", text: c ? String(c) : "" }); const t = `${c || "Some"} notes changed · rescan`; st.setAttribute("aria-label", t); st.title = t; right.appendChild(st); } }
   const thSlot = right.createDiv({ cls: "thslot" }); thSlot.appendChild($("#themeseg"));
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
-  const ARR_OFF = new Set(["mosaic", "graph", "posters", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
+  const ARR_OFF = new Set(["people", "mosaic", "graph", "posters", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   syncTB = () => {
     const core = CORE.has(view); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
     $("#vmore").classList.toggle("on", false);
