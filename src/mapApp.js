@@ -2968,7 +2968,7 @@ $("#gocsi").onclick = () => goChord("in");
 
 root.querySelectorAll("#vseg button[data-v]").forEach(b => b.onclick = e => {
   if (b.dataset.v === view || (b.dataset.v === "emergence" && view === "spacetime")) { e.stopPropagation(); toggleMapOpts(b); return; }   // the current map's tab opens its own menu: variants and options
-  setView(b.dataset.v); });
+  closePops(); setView(b.dataset.v); });   // switching maps closes any open menu (More, a map's own menu)
 
 // scoring panel
 const SROWS = [
