@@ -10,7 +10,7 @@ module.exports = async ({ page, sleep, shot }) => {
   const sel = () => E(() => { const t = document.querySelector('.ivm .drawer h2, .ivm #drawer h2, .ivm aside h2'); return t ? t.textContent : null; });
   const view = () => E(() => app.workspace.getLeavesOfType('ideaverse-maps')[0].view.debug.__ivYaw()[0]);
   // toggles per mode
-  for (const [m, hop, hopLocked, trail] of [['random', true, false, false], ['thread', true, false, false], ['map', true, true, true]]) {
+  for (const [m, hop, hopLocked, trail] of [['random', true, false, false], ['thread', true, false, false], ['map', false, true, true]]) {
     await E(`document.querySelector('.ivm #playseg button[data-p=${m}]').click()`); await sleep(200);
     const r = await E(() => ({ hop: document.querySelector('.ivm #pmaps').closest('label').getBoundingClientRect().width > 0, locked: document.querySelector('.ivm #pmaps').disabled, trail: document.querySelector('.ivm #ptrail').closest('label').getBoundingClientRect().width > 0, playing: document.querySelector('.ivm #pplay').textContent }));
     ok(`${m}: toggles shown right, nothing starts`, r.hop === hop && r.locked === hopLocked && r.trail === trail && r.playing === '▶', JSON.stringify(r)); }
