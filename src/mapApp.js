@@ -2165,6 +2165,7 @@ function rad(i){ if (view === "stars") return Math.max(.7, Math.min(SR[i]*Math.p
 
 function render(){
   raf = 0;
+  if (!(W > 0 && H > 0) || !isFinite(k) || !isFinite(tx) || !isFinite(ty)) return;   // hidden (a background tab or a base still laying out): nothing to draw yet
   if (!popFrozen) popNow = performance.now();
   const swap = view === "stars" ? Object.fromEntries(Object.keys(SPACE).map(kk => [kk, css[kk]])) : null;
   if (swap) Object.assign(css, SPACE);

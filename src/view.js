@@ -109,7 +109,7 @@ export async function mountInto(owner, el, opts) {
     const d = dir === "/" ? "" : normalizePath(dir);
     return normalizePath(d ? `${d}/${SAVED_NAME}` : SAVED_NAME); };
   const map = mountMap(root, D, {
-    store: plugin.store,
+    store: opts.store || plugin.store,
     isActive: opts.isActive,
     registerDomEvent: (target, type, fn, o) => events.registerDomEvent(target, type, fn, o),
     openNote: opts.openNote,
