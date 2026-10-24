@@ -45,10 +45,10 @@ const makeView = BasesView => class MapBasesView extends BasesView {
   /** The base's own Sort and Group, so maps like Posters can follow them. */
   baseInfo() {
     const d = this.data, strip = p => String(p || "").replace(/^note\./, "");
-    let sort = null; try { const s = this.config && this.config.getSort && this.config.getSort(); if (s && s[0]) sort = strip(s[0].property); } catch (e) {}
+    let sort = null; try { const s = this.config && this.config.getSort && this.config.getSort(); if (s && s[0]) sort = strip(s[0].property); } catch (e) { /* an older Obsidian without Sort or Group: nothing to follow */ }
     let groups = null, order = null;
     try { const g = d && d.groupedData; if (Array.isArray(g) && g.length > 1 || (g && g[0] && g[0].hasKey && g[0].hasKey())) { groups = new Map(); order = [];
-      for (const grp of g) { const k = grp.hasKey && grp.hasKey() ? String(grp.key).replace(/^\[\[([^\]|]+)(\|[^\]]*)?\]\]$/, "$1") : "—"; order.push(k); for (const e of grp.entries || []) if (e && e.file) groups.set(e.file.path, k); } } } catch (e) {}
+      for (const grp of g) { const k = grp.hasKey && grp.hasKey() ? String(grp.key).replace(/^\[\[([^\]|]+)(\|[^\]]*)?\]\]$/, "$1") : "—"; order.push(k); for (const e of grp.entries || []) if (e && e.file) groups.set(e.file.path, k); } } } catch (e) { /* an older Obsidian without Sort or Group: nothing to follow */ }
     this.biv = (this.biv || 0) + 1;
     return { sort, groups, order, v: this.biv };
   }
