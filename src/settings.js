@@ -48,6 +48,9 @@ export class MapsSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Dates from files").setDesc("A note with no date property and no date in its name is placed by when its file was made. File dates change when notes are copied, synced, restored or checked out with git; if that's your vault, turn this off and list your own date property above instead.")
       .addToggle(t => t.setValue(s.fileDates !== false).onChange(async v => { s.fileDates = v; await save(); }));
 
+    new Setting(containerEl).setName("Markdown links").setDesc("Also count markdown-style links to notes, [text](folder/Note.md), the kind some tools write. Off by default: most vaults link with [[wikilinks]].")
+      .addToggle(t => t.setValue(!!s.mdLinks).onChange(async v => { s.mdLinks = v; await save(); }));
+
     new Setting(containerEl).setName("Properties to plot").setDesc("Number properties offered under By → More… (comma-separated), for example year, rating, pages. Each becomes an axis: notes line up left to right by its value. Rescan after changing.").addText(t => t
       .setPlaceholder("year, rating").setValue((s.axisProps || ["year"]).join(", "))
       .onChange(async v => { s.axisProps = v.split(",").map(x => x.trim()).filter(Boolean); await p.saveSettings(); }));
