@@ -2133,7 +2133,7 @@ function pplOptsUI(){ const box = $("#pplctl"); if (!box) return; const cand = P
   // how many of the people are on the map: those named in two or more notes are the ones the slider can reach
   if (v) v.setText(`${Math.min(PPL.max, PPL.avail || 0).toLocaleString()} of ${(PPL.avail || 0).toLocaleString()} people named in 2+ notes${PPL.named > (PPL.avail || 0) ? ` (${(PPL.named - PPL.avail).toLocaleString()} more named once)` : ""} · ${(PPL.shown || 0).toLocaleString()} notes`); }
 // a person on the map: the star under the pointer (people with no note of their own can be clicked too)
-function pplHubAt(px, py){ let best = -1, bd = Infinity; for (const h of PPL.hubs) { const d = Math.hypot(sx(h.x) - px, sy(h.y) - py), r = Math.max(8, h.r * k * .55 + 4); if (d < r && d < bd) { bd = d; best = h.h; } } return best; }
+function pplHubAt(px, py){ let best = -1, bd = Infinity; for (const h of PPL.hubs) { const d = Math.hypot(sx(h.x) - px, sy(h.y) - py), r = Math.max(8, Math.min(26, h.r * k * .55) + 4); if (d < r && d < bd) { bd = d; best = h.h; } } return best; }
 function pplClick(i, px, py){ if (i >= 0) { PPL.pick = -1; return false; } const h = pplHubAt(px, py);
   if (h < 0) { if (PPL.pick >= 0) { PPL.pick = -1; draw(); } return false; }
   const hub = PPL.hubs[h]; if (hub.note >= 0) { PPL.pick = -1; return false; }   // they have a note: pick it like any other
@@ -2155,7 +2155,7 @@ EXP.people = {
     if (act && act.hub >= 0) { const p_ = PPL.hubs[act.hub]; ctx.strokeStyle = css.accent; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.beginPath(); for (const i of act.notes) { if (!VV(i)) continue; ctx.moveTo(sx(p_.x), sy(p_.y)); ctx.lineTo(sx(X[i]), sy(Y[i])); } ctx.stroke(); }
     // the picked note's people
     if (hl >= 0 && PPL.np.has(hl)) { ctx.strokeStyle = css.accent; ctx.globalAlpha = .85; ctx.lineWidth = 1.5; ctx.beginPath(); for (const h of PPL.np.get(hl)) { const p_ = PPL.hubs[h]; ctx.moveTo(sx(X[hl]), sy(Y[hl])); ctx.lineTo(sx(p_.x), sy(p_.y)); } ctx.stroke(); }
-    for (const h of PPL.hubs) { const x = sx(h.x), y = sy(h.y), r = Math.max(3, h.r * k * .55); if (x < -200 || x > W + 200 || y < -200 || y > H + 200) continue; const col = PPL.col[h.prop] || css.accent;
+    for (const h of PPL.hubs) { const x = sx(h.x), y = sy(h.y), r = Math.max(3, Math.min(26, h.r * k * .55)); if (x < -200 || x > W + 200 || y < -200 || y > H + 200) continue; const col = PPL.col[h.prop] || css.accent;
       const lit = act ? act.hubs.has(h.h) : false;
       const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3.2); g.addColorStop(0, col); g.addColorStop(.3, col + "55"); g.addColorStop(1, col + "00"); ctx.globalAlpha = (lit ? 1 : .85) * (act && !lit ? .22 : 1); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = act && !lit ? .3 : 1; if (act && act.hub === h.h) { ctx.strokeStyle = css.ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, r + 4, 0, Math.PI * 2); ctx.stroke(); } ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
@@ -2168,14 +2168,14 @@ EXP.people = {
       else { ctx.fillStyle = i === sel ? css.accent : css.ink; ctx.beginPath(); ctx.arc(x, y, i === sel ? r * 1.8 : r, 0, Math.PI * 2); ctx.fill(); } }
     ctx.globalAlpha = 1; },
   labels(){ ctx.textAlign = "center"; ctx.textBaseline = "top"; const placed = [];
-    for (const h of [...PPL.hubs].sort((a, b) => b.n - a.n)) { const x = sx(h.x), y = sy(h.y) + Math.max(3, h.r * k * .55) + 6; if (x < -100 || x > W + 100 || y < -40 || y > H + 40) continue;
+    for (const h of [...PPL.hubs].sort((a, b) => b.n - a.n)) { const x = sx(h.x), y = sy(h.y) + Math.max(3, Math.min(26, h.r * k * .55)) + 6; if (x < -100 || x > W + 100 || y < -40 || y > H + 40) continue;
       const fs = Math.max(10, Math.min(15, 9 + Math.sqrt(h.n) * 1.1)); ctx.font = `600 ${fs}px ${css.body}`; const w = ctx.measureText(h.name).width;
       if (placed.some(p_ => Math.abs(p_[0] - x) < (p_[2] + w) / 2 + 4 && Math.abs(p_[1] - y) < fs + 10)) continue; placed.push([x, y, w]);
       ctx.globalAlpha = PPL.act && !PPL.act.hubs.has(h.h) ? .35 : 1; ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.fillStyle = css.ink; ctx.strokeText(h.name, x, y); ctx.fillText(h.name, x, y);
       ctx.font = `400 ${fs * .72}px ${css.mono}`; ctx.fillStyle = css.muted; const t = `${h.n} · ${h.prop}`; ctx.strokeText(t, x, y + fs + 2); ctx.fillText(t, x, y + fs + 2); }
     ctx.globalAlpha = 1;
     // a picked person's notes are named when there's room
-    if (PPL.act && PPL.act.hub >= 0 && PPL.act.notes.size <= 60) { ctx.font = `500 11px ${css.body}`; ctx.fillStyle = css.ink; ctx.lineWidth = 3; ctx.strokeStyle = css.bg; for (const i of PPL.act.notes) { if (!VV(i)) continue; const x = sx(X[i]), y = sy(Y[i]) + 6; if (x < 0 || x > W || y < 0 || y > H) continue; ctx.strokeText(N[i].title, x, y); ctx.fillText(N[i].title, x, y); } }
+    if (PPL.act && PPL.act.hub >= 0 && PPL.pick >= 0 && PPL.act.notes.size <= 60) { ctx.font = `500 11px ${css.body}`; ctx.fillStyle = css.ink; ctx.lineWidth = 3; ctx.strokeStyle = css.bg; for (const i of PPL.act.notes) { if (!VV(i)) continue; const x = sx(X[i]), y = sy(Y[i]) + 6; if (x < 0 || x > W || y < 0 || y > H) continue; ctx.strokeText(N[i].title, x, y); ctx.fillText(N[i].title, x, y); } }
     if (sel >= 0 && VV(sel)) { ctx.font = `600 12px ${css.body}`; ctx.fillStyle = css.ink; ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.strokeText(N[sel].title, sx(X[sel]), sy(Y[sel]) + 8); ctx.fillText(N[sel].title, sx(X[sel]), sy(Y[sel]) + 8); }
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
   legend: "People: the people your notes name in properties like director, actors, author or guests, as stars sized by how many notes name them. Lines join people who share notes, brighter the more they share. Each note orbits its main person, on the side facing the others it names; zoom in to see pictures. Click the People tab to pick which properties count and how many people to show.",
@@ -2779,7 +2779,10 @@ function sideW(){ // width covered on the right by the note panel and any open s
 function visTarget(xs, ys){   // camera that frames every visible note, given where the notes are (or will be)
   const phone = isPhone(), dw = sideW(), vw = W - dw, vh = phone && sel >= 0 ? H*.48 : H, pad = phone ? 40 : 80;
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, c = 0;
-  for (let i=0;i<n;i++) if (vis[i]) { c++; x0 = Math.min(x0, xs[i]); x1 = Math.max(x1, xs[i]); y0 = Math.min(y0, ys[i]); y1 = Math.max(y1, ys[i]); }
+  const pa = view === "people" && typeof pplActive === "function" ? pplActive() : null;   // People: frame the note, its people and (two steps) their notes
+  if (pa) { for (const i of pa.notes) { c++; x0 = Math.min(x0, xs[i]); x1 = Math.max(x1, xs[i]); y0 = Math.min(y0, ys[i]); y1 = Math.max(y1, ys[i]); }
+    for (const h of pa.hubs) { const p_ = PPL.hubs[h]; if (!p_) continue; c++; x0 = Math.min(x0, p_.x); x1 = Math.max(x1, p_.x); y0 = Math.min(y0, p_.y); y1 = Math.max(y1, p_.y); } }
+  else for (let i=0;i<n;i++) if (vis[i] && !(EHID[i] && expOn())) { c++; x0 = Math.min(x0, xs[i]); x1 = Math.max(x1, xs[i]); y0 = Math.min(y0, ys[i]); y1 = Math.max(y1, ys[i]); }
   if (!c) return null;
   const kk = Math.min(4, Math.max(.1, Math.min((vw - pad*2) / Math.max(x1-x0, 40), (vh - pad*2 - 40) / Math.max(y1-y0, 40))));
   return {k:kk, tx: vw/2 - (x0+x1)/2*kk, ty: (vh + 40)/2 - (y0+y1)/2*kk};
@@ -3726,7 +3729,8 @@ function setFocus(i, fromTrail){
 function renderFocusBar(){
   const fb = $("#focusbar");
   if (focus < 0) { fb.hidden = true; fitFocus(); return; }
-  let c = 0; for (let i=0;i<n;i++) if (vis[i] && i !== focus) c++;
+  let c = 0; const pa = view === "people" ? pplActive() : null;
+  if (pa) c = pa.notes.size - (pa.notes.has(focus) ? 1 : 0) + pa.hubs.size; else for (let i=0;i<n;i++) if (vis[i] && i !== focus && !(EHID[i] && expOn())) c++;
   const pos = EFF_ORDER.indexOf(focus);
   html(fb).v = `<span class="fl">Focus</span><span class="fn" title="${esc(N[focus].title)}">${esc(N[focus].title)}</span><span class="fc">${c.toLocaleString()} linked</span>
     <div class="seg" role="group" aria-label="Direction"><button data-fd="out" title="Notes it links to">Out</button><button data-fd="in" title="Notes that link to it">In</button><button data-fd="both" title="Both directions">Both</button></div>
