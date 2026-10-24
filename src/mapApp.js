@@ -3693,7 +3693,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
 
 // hover hints: Obsidian's own quick tooltip, not the browser's slow one. Every title becomes an aria-label (which Obsidian shows
 // as its tooltip), now and whenever one is set later.
-{ const quick = el => { if (el.getAttribute && el.getAttribute("aria-label") && el.getAttribute("data-tooltip-delay") !== "500") el.setAttribute("data-tooltip-delay", "500"); };   // half Obsidian's usual wait
+{ const quick = el => { if (el.getAttribute && el.getAttribute("aria-label") && el.getAttribute("data-tooltip-delay") !== "333") el.setAttribute("data-tooltip-delay", "333"); };   // a third of a second
   const move = el => { quick(el); const t = el.getAttribute("title"); if (t == null) return; el.removeAttribute("title"); if (t && !el.getAttribute("aria-label")) el.setAttribute("aria-label", t); else if (t && el.getAttribute("aria-label") !== t && el.dataset.tipFromTitle) el.setAttribute("aria-label", t); el.dataset.tipFromTitle = "1"; quick(el); };
   root.querySelectorAll("[title], [aria-label]").forEach(move);
   new MutationObserver(ms => { for (const m of ms) if (m.type === "attributes") move(m.target); else for (const nd of m.addedNodes) if (nd.nodeType === 1) { move(nd); nd.querySelectorAll && nd.querySelectorAll("[title], [aria-label]").forEach(move); } })
