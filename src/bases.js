@@ -11,7 +11,7 @@ const makeView = BasesView => class MapBasesView extends BasesView {
     super(controller);
     this.type = BASES_VIEW;
     this.plugin = plugin;
-    this.hostEl = containerEl.createDiv({ cls: "ivm-bases" });
+    this.hostEl = containerEl.createDiv({ cls: "ivm-bases", attr: { "data-ivmv": plugin.manifest.version } });   // which version drew it, so an update can redraw older ones
     this.map = null; this.noteLeaf = null; this.mounting = null; this.paths = null;
   }
   onload() { this.mounting = this.mount(); }
