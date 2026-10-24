@@ -658,3 +658,18 @@ body.is-phone .ivm.kb header.tb2 .search{flex:1 1 100%;max-width:none;margin:0}
 @container ivm (max-width:760px){.ivm .wm-name{display:none}.ivm .wm-lyt{bottom:10px;font-size:10px}}
 .ivm div main.has-drawer .wm-lyt{display:none}
 body.is-phone .ivm .wm-name{display:none}
+/* the toolbar stays one row on desktop: as the view narrows it drops the link count, then button words, then the counts */
+@container ivm (min-width:761px){
+.ivm header.tb2{flex-wrap:nowrap}
+.ivm header.tb2 .tbl{flex:1 1 auto;min-width:0}
+.ivm header.tb2 .tbr{flex:0 0 auto;flex-wrap:nowrap}
+.ivm header.tb2 #vsegms{min-width:0}
+}
+@container ivm (max-width:1320px){.ivm header.tb2 #stats > :nth-child(n+2){display:none}}
+@container ivm (max-width:1220px){.ivm header.tb2 .tbb .tbl2,.ivm header.tb2 #viewbtn span{display:none}.ivm header.tb2 .search{flex:0 1 170px;min-width:120px}}
+@container ivm (max-width:1000px){.ivm header.tb2 #stats{display:none}.ivm header.tb2 .search{flex:0 1 140px;min-width:100px}}
+.ivm header.tb2 #vsegms{display:flex;align-items:center;gap:4px}
+.ivm header.tb2 #vsegms > #vmore{flex:none;border:1px solid var(--line);border-radius:999px;background:none;color:var(--muted);padding:6px 11px;cursor:pointer}
+.ivm header.tb2 #vsegms > #vmore:hover{color:var(--ink)}
+.ivm header.tb2 #vseg{min-width:0;flex:0 1 auto}
+.ivm header.tb2 #vmorepop > .chip{width:100%;text-align:left}
