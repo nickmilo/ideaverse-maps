@@ -4,6 +4,8 @@ End-to-end checks that run the plugin inside real Obsidian (Linux build, under X
 
 ```
 python3 test/make-ace-vault.py /tmp/vaults/synth 2500     # ACE folders, maps, links, up/related, dates
+python3 test/make-films.py /tmp/vaults/synth                # + 160 made-up films with posters (Posters, README)
+# README images: node test/obs.js /tmp/vaults/synth test/scenarios/readme-shots2.js  (SHOTS=<dir>)
 python3 test/make-plain-vault.py /tmp/vaults/plain 600    # no ACE, no frontmatter
 npm run build
 OBSIDIAN=/path/to/obsidian-1.x/obsidian xvfb-run -a -s "-screen 0 1600x1000x24" \
