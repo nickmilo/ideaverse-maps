@@ -41,7 +41,7 @@ A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), P
 
 ## The time-lapse
 
-In **Animations** (bottom left), pick **Timelapse** and press ▶ to replay your vault by month or by week. New notes arrive (popcorn, comets, rain, or a swirl), and notes move up a level as their links arrive. Click a note at any point to pause and look around; Resume carries on.
+In **Animations** (bottom left), pick **Timelapse** and press ▶ to replay your vault by month or by week. New notes arrive (comets, rain, or a swirl), and notes move up a level as their links arrive. Click a note at any point to pause and look around; Resume carries on.
 
 ![The time-lapse playing on Gravity, November 2023](docs/timelapse.png)
 <sub>The time-lapse mid-play on Gravity, LYT Mode theme: November 2023's new notes burst in around the clock.</sub>
