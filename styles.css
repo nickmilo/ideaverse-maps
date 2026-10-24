@@ -706,3 +706,9 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .app:has(> header[hidden]) .wm-name{margin-right:40px}
 .ivm.ivm .htab{white-space:nowrap;overflow:hidden}
 .ivm header.tb2 .hcol svg,.ivm.ivm .htab svg{display:block}
+.ivm header.tb2 .mapopts .sglow{display:flex;align-items:center;gap:10px;margin-top:6px;padding-top:8px;border-top:1px solid var(--line)}
+.ivm header.tb2 .mapopts .sglow .sgl{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+/* Starfield's sky is always dark: the counts and watermarks turn light there */
+.ivm[data-view="stars"] main .mapstats,.ivm[data-view="stars"] .wm-lyt{color:#aab4d6}
+.ivm[data-view="stars"] .mapstats b{color:#e6ebff}
+.ivm[data-view="stars"] .wm-name{color:#c9d2ff}
