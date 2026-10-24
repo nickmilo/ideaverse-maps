@@ -1820,9 +1820,11 @@ function postersDetect(){
   const dl = lanes.find(l => l.vals && cover(l) >= .5);
   PST.opts = { across, lanes, size, img, defLane: BASEINFO && BASEINFO.groups && BASEINFO.groups.size ? "@base" : dl ? dl.id : "" }; return PST.opts; }
 function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o = postersDetect();
-  const fill = (sel_, list, cur) => { sel_.empty(); for (const it of list) sel_.createEl("option", { value: it.id, text: it.name }); sel_.value = list.some(it => it.id === cur) ? cur : list[0].id; };
-  const cu = PST.cur; fill($("#pacross"), o.across, cu ? cu.acrossId : PST.across ?? o.across[0].id); fill($("#pheight"), [{ id: "", name: "None (lanes)" }, ...o.across], cu ? cu.heightId : "");
-  { const hr = $("#planes").closest(".prow"); if (hr) hr.hidden = !!(PST.cur && PST.cur.heightId); }
+  const fill = (sel_, list, cur) => { sel_.empty(); sel_.disabled = !list.length; if (!list.length) { sel_.createEl("option", { value: "", text: "Nothing to pick" }); return; }
+    for (const it of list) sel_.createEl("option", { value: it.id, text: it.name }); sel_.value = list.some(it => it.id === cur) ? cur : list[0].id; };
+  const cu = PST.cur; fill($("#pacross"), o.across, cu ? cu.acrossId : PST.across ?? o.across[0].id); fill($("#pheight"), o.across.filter(a => !cu || a.id !== cu.acrossId), cu ? cu.heightId : "");
+  { const sc_ = !!(cu && cu.heightId); box.querySelectorAll('[data-k="lanes"]').forEach(el => el.hidden = sc_); box.querySelectorAll('[data-k="height"]').forEach(el => el.hidden = !sc_);
+    box.querySelectorAll("#pmode button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.pm === "scatter") === sc_))); }
   for (const key of ["across", "height", "size"]) postersSlider(key); postersLaneChips(); fill($("#planes"), o.lanes, cu ? cu.laneId : o.defLane);
   fill($("#psize"), o.size, cu ? cu.sizeId : "");
   $("#pimg").setText(o.img ? `Pictures from ${o.img}` : "No image property found"); }
@@ -3956,9 +3958,19 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     $("#goshelf").after(gp); gp.onclick = () => { closePops(); driftStop(); setView("posters"); }; }
   // Posters' own options, in its map menu: Across, Lanes, Size
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "postctl" } }); pc.hidden = true;
-    for (const [id, lab_, pk, key] of [["pacross", "Across", "iv-pacross", "across"], ["pheight", "Height", "iv-pheight", "height"], ["planes", "Lanes", "iv-planes", "lanes"], ["psize", "Size", "iv-psize", "size"]]) {
-      const row = pc.createEl("label", { cls: "prow" }); row.createSpan({ text: lab_ }); const sel_ = row.createEl("select", { attr: { id } });
-      sel_.onchange = () => { PST[key] = sel_.value; save(pk, sel_.value); morph(true, () => fitTarget()); legend(); };
+    // Rows (a category per row) or Scatter (a second number bottom to top)
+    const pm = pc.createDiv({ cls: "pmode" }); pm.createSpan({ text: "Layout" }); const pseg = pm.createDiv({ cls: "seg", attr: { id: "pmode", role: "group", "aria-label": "Posters layout" } });
+    for (const [m, t, tip] of [["rows", "Rows", "One row per value of a category (genre, status, director)"], ["scatter", "Scatter", "Two numbers: one left to right, one bottom to top (your rating against the crowd's)"]]) {
+      const b = pseg.createEl("button", { text: t, attr: { type: "button", "data-pm": m, "aria-label": tip } });
+      b.onclick = e => { e.stopPropagation(); let h = "";
+        if (m === "scatter") { const o = postersDetect(), cu = PST.cur || {}, c = o.across.filter(a => a.id !== cu.acrossId && a.id !== "@created");
+          const pick = c.find(a => a.id === PST.lastHeight) || c.find(a => /^(rank|rating|stars|score|my.?rating)$/i.test(a.id)) || c[0]; if (!pick) return; h = pick.id; }
+        PST.height = h; save("iv-pheight", h); morph(true, () => fitTarget()); legend(); }; }
+    const HINT = { across: "A date or number. Places each card left to right.", height: "A second number. Places each card bottom to top.", lanes: "A category. Each value gets its own row.", size: "A number. The bigger it is, the bigger the card." };
+    for (const [id, lab_, pk, key] of [["pacross", "Left to right", "iv-pacross", "across"], ["pheight", "Bottom to top", "iv-pheight", "height"], ["planes", "Rows by", "iv-planes", "lanes"], ["psize", "Card size", "iv-psize", "size"]]) {
+      const row = pc.createEl("label", { cls: "prow", attr: { "data-k": key } }); row.createSpan({ text: lab_ }); const sel_ = row.createEl("select", { attr: { id } });
+      pc.createDiv({ cls: "phint", text: HINT[key], attr: { "data-k": key } });
+      sel_.onchange = () => { PST[key] = sel_.value; if (key === "height" && sel_.value) PST.lastHeight = sel_.value; save(pk, sel_.value); morph(true, () => fitTarget()); legend(); };
       const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
   const VN = () => ({ emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemaking", arc: "Arc",
@@ -4052,6 +4064,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   mo2.observe($("#tmsubs"), { attributes: true, attributeFilter: ["aria-pressed", "hidden"] });
   syncTB(); }
 
+let scopeSig = null, baseSig = null, baseDirty = false;
 if (following) win.setTimeout(() => followPath(host.activePath && host.activePath(), true), 400);   // opened while following: start on the active note
 
 return {
@@ -4059,9 +4072,14 @@ return {
     win.clearTimeout(senseTimer); win.clearTimeout(pTimer); driftStop(); tip.remove(); },
   openNote(path){ const i = PIDX.get(path); if (i != null) navTo(i); },
   follow(path){ followPath(path); },
-  setScope(paths){ if (paths == null) SCOPE = null; else { SCOPE = new Uint8Array(n); for (const p of paths) { const i = PIDX.get(p); if (i != null) SCOPE[i] = 1; } } if (!dead) relayout(!!W, false, () => fitTarget()); },
+  // a base re-sends its notes whenever anything in the vault changes; only a different set of notes refits the view,
+  // so zooming in isn't undone a second later
+  setScope(paths){ const sig = paths == null ? "*" : paths.length + ":" + paths.join("\n"); if (dead) return;
+    if (sig === scopeSig) { if (baseDirty) { baseDirty = false; relayout(!!W, false, () => ({ k, tx, ty })); } return; }
+    scopeSig = sig; baseDirty = false; if (paths == null) SCOPE = null; else { SCOPE = new Uint8Array(n); for (const p of paths) { const i = PIDX.get(p); if (i != null) SCOPE[i] = 1; } } relayout(!!W, false, () => fitTarget()); },
   _posters(){ return { pimg: [...PIMG].filter(([, e]) => e.ok).length, cur: PST.cur, across: PST.opts && PST.opts.across.map(a => a.id + ":" + a.kind), lanes: PST.opts && PST.opts.lanes.map(a => a.id), img: PST.img, ticks: PST.ticks.length, fm: (() => { for (let i=0;i<n;i++) if (vis[i]) return [N[i].path, JSON.stringify(fmOf(i))]; })() }; },
-  setBaseInfo(info){ BASEINFO = info || null; FMC.clear(); PST.key = null; },
+  setBaseInfo(info){ const sig = info ? JSON.stringify([info.sort, info.order, info.groups ? [...info.groups].join() : ""]) : ""; if (sig === baseSig) return;
+    baseSig = sig; BASEINFO = info || null; FMC.clear(); PST.key = null; baseDirty = true; },
   toggleFollow(){ setFollowing(!following); return following; },
   themeChanged(){ const t = pref("iv-theme", null); if (t == null) setTheme(autoTheme()); else if (t === "obsidian") setTheme("obsidian"); },   // Obsidian's theme or mode changed
 };
