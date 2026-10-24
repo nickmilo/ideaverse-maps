@@ -650,3 +650,11 @@ body.is-phone .ivm.kb header.tb2 .search{flex:1 1 100%;max-width:none;margin:0}
 @container ivm (max-width:760px){.ivm header.tb2 .tbr{min-width:0;max-width:100%}.ivm header.tb2 .search input{width:100%}}
 .ivm .app{grid-template-columns:minmax(0,1fr)}
 .ivm .app > header.tb2{min-width:0}
+/* watermarks: Linking Your Thinking at the bottom center, the plugin's name at the top left (desktop) */
+.ivm .wm{position:absolute;z-index:1;pointer-events:none;user-select:none}
+.ivm .wm-lyt{left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);opacity:.55;white-space:nowrap}
+.ivm .wm-name{top:12px;left:16px;color:var(--title,var(--ink));font:var(--dw) 22px/1 var(--display);letter-spacing:-.02em;opacity:.4;white-space:nowrap}
+.ivm .wm-name em{font-style:normal;color:var(--accent)}
+@container ivm (max-width:760px){.ivm .wm-name{display:none}.ivm .wm-lyt{bottom:10px;font-size:10px}}
+.ivm div main.has-drawer .wm-lyt{display:none}
+body.is-phone .ivm .wm-name{display:none}
