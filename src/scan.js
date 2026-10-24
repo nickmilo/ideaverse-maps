@@ -36,7 +36,7 @@ export const DEFAULTS = {
   privateFolders: [],     // only big maps (Level 3+) from these folders appear
   homeNotes: [],          // always Level 5
   axisProps: ["year"],
-  dateProps: ["created"],  // the property that says when a note was made; the first one a note has wins (any capitalization)    // number properties offered under By → More… (as well as the built-in axes)
+  dateProps: ["created", "createdAt", "created_at", "created on", "date created", "dateCreated", "creation date", "creation_date"],  // the property that says when a note was made; the first one a note has wins (any capitalization)    // number properties offered under By → More… (as well as the built-in axes)
   mapFolders: [],         // every note in these folders counts as a map
   mapCollections: ["Maps", "Views"],   // notes listed in these collections count as maps
   fileDates: true,        // a note with no created date and no date in its name is dated by when its file was made
@@ -67,13 +67,16 @@ export function parseDay(v) {
   if (v == null) return ""; let t = String(v).trim().replace(/^\[\[|\]\]$/g, "").replace(/\|.*$/, "").replace(/^["']+|["']+$/g, "").trim();
   const ok = (y, m, d) => { y = +y; m = +m; d = +d; if (!(y >= 1000 && y <= 2999 && m >= 1 && m <= 12 && d >= 1 && d <= 31)) return ""; return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`; };
   let m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(t); if (m) return ok(m[1], m[2], m[3]);
+  if (/^1\d{9}(\d{3})?$/.test(t)) { const d = new Date(+t * (t.length === 10 ? 1000 : 1)); return ok(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()); }   // seconds or milliseconds since 1970 (some exports)
   m = /^(\d{4})(\d{2})(\d{2})(?:\d{2,6})?$/.exec(t); if (m) return ok(m[1], m[2], m[3]);
   m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})/.exec(t); if (m) return +m[1] > 12 ? ok(m[3], m[2], m[1]) : ok(m[3], m[1], m[2]);
   m = /^([A-Za-z]{3,})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})/.exec(t); if (m) { const i = MONTHS.indexOf(m[1].slice(0, 3).toLowerCase()); if (i >= 0) return ok(m[3], i + 1, m[2]); }
   m = /^(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,})\.?,?\s+(\d{4})/.exec(t); if (m) { const i = MONTHS.indexOf(m[2].slice(0, 3).toLowerCase()); if (i >= 0) return ok(m[3], i + 1, m[1]); }
   return ""; }
 /** The note's created date: the first of the date properties (Settings) it has, any capitalization. */
-const createdOf = (e, C) => { const d = e.dates || {}; for (const k of C.dateProps && C.dateProps.length ? C.dateProps : ["created"]) { const v = parseDay(d[String(k).toLowerCase()]); if (v) return v; } return e.created ? parseDay(e.created) : ""; };
+// a setting left at the old default (just "created") gets today's wider default, so createdAt and the like work without touching Settings
+const dateKeys = C => !C.dateProps || !C.dateProps.length || (C.dateProps.length === 1 && String(C.dateProps[0]).toLowerCase() === "created") ? DEFAULTS.dateProps : C.dateProps;
+const createdOf = (e, C) => { const d = e.dates || {}; for (const k of dateKeys(C)) { const v = parseDay(d[String(k).toLowerCase()]); if (v) return v; } return e.created ? parseDay(e.created) : ""; };
 function fmScalar(fm, key) {
   const m = new RegExp("^" + esc(key) + ":[ \\t]*(.*)$", "m").exec(fm);
   return m ? m[1].trim().replace(/^["']+|["']+$/g, "") : "";

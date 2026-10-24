@@ -1,4 +1,5 @@
 import { PluginSettingTab, Setting, TFolder, normalizePath } from "obsidian";
+import { DEFAULTS } from "./scan.js";
 
 const list = v => String(v || "").split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(s => normalizePath(s)).filter(s => s && s !== "/");
 
@@ -40,8 +41,8 @@ export class MapsSettingTab extends PluginSettingTab {
     folderOne("Hidden until picked", "A folder that's on the map but switched off by default, and never scored against the rest (for example, imported learning packs).", "packs");
     folderList("Big maps only", "Private folders: only their maps (Level 3 and up) appear.", "privateFolders");
 
-    new Setting(containerEl).setName("Date property").setDesc("The property that says when a note was made, in any capitalization (created, Created, CREATED). List more than one to have the first one a note has win, for example: created, date created. Reads 2024-05-01, [[2024-05-01]], 2024-05-01T09:30, May 1, 2024 and more. Rescan after changing.").addText(t => t
-      .setPlaceholder("created").setValue((s.dateProps || ["created"]).join(", "))
+    new Setting(containerEl).setName("Date property").setDesc("The property that says when a note was made, in any capitalization (created, Created, CREATED). The first one a note has wins; the list starts with the common names (created, createdAt, date created…), and you can add your own. Reads 2024-05-01, [[2024-05-01]], 2024-05-01T09:30, May 1, 2024 and more. Rescan after changing.").addText(t => t
+      .setPlaceholder("created, createdAt, date created").setValue((s.dateProps && !(s.dateProps.length === 1 && s.dateProps[0].toLowerCase() === "created") ? s.dateProps : DEFAULTS.dateProps).join(", "))
       .onChange(async v => { const l = v.split(",").map(x => x.trim()).filter(Boolean); s.dateProps = l.length ? l : ["created"]; await p.saveSettings(); }));
 
     new Setting(containerEl).setName("Dates from files").setDesc("A note with no date property and no date in its name is placed by when its file was made. File dates can change when notes are copied, synced or restored.")
