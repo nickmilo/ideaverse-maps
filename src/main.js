@@ -31,6 +31,12 @@ export default class IdeaverseMapsPlugin extends Plugin {
       this.registerEvent(this.app.vault.on("create", mark));
       this.registerEvent(this.app.vault.on("delete", mark));
       this.registerEvent(this.app.vault.on("rename", mark));
+      // after an update, a base that was already open still runs the map from the old version: redraw it with this one
+      for (const leaf of this.app.workspace.getLeavesOfType("bases")) {
+        const old = leaf.view && leaf.view.containerEl && leaf.view.containerEl.querySelector(".ivm-bases");
+        if (!old || old.dataset.ivmv === this.manifest.version) continue;
+        if (typeof leaf.rebuildView === "function") leaf.rebuildView(); else void leaf.setViewState(leaf.getViewState());
+      }
     });
   }
 

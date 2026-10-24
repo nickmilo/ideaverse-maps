@@ -704,3 +704,4 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm .htab{left:auto;right:14px;top:11px;transform:none;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:1px solid var(--line);border-radius:8px;font:500 13px/1 var(--mono);letter-spacing:0}
 .ivm.ivm .htab[hidden]{display:none}
 .ivm .app:has(> header[hidden]) .wm-name{margin-right:40px}
+.ivm.ivm .htab{white-space:nowrap;overflow:hidden}
