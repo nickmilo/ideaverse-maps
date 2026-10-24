@@ -10,6 +10,23 @@ const FENCE = /```[\s\S]*?```/g;
 const WORD = /[\p{L}\p{N}_]+/gu;
 const KEYS = /^([A-Za-z_][\w-]*):/gm;
 
+/** Everything the scan needs from one note's text, so a note's text is read only when it changes (see adapter.cache). */
+export const EXTRACT_VERSION = 1;
+function extractNote(t){
+  const [fm, body0] = splitFm(t), body = body0.replace(FENCE, ""), lines = nonEmptyLines(body);
+  const keys = []; KEYS.lastIndex = 0; let km; while ((km = KEYS.exec(fm))) if (!keys.includes(km[1])) keys.push(km[1]);
+  const P = []; for (const key of keys) { if (key === "up" || key === "related" || key === "collections") continue; for (const l of links(fmField(fm, key))) P.push(l); }
+  const props = {};
+  for (const [key, short] of [["year", "y"], ["yearXP", "yx"], ["imdbRating", "im"], ["open_rate", "or"]]) {
+    const v = fmScalar(fm, key).replace(/%+$/, ""); const f = v === "" ? NaN : Number(v); if (isFinite(f)) props[short] = Math.round(f * 100) / 100; }
+  { const m = /^\s*(-?\d{1,4})\b/.exec(fmScalar(fm, "lifespan")); if (m) props.born = parseInt(m[1], 10); }
+  props.w = words(body); props.kb = kb(t); props.sf = senseFeatures(fm, body0, lines);
+  return { B: links(body), U: links(fmField(fm, "up")), R: links(fmField(fm, "related")), P, C: links(fmField(fm, "collections")),
+    rank: fmScalar(fm, "rank"), created: fmScalar(fm, "created").slice(0, 10), lines: lines.length, linkLines: lines.filter(l => l.includes("[[")).length, props }; }
+function extractArchive(t, isMd){
+  const [fm, b0] = isMd ? splitFm(t) : ["", t], b = b0.replace(FENCE, ""), ls = nonEmptyLines(b);
+  return { B: links(b), created: fmScalar(fm, "created").slice(0, 10), w: words(b), kb: kb(t), sf: senseFeatures(fm, b0, ls), density: ls.length ? r3(ls.filter(l => l.includes("[[")).length / ls.length) : 0 }; }
+
 export const DEFAULTS = {
   exclude: [],            // folders left off the map entirely
   archive: "",            // an archive folder: on the map as its own layer; its links never lift notes outside it
@@ -81,15 +98,19 @@ export async function scanVault(adapter, settings, onProgress) {
   const paths = notes.map(f => f.path), pathSet = new Set(paths);
   const byName = new Map(); for (const p of paths) { const k = stem(p).toLowerCase(); if (!byName.has(k)) byName.set(k, p); }
 
-  // read everything (in batches, so a big vault doesn't stall the app)
-  const text = new Map(); const archFiles = ARCHIVE ? all.filter(f => (f.path.endsWith(".md") || f.path.endsWith(".txt")) && under(f.path, [ARCHIVE]) && !base(f.path).startsWith(".")) : [];
-  const toRead = [...notes, ...archFiles]; let done = 0;
+  // read what changed (in batches, so a big vault doesn't stall the app); unchanged notes come from the cache
+  const ex = new Map(); const archFiles = ARCHIVE ? all.filter(f => (f.path.endsWith(".md") || f.path.endsWith(".txt")) && under(f.path, [ARCHIVE]) && !base(f.path).startsWith(".")) : [];
+  const archSet = new Set(archFiles.map(f => f.path)), cache = adapter.cache || null;
+  const extract = (f, t) => archSet.has(f.path) ? extractArchive(t, f.path.endsWith(".md")) : extractNote(t);
+  const toRead = []; for (const f of [...notes, ...archFiles]) { const c = cache && cache.get(f.path, f.mtime, f.size); if (c) ex.set(f.path, c); else toRead.push(f); }
+  let done = 0, total = toRead.length;
   for (let i = 0; i < toRead.length; i += 200) {
     const batch = toRead.slice(i, i + 200);
     const got = await Promise.all(batch.map(f => f.read().catch(() => null)));
-    batch.forEach((f, j) => { if (got[j] != null) text.set(f.path, got[j]); });
-    done += batch.length; if (onProgress) onProgress(done, toRead.length);
+    batch.forEach((f, j) => { if (got[j] == null) return; const e = extract(f, got[j]); ex.set(f.path, e); if (cache) cache.set(f.path, f.mtime, f.size, e); });
+    done += batch.length; if (onProgress) onProgress(done, total);
   }
+  if (cache && cache.prune) cache.prune(new Set([...notes, ...archFiles].map(f => f.path)));
 
   const ctime = new Map(notes.map(f => [f.path, f.ctime || 0]));
   const mtime = new Map(notes.map(f => [f.path, f.mtime || 0]));
@@ -100,34 +121,24 @@ export async function scanVault(adapter, settings, onProgress) {
   const info = new Map(); let unresolved = 0;
 
   for (const p of paths) {
-    const t = text.get(p); if (t == null) continue;
-    const [fm, body0] = splitFm(t);
-    const body = body0.replace(FENCE, "");
-    const lines = nonEmptyLines(body);
-    const linkLines = lines.filter(l => l.includes("[[")).length;
-    const colls = links(fmField(fm, "collections")).map(x => base(x.trim()));
+    const e = ex.get(p); if (!e) continue;
+    const colls = e.C.map(x => base(x.trim()));
     const title = stem(p);
-    for (const l of links(body)) {
+    for (const l of e.B) {
       const q = resolve(l, p);
       if (q && q !== p) { if (isPack(p) !== isPack(q)) { add(cross, p, q + "\u0000" + 0); continue; } add(bodyOut, p, q); add(bodyIn, q, p); }
       else if (!q) unresolved++;
     }
-    for (const key of ["up", "related"]) for (const l of links(fmField(fm, key))) {
+    for (const key of ["up", "related"]) for (const l of (key === "up" ? e.U : e.R)) {
       const q = resolve(l, p);
       if (q && q !== p) { if (isPack(p) !== isPack(q)) { add(cross, p, q + "\u0000" + (key === "related" ? 4 : 1)); continue; }
         add(upOut, p, q); add(upIn, q, p); add(key === "related" ? relOut : upkOut, p, q); }
     }
-    const keys = new Set(); KEYS.lastIndex = 0; let km; while ((km = KEYS.exec(fm))) keys.add(km[1]);
-    for (const key of keys) { if (key === "up" || key === "related" || key === "collections") continue;
-      for (const l of links(fmField(fm, key))) { const q = resolve(l, p); if (q && q !== p) { add(propOut, p, q); add(propIn, q, p); } } }   // any property's links (topics, source, people…) make both notes linked
-    for (const l of links(fmField(fm, "collections"))) { const q = resolve(l, p); if (q && q !== p && (!isPack(p) || isPack(q))) { add(collIn, q, p); add(collOut, p, q); } }
-    const props = {};
-    for (const [key, short] of [["year", "y"], ["yearXP", "yx"], ["imdbRating", "im"], ["open_rate", "or"]]) {
-      const v = fmScalar(fm, key).replace(/%+$/, ""); const f = v === "" ? NaN : Number(v); if (isFinite(f)) props[short] = Math.round(f * 100) / 100; }
-    { const m = /^\s*(-?\d{1,4})\b/.exec(fmScalar(fm, "lifespan")); if (m) props.born = parseInt(m[1], 10); }
-    props.w = words(body); props.kb = kb(t); props.sf = senseFeatures(fm, body0, lines);
-    let rank = fmScalar(fm, "rank"); rank = rank === "" || !isFinite(Number(rank)) ? null : Number(rank);
-    const created = fmScalar(fm, "created").slice(0, 10);
+    for (const l of e.P) { const q = resolve(l, p); if (q && q !== p) { add(propOut, p, q); add(propIn, q, p); } }   // any property's links (topics, source, people…) make both notes linked
+    for (const l of e.C) { const q = resolve(l, p); if (q && q !== p && (!isPack(p) || isPack(q))) { add(collIn, q, p); add(collOut, p, q); } }
+    const props = Object.assign({}, e.props), lines = { length: e.lines }, linkLines = e.linkLines;
+    let rank = e.rank; rank = rank === "" || !isFinite(Number(rank)) ? null : Number(rank);
+    const created = e.created;
     let date = /^\d{4}-\d{2}-\d{2}$/.test(created) ? created : "";
     if (!date) { const m = /(\d{4}-\d{2}-\d{2})/.exec(title); date = m ? m[1] : ""; }
     if (!date && C.fileDates && ctime.get(p)) date = new Date(ctime.get(p)).toISOString().slice(0, 10);   // no date in the note: when the file was made
@@ -192,20 +203,20 @@ export async function scanVault(adapter, settings, onProgress) {
 
   // the archive: its own layer, scored on its own links
   if (archFiles.length) {
-    const arch = archFiles.map(f => f.path).filter(p => text.has(p));
+    const arch = archFiles.map(f => f.path).filter(p => ex.has(p));
     const aName = new Map(); for (const p of arch) { const k = stem(p).toLowerCase(); if (!aName.has(k)) aName.set(k, p); }
     const aSet = new Set(arch);
     const aResolve = target => { let t = base(target.trim()).toLowerCase(); if (t.endsWith(".md")) t = t.slice(0, -3); const v = byName.get(t); return aName.get(t) || (v && idx.has(v) ? v : null); };
     const aDate = (name, fm) => {
       let m = /((?:19|20)\d{2})-(\d{2})-(\d{2})/.exec(name); if (m) return m[0];
       m = /^((?:19|20)\d{2})(\d{2})(\d{2})\d{4}/.exec(name); if (m && +m[2] >= 1 && +m[2] <= 12 && +m[3] >= 1 && +m[3] <= 31) return `${m[1]}-${m[2]}-${m[3]}`;
-      const c = fmScalar(fm, "created").slice(0, 10); if (/^\d{4}-\d{2}-\d{2}$/.test(c) && c < "2021") return c;
+      const c = fm; if (/^\d{4}-\d{2}-\d{2}$/.test(c) && c < "2021") return c;
       m = /((?:19|20)\d{2})-(\d{2})\b/.exec(name); if (m && +m[2] >= 1 && +m[2] <= 12) return m[0] + "-15";
       m = /^((?:19|20)\d{2})\b/.exec(name); return m ? m[1] + "-07-01" : ""; };
     const aOut = S(), aIn = S(), aInfo = new Map();
-    for (const p of arch) { const t = text.get(p), [fm, b0] = p.endsWith(".md") ? splitFm(t) : ["", t], b = b0.replace(FENCE, ""), ls = nonEmptyLines(b), name = stem(p);
-      for (const l of links(b)) { const q = aResolve(l); if (q && q !== p) { add(aOut, p, q); if (aSet.has(q)) add(aIn, q, p); } }
-      aInfo.set(p, { title: name, date: aDate(name, fm), w: words(b), kb: kb(t), sf: senseFeatures(fm, b0, ls), density: ls.length ? r3(ls.filter(l => l.includes("[[")).length / ls.length) : 0, named_map: /\bMOC\b|\bIndex\b/.test(name) }); }
+    for (const p of arch) { const e = ex.get(p), name = stem(p);
+      for (const l of e.B) { const q = aResolve(l); if (q && q !== p) { add(aOut, p, q); if (aSet.has(q)) add(aIn, q, p); } }
+      aInfo.set(p, { title: name, date: aDate(name, e.created), w: e.w, kb: e.kb, sf: e.sf, density: e.density, named_map: /\bMOC\b|\bIndex\b/.test(name) }); }
     const aIdx = new Map(); arch.forEach((p, j) => aIdx.set(p, nodes.length + j));
     const aIsMap = p => { const i = aInfo.get(p); return i.named_map || (get(aOut, p).size >= C.l3MinOut && i.density >= C.l3Density); };
     for (const p of arch) { const i = aInfo.get(p), j = aIdx.get(p), bi = Math.log1p(get(aIn, p).size), bo = Math.log1p(get(aOut, p).size);

@@ -1,7 +1,7 @@
 import { Plugin, TFile, normalizePath } from "obsidian";
 import { MapView, VIEW_TYPE } from "./view.js";
 import { MapsSettingTab, detectDefaults } from "./settings.js";
-import { DEFAULTS, scanVault } from "./scan.js";
+import { DEFAULTS, EXTRACT_VERSION, scanVault } from "./scan.js";
 
 export default class IdeaverseMapsPlugin extends Plugin {
   async onload() {
@@ -73,15 +73,32 @@ export default class IdeaverseMapsPlugin extends Plugin {
     for (const leaf of leaves) if (leaf.view instanceof MapView) await leaf.view.reload();
   }
 
+  /** What the scan learned from each note's text, kept between sessions in the plugin's folder, so only changed notes are read again.
+      It holds links, counts and a few property values, never note text, and stays on this device. */
+  get cachePath() { return normalizePath(`${this.manifest.dir}/scan-cache.json`); }
+  async scanCache() {
+    if (!this.cacheData) { let d = null;
+      try { if (await this.app.vault.adapter.exists(this.cachePath)) d = JSON.parse(await this.app.vault.adapter.read(this.cachePath)); } catch { d = null; }
+      this.cacheData = d && d.v === EXTRACT_VERSION && d.files ? d : { v: EXTRACT_VERSION, files: {} }; }
+    const F = this.cacheData.files, c = { changed: false,
+      get: (p, m, z) => { const r = F[p]; return r && r[0] === m && r[1] === z ? r[2] : undefined; },
+      set: (p, m, z, e) => { F[p] = [m, z, e]; c.changed = true; },
+      prune: keep => { for (const p of Object.keys(F)) if (!keep.has(p)) { delete F[p]; c.changed = true; } } };
+    return c;
+  }
+  async saveScanCache() { try { await this.app.vault.adapter.write(this.cachePath, JSON.stringify(this.cacheData)); } catch (e) { console.warn("Maps of the Ideaverse: couldn't save the scan cache", e); } }
+
   /** Read the whole vault into the map's data (see scan.js). */
   async getGraph(onProgress) {
     if (this.graph) return this.graph;
     const app = this.app, s = this.settings;
     const files = app.vault.getFiles()
       .filter(f => f.extension === "md" || (f.extension === "txt" && s.archive && f.path.startsWith(normalizePath(s.archive) + "/")))
-      .map(f => ({ path: f.path, ctime: f.stat.ctime, mtime: f.stat.mtime, read: () => app.vault.cachedRead(f) }));
+      .map(f => ({ path: f.path, ctime: f.stat.ctime, mtime: f.stat.mtime, size: f.stat.size, read: () => app.vault.cachedRead(f) }));
     const resolve = (link, from) => { const f = app.metadataCache.getFirstLinkpathDest(link.replace(/\.md$/i, ""), from); return f ? f.path : null; };
-    this.graph = await scanVault({ files, resolve, vaultName: app.vault.getName() }, s, onProgress);
+    const cache = await this.scanCache();
+    this.graph = await scanVault({ files, resolve, vaultName: app.vault.getName(), cache }, s, onProgress);
+    if (cache.changed) void this.saveScanCache();
     this.dirty = false;
     return this.graph;
   }
