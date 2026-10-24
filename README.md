@@ -13,7 +13,7 @@ Four main maps sit in the toolbar. Click a map's tab again for its variants and 
 
 ### Emergence
 
-Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders. **Filter** sets the **years shown**: drag either end to keep only, say, 2022 to 2024 (every map of the whole vault shares it: Gravity, Starfield, Sensemaking, Graph, Chord, Treemap, Mosaic and the rest; Posters and People have their own sliders). Notes from other years and notes with no date wait in No date, Before and After strips at the edges; turn off **Show notes outside the date range** to leave them off the map. Click any note to light up its links: up to the maps above it, down to the notes it gathers. Its menu also has **Space-Time** (your top folders as rows) and **Planetarium** (stand inside it: Level 5 overhead).
+Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders. **Filter** sets the **years shown**: drag either end to keep only, say, 2022 to 2024 (every map of the whole vault shares it: Gravity, Starfield, Sensemaking, Obsidian, Chord, Treemap, Mosaic and the rest; Posters and People have their own sliders). Notes from other years and notes with no date wait in No date, Before and After strips at the edges; turn off **Show notes outside the date range** to leave them off the map. Click any note to light up its links: up to the maps above it, down to the notes it gathers. Its menu also has **Space-Time** (your top folders as rows) and **Planetarium** (stand inside it: Level 5 overhead).
 
 ### Gravity
 
@@ -40,12 +40,12 @@ A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), P
 
 **More** holds the rest.
 
-### Graph
+### Obsidian
 
-Like Obsidian's graph view: every note pushes the others away and its links pull it toward its neighbors, settling live as you watch. Drawn with the emergence symbols, so hubs and maps stand out, and with everything the other maps have: the Timelapse, Wander Mode, Focus mode, filters. Unlinked notes ring the outside.
+Our take on Obsidian's graph view: every note pushes the others away and its links pull it toward its neighbors, settling live as you watch. Drag a note and its links tug the rest along; let go and it settles. Drawn with the emergence symbols, so hubs and maps stand out, and with everything the other maps have: the Timelapse, Wander Mode, Focus mode, filters. Unlinked notes ring the outside.
 
-![Graph: a hub and its links](docs/graph.png)
-<sub>Graph in the Dark theme, zoomed in on a hub and its links.</sub>
+![Obsidian: a hub and its links](docs/graph.png)
+<sub>The Obsidian map in the Dark theme, zoomed in on a hub and its links.</sub>
 
 ### Chord, Corona and Tesla
 
