@@ -1047,9 +1047,14 @@ const CHCAT_T = (() => {   // one arc a year, oldest first; undated notes at the
   const keys = [...ys.keys()].sort((a, b) => (a === "No date") - (b === "No date") || a.localeCompare(b)), nums = keys.filter(k => k !== "No date").map(Number), y0 = Math.min(...nums), y1 = Math.max(...nums);
   return keys.map((k, j) => { const f = k === "No date" ? -1 : (Number(k) - y0)/Math.max(1, y1 - y0);
     return {id: j, name: k, short: k, ace: k === "No date" ? "x" : "t", hue: f < 0 ? "#8b8b95" : `hsl(${Math.round(205 - 175*f)}, 58%, ${Math.round(50 + 6*f)}%)`, ids: ys.get(k)}; }); })();
-let ribKey = null, CH_RIB = [];
+let ribKey = null, CH_RIB = [], CH_MAX = 0;   // CH_MAX: the biggest band with every note shown (all time), the scale every band is drawn against
 let CHCAT = chordBy === "time" ? CHCAT_T : CHCAT_F;
-function chSetCats(){ CHCAT = chordBy === "time" ? CHCAT_T : CHCAT_F; for (const c of CHCAT) for (const i of c.ids) CHC[i] = c.id; ribKey = null; }
+// By Folders, unless the notes shown all sit in one folder (a base of one folder, a filter): then by Time, so there are bands between years to see
+let chOneFolder = false;
+function chSetCats(){ let k = 0; if (typeof vis !== "undefined" && vis) for (const c of CHCAT_F) { if (c.ids.some(i => vis[i])) k++; if (k > 1) break; }
+  chOneFolder = chordBy !== "time" && k === 1;
+  const want = chordBy === "time" || chOneFolder ? CHCAT_T : CHCAT_F; if (want === CHCAT && ribKey !== null) return;
+  CHCAT = want; for (const c of CHCAT) for (const i of c.ids) CHC[i] = c.id; ribKey = null; }
 chSetCats();
 // angles: share by count^0.6 so the big folders don't swallow the ring; small gaps between kinds, bigger between ACE folders.
 // Only the kinds with notes showing get a share: switch folders off and the rest close up to fill the whole ring.
@@ -1066,8 +1071,12 @@ function chRibbons(){   // counted among the notes shown (and, on the timeline, 
   const key_ = (senseT == null ? "all" : senseT) + ":" + nv; if (key_ === ribKey) return CH_RIB; ribKey = key_;
   const m = new Map(), on = i => vis[i] && (senseT == null || !(TV[i] > senseT));
   for (const [a,b,t] of E) { if (t === 2 || t === 3 || t === 5 || !on(a) || !on(b)) continue; const p = CHC[a], q = CHC[b]; if (p === q) continue; const kk = p < q ? p*1000 + q : q*1000 + p; m.set(kk, (m.get(kk) || 0) + 1); }
-  CH_RIB = [...m].map(([kk, c]) => ({p: Math.floor(kk/1000), q: kk % 1000, c})).filter(r => r.c >= 3).sort((a,b) => a.c - b.c); return CH_RIB; }
+  CH_RIB = [...m].map(([kk, c]) => ({p: Math.floor(kk/1000), q: kk % 1000, c})).filter(r => r.c >= 3).sort((a,b) => a.c - b.c);
+  if (senseT == null) CH_MAX = CH_RIB.length ? CH_RIB[CH_RIB.length - 1].c : 0; return CH_RIB; }
+// bands are scaled to the biggest one among the notes shown, so a base, a filter or a focus still shows them clearly; on the timeline they grow toward that
+const ribMax = () => Math.max(30, CH_MAX || 900);
 function layoutChord(){
+  chSetCats();
   chAngles();
   for (const c of CHCAT) { const ids = c.ids.slice().sort((a,b) => (isNaN(TV[a]) ? -1 : TV[a]) - (isNaN(TV[b]) ? -1 : TV[b])), m = ids.length;
     ids.forEach((i, j) => { const a = c.a0 + (c.a1 - c.a0)*((j + .5)/m), lv = N[i].level, h = hash(N[i].path, 23);
@@ -1139,7 +1148,7 @@ function csGuides(){
   ctx.globalAlpha = 1;
   // ribbons between kinds: out over the surface, or through the glass
   // with a note picked, its own kind's bands stay bright and the rest step back (not out)
-  const hl = sel >= 0 ? sel : hover, hk = hl >= 0 ? CHC[hl] : -1, mx = 900;
+  const hl = sel >= 0 ? sel : hover, hk = hl >= 0 ? CHC[hl] : -1, mx = (chRibbons(), ribMax());
   if (csBands) for (const r of chRibbons()) { const A = CHCAT[r.p], B = CHCAT[r.q], fade = hk < 0 || r.p === hk || r.q === hk ? 1 : .4;
     ctx.strokeStyle = chHue(A); ctx.globalAlpha = (.08 + .3*Math.sqrt(r.c/mx))*fade; ctx.lineWidth = Math.max(.7, Math.sqrt(r.c/mx)*rs*(CSPH === "out" ? .045 : .07));
     const ca = CSC[A.id], cb = CSC[B.id]; if (!ca || !cb) continue; ctx.beginPath(); csStroke(csArc(ca[0], ca[1], cb[0], cb[1], 28)); ctx.stroke(); }
@@ -1960,7 +1969,7 @@ function chordGuides(){
     ctx.globalAlpha = .05; ctx.lineWidth = R0*.12; ctx.beginPath(); ctx.arc(cx, cy, R0*.955, c.a0, c.a1); ctx.stroke(); }
   ctx.globalAlpha = 1;
   // ribbons: one curve per pair of kinds, through the middle, width by how many links join them
-  const hl = sel >= 0 ? sel : hover, fade = hl >= 0 ? .25 : 1, RIB = chRibbons(), mx = 900;   // width ∝ √(links between the two kinds); fixed scale, so ribbons visibly thicken over the years
+  const hl = sel >= 0 ? sel : hover, fade = hl >= 0 ? .25 : 1, RIB = chRibbons(), mx = ribMax();   // width ∝ √(links between the two kinds); fixed scale, so ribbons visibly thicken over the years
   const CA = chOn();
   for (const r of RIB) { const mine = CA >= 0 && (r.p === CA || r.q === CA); if (CA >= 0 && !mine) { ctx.globalAlpha = .03; } const A = CHCAT[r.p], B = CHCAT[r.q], a = (A.a0 + A.a1)/2, b = (B.a0 + B.a1)/2, rr = R0*.9;
     if (CA >= 0 && mine) { const src = r.p === CA ? a : b, dst = r.p === CA ? b : a, g = ctx.createLinearGradient(cx + rr*Math.cos(src), cy + rr*Math.sin(src), cx + rr*Math.cos(dst), cy + rr*Math.sin(dst));
@@ -3704,7 +3713,7 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
     root.dataset.mo = variants() || hasLay() ? "1" : "";
     AR.w.hidden = ARR_OFF.has(view); AR.val.setText(axisName(mode));
     let g = false; for (const [w, el] of GS) { w.hidden = el.hidden; g = g || !el.hidden; } GR.w.hidden = !g;
-    GR.val.setText(view === "shelf" ? (($("#shelfsort button[aria-pressed=true]") || {}).textContent || "") : view === "chord" ? (($("#chordby button[aria-pressed=true]") || {}).textContent || "") : view === "treemap" ? ($("#tmsubs").getAttribute("aria-pressed") === "true" ? "Subfolders" : "Folders") : "");
+    GR.val.setText(view === "shelf" ? (($("#shelfsort button[aria-pressed=true]") || {}).textContent || "") : view === "chord" ? (chOneFolder ? "Time · one folder" : (($("#chordby button[aria-pressed=true]") || {}).textContent || "")) : view === "treemap" ? ($("#tmsubs").getAttribute("aria-pressed") === "true" ? "Subfolders" : "Folders") : "");
     { const th = $("#themeseg"), want = isPhone() ? thSec : thSlot; if (th.parentElement !== want) want.appendChild(th); thSec.hidden = !isPhone(); thSlot.hidden = isPhone(); }
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }
