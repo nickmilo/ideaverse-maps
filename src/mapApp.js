@@ -80,7 +80,8 @@ let fullY = fromY;   // kept equal to the start: every shown year at full scale
 // the map, whatever Arrange is set to. It replaces the old "Starts" control, whose older notes gathered in a Before strip.
 let YR0 = Math.max(SLMIN, Math.min(NOW_Y, +pref("iv-yr0", SLMIN))), YR1 = Math.max(SLMIN, Math.min(NOW_Y, +pref("iv-yr1", NOW_Y))); if (YR0 > YR1) [YR0, YR1] = [YR1, YR0];
 fromY = fullY = YR0;
-const YRV = new Set(["emergence", "spacetime", "gravity", "stars"]);
+// every map of the whole vault shares it; Posters and People have their own sliders, Linear its own years
+const YRV = new Set(["emergence", "spacetime", "gravity", "stars", "sense", "graph", "chord", "treemap", "mosaic", "tree", "shelf", "skyline", "planet", "quincunx", "arc"]);
 // "Show notes outside the date range": off by default, so these maps show only the years picked, and no undated notes;
 // on, notes with no date sit in the No date strip, older ones in a Before strip, newer ones in an After strip
 let YRALL = pref("iv-yrall", false) === true;
@@ -784,8 +785,8 @@ function senseWhy(i){   // for the note panel: the archetype and the clues that 
 // ---- time: notes appear as they were created; a dot follows where attention went ----
 let senseT = null;                                // null = everything; else a time (ms): only notes created by then
 const SENSE_WIN = 90*DAY;                         // "recent" = the trailing 90 days
-let SY0 = SLMIN, SY1 = NOW_Y;   // Sensemaking shows only notes dated in these years (the full span also keeps undated notes)
-{ const r = pref("iv-syears", null); if (Array.isArray(r)) { SY0 = Math.max(SLMIN, Math.min(NOW_Y, +r[0] || SLMIN)); SY1 = Math.max(SY0, Math.min(NOW_Y, +r[1] || NOW_Y)); } }
+let SY0 = YR0, SY1 = YR1;   // (since 0.4.17 these follow Years shown)
+
 const syFull = () => SY0 <= SLMIN && SY1 >= NOW_Y;
 const syT0 = () => SY0 <= SLMIN ? -Infinity : Date.UTC(SY0, 0, 1), syT1 = () => Date.UTC(SY1 + 1, 0, 1) - 1;
 const inYears = i => syFull() || (TV[i] >= syT0() && TV[i] <= syT1());
@@ -3417,9 +3418,9 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", msv = view === "mosaic", ppv = view === "people", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view)));   // the Layout section shows only where there are layout settings
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", msv = view === "mosaic", ppv = view === "people", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view))) || YRV.has(view);   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv; const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } }
-  if (lay) { $("#startms").hidden = true; { const yc = $("#yrctl"); if (yc) { yc.hidden = !YRV.has(view) || csv || expOn(); syncYr(); } } $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = !sv; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
+  if (lay) { $("#startms").hidden = true; { const yc = $("#yrctl"); if (yc) { yc.hidden = !YRV.has(view); syncYr(); } } $("#sensems").hidden = true; $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = true; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -4282,6 +4283,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const st = $("#stats"); st.classList.add("mapstats"); cv.parentElement.appendChild(st); }
   // a tab for the current map when it lives under More (Corona, Bookshelf, Spiral…), and More itself
   // it sits outside the scrolling tabs, beside More, so it never scrolls out of sight
+  // every main tab gets the ▾ when its map has a menu (Gravity and Sensemaking have Years shown)
+  for (const v_ of ["gravity", "sense"]) { const b_ = root.querySelector(`#vseg button[data-v="${v_}"]`); if (b_ && !b_.querySelector(".vcar")) { b_.createSpan({ cls: "vcar", text: " ▾" }); b_.setAttribute("aria-haspopup", "true"); } }
   const vcurSeg = $("#vsegms").createDiv({ cls: "seg vcurseg" }), vcur = vcurSeg.createEl("button", { cls: "vcur", attr: { id: "vcur", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
   $("#vmore").setText("More ▾"); $("#vmore").setAttribute("aria-label", "More maps");
   $("#vsegms").insertBefore($("#vmore"), $("#vseg").nextSibling);   // More sits outside the tabs, so it never scrolls out of sight
@@ -4324,7 +4327,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const tg = yc.createEl("label", { cls: "pmaps yrall", attr: { "aria-label": "Show notes with no date, and notes from before or after the years shown, in strips at the edges" } });
     const cb = tg.createEl("input", { type: "checkbox", attr: { id: "yrall" } }); cb.checked = YRALL; tg.createEl("i", { cls: "sw" }); tg.createSpan({ text: "Show notes outside the date range" });
     cb.onchange = () => { YRALL = cb.checked; save("iv-yrall", YRALL); relayout(true, false, () => fitTarget()); };
-    let t_ = 0; const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; syncYr();
+    let t_ = 0; const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; SY0 = YR0; SY1 = YR1; syncYr();
+      if (view === "sense" && typeof senseSteps === "function") { senseStop(); senseT = null; senseTrail = []; SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; $("#tldate").textContent = "All time"; }
       win.clearTimeout(t_); if (commit) { save("iv-yr0", YR0); save("iv-yr1", YR1); } t_ = win.setTimeout(() => relayout(false), commit ? 0 : 90); };
     a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true); }
   // Posters' own options, in its map menu: Across, Lanes, Size
