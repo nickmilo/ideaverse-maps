@@ -11,7 +11,7 @@ const WORD = /[\p{L}\p{N}_]+/gu;
 const KEYS = /^([A-Za-z_][\w-]*):/gm;
 
 /** Everything the scan needs from one note's text, so a note's text is read only when it changes (see adapter.cache). */
-export const EXTRACT_VERSION = 1;
+export const EXTRACT_VERSION = 2;
 function extractNote(t){
   const [fm, body0] = splitFm(t), body = body0.replace(FENCE, ""), lines = nonEmptyLines(body);
   const keys = []; KEYS.lastIndex = 0; let km; while ((km = KEYS.exec(fm))) if (!keys.includes(km[1])) keys.push(km[1]);
@@ -21,7 +21,8 @@ function extractNote(t){
     const v = fmScalar(fm, key).replace(/%+$/, ""); const f = v === "" ? NaN : Number(v); if (isFinite(f)) props[short] = Math.round(f * 100) / 100; }
   { const m = /^\s*(-?\d{1,4})\b/.exec(fmScalar(fm, "lifespan")); if (m) props.born = parseInt(m[1], 10); }
   props.w = words(body); props.kb = kb(t); props.sf = senseFeatures(fm, body0, lines);
-  return { B: links(body), U: links(fmField(fm, "up")), R: links(fmField(fm, "related")), P, C: links(fmField(fm, "collections")),
+  const num = {}; for (const key of keys) { const v = fmScalar(fm, key).replace(/%+$/, ""); if (v !== "" && /^-?[\d.,]+$/.test(v)) { const f = Number(v.replace(/,/g, "")); if (isFinite(f)) num[key] = Math.round(f*100)/100; } }   // every number-valued property, for the By → More… axes
+  return { num, B: links(body), U: links(fmField(fm, "up")), R: links(fmField(fm, "related")), P, C: links(fmField(fm, "collections")),
     rank: fmScalar(fm, "rank"), created: fmScalar(fm, "created").slice(0, 10), lines: lines.length, linkLines: lines.filter(l => l.includes("[[")).length, props }; }
 function extractArchive(t, isMd){
   const [fm, b0] = isMd ? splitFm(t) : ["", t], b = b0.replace(FENCE, ""), ls = nonEmptyLines(b);
@@ -33,6 +34,7 @@ export const DEFAULTS = {
   packs: "",              // a folder on the map but off by default, never scored against the rest (Nick's learning packs)
   privateFolders: [],     // only big maps (Level 3+) from these folders appear
   homeNotes: [],          // always Level 5
+  axisProps: ["year"],    // number properties offered under By → More… (as well as the built-in axes)
   mapFolders: [],         // every note in these folders counts as a map
   mapCollections: ["Maps", "Views"],   // notes listed in these collections count as maps
   fileDates: true,        // a note with no created date and no date in its name is dated by when its file was made
@@ -136,7 +138,8 @@ export async function scanVault(adapter, settings, onProgress) {
     }
     for (const l of e.P) { const q = resolve(l, p); if (q && q !== p) { add(propOut, p, q); add(propIn, q, p); } }   // any property's links (topics, source, people…) make both notes linked
     for (const l of e.C) { const q = resolve(l, p); if (q && q !== p && (!isPack(p) || isPack(q))) { add(collIn, q, p); add(collOut, p, q); } }
-    const props = Object.assign({}, e.props), lines = { length: e.lines }, linkLines = e.linkLines;
+    const props = Object.assign({}, e.props); { const nm = {}; for (const k of C.axisProps || []) if (e.num && e.num[k] != null) nm[k] = e.num[k]; if (Object.keys(nm).length) props.n = nm; }
+    const lines = { length: e.lines }, linkLines = e.linkLines;
     let rank = e.rank; rank = rank === "" || !isFinite(Number(rank)) ? null : Number(rank);
     const created = e.created;
     let date = /^\d{4}-\d{2}-\d{2}$/.test(created) ? created : "";
@@ -231,7 +234,7 @@ export async function scanVault(adapter, settings, onProgress) {
   }
 
   return { generated: new Date().toISOString().slice(0, 19), vault: adapter.vaultName || "Vault",
-    settings: { exclude: C.exclude, moc_only: C.privateFolders, home_notes: C.homeNotes, l5_top: L5, l4_map_links: C.l4MapLinks, l3_min_out: C.l3MinOut,
+    settings: { axis_props: C.axisProps || [], exclude: C.exclude, moc_only: C.privateFolders, home_notes: C.homeNotes, l5_top: L5, l4_map_links: C.l4MapLinks, l3_min_out: C.l3MinOut,
       l3_density: C.l3Density, promote_l4: C.promoteL4, promote_l3: C.promoteL3, nav_jaccard: C.navJaccard, weights: W, map_folders: C.mapFolders,
       map_collections: C.mapCollections, packs: PACKS, archive: ARCHIVE },
     nodes, edges, unresolved, dropped: dropped.length };

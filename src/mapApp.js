@@ -280,6 +280,12 @@ const AXES = {
   "p:kb":  {name:"Size (KB)", get:d => d.p && d.p.kb, kind:"log", jit:.006},
   "links": {name:"Links (in + out)", get:d => d.body_in + d.body_out, kind:"log", jit:.01},
   "upin":  {name:"Uplinks (notes that link up to it)", get:d => d.up_in, kind:"log", jit:.01}};
+// the number properties named in Settings → By → More… (year by default): each becomes an axis, scaled to its values.
+// Year-like ones that reach back centuries or millennia squeeze the far past, as Time's "Before" strip does.
+for (const key of (D.settings && D.settings.axis_props) || []) { const vals = N.map(d => d.p && d.p.n && d.p.n[key]).filter(v => v != null && isFinite(v)); if (!vals.length) continue;
+  const lo = Math.min(...vals), hi = Math.max(...vals), yearish = hi >= 1000 && hi <= 2200 && vals.every(v => Number.isInteger(v) && v <= 2200), wide = lo >= 0 && hi > 50*Math.max(1, lo) && hi > 100;
+  const span = hi - lo || 1, raw = span/8, mag = Math.pow(10, Math.floor(Math.log10(raw))), tick = [1, 2, 5, 10].map(m => m*mag).find(t => t >= raw) || 10*mag;
+  AXES["n:" + key] = yearish ? {name: key, get: d => d.p && d.p.n && d.p.n[key], kind: "year", anchor: lo < 1850 ? 1900 : null, jit: .004} : wide ? {name: key, get: d => d.p && d.p.n && d.p.n[key], kind: "log", jit: .006} : {name: key, get: d => d.p && d.p.n && d.p.n[key], kind: "lin", tick, jit: .006}; }
 const axisHas = m => !!AXES[m] && N.some(d => { const v = AXES[m].get(d); return v != null && isFinite(v); });
 const XP = new Float32Array(n), X0P = 170;
 let PA = null;   // the active property axis: {ax, umin, umax}
@@ -2655,6 +2661,7 @@ $("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoom
   if (sphOn()) { morph(true, () => fitTarget()); return; } if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, 0]; domeKeep(); morph(true, () => fitTarget()); return; } fit(true); };   // in a dome: face forward again
 root.querySelectorAll("#xseg button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.x === mode)); b.onclick = () => setMode(b.dataset.x); });
 $("#xmore").onchange = e => setMode(e.target.value || "time");
+for (const key of Object.keys(AXES)) if (key.startsWith("n:") && !root.querySelector(`#xmore option[value="${CSS.escape(key)}"]`)) $("#xmore").createEl("option", { value: key, text: AXES[key].name });   // your own number properties
 root.querySelectorAll("#xmore option").forEach(o => { if (o.value && !axisHas(o.value)) o.remove(); });   // only axes some note has
 { const rb = $('#xseg button[data-x="rank"]'); if (rb) rb.hidden = !axisHas("rank");
   const ab = $('#xseg button[data-x="ace"]'); if (ab && !FOLD.some(f => ACE.includes(f) && f !== "+" && f !== "x")) ab.textContent = "Folders"; }
