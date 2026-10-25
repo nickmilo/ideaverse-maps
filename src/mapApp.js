@@ -3500,13 +3500,13 @@ function select(i, fromTrail){
     <div class="lvl">Level ${d.level} · ${esc(LV[d.level].name)}</div>${axisValue(d) ? `<div class="lvl axv">${esc(axisValue(d))}</div>` : ""}${d.archive ? `<div class="lvl" style="margin-left:6px">Archive</div>` : ""}${view === "arc" ? `<div class="lvl axv" title="${esc(ARW[i])}">ARC · ${ARC_L[ARS[i]].name} · ${esc(ARW[i])}</div>` : ""}${view === "chord" ? `<div class="lvl axv">◯ ${esc(CHCAT[CHC[i]].short)}</div>` : ""}${view === "stars" && BOD[i] >= 0 ? `<div class="lvl axv">✦ ${esc(bodyLabel(i))}</div>` : ""}
     <div class="nums"><div><b>${d.body_in}</b><span>linked from</span></div><div><b>${d.body_out}</b><span>links to</span></div><div><b>${d.up_in}</b><span>link up to it</span></div><div><b>${d.score.toFixed(1)}</b><span>link score</span></div></div>
     ${whyBox(i)}<button class="open" id="dopen" title="Open the note (Cmd/Ctrl-click: in a new tab)">Open note</button><button class="focusbtn" id="dfocus">${focus === i ? "Exit focus" : "Focus on its links"}</button>
-    ${up.length || down.length ? `<div class="lgrp" title="Links in the body of the note, placed by emergence level">Emergence</div>` : ""}
-    ${up.length ? `<h5><i style="border-color:var(--up)"></i>Above · ${up.length}</h5>${noteList(up)}` : ""}
-    ${down.length ? `<h5><i style="border-color:var(--down)"></i>Below · ${down.length}</h5>${noteList(down)}` : ""}
-    ${upl.length || rel.length || prop.length ? `<div class="lgrp${up.length || down.length ? " sep" : ""}" title="Links written in the frontmatter">Properties</div>` : ""}
+    ${upl.length || rel.length || prop.length ? `<div class="lgrp" title="Links written in the frontmatter">Properties</div>` : ""}
     ${upl.length ? `<h5><i style="border-color:var(--upp)"></i>Uplinks · ${upl.length}</h5>${noteList(upl)}` : ""}
     ${rel.length ? `<h5><i style="border-color:var(--rel)"></i>Related · ${rel.length}</h5>${noteList(rel)}` : ""}
     ${prop.length ? `<h5><i style="border-color:var(--prop)"></i>Other properties · ${prop.length}</h5>${noteList(prop)}` : ""}
+    ${up.length || down.length ? `<div class="lgrp${upl.length || rel.length || prop.length ? " sep" : ""}" title="Links in the body of the note, placed by emergence level">Emergence</div>` : ""}
+    ${up.length ? `<h5><i style="border-color:var(--up)"></i>Above · ${up.length}</h5>${noteList(up)}` : ""}
+    ${down.length ? `<h5><i style="border-color:var(--down)"></i>Below · ${down.length}</h5>${noteList(down)}` : ""}
     ${!up.length && !down.length && !rel.length && !prop.length && !upl.length ? `<h5>No links on the map</h5>` : ""}`;
   const opening = drawer.hidden && !drawerCollapsed; drawer.hidden = drawerCollapsed; drawer.scrollTop = 0; syncDtab();
   if (opening) { resize(); if (!morphing) keepInView(i); }
