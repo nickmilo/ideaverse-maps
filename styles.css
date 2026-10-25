@@ -860,3 +860,9 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .postctl .pmode{flex-wrap:wrap;row-gap:4px}
 .ivm .postctl .pmode #pmode{max-width:100%}
 .ivm .postctl .pmode #pmode button{padding-left:8px;padding-right:8px}
+/* Display → Show the way home: which note it finds the way to */
+.ivm .dlist .bacto{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:0 4px 6px 34px;font:400 11.5px var(--font-interface,inherit);color:var(--muted);max-width:280px}
+.ivm .dlist .bacto[hidden]{display:none}
+.ivm .dlist .bacto b{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+.ivm .dlist .bacto .pchip[hidden]{display:none}
+.ivm .dlist .bacto .pchip:disabled{opacity:.45;cursor:default}

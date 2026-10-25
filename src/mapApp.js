@@ -2881,6 +2881,34 @@ function visTarget(xs, ys){   // camera that frames every visible note, given wh
 }
 function rad(i){ if (view === "stars") return Math.max(.7*BOOST, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1)*BOOST, 16)); return Math.max((view === "lincal" ? 1.8 : 1.1)*BOOST, Math.min(R[i]*Math.pow(k, .55)*(geo3On() ? DS3[i] : view === "lincal" ? 1.5 : 1)*BOOST, 30)); }   // 3D Geometric: nearer notes are bigger
 
+// ---------- Way home (Kevin Bacon): from the note you're on, the fewest links back to one note (Home by default) ----------
+// Any map: the path lights up as a line through each note on it, named, with the count of steps. Display → Show the way home.
+let BACON = pref("iv-bacon", false) === true, BACTO = pref("iv-bacto", null);   // BACTO: the path of the note to find the way to (null: Home)
+const BAC = { key: "", par: null, to: -1 };
+function baconHome(){ let r = -1, b = -1; for (let i=0;i<n;i++) if (vis[i] && N[i].home && !ARCH[i]) { const d = out[i].length + inn[i].length; if (d > b) { b = d; r = i; } }
+  if (r < 0) for (let i=0;i<n;i++) if (vis[i] && !ARCH[i] && (r < 0 || byRank(i, r) < 0)) r = i; return r; }
+function baconTarget(){ if (BACTO) { const i = N.findIndex(d => d.path === BACTO); if (i >= 0 && vis[i]) return i; } return baconHome(); }
+function baconPar(){ let vc = 0; for (let i=0;i<n;i++) if (vis[i]) vc++; const key = (BACTO || "") + ":" + vc; if (key === BAC.key) return BAC;
+  const t = baconTarget(), par = new Int32Array(n).fill(-2); BAC.key = key; BAC.to = t; BAC.par = par; if (t < 0) return BAC;
+  par[t] = -1; let q = [t]; while (q.length) { const nq = []; for (const i of q) for (const j of UND(i)) { if (par[j] !== -2 || !vis[j] || ARCH[j]) continue; par[j] = i; nq.push(j); } q = nq; }
+  return BAC; }
+function baconPath(i){ const b = baconPar(); if (i < 0 || b.to < 0 || b.par[i] === -2) return null; const p = []; let g = 0; while (i >= 0 && g++ < 500) { p.push(i); i = b.par[i]; } return p; }
+function drawBacon(){ const hl = sel >= 0 ? sel : hover; if (hl < 0 || !vis[hl]) return; const b = baconPar(); if (b.to < 0) return;
+  const p = baconPath(hl), to = N[b.to].title, x0 = sx(X[hl]), y0 = sy(Y[hl]);
+  const badge = t => { ctx.font = `600 11px ${css.mono}`; ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.fillStyle = css.accent; ctx.strokeText(t, x0, y0 + 24); ctx.fillText(t, x0, y0 + 24); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; };
+  if (!p) { badge(`No way to ${to} from here`); return; }
+  if (p.length < 2) return;
+  ctx.save(); ctx.lineCap = ctx.lineJoin = "round";
+  const line = () => { ctx.beginPath(); p.forEach((i, q) => { const x = sx(X[i]), y = sy(Y[i]); if (q) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); };
+  ctx.strokeStyle = css.bg; ctx.globalAlpha = .7; ctx.lineWidth = 7; line(); ctx.strokeStyle = css.accent; ctx.globalAlpha = .95; ctx.lineWidth = 3; line();
+  ctx.globalAlpha = 1; for (const i of p) { const x = sx(X[i]), y = sy(Y[i]), r = i === b.to ? 7 : 4.5; ctx.fillStyle = css.accent; ctx.strokeStyle = css.bg; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill(); ctx.stroke(); }
+  // each note on the way is named (unless the map named it already); the count of steps sits under the note it leads to
+  const named = new Set(LH.map(h => h[4])); ctx.font = `600 11.5px ${css.body}`; ctx.textBaseline = "middle"; ctx.lineWidth = 4;
+  for (const i of p.slice(1)) { if (named.has(i)) continue; const x = sx(X[i]) + 10, y = sy(Y[i]) - 10; ctx.strokeStyle = css.bg; ctx.fillStyle = css.ink; ctx.strokeText(N[i].title, x, y); ctx.fillText(N[i].title, x, y); }
+  const st = p.length - 1, tx_ = sx(X[b.to]), ty_ = sy(Y[b.to]) + 12; ctx.font = `600 11px ${css.mono}`; ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.strokeStyle = css.bg; ctx.fillStyle = css.accent;
+  const t = `${st} ${st === 1 ? "step" : "steps"} away`; ctx.strokeText(t, tx_, ty_); ctx.fillText(t, tx_, ty_);
+  ctx.restore(); }
+
 function render(){
   raf = 0;
   if (!(W > 0 && H > 0) || !isFinite(k) || !isFinite(tx) || !isFinite(ty)) return;   // hidden (a background tab or a base still laying out): nothing to draw yet
@@ -3015,6 +3043,7 @@ function render(){
   for (const i of [sel, hover]) if (i >= 0) { const x = sx(X[i]), y = sy(Y[i]); ctx.strokeStyle = css.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x,y,rad(i)+3,0,6.2832); ctx.stroke(); }
 
   labels(lit);
+  if (BACON) drawBacon();
   axisLabels();
   if (GROWV() && senseT != null) drawGrowth();
   if (swap) Object.assign(css, swap);
@@ -4566,10 +4595,19 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   vgCb.checked = VGRID; vgCb.onchange = () => { VGRID = vgCb.checked; save("iv-vgrid", VGRID); syncTB(); };
   const alSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Draw every link on the map, faintly" } }); const alCb = alSw.createEl("input", { type: "checkbox" }); alSw.createEl("i", { cls: "sw" }); alSw.createSpan({ text: "Show all links" });
   alCb.onchange = () => { if (alCb.checked !== showAll) $("#alllinks").click(); };
+  // Show the way home (Kevin Bacon): from the note you're on, the fewest links back to Home, or to a note you choose
+  const bcSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Kevin Bacon: from the note you're on, light up the fewest links back to Home (or a note you choose)" } }); const bcCb = bcSw.createEl("input", { type: "checkbox" }); bcSw.createEl("i", { cls: "sw" }); bcSw.createSpan({ text: "Show the way home" });
+  const bcTo = DI.p.createDiv({ cls: "bacto" }); bcTo.createSpan({ cls: "btl", text: "To" }); const bcName = bcTo.createEl("b");
+  const bcUse = bcTo.createEl("button", { cls: "pchip", text: "Use this note", attr: { type: "button" } }), bcHome = bcTo.createEl("button", { cls: "pchip", text: "Home", attr: { type: "button" } });
+  const syncBac = () => { bcCb.checked = BACON; bcTo.hidden = !BACON; const t = baconTarget(); bcName.setText(t >= 0 ? N[t].title : "nothing"); bcUse.disabled = sel < 0 || (t >= 0 && sel === t); bcHome.hidden = !BACTO;
+    bcUse.title = sel < 0 ? "Click a note on the map first" : `Find the way to ${N[sel].title} instead`; };
+  bcCb.onchange = () => { BACON = bcCb.checked; save("iv-bacon", BACON); syncBac(); draw(); };
+  bcUse.onclick = e => { e.stopPropagation(); if (sel < 0) return; BACTO = N[sel].path; save("iv-bacto", BACTO); syncBac(); draw(); };
+  bcHome.onclick = e => { e.stopPropagation(); BACTO = null; save("iv-bacto", null); syncBac(); draw(); };
   const thSec = DI.p.createDiv({ cls: "fsec thsec" }); thSec.createDiv({ cls: "pt", text: "Theme" });
   DI.p.appendChild($("#scorebtn")); $("#scorebtn").className = "drow dlink"; $("#scorebtn").setText("How notes are scored ›");
   $("#scorebtn").addEventListener("click", () => closePops());
-  opener(DI, () => { alCb.checked = showAll; });
+  opener(DI, () => { alCb.checked = showAll; syncBac(); }); syncBac();
   // Find, Follow note (an icon), Saved, and the ︿ that tucks the bar away
   right.appendChild(root.querySelector("header .search"));
   // Focus on active note (the note and its neighbors), then Sync active note with the Obsidian editor
