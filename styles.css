@@ -812,7 +812,6 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm[data-vgrid="1"] header.tb2 #vsegms > #vmore{order:3}
 .ivm[data-vgrid="1"] header.tb2 #vsegms > #vseg,.ivm[data-vgrid="1"] header.tb2 #vsegms{flex:none}
 .ivm[data-vgrid="1"] header.tb2 .tbl{flex:0 0 auto}
-.ivm[data-vgrid="1"] header.tb2 #dispbtn .tbl2{display:none}
 @container ivm (min-width:761px){.ivm[data-vgrid="1"] header.tb2 .tbr{flex:0 1 auto;min-width:0}.ivm[data-vgrid="1"] header.tb2 .search{flex:0 1 200px;min-width:120px}}
 @container ivm (max-width:1199px){.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{display:none}.ivm[data-vgrid="1"] header.tb2 .tbl{flex:1 1 auto}.ivm[data-vgrid="1"] header.tb2 #vsegms{flex:0 1 auto}}
 
@@ -844,3 +843,5 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm #driftbar .dwob.dim{opacity:.5}
 .ivm .yrctl .srange .yrh.lft{transform:translateX(-100%)}
 .ivm .yrctl .srange .yrh.rgt{transform:none}
+/* Show more map names: Filter and Display keep their words while there's room, then drop to icons together */
+@container ivm (max-width:1479px){.ivm[data-vgrid="1"] header.tb2 .tbb .tbl2{display:none}}
