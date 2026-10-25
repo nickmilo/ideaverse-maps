@@ -3,7 +3,7 @@
 import { sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 
-export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "graph", "mosaic", "people"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
+export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -81,7 +81,7 @@ let fullY = fromY;   // kept equal to the start: every shown year at full scale
 let YR0 = Math.max(SLMIN, Math.min(NOW_Y, +pref("iv-yr0", SLMIN))), YR1 = Math.max(SLMIN, Math.min(NOW_Y, +pref("iv-yr1", NOW_Y))); if (YR0 > YR1) [YR0, YR1] = [YR1, YR0];
 fromY = fullY = YR0;
 // every map of the whole vault shares it; Posters and People have their own sliders, Linear its own years
-const YRV = new Set(["emergence", "spacetime", "gravity", "stars", "sense", "graph", "chord", "treemap", "mosaic", "tree", "shelf", "skyline", "planet", "quincunx", "arc"]);
+const YRV = new Set(["emergence", "spacetime", "gravity", "stars", "sense", "graph", "ideaverse", "chord", "treemap", "mosaic", "tree", "shelf", "skyline", "planet", "quincunx", "arc"]);
 // "Show notes outside the date range": off by default, so these maps show only the years picked, and no undated notes;
 // on, notes with no date sit in the No date strip, older ones in a Before strip, newer ones in an After strip
 let YRALL = pref("iv-yrall", true) !== false;   // on by default (Nick, Oct 24)
@@ -879,19 +879,19 @@ function drawGrowth(){
 function popCentre(i){
   if (view === "stars") { const b = BOD[i] >= 0 ? BODIES[BOD[i]] : null;
     return b ? (([bx_, by_]) => [sx(bx_), sy(by_), Math.max(40, b.r*k*1.25)])(bodyPos(b)) : [sx(UC.x), sy(UC.y), Math.max(60, (UB.x1 - UB.x0)*k*.3)]; }
-  if (view === "graph") return [sx((expBox.x0 + expBox.x1) / 2), sy((expBox.y0 + expBox.y1) / 2), Math.max(50, (expBox.x1 - expBox.x0) * k * .3)];   // the Obsidian map: from its middle
+  if (GRV()) return [sx((expBox.x0 + expBox.x1) / 2), sy((expBox.y0 + expBox.y1) / 2), Math.max(50, (expBox.x1 - expBox.x0) * k * .3)];   // the Obsidian map: from its middle
   return [sx(SC_.x), sy(SC_.y), SR0*k*1.25];
 }
 let SOFT = 1;
 function drawPops(){
   // the Obsidian map is busy already: its comets and swirls are fainter and travel less far (rain stays as it is)
-  SOFT = view === "graph" ? .4 : 1;
+  SOFT = GRV() ? .4 : 1;
   if (senseT != null && POP.some(v => v)) { const now = popNow, few = [], fly = new Map();
     for (let i=0;i<n;i++) { const t0 = POP[i]; if (!t0 || now < t0 || now - t0 >= popMs() || !vis[i] || (view === "sense" && !inYears(i))) continue; few.push(i); }
     few.sort((a,b) => N[a].level - N[b].level);
     ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const taken = LH.map(b => b.slice(0, 4));
     few.sort((a,b) => N[b].level - N[a].level || N[b].score - N[a].score);   // biggest names claim label space first; draw order doesn't matter much
-    for (const i of few) { const e = (now - POP[i])/popMs(), lv = N[i].level, col = view === "stars" ? SPAL[SC[i]] : view === "graph" ? (GRAD[lv] ? GRAD[lv][0] : css.accent) : ARCH4[quadOf(i)][3], r = Math.max(2.2, rad(i));
+    for (const i of few) { const e = (now - POP[i])/popMs(), lv = N[i].level, col = view === "stars" ? SPAL[SC[i]] : GRV() ? (GRAD[lv] ? GRAD[lv][0] : css.accent) : ARCH4[quadOf(i)][3], r = Math.max(2.2, rad(i));
       const hx = sx(X[i]), hy = sy(Y[i]); let x = hx, y = hy, sc = 1;
       if (senseFx === "pop") {   // popcorn: burst big, hop, settle
         const burst = e < .14 ? e/.14 : 1, settle = e < .14 ? 0 : (e - .14)/.86, big = (2.6 + lv*1.3)/Math.sqrt(1 + few.length/20);
@@ -1025,7 +1025,7 @@ function setView(v){
   else if (view === "spacetime" && v !== "spacetime" && modeKeep) { mode = modeKeep; modeKeep = null; }
   root.querySelectorAll("#xseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.x === mode)));
   ungrow(); view = v; save("iv-view", v); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
-  root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === (view === "spacetime" ? "emergence" : view))));
+  root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === tabOf())));
   root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : "";
   if (yrNarrow()) { computeVis(); layoutACE(); layoutTime(); layoutProp(); updateCounts(); }
   syncRange(); legend(); morph(true, () => fitTarget());
@@ -1291,13 +1291,18 @@ function quinSeeds(m){
 // #1 at the core, #2–7 on the six points; then each tetrahedron (a face of the octahedron and the core) gets a note
 // at its center, the emptiest first, which splits it in four. Other notes gather in a small cloud around their top note.
 // the Obsidian map in 3D uses the same turntable camera as the 3D Geometric sketches
-let GR3D = pref("iv-gr3d", false) === true, GR3F = 2000;
-const geo3On = () => (view === "quincunx" && (GEO === "octa" || GEO === "shells")) || (view === "graph" && GR3D);
+// Obsidian (flat, draggable) and Ideaverse (the same graph in 3D) share the graph engine
+let GR3F = 2000;
+// which main tab a map lights: Space-Time is Emergence's, Tesla is the chord map turned inside a glass globe
+function tabOf(){ return view === "spacetime" ? "emergence" : view === "chord" && CSPH === "in" ? "tesla" : view; }
+function GRV(){ return view === "graph" || view === "ideaverse"; }
+function IDV(){ return view === "ideaverse"; }
+const geo3On = () => (view === "quincunx" && (GEO === "octa" || GEO === "shells")) || (GRV() && IDV());
 let g3Yaw = .55, g3Pitch = .42; { const c = pref("iv-g3cam", null); if (Array.isArray(c)) { g3Yaw = +c[0] || g3Yaw; g3Pitch = +c[1] || g3Pitch; } }
 const G3 = new Float32Array(3*n); let G3P = [], G3E = [];
 const g3Keep = () => save("iv-g3cam", [+g3Yaw.toFixed(3), +g3Pitch.toFixed(3)]);
 function g3Cam(x, y, z){ const cy = Math.cos(g3Yaw), sy_ = Math.sin(g3Yaw), cp = Math.cos(g3Pitch), sp = Math.sin(g3Pitch);
-  const x1 = x*cy + z*sy_, z1 = -x*sy_ + z*cy, y2 = y*cp - z1*sp, z2 = y*sp + z1*cp, f = view === "graph" ? GR3F : QS*4.5, sc = f/Math.max(f*.15, f + z2); return [x1*sc, y2*sc, z2, sc]; }
+  const x1 = x*cy + z*sy_, z1 = -x*sy_ + z*cy, y2 = y*cp - z1*sp, z2 = y*sp + z1*cp, f = GRV() ? GR3F : QS*4.5, sc = f/Math.max(f*.15, f + z2); return [x1*sc, y2*sc, z2, sc]; }
 function geoProj(){ for (let i=0;i<n;i++) { const q = g3Cam(G3[3*i], G3[3*i+1], G3[3*i+2]); EX[i] = q[0]; EY[i] = q[1]; DS3[i] = Math.max(.45, Math.min(2.2, q[3]*q[3])); } }
 function octaSeeds(m){
   const P = [[0, 0, 0], [0, -QS, 0], [QS, 0, 0], [0, 0, QS], [-QS, 0, 0], [0, 0, -QS], [0, QS, 0]], pts = P.slice(0, Math.min(m, 7));
@@ -2253,11 +2258,11 @@ EXP.mosaic = {
 const GPH = { key: "", x: null, y: null, run: 0 };
 function layoutGraph(){
   const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
-  const key = (GR3D ? "3d:" : "") + ids.length + ":" + ids.reduce((a, i) => (a * 31 + i) | 0, 7);
+  const key = (IDV() ? "3d:" : "") + ids.length + ":" + ids.reduce((a, i) => (a * 31 + i) | 0, 7);
   if (GPH.key !== key) graphSim(ids, key);
-  if (GR3D) { for (let i=0;i<n;i++) { G3[3*i] = GPH.x[i]; G3[3*i+1] = GPH.y[i]; G3[3*i+2] = GPH.z ? GPH.z[i] : 0; } geoProj(); }
+  if (IDV()) { for (let i=0;i<n;i++) { G3[3*i] = GPH.x[i]; G3[3*i+1] = GPH.y[i]; G3[3*i+2] = GPH.z ? GPH.z[i] : 0; } geoProj(); }
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (let i=0;i<n;i++) { if (!GR3D) { EX[i] = GPH.x[i]; EY[i] = GPH.y[i]; } if (vis[i]) { if (EX[i] < x0) x0 = EX[i]; if (EX[i] > x1) x1 = EX[i]; if (EY[i] < y0) y0 = EY[i]; if (EY[i] > y1) y1 = EY[i]; } }
+  for (let i=0;i<n;i++) { if (!IDV()) { EX[i] = GPH.x[i]; EY[i] = GPH.y[i]; } if (vis[i]) { if (EX[i] < x0) x0 = EX[i]; if (EX[i] > x1) x1 = EX[i]; if (EY[i] < y0) y0 = EY[i]; if (EY[i] > y1) y1 = EY[i]; } }
   if (!isFinite(x0)) { x0 = y0 = -100; x1 = y1 = 100; } expBox = { x0: x0 - 40, y0: y0 - 40, x1: x1 + 40, y1: y1 + 40 }; }
 // d3-force style: many-body (Barnes–Hut) + links + centering, velocity Verlet with alpha cooling
 function graphForce(m, EA, EB, x, y, act, z) {   // act: Int32Array of node indices that move; z: a third axis for 3D (optional)
@@ -2314,7 +2319,7 @@ function graphSim(ids, key){
   const ea = [], eb = [], seen = new Set();
   for (const [a, b] of E) { const p = loc[a], q = loc[b]; if (p < 0 || q < 0 || p === q) continue; const kk = p < q ? p * m + q : q * m + p; if (seen.has(kk)) continue; seen.add(kk); ea.push(p); eb.push(q); }
   const deg = new Int32Array(m); for (let e = 0; e < ea.length; e++) { deg[ea[e]]++; deg[eb[e]]++; }
-  const x = new Float64Array(m), y = new Float64Array(m), z = GR3D ? new Float64Array(m) : null, lk = []; for (let j = 0; j < m; j++) if (deg[j]) lk.push(j);
+  const x = new Float64Array(m), y = new Float64Array(m), z = IDV() ? new Float64Array(m) : null, lk = []; for (let j = 0; j < m; j++) if (deg[j]) lk.push(j);
   lk.sort((a, b) => N[ids[b]].score - N[ids[a]].score || (N[ids[a]].path < N[ids[b]].path ? -1 : 1));
   // a spiral to start from (a ball in 3D), the highest-scoring notes in the middle
   lk.forEach((j, q) => { if (!z) { const r = 10 * Math.sqrt(.5 + q), a = q * Math.PI * (3 - Math.sqrt(5)); x[j] = r * Math.cos(a); y[j] = r * Math.sin(a); return; }
@@ -2334,10 +2339,10 @@ function graphSim(ids, key){
   // kept for dragging: pin a note to the pointer and wake the physics; let go and it cools and settles again
   GPH.F = F; GPH.loc = loc; GPH.deg = deg; GPH.wake = () => { more = true; if (!looping && run === GPH.run) { looping = true; lastF = 0; RAF(frame); } };
   if (!more) return; looping = true;
-  const frame = now => { const gapMs = lastF ? now - lastF : 16; lastF = now; if (run !== GPH.run || dead || view !== "graph") { looping = false; if (run === GPH.run && more && !GPH.drag) GPH.key = ""; return; }
+  const frame = now => { const gapMs = lastF ? now - lastF : 16; lastF = now; if (run !== GPH.run || dead || !GRV()) { looping = false; if (run === GPH.run && more && !GPH.drag) GPH.key = ""; return; }
     // slow frames get more physics each, so the settle takes about the same time on any machine
     const f0 = performance.now(), bud = Math.min(400, Math.max(14, gapMs * .6)); while (more && performance.now() - f0 < bud) step(); GPH.stepMs = performance.now() - f0; place();
-    if (GR3D) { for (let i=0;i<n;i++) if (vis[i]) { G3[3*i] = GPH.x[i]; G3[3*i+1] = GPH.y[i]; G3[3*i+2] = GPH.z[i]; } geoProj(); } else for (let i=0;i<n;i++) if (vis[i]) { EX[i] = GPH.x[i]; EY[i] = GPH.y[i]; }
+    if (IDV()) { for (let i=0;i<n;i++) if (vis[i]) { G3[3*i] = GPH.x[i]; G3[3*i+1] = GPH.y[i]; G3[3*i+2] = GPH.z[i]; } geoProj(); } else for (let i=0;i<n;i++) if (vis[i]) { EX[i] = GPH.x[i]; EY[i] = GPH.y[i]; }
     const d0 = performance.now(); if (!morphing) { X.set(EX); Y.set(EY); if (!GPH.touched) { layoutGraph(); const t = fitTarget(); k = t.k; tx = t.tx; ty = t.ty; } draw(); } GPH.drawMs = performance.now() - d0; GPH.morph = morphing;
     if (more) RAF(frame); else { looping = false; layoutGraph(); buildGrid(); if (!GPH.touched) fit(true); } };
   // the view follows the settling graph until you zoom or drag it yourself
@@ -2353,8 +2358,10 @@ EXP.graph = {
     ctx.strokeStyle = css["edge-faint"]; ctx.globalAlpha = (sel >= 0 || hover >= 0 ? .75 : 1) * Math.min(1, .45 + .55 / stp); ctx.lineWidth = 1; ctx.beginPath();
     for (let q = 0; q < on.length; q += stp) { const [a, b] = E[on[q]]; ctx.moveTo(sx(X[a]), sy(Y[a])); ctx.lineTo(sx(X[b]), sy(Y[b])); }
     ctx.stroke(); ctx.globalAlpha = 1; },
-  legend: "Obsidian: every note pulled toward the notes it links to and pushed away from the rest, like Obsidian's graph view, drawn with the emergence symbols so hubs and maps stand out. Unlinked notes ring the outside. Drag a note and its links tug the rest along; let go and it settles. In 3D (click the Obsidian tab) it's a ball: drag to turn it, scroll to fly in. Click a note to light up its links; the Timelapse grows it, and Focus mode and Wander Mode work here too.",
+  legend: "Obsidian: every note pulled toward the notes it links to and pushed away from the rest, like Obsidian's graph view, drawn with the emergence symbols so hubs and maps stand out. Unlinked notes ring the outside. Drag a note and its links tug the rest along; let go and it settles. Click a note to light up its links; the Timelapse grows it, and Focus mode and Wander Mode work here too.",
 };
+
+EXP.ideaverse = { ...EXP.graph, legend: "Ideaverse: your whole vault as a ball of notes, pulled together by their links and pushed apart by each other, drawn with the emergence symbols. Drag to turn it, scroll to fly in; Orbit in Animations turns it (Earth and Spinning too). Unlinked notes sit on a shell around the rest. Click a note to light up its links." };
 
 // ---------- PKM Planet: the six domains of personal knowledge as a world map on a table ----------
 // Each note settles around a landmark in its domain (by folder and title); hubs and maps sit at the heart of each
@@ -2662,7 +2669,7 @@ function driftFrame(now){
     render(); return; }
   if (geo3On()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;
     // (the Obsidian map turns faster, still swaying as it goes: Lively as fast as Spinning, Slow what Lively was at 2½×, Calm what Slow was)
-    const gSp = view === "graph" ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[driftSpeed] : null;
+    const gSp = GRV() ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[driftSpeed] : null;
     g3Yaw -= (gSp != null ? gSp : spin)*1.6*dt; g3Pitch = earthy() ? 20*Math.PI/180 : .35 + .3*Math.sin(t*2*Math.PI/((breath || 30)*1.4)); geoProj(); X.set(EX); Y.set(EY); render(); return; }
   if (sphOn()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;   // the globe turns slowly, tilting as it goes
     csYaw += spin*1.6*dt; csPitch = earthy() ? 20*Math.PI/180 : .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); return; }
@@ -2890,7 +2897,7 @@ function render(){
       const upward = N[j].level > N[hl].level || (N[j].level === N[hl].level && Y[j] < Y[hl]);
       ctx.strokeStyle = edgeColor(hl, j, upward); ctx.globalAlpha = (sel >= 0 ? .75 : .5)*many; ctx.lineWidth = sel >= 0 ? 1.4 : 1;
       const x1 = sx(X[hl]), y1 = sy(Y[hl]), x2 = sx(X[j]), y2 = sy(Y[j]);
-      let mx = (x1+x2)/2, my = (y1+y2)/2 - (view === "planet" ? Math.hypot(x2-x1, y2-y1)*.55 : view === "graph" ? 0 : Math.abs(x2-x1)*.12);   // PKM Planet: links arc up off the table
+      let mx = (x1+x2)/2, my = (y1+y2)/2 - (view === "planet" ? Math.hypot(x2-x1, y2-y1)*.55 : GRV() ? 0 : Math.abs(x2-x1)*.12);   // PKM Planet: links arc up off the table
       if (view === "chord") { const cx = sx(CH_C.x), cy = sy(CH_C.y); mx = cx + ((x1+x2)/2 - cx)*.25; my = cy + ((y1+y2)/2 - cy)*.25; }
       if (sphOn()) { const pts = csArc(DTH[hl], DPH[hl], DTH[j], DPH[j], 26); ctx.beginPath(); csStroke(pts); ctx.stroke();
         if (csOut()) { const ga = ctx.globalAlpha; ctx.globalAlpha = ga*.45; ctx.setLineDash([3, 4]); ctx.beginPath(); let on = false;   // the part behind the globe: dashed, so every link shows
@@ -2916,7 +2923,7 @@ function render(){
   const vx0 = -30, vx1 = W+30, vy0 = -30, vy1 = H+30;
   // hovering fades the rest gently; a click (selection) fades it fully, like the link lines
   // the rest fades to a quarter when a note is picked; on the Obsidian map half as much (to about 60%), so the graph stays visible around it
-  const dim = lit && !(focus >= 0 && (sel === focus || sel < 0) && hover < 0) ? (sel >= 0 ? (view === "graph" ? .62 : .25) : (view === "graph" ? .85 : .7)) : 1;
+  const dim = lit && !(focus >= 0 && (sel === focus || sel < 0) && hover < 0) ? (sel >= 0 ? (GRV() ? .62 : .25) : (GRV() ? .85 : .7)) : 1;
   if (view === "stars") starsNotes(lit, dim); else if (expOn() && EXP[view].notes) EXP[view].notes(lit, dim); else {
   for (const lv of [1,2]) for (const ar of [1,0]) {   // archive notes as rings, vault notes as dots
     ctx.globalAlpha = dim; ctx.beginPath();
@@ -3152,7 +3159,7 @@ function labels(lit){
 }
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function axisLabels(){
-  if (expOn()) { if (EXP[view].labels) EXP[view].labels(); if (view === "graph") drawPops(); return; }   // the Obsidian map's Timelapse: comets, rain or swirls, as on Starfield
+  if (expOn()) { if (EXP[view].labels) EXP[view].labels(); if (GRV()) drawPops(); return; }   // the Obsidian map's Timelapse: comets, rain or swirls, as on Starfield
   if (domeOn()) { domeLabels(); return; }
   if (view === "stars") { starLabels(); drawPops(); return; }
   if (view === "sense") { senseLabels(); return; }
@@ -3263,7 +3270,7 @@ function pick(px, py){
 const tip = $("#tip"); tip.addClass("ivm-tip"); doc.body.appendChild(tip);
 let drag = null, moved = false; const pts = new Map();
 cv.addEventListener("pointerdown", e => { lastDown = [e.offsetX, e.offsetY]; GPH.drag = null;
-  if (view === "graph" && !GR3D && e.button === 0 && !e.shiftKey && GPH.F) { const i = pick(e.offsetX, e.offsetY), j = i >= 0 ? GPH.loc[i] : -1; if (j >= 0 && GPH.deg[j] > 0) GPH.drag = { i, j }; } driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, cyaw: csYaw, cpitch: csPitch, gyaw: g3Yaw, gpitch: g3Pitch, orbit: (s3dOn() || domeOn() || sphOn() || geo3On()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
+  if (GRV() && !IDV() && e.button === 0 && !e.shiftKey && GPH.F) { const i = pick(e.offsetX, e.offsetY), j = i >= 0 ? GPH.loc[i] : -1; if (j >= 0 && GPH.deg[j] > 0) GPH.drag = { i, j }; } driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, cyaw: csYaw, cpitch: csPitch, gyaw: g3Yaw, gpitch: g3Pitch, orbit: (s3dOn() || domeOn() || sphOn() || geo3On()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
 cv.addEventListener("contextmenu", e => e.preventDefault());   // right-drag pans (as in Miro); no menu on the map
 cv.addEventListener("pointermove", e => {
   if (pts.has(e.pointerId)) {
@@ -3454,8 +3461,8 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", msv = view === "mosaic", ppv = view === "people", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view))) || view === "graph";   // the Layout section shows only where there are layout settings
-  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv; const g3s = $("#gr3seg"); if (g3s) g3s.hidden = view !== "graph"; const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } }
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", msv = view === "mosaic", ppv = view === "people", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view)));   // the Layout section shows only where there are layout settings
+  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv;  const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } }
   if (lay) { $("#startms").hidden = true; $("#sensems").hidden = true; $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = true; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
@@ -3464,7 +3471,7 @@ function syncRange(){
   if (senseT == null && typeof senseSteps === "function" && GROWV()) { SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; }
   $("#xmore").value = AXES[mode] && mode !== "rank" ? mode : ""; $("#xmore").classList.toggle("on", !!(AXES[mode] && mode !== "rank"));
   root.querySelectorAll("#subseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.o === subOrder)));
-  root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === (view === "spacetime" ? "emergence" : view))));
+  root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === tabOf())));
   root.querySelectorAll("#laneseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.l === lanes)));
   syncFold();
   syncColl();
@@ -4007,7 +4014,7 @@ function applySaved(v){
     if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
     ungrow();   // back to today's levels; a saved time-lapse point re-grows them below
     view = nv; save("iv-view", view); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
-    root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === (view === "spacetime" ? "emergence" : view))));
+    root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === tabOf())));
     root.dataset.view = view; syncTimebar(); }   // the map's buttons and layout follow the view
   modeKeep = null; mode = (v.mode === "time" || v.mode === "ace" || AXES[v.mode]) ? v.mode : "time"; if (view === "spacetime") mode = "time"; else save("iv-x", mode);
   folders = (v.folders || FOLD).filter(f => FOLD.includes(f)); if (!folders.length) folders = [...FOLD]; save("iv-folders", folders); subOff = Array.isArray(v.subsOff) ? new Set(v.subsOff) : defSubs(); save("iv-subsoff", [...subOff]); subCompute();
@@ -4322,7 +4329,12 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   left.appendChild(root.querySelector(".brand .duo")); left.appendChild($("#vsegms")); { const fbar = $("#focusbar"); fbar.classList.add("mapfb"); cv.parentElement.appendChild(fbar); }   // the focus bar floats at the top of the map
   // the note and link counts sit at the map's top left (the plugin's name sits at the top right, clear of the note panel)
   { const st = $("#stats"); st.classList.add("mapstats"); cv.parentElement.appendChild(st); }
-  // a tab for the current map when it lives under More (Corona, Bookshelf, Spiral…), and More itself
+  // the main tabs: Emergence, Ideaverse, Starfield, Tesla. Gravity and Sensemaking move to the top of More
+  { const vs = $("#vseg"), em = vs.querySelector('button[data-v="emergence"]'), st = vs.querySelector('button[data-v="stars"]');
+    const mk = (v, label, tip, go) => { const b = doc.createElement("button"); b.dataset.v = v; b.textContent = label; b.setAttribute("aria-label", tip); b.onclick = e => { if ((v === "ideaverse" && view === v) || (v === "tesla" && view === "chord" && CSPH === "in")) { e.stopPropagation(); toggleMapOpts(b); return; } closePops(); go(); root.querySelectorAll("#vseg button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.v === tabOf()))); if (typeof syncTB === "function") syncTB(); }; return b; };
+    em.after(mk("ideaverse", "Ideaverse", "Your whole vault as a ball of notes in 3D: drag to turn it, scroll to fly in", () => setView("ideaverse")));
+    st.after(mk("tesla", "Tesla", "Every note on a glass globe, grouped by kind; links cross through the inside", () => goChord("in")));
+    for (const v of ["gravity", "sense"]) { const b = vs.querySelector(`button[data-v="${v}"]`); if (b) { b.hidden = true; b.classList.add("vburied"); } } }
   // it sits outside the scrolling tabs, beside More, so it never scrolls out of sight
   // every main tab gets the ▾ when its map has a menu (Gravity and Sensemaking have Years shown)
   for (const v_ of ["sense"]) { const b_ = root.querySelector(`#vseg button[data-v="${v_}"]`); if (b_ && !b_.querySelector(".vcar")) { b_.createSpan({ cls: "vcar", text: " ▾" }); b_.setAttribute("aria-haspopup", "true"); } }
@@ -4337,6 +4349,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     $("#goshelf").after(gp); gp.onclick = () => { closePops(); driftStop(); setView("posters"); };
     // Graph: our take on the core graph view, first in the list
     const gg = doc.createElement("button"); gg.className = "chip"; gg.id = "gograph"; gg.textContent = "Obsidian"; gg.setAttribute("aria-label", "Like Obsidian's graph view: notes pulled together by their links, drawn with the emergence symbols");
+    for (const [id, v, label, tip] of [["gogravity", "gravity", "Gravity", "The five levels as rings: hubs at the center, unlinked notes on the rim"], ["gosense", "sense", "Sensemaking", "Four ways of working with notes, as a 2×2"]]) {
+      const b = doc.createElement("button"); b.className = "chip"; b.id = id; b.textContent = label; b.setAttribute("aria-label", tip); $("#gochord").before(b); b.onclick = () => { closePops(); driftStop(); setView(v); }; }
+    { const co = $("#gocso"); if (co) co.textContent = "Corona"; const te = $("#gocsi"); if (te) { te.textContent = "Tesla"; te.hidden = true; te.classList.add("gone"); } }
     $("#gochord").before(gg); gg.onclick = () => { closePops(); driftStop(); setView("graph"); };
     // Mosaic: every note a tile, after Treemap
     const gm = doc.createElement("button"); gm.className = "chip"; gm.id = "gomosaic"; gm.textContent = "Mosaic"; gm.setAttribute("aria-label", "Every note a tile, set like stones: Level 5 at the heart, each level a frame around it");
@@ -4352,11 +4367,6 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const row = pc.createEl("label", { cls: "prow" }); row.createSpan({ text: "Show" }); const r = row.createEl("input", { type: "range" }); r.min = "5"; r.max = "150"; r.step = "1"; r.value = String(PPL.max);
     pc.createDiv({ cls: "phint pplv" }); let t_ = 0;
     r.oninput = () => { PPL.max = +r.value; win.clearTimeout(t_); t_ = win.setTimeout(() => { save("iv-pplmax", PPL.max); morph(true, () => fitTarget()); }, 180); }; }
-  // the Obsidian map: flat, or a ball to turn in your hand
-  { const gs = $("#laygrp").createDiv({ cls: "seg", attr: { id: "gr3seg", role: "group", "aria-label": "Obsidian map in 2D or 3D" } }); gs.hidden = true;
-    for (const [v, t, tip] of [[false, "2D", "Flat, like Obsidian's graph: drag a note and the rest follow"], [true, "3D", "A ball of notes: drag to turn it, scroll to fly in"]]) {
-      const b = gs.createEl("button", { text: t, attr: { type: "button", "aria-label": tip, "aria-pressed": String(GR3D === v) } });
-      b.onclick = e => { e.stopPropagation(); if (GR3D === v) return; GR3D = v; save("iv-gr3d", v); gs.querySelectorAll("button").forEach((x, j) => x.setAttribute("aria-pressed", String((j === 1) === v))); root.dataset.dome = geo3On() ? "1" : ""; GPH.key = ""; morph(true, () => fitTarget()); legend(); }; } }
   // Mosaic's own option: Emergence or Scattered
   { const ms_ = $("#laygrp").createDiv({ cls: "seg", attr: { id: "mosseg", role: "group", "aria-label": "Mosaic" } }); ms_.hidden = true;
     for (const [v, t, tip] of [["emergence", "Emergence", "Level 5 at the heart, each level a frame around it"], ["scatter", "Scattered", "The same tiles, in no order"]]) {
@@ -4397,8 +4407,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
   const VN = () => ({ emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemaking", arc: "Arc",
     chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
-    shelf: "Bookshelf", posters: "Posters", graph: "Obsidian", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
-  const CORE = new Set(["emergence", "spacetime", "gravity", "stars", "sense"]);
+    shelf: "Bookshelf", posters: "Posters", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
+  const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars"]);
   // the current map's menu: its variants (Emergence, Starfield) and the options that belong to it alone
   const mo = $("#vsegms").createDiv({ cls: "mspop mapopts", attr: { id: "mapopts", role: "dialog", "aria-label": "This map" } }); mo.hidden = true;
   const moT = mo.createDiv({ cls: "pt" });
@@ -4481,9 +4491,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     st.createSpan({ cls: "tbadge", text: c ? String(c) : "" }); const t = `${c || "Some"} notes changed · rescan`; st.setAttribute("aria-label", t); st.title = t; right.appendChild(st); } }
   const thSlot = right.createDiv({ cls: "thslot" }); thSlot.appendChild($("#themeseg"));
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
-  const ARR_OFF = new Set(["people", "mosaic", "graph", "posters", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
+  const ARR_OFF = new Set(["ideaverse", "people", "mosaic", "graph", "posters", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   syncTB = () => {
-    const core = CORE.has(view); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
+    const core = CORE.has(view) || (view === "chord" && CSPH === "in"); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
     $("#vmore").classList.toggle("on", false);
     root.dataset.mo = variants() || hasLay() ? "1" : "";
     AR.w.hidden = ARR_OFF.has(view); AR.val.setText(axisName(mode));
