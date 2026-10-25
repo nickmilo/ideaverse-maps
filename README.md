@@ -1,7 +1,9 @@
 # Maps of the Ideaverse
 
-![The Obsidian map in 3D: Nick's ideaverse, turning, with one note's links lit](docs/obsidian-3d.webp)
-<sub>The Obsidian map in 3D, turning through Nick Milo's own ideaverse (14,617 notes).</sub>
+![The Ideaverse map: Nick's ideaverse in 3D, turning, with one note's links lit](docs/obsidian-3d.webp)
+<sub>The Ideaverse map (the Obsidian map in 3D), turning through Nick Milo's own ideaverse (14,617 notes).</sub>
+
+Visualize your notes across a suite of insanely cool interactive maps—Emergence, Ideaverse, Starfield, and many more. There is even an improved Obsidian graph, which is WAY faster. The implications of this are up to your imagination. Oh, and also, it works in Bases, which will be extremely useful for anyone, especially researchers, who use targeted datasets. Data visualization has become reborn.
 
 See your notes as maps. Every note in your vault gets a place, by what it is and how it's linked: from unlinked notes at the bottom up to your maps of maps and home notes at the top. Press play and watch your vault grow, month by month. Then try it another dozen ways: as rings, as galaxies, as a graph, as a bookshelf, as a wall of movie posters.
 
