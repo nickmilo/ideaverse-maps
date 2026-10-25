@@ -15,6 +15,11 @@ module.exports = async ({ page, sleep, shot }) => {
   console.log('to row:', await page.evaluate(() => document.querySelector('.ivm .bacto').textContent));
   await page.evaluate(() => document.querySelector('.ivm .bacto .pchip').click()); await sleep(300);
   console.log('after use:', await page.evaluate(() => document.querySelector('.ivm .bacto').textContent));
+  await page.evaluate(() => document.querySelector('.ivm .bcname').click()); await sleep(200); await page.keyboard.type('craft'); await sleep(300);
+  console.log('hits:', await page.evaluate(() => [...document.querySelectorAll('.ivm .bchit')].map(b => b.textContent).join(' | ')));
+  await page.locator('.ivm #disppop').screenshot({ path: process.env.SHOTS + '/bacon-find.png' });
+  await page.keyboard.press('Enter'); await sleep(300);
+  console.log('after pick:', await page.evaluate(() => document.querySelector('.ivm .bacto').textContent), 'open:', await page.evaluate(() => !document.querySelector('.ivm #disppop').hidden));
   await page.locator('.ivm #disppop').screenshot({ path: process.env.SHOTS + '/bacon-disp.png' });
   console.log('errors:', errs.length ? errs.slice(0, 3).join(' | ') : 'none');
 };
