@@ -799,7 +799,7 @@ body.is-phone .ivm .wm-name{display:none}
 /* Orbit: Earth on the 3D Obsidian map too, and Spinning (a fast Earth) only there */
 .ivm[data-view="ideaverse"] #driftseg .dearth{display:inline-block}
 .ivm.ivm #driftseg .dspin{display:none}
-.ivm.ivm[data-view="ideaverse"] #driftseg .dspin,.ivm.ivm[data-view="chord"][data-dome="1"] #driftseg .dspin{display:inline-block}
+.ivm.ivm[data-view="ideaverse"] #driftseg .dspin,.ivm.ivm[data-view="chord"][data-dome="1"] #driftseg .dspin,.ivm.ivm[data-view="quincunx"][data-dome="1"] #driftseg .dspin,.ivm.ivm[data-view="planet"][data-dome="1"] #driftseg .dspin{display:inline-block}
 
 .ivm #vmorepop .chip[hidden]{display:none}
 /* Display → Show more map names: a small two-row grid between the tabs and More, on wide windows only */
