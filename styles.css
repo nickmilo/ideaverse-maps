@@ -866,3 +866,18 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .dlist .bacto b{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
 .ivm .dlist .bacto .pchip[hidden]{display:none}
 .ivm .dlist .bacto .pchip:disabled{opacity:.45;cursor:default}
+.ivm.ivm .dlist .bacto .bcname{all:unset;color:var(--ink);font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;border-bottom:1px dashed var(--muted)}
+.ivm.ivm .dlist .bacto .bcname:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.ivm .dlist .bcfind{display:flex;flex-direction:column;gap:2px;padding:0 4px 6px 34px;max-width:280px}
+.ivm .dlist .bcfind[hidden]{display:none}
+.ivm .dlist .bcfind input{width:100%;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:12px}
+.ivm.ivm .dlist .bchit{all:unset;display:flex;justify-content:space-between;gap:8px;padding:3px 6px;border-radius:5px;font-size:12px;color:var(--ink);cursor:pointer}
+.ivm.ivm .dlist .bchit:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.ivm .dlist .bchit span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ivm .dlist .bclv,.ivm .dlist .bcnone{color:var(--muted);font:400 10.5px var(--mono)}
+.ivm.ivm .dlist .bacto .pchip{all:unset;display:inline-flex;align-items:center;padding:1px 8px;border:1px solid var(--line);border-radius:999px;font:500 11px var(--font-interface,inherit);color:var(--muted);cursor:pointer;white-space:nowrap}
+.ivm.ivm .dlist .bacto .pchip:hover:not(:disabled){color:var(--ink);border-color:var(--muted)}
+.ivm.ivm .dlist .bacto .pchip[hidden]{display:none}
+.ivm .dlist .bacto{row-gap:4px}
+.ivm .dlist .bacto .bcbtns{display:flex;gap:6px;flex-basis:100%}
+.ivm .dlist .bacto,.ivm .dlist .bcfind{padding-left:30px}

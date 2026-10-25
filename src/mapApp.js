@@ -2899,8 +2899,10 @@ function drawBacon(){ const hl = sel >= 0 ? sel : hover; if (hl < 0 || !vis[hl])
   if (!p) { badge(`No way to ${to} from here`); return; }
   if (p.length < 2) return;
   ctx.save(); ctx.lineCap = ctx.lineJoin = "round";
-  const line = () => { ctx.beginPath(); p.forEach((i, q) => { const x = sx(X[i]), y = sy(Y[i]); if (q) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); };
-  ctx.strokeStyle = css.bg; ctx.globalAlpha = .7; ctx.lineWidth = 7; line(); ctx.strokeStyle = css.accent; ctx.globalAlpha = .95; ctx.lineWidth = 3; line();
+  // each step a gentle arc (bending the same way, so the way reads as one flowing line), thin enough that the links under it still show
+  const line = () => { ctx.beginPath(); for (let q = 0; q < p.length; q++) { const x = sx(X[p[q]]), y = sy(Y[p[q]]); if (!q) { ctx.moveTo(x, y); continue; }
+      const x0_ = sx(X[p[q - 1]]), y0_ = sy(Y[p[q - 1]]), dx = x - x0_, dy = y - y0_; ctx.quadraticCurveTo((x0_ + x) / 2 - dy * .14, (y0_ + y) / 2 + dx * .14, x, y); } ctx.stroke(); };
+  ctx.strokeStyle = css.bg; ctx.globalAlpha = .45; ctx.lineWidth = 5; line(); ctx.strokeStyle = css.accent; ctx.globalAlpha = .8; ctx.lineWidth = 2; line();
   ctx.globalAlpha = 1; for (const i of p) { const x = sx(X[i]), y = sy(Y[i]), r = i === b.to ? 7 : 4.5; ctx.fillStyle = css.accent; ctx.strokeStyle = css.bg; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill(); ctx.stroke(); }
   // each note on the way is named (unless the map named it already); the count of steps sits under the note it leads to
   const named = new Set(LH.map(h => h[4])); ctx.font = `600 11.5px ${css.body}`; ctx.textBaseline = "middle"; ctx.lineWidth = 4;
@@ -4597,13 +4599,24 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   alCb.onchange = () => { if (alCb.checked !== showAll) $("#alllinks").click(); };
   // Show the way home (Kevin Bacon): from the note you're on, the fewest links back to Home, or to a note you choose
   const bcSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Kevin Bacon: from the note you're on, light up the fewest links back to Home (or a note you choose)" } }); const bcCb = bcSw.createEl("input", { type: "checkbox" }); bcSw.createEl("i", { cls: "sw" }); bcSw.createSpan({ text: "Show the way home" });
-  const bcTo = DI.p.createDiv({ cls: "bacto" }); bcTo.createSpan({ cls: "btl", text: "To" }); const bcName = bcTo.createEl("b");
-  const bcUse = bcTo.createEl("button", { cls: "pchip", text: "Use this note", attr: { type: "button" } }), bcHome = bcTo.createEl("button", { cls: "pchip", text: "Home", attr: { type: "button" } });
-  const syncBac = () => { bcCb.checked = BACON; bcTo.hidden = !BACON; const t = baconTarget(); bcName.setText(t >= 0 ? N[t].title : "nothing"); bcUse.disabled = sel < 0 || (t >= 0 && sel === t); bcHome.hidden = !BACTO;
+  const bcTo = DI.p.createDiv({ cls: "bacto" }); bcTo.createSpan({ cls: "btl", text: "To" }); const bcName = bcTo.createEl("button", { cls: "bcname", attr: { type: "button", "aria-label": "Choose the note to find the way to" } });
+  const bcBtns = bcTo.createSpan({ cls: "bcbtns" }), bcUse = bcBtns.createEl("button", { cls: "pchip", text: "Use this note", attr: { type: "button" } }), bcHome = bcBtns.createEl("button", { cls: "pchip", text: "Home", attr: { type: "button" } });
+  const syncBac = () => { bcCb.checked = BACON; bcTo.hidden = !BACON; if (!BACON && typeof bcClose === "function") bcClose(); const t = baconTarget(); bcName.setText(t >= 0 ? N[t].title : "nothing"); bcUse.disabled = sel < 0 || (t >= 0 && sel === t); bcHome.hidden = !BACTO;
     bcUse.title = sel < 0 ? "Click a note on the map first" : `Find the way to ${N[sel].title} instead`; };
   bcCb.onchange = () => { BACON = bcCb.checked; save("iv-bacon", BACON); syncBac(); draw(); };
   bcUse.onclick = e => { e.stopPropagation(); if (sel < 0) return; BACTO = N[sel].path; save("iv-bacto", BACTO); syncBac(); draw(); };
   bcHome.onclick = e => { e.stopPropagation(); BACTO = null; save("iv-bacto", null); syncBac(); draw(); };
+  // click the name to pick any note: type a few letters, pick from the matches
+  const bcFind = DI.p.createDiv({ cls: "bcfind" }); bcFind.hidden = true; const bcIn = bcFind.createEl("input", { type: "text", attr: { placeholder: "Find the note to head for…", "aria-label": "Find the note to head for" } }), bcHits = bcFind.createDiv({ cls: "bchits" });
+  const bcClose = () => { bcFind.hidden = true; bcIn.value = ""; bcHits.empty(); };
+  const bcSet = i => { BACTO = N[i].path; save("iv-bacto", BACTO); bcClose(); syncBac(); draw(); };
+  bcName.onclick = e => { e.stopPropagation(); bcFind.hidden = !bcFind.hidden; if (!bcFind.hidden) { bcIn.focus(); bcIn.dispatchEvent(new Event("input")); } };
+  bcIn.oninput = () => { const q = bcIn.value.trim().toLowerCase(); bcHits.empty(); const a = [], b_ = [];
+    for (let i=0;i<n;i++) { if (!vis[i] || ARCH[i]) continue; const t = N[i].title.toLowerCase(); if (!q) { if (N[i].level >= 4) a.push(i); continue; } if (t.startsWith(q)) a.push(i); else if (t.includes(q)) b_.push(i); }
+    const hits = [...a.sort(byRank), ...b_.sort(byRank)].slice(0, 8);
+    for (const i of hits) { const h = bcHits.createEl("button", { cls: "bchit", attr: { type: "button" } }); h.createSpan({ text: N[i].title }); h.createSpan({ cls: "bclv", text: "L" + N[i].level }); h.onclick = e => { e.stopPropagation(); bcSet(i); }; }
+    if (!hits.length) bcHits.createDiv({ cls: "bcnone", text: "No note by that name" }); };
+  bcIn.onkeydown = e => { e.stopPropagation(); if (e.key === "Escape") bcClose(); if (e.key === "Enter") { const f = bcHits.querySelector(".bchit"); if (f) f.click(); } };
   const thSec = DI.p.createDiv({ cls: "fsec thsec" }); thSec.createDiv({ cls: "pt", text: "Theme" });
   DI.p.appendChild($("#scorebtn")); $("#scorebtn").className = "drow dlink"; $("#scorebtn").setText("How notes are scored ›");
   $("#scorebtn").addEventListener("click", () => closePops());
