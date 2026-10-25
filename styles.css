@@ -858,7 +858,12 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm.ivm.ivm[data-view="ideaverse"] #driftbar .dwob,.ivm.ivm.ivm.ivm[data-view="chord"][data-dome="1"] #driftbar .dwob,.ivm.ivm.ivm.ivm[data-view="quincunx"][data-dome="1"] #driftbar .dwob,.ivm.ivm.ivm.ivm[data-view="planet"][data-dome="1"] #driftbar .dwob{display:flex}
 .ivm.ivm.ivm.ivm #driftbar .dwob[hidden]{display:none}
 /* Base Builder · Constellation: only the layout switch and the line saying where the stars come from */
-.ivm .postctl.pcon > :not(.pmode):not(.bhint){display:none}
+.ivm .postctl.pcon > :not(.pmode):not(.bhint):not(.bcon){display:none}
+.ivm .postctl .bcon{grid-column:1/-1;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;align-items:center}
+.ivm .postctl .bcon[hidden]{display:none}
+.ivm .postctl .bcon .gfw{display:flex;align-items:center;gap:8px;min-width:0}
+.ivm .postctl .bcon .gfw input{flex:1;min-width:0}
+.ivm .postctl .bcon .gfw b{font:500 11px var(--mono);color:var(--muted);min-width:30px;text-align:right}
 /* four layouts (Base Builder): the switch takes its own line under "Layout", buttons a little tighter */
 .ivm .postctl .pmode{flex-wrap:wrap;row-gap:4px}
 .ivm .postctl .pmode #pmode{max-width:100%}
