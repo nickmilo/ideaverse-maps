@@ -2,6 +2,8 @@ module.exports = async ({ page, sleep, shot }) => {
   const errs = []; page.on('pageerror', e => errs.push(e.message + ' @ ' + (e.stack||'').split('\n').slice(1,4).join(' < '))); page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text().slice(0, 200)); });
   await page.evaluate(() => app.commands.executeCommandById('ideaverse-maps:open')); await page.waitForSelector('.ivm canvas', { timeout: 120000 }); await sleep(1500);
   await page.evaluate(() => { document.querySelector('.ivm #vmore').click(); document.querySelector('.ivm #gograph').click(); }); await sleep(8000);
+  if (process.env.BACON) { await page.evaluate(() => document.querySelector('.ivm #dispbtn').click()); await sleep(300); await page.evaluate(() => { const l = [...document.querySelectorAll('.ivm #disppop label.drow')].find(l => /way home/.test(l.textContent)); if (!l.querySelector('input').checked) l.click(); }); await sleep(300); await page.mouse.click(1590, 990); await sleep(300); }
+  if (process.env.YR) { await page.evaluate(y => { const [a] = document.querySelectorAll('.ivm #yrctl input'); a.value = y; a.dispatchEvent(new Event('input', { bubbles: true })); a.dispatchEvent(new Event('change', { bubbles: true })); }, process.env.YR); await sleep(3000); }
   const M = 'app.workspace.getLeavesOfType("ideaverse-maps")[0].view.map';
   const target = process.env.TARGET || 'Atlas/Maps/Craft note path.md';
   await page.evaluate(t => app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map.openNote(t), target); await sleep(1500);
