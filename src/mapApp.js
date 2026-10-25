@@ -1840,7 +1840,7 @@ EXP.lifeline = {
 // Size: a number (your rank). Each note is a card, and when the note has an image property (a poster, a cover),
 // the card shows it once you zoom in. The map reads the properties itself, so it works on any dataset.
 // Posters and Base Builder share this engine, each with its own settings (iv-p… and iv-b…)
-const mkPST = c => ({ across: pref(`iv-${c}across`, null), lanes: pref(`iv-${c}lanes`, null), size: pref(`iv-${c}size`, null), height: pref(`iv-${c}height`, null), mosaic: !!pref(`iv-${c}mosaic`, false), con: c === "b" && pref("iv-bcon", false) === true, mbox: [], mosaicOn: false, rng: pref(`iv-${c}rng`, null) || {}, lhide: pref(`iv-${c}lhide`, null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" });
+const mkPST = c => ({ across: pref(`iv-${c}across`, null), lanes: pref(`iv-${c}lanes`, null), size: pref(`iv-${c}size`, null), height: pref(`iv-${c}height`, null), mosaic: !!pref(`iv-${c}mosaic`, false), con: c === "b" && pref("iv-bcon", false) === true, conSel: c === "b" ? pref("iv-bconsel", null) : null, conMax: c === "b" ? +pref("iv-bconmax", 40) || 40 : 40, mbox: [], mosaicOn: false, rng: pref(`iv-${c}rng`, null) || {}, lhide: pref(`iv-${c}lhide`, null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" });
 const PSTP = mkPST("p"), PSTB = mkPST("b"), PSC = () => view === "builder" ? PSTB : PSTP, PK = key => "iv-" + (PSC() === PSTB ? "b" : "p") + key;
 let BASEINFO = null;   // from a base: its sort property and each note's group
 // (a note whose properties Obsidian hasn't read yet, right after it starts, is asked again next time instead of remembered as empty)
@@ -1900,6 +1900,7 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
     const con = view === "builder" && PSTB.con && PSTB.conProps && PSTB.conProps.ids.length, md = con ? "constellation" : cu && cu.mosaic ? "mosaic" : sc_ ? "scatter" : "rows"; box.querySelectorAll("#pmode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pm === md)));
     { const cb_ = box.querySelector('#pmode button[data-pm="constellation"]'); if (cb_) { cb_.hidden = view !== "builder"; const has = peopleDetect().length > 0; cb_.disabled = !has; cb_.title = has ? "" : "No property here lists people (director, cast, author…)"; } }
     box.classList.toggle("pcon", !!con);
+    { const bc = box.querySelector(".bcon"); if (bc) { bc.hidden = !con; if (con) builderConUI(bc); } }
     const ar = box.querySelector('.prow[data-k="across"] > span'), ah = box.querySelector('.phint[data-k="across"]');
     if (ar) ar.setText(md === "mosaic" ? "Narrow by" : "Left to right"); if (ah) ah.setText(md === "mosaic" ? "A date or number. Use its slider to keep part of the set." : "A date or number. Places each card left to right.");
     const lr = box.querySelector('.prow[data-k="lanes"] > span'), lh_ = box.querySelector('.phint[data-k="lanes"]');
@@ -1911,7 +1912,7 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
   { const bh = $("#bhint"); if (bh) { bh.hidden = view !== "builder"; if (view === "builder" && cu) { const nm = (list, id) => (list.find(x => x.id === id) || {}).name;
       const parts = [["Left to right", nm(o.across, cu.acrossId)], cu.heightId ? ["Bottom to top", nm(o.across, cu.heightId)] : ["Rows", cu.laneId ? nm(o.lanes, cu.laneId) : ""], ["Size", cu.sizeId ? nm(o.size, cu.sizeId) : ""]].filter(p_ => p_[1]);
       const cp = PSTB.con && PSTB.conProps && PSTB.conProps.ids.length ? PSTB.conProps : null;
-      bh.setText(cp ? (cp.cols ? "From this base's columns: " : "From these notes' properties: ") + "Stars from " + cp.ids.join(" · ") : (o.cols ? "From this base's columns: " : "From these notes' properties: ") + parts.map(p_ => p_[0] + " " + p_[1]).join(" · ")); } }
+      bh.setText(cp ? (cp.own ? "Your pick: " : cp.cols ? "From this base's columns: " : "From these notes' properties: ") + "Stars from " + cp.ids.join(" · ") : (o.cols ? "From this base's columns: " : "From these notes' properties: ") + parts.map(p_ => p_[0] + " " + p_[1]).join(" · ")); } }
     const sz = box.querySelector('.prow[data-k="size"] > span'); if (sz) sz.setText(PSC().dots && !(cu && cu.mosaic) ? "Dot size" : "Card size"); } }
 function layoutPosters(){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0; FMC.clear();
@@ -2125,14 +2126,24 @@ EXP.posters = {
 // or number column, Rows the base's groups (else its first category column), Size the next number column. Notes with a
 // picture are cards; without one, dots colored by their row. A base opens on this map until you pick another.
 function builderHue(i){ const P_ = PSC(), lab = P_.lab, ord = P_.order; if (!lab || !ord || ord.length < 2) return css.accent; const j = ord.indexOf(lab[i]); return j < 0 || lab[i] === "—" ? css.muted : PPAL[j % PPAL.length]; }
+function builderConUI(bc){ const bp = PSTB.conProps || { ids: [], cand: [] }, list = bc.querySelector(".bcchips"), on = new Set(bp.ids);
+  const sig = bp.cand.map(c => c.id).join(",") + "|" + bp.ids.join(","); if (list.dataset.sig !== sig) { list.dataset.sig = sig; list.empty();
+    for (const c of bp.cand) { const ch = list.createEl("button", { cls: "pchip" + (on.has(c.id) ? "" : " off"), attr: { type: "button", title: `${c.n} notes name people in ${c.id}` } }); ch.createSpan({ text: c.id }); ch.createEl("b", { text: String(c.n) });
+      ch.onclick = ev => { ev.stopPropagation(); const s_ = new Set(bp.ids); if (s_.has(c.id)) { if (s_.size === 1) return; s_.delete(c.id); } else s_.add(c.id); PSTB.conSel = [...s_]; save("iv-bconsel", PSTB.conSel); morph(true, () => fitTarget()); legend(); }; }
+    if (bp.own) { const rs = list.createEl("button", { cls: "pchip pall", text: "From the base", attr: { type: "button", title: "Go back to the people columns this base shows" } }); rs.onclick = ev => { ev.stopPropagation(); PSTB.conSel = null; save("iv-bconsel", null); morph(true, () => fitTarget()); legend(); }; } }
+  const r = bc.querySelector("input"), top = Math.min(1000, PPL.avail || 0); r.max = String(Math.max(5, top)); if (document.activeElement !== r) r.value = String(Math.min(PSTB.conMax, Math.max(5, top))); bc.querySelector(".bcv").setText(String(Math.min(PSTB.conMax, PPL.avail || 0)));
+  bc.querySelector(".bcn").setText(`${Math.min(PSTB.conMax, PPL.avail || 0).toLocaleString()} of ${(PPL.avail || 0).toLocaleString()} people named in 2+ notes`); }
 // Constellation (Base Builder's fourth layout): the People constellation, from the people columns of this base
 const pplOn = () => view === "people" || (view === "builder" && PSTB.con);
 function builderPeople(){ const cand = peopleDetect(), cols = BASEINFO && Array.isArray(BASEINFO.cols) ? BASEINFO.cols : null;
   const inCols = cols ? cand.filter(c => cols.includes(c.id)).sort((a, b) => cols.indexOf(a.id) - cols.indexOf(b.id)) : [];
-  const pick = inCols.length ? inCols : cand.filter(c => c.def).length ? cand.filter(c => c.def) : cand.slice(0, 1); return { ids: pick.map(c => c.id), cols: inCols.length > 0 }; }
+  const pick = inCols.length ? inCols : cand.filter(c => c.def).length ? cand.filter(c => c.def) : cand.slice(0, 1);
+  // your own pick of which properties make the stars (Constellation's chips), when it still fits these notes
+  const own = Array.isArray(PSTB.conSel) ? PSTB.conSel.filter(id => cand.some(c => c.id === id)) : [];
+  return { ids: own.length ? own : pick.map(c => c.id), cols: !own.length && inCols.length > 0, own: own.length > 0, cand }; }
 const BPOST = EXP.posters;
 EXP.builder = { ownLabels: true,
-  layout(){ if (PSTB.con) { const bp = builderPeople(); PSTB.conProps = bp; if (bp.ids.length) { layoutPeople(bp.ids); postersOptsUI(); return; } } layoutPosters(); },
+  layout(){ if (PSTB.con) { const bp = builderPeople(); PSTB.conProps = bp; if (bp.ids.length) { layoutPeople(bp.ids, PSTB.conMax); postersOptsUI(); return; } } layoutPosters(); },
   get pick(){ return PSTB.con ? undefined : BPOST.pick; },
   get labels(){ return PSTB.con ? EXP.people.labels : BPOST.labels; },
   guides(){ return (PSTB.con ? EXP.people : BPOST).guides(); },
@@ -2151,14 +2162,16 @@ function peopleDetect(){
   const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
   const key = ids.length + ":" + (ids[0] ?? -1) + ":" + (ids[ids.length - 1] ?? -1); if (PPL.key === key) return PPL.cand; PPL.key = key;
   const step = Math.max(1, Math.floor(ids.length / 3000)), st = new Map(); let sampled = 0;
-  for (let q = 0; q < ids.length; q += step) { sampled++; const fm = fmOf(ids[q]); if (!fm) continue;
+  let got = 0;
+  for (let q = 0; q < ids.length; q += step) { sampled++; const fm = fmOf(ids[q]); if (!fm) continue; got++;
     for (const k_ of Object.keys(fm)) { if (/^(up|related|collections|tags|aliases|cssclasses|position)$/i.test(k_)) continue; const v = fm[k_]; const vs = Array.isArray(v) ? v : v == null ? [] : [v];
       let o = st.get(k_); const good = vs.filter(x => typeof x === "string" && x.trim() && x.length <= 80 && !/^\d/.test(x.trim()) && !/^https?:/.test(x) && !/\.(png|jpe?g|webp|gif|avif|svg|pdf|md)\]*$/i.test(x.trim())); if (!good.length) continue;
       if (!o) st.set(k_, o = { n: 0, link: 0, vals: new Set() }); o.n++; for (const x of good) { if (isLink(x)) o.link++; o.vals.add(linkName(x).toLowerCase()); } } }
+  if (!got) PPL.key = "";   // nothing read yet (Obsidian still indexing): look again next time
   PPL.cand = [...st].filter(([k_, o]) => o.n >= Math.max(3, sampled * .05) && o.vals.size >= 3).map(([k_, o]) => ({ id: k_, n: o.n, d: o.vals.size, def: PPL_RX.test(k_) }))
     .filter(c => c.def || c.d >= 12).sort((a, b) => b.def - a.def || b.n - a.n).slice(0, 10);
   return PPL.cand; }
-function layoutPeople(only){
+function layoutPeople(only, maxHubs){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
   const cand = peopleDetect(), props = only || (PPL.props && PPL.props.length ? cand.filter(c => PPL.props.includes(c.id)) : cand.filter(c => c.def)).map(c => c.id);
   PPL.active = props; PSC().img = postersDetect().img; const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
@@ -2168,7 +2181,7 @@ function layoutPeople(only){
       for (const x of vs) { if (typeof x !== "string" || !x.trim() || x.length > 80) continue; const nm = linkName(x); const key = nm.toLowerCase(); if (got.some(g => g[0] === key)) continue; got.push([key, nm, k_]); } }
     if (!got.length) continue; np.set(i, got); for (const [key, nm, k_] of got) { const c = cnt.get(key); if (c) c.n++; else cnt.set(key, { n: 1, name: nm, prop: k_ }); } }
   let ranked = [...cnt].sort((a, b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : 1)); PPL.named = ranked.length; const two = ranked.filter(r => r[1].n >= 2); if (two.length >= 3) ranked = two; PPL.avail = ranked.length;
-  const hubs = ranked.slice(0, Math.max(3, PPL.max)).map(([key, c], h) => ({ key, name: c.name, prop: c.prop, n: c.n, h })), hix = new Map(hubs.map(h => [h.key, h.h])), H = hubs.length;
+  const hubs = ranked.slice(0, Math.max(3, maxHubs || PPL.max)).map(([key, c], h) => ({ key, name: c.name, prop: c.prop, n: c.n, h })), hix = new Map(hubs.map(h => [h.key, h.h])), H = hubs.length;
   // which notes stay: those naming at least one hub; their main person is the most-named one
   const keep = new Map(); const pair = new Map();
   for (const [i, got] of np) { const hs = got.map(g => hix.get(g[0])).filter(h => h != null); if (!hs.length) continue; hs.sort((a, b) => hubs[b].n - hubs[a].n || a - b); keep.set(i, hs);
@@ -4536,6 +4549,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Posters' own options, in its map menu: Across, Lanes, Size
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "postctl" } }); pc.hidden = true;
     pc.createDiv({ cls: "phint bhint", attr: { id: "bhint" } }).hidden = true;
+    // Constellation's own options (Base Builder): which properties make the stars, and how many people to show
+    { const bc = pc.createDiv({ cls: "bcon" }); bc.hidden = true; bc.createDiv({ cls: "phint", text: "Stars from these properties:" }); bc.createDiv({ cls: "plchips bcchips" });
+      const row = bc.createEl("label", { cls: "prow" }); row.createSpan({ text: "Show" }); const w = row.createDiv({ cls: "gfw" }); const r = w.createEl("input", { type: "range", attr: { "aria-label": "How many people to show" } }); r.min = "5"; r.step = "1"; w.createEl("b", { cls: "bcv" });
+      bc.createDiv({ cls: "phint bcn" });
+      let t_ = 0; r.oninput = () => { PSTB.conMax = +r.value; bc.querySelector(".bcv").setText(r.value); win.clearTimeout(t_); t_ = win.setTimeout(() => { save("iv-bconmax", PSTB.conMax); morph(true, () => fitTarget()); }, 180); }; }
     // Rows (a category per row) or Scatter (a second number bottom to top)
     const pm = pc.createDiv({ cls: "pmode" }); pm.createSpan({ text: "Layout" }); const pseg = pm.createDiv({ cls: "seg", attr: { id: "pmode", role: "group", "aria-label": "Posters layout" } });
     for (const [m, t, tip] of [["rows", "Rows", "One row per value of a category (genre, status, director)"], ["scatter", "Scatter", "Two numbers: one left to right, one bottom to top (your rating against the crowd's)"], ["mosaic", "Mosaic", "Every card as a tile, no gaps: a block per category, each tile sized by Card size"], ["constellation", "Constellation", "The people the notes name (director, cast, author…) as stars, joined by the notes they share"]]) {
@@ -4546,6 +4564,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         if (m === "scatter") { const o = postersDetect(), cu = PSC().cur || {}, c = o.across.filter(a => a.id !== cu.acrossId && a.id !== "@created");
           const pick = c.find(a => a.id === PSC().lastHeight) || c.find(a => /^(rank|rating|stars|score|my.?rating)$/i.test(a.id)) || c[0]; if (!pick) return; h = pick.id; }
         PSC().height = h; save(PK("height"), h); morph(true, () => fitTarget()); legend(); }; }
+    { const bc_ = pc.querySelector(".bcon"); if (bc_) pm.after(bc_); }   // Constellation's options sit under the layout switch
     const HINT = { across: "A date or number. Places each card left to right.", height: "A second number. Places each card bottom to top.", lanes: "A category. Each value gets its own row.", size: "A number. The bigger it is, the bigger the card." };
     for (const [id, lab_, pk, key] of [["pacross", "Left to right", "iv-pacross", "across"], ["pheight", "Bottom to top", "iv-pheight", "height"], ["planes", "Rows by", "iv-planes", "lanes"], ["psize", "Card size", "iv-psize", "size"]]) {
       const row = pc.createEl("label", { cls: "prow", attr: { "data-k": key } }); row.createSpan({ text: lab_ }); const sel_ = row.createEl("select", { attr: { id } });
