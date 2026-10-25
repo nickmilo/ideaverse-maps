@@ -5,10 +5,14 @@ module.exports = async ({ page, sleep, shot }) => {
   const M = 'app.workspace.getLeavesOfType("ideaverse-maps")[0].view.map';
   const target = process.env.TARGET || 'Atlas/Maps/Craft note path.md';
   await page.evaluate(t => app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map.openNote(t), target); await sleep(1500);
-  await page.evaluate(() => document.querySelector('.ivm #dfocus').click()); await sleep(1000);
-  if (process.env.FIND) { await page.locator('.ivm #q').first().click(); await page.keyboard.type(process.env.FIND); await sleep(800); await page.mouse.click(1590, 990); await sleep(300); }
+  if (process.env.FIND) { await page.locator('.ivm #q').first().click(); await page.keyboard.type(process.env.FIND); await sleep(600); }
+  await page.evaluate(() => document.querySelector('.ivm #dfocus').click()); await sleep(100);
+  if (process.env.FIND) { await page.keyboard.type('a'); await sleep(50); await page.keyboard.press('Backspace'); await sleep(300); }
+  await sleep(800);
   await page.evaluate(() => { const b = [...document.querySelectorAll('.ivm #focusbar button')].find(b => b.textContent.trim() === '2'); b && b.click(); }); await sleep(8000);
   // find a linked neighbor in focus
+  console.log('raf/s', await page.evaluate(() => new Promise(r => { let c = 0; const t0 = performance.now(); const f = () => { c++; if (performance.now() - t0 < 1000) requestAnimationFrame(f); else r(c); }; requestAnimationFrame(f); })));
+  console.log('longtask', await page.evaluate(() => new Promise(r => { const t0 = performance.now(); setTimeout(() => r(performance.now() - t0), 0); })));
   for (let q = 0; q < 4; q++) { console.log('probe', await page.evaluate(() => JSON.stringify(app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map._graph()))); await sleep(1500); }
   if (process.env.NOFOCUS) { await page.evaluate(() => document.querySelector('.ivm #focusbar button:last-child').click()); await sleep(5000); }
   const nb = await page.evaluate(() => { const m = app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map; const fs = app.vault.getMarkdownFiles().map(f => f.path); for (const p of fs) { const r = m._scr(p); if (r && r[2] && r[4] > 0 && r[0] > 100 && r[0] < 1000 && r[1] > 250 && r[1] < 900) return [p, r]; } return null; });
