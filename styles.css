@@ -814,7 +814,7 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm[data-vgrid="1"] header.tb2 .tbl{flex:0 0 auto}
 .ivm[data-vgrid="1"] header.tb2 #dispbtn .tbl2{display:none}
 @container ivm (min-width:761px){.ivm[data-vgrid="1"] header.tb2 .tbr{flex:0 1 auto;min-width:0}.ivm[data-vgrid="1"] header.tb2 .search{flex:0 1 200px;min-width:120px}}
-@container ivm (max-width:1419px){.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{display:none}.ivm[data-vgrid="1"] header.tb2 .tbl{flex:1 1 auto}.ivm[data-vgrid="1"] header.tb2 #vsegms{flex:0 1 auto}}
+@container ivm (max-width:1199px){.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{display:none}.ivm[data-vgrid="1"] header.tb2 .tbl{flex:1 1 auto}.ivm[data-vgrid="1"] header.tb2 #vsegms{flex:0 1 auto}}
 
 /* Orbit: Wobble like the Earth (shown with Earth, Spinning and LYT) */
 .ivm #driftbar .pmaps{flex-basis:100%;order:10;contain:inline-size;display:flex;align-items:center;gap:7px;font:500 10px var(--mono);letter-spacing:.06em;color:var(--muted);cursor:pointer;padding:0 0 3px;line-height:1}
@@ -831,3 +831,10 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm #driftbar .dwob{display:none}
 .ivm.ivm[data-view="chord"] #driftbar .dwob,.ivm.ivm[data-view="planet"] #driftbar .dwob,.ivm.ivm[data-view="quincunx"] #driftbar .dwob,.ivm.ivm[data-view="stars"] #driftbar .dwob,.ivm.ivm[data-view="ideaverse"] #driftbar .dwob{display:flex}
 .ivm.ivm #driftbar .dwob[hidden]{display:none}
+/* Show more map names on narrower windows (1200–1320px): tighter tabs, the Arrange/Group button down to its icon, a narrower Find box */
+@container ivm (max-width:1320px){
+.ivm[data-vgrid="1"] header.tb2 #vsegms .seg button,.ivm[data-vgrid="1"] header.tb2 #vmore{padding-left:7px;padding-right:7px}
+.ivm[data-vgrid="1"] header.tb2 .tbr .tbb b{display:none}
+.ivm[data-vgrid="1"] header.tb2 .search{flex:0 1 150px;min-width:100px}
+.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{column-gap:8px;margin:0 2px 0 6px}
+}
