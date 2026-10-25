@@ -1100,7 +1100,9 @@ function arcHeaders(yTop){
 const CHX = new Float32Array(n), CHY = new Float32Array(n), CHC = new Int16Array(n);
 const CH_C = {x: WW/2, y: WH/2}, CH_R = 820;
 const CH_HUE = {"+":"#d99a2b", "Atlas":"#3f7fd0", "Calendar":"#2f9f78", "Efforts":"#d0503f", "x":"#8b8b95"};
-let chordBy = pref("iv-chordby", "folders") === "time" ? "time" : "folders";   // Chord, Corona and Tesla: arcs by folder, or by year (clockwise from 12 o'clock)
+// tags (Bookshelf and Chord can group by them): a note's first tag decides; its first level is the group, its second the subgroup
+const tagOf = i => (N[i].tags && N[i].tags[0]) || "", tagTop = i => tagOf(i).split("/")[0], tagSub = i => tagOf(i).split("/")[1] || "", HASTAGS = N.some(d => d.tags && d.tags.length);
+let chordBy = ["time", "tags"].includes(pref("iv-chordby", "folders")) && (pref("iv-chordby", "folders") !== "tags" || HASTAGS) ? pref("iv-chordby", "folders") : "folders";   // Chord, Corona and Tesla: arcs by folder, or by year (clockwise from 12 o'clock)
 const CHCAT_F = (() => {
   const by = new Map(); const key = d => d.archive ? "x/z archive" : d.sub || d.ace;
   for (const d of N) by.set(key(d), (by.get(key(d)) || 0) + 1);
@@ -1114,13 +1116,20 @@ const CHCAT_T = (() => {   // one arc a year, oldest first; undated notes at the
   const keys = [...ys.keys()].sort((a, b) => (a === "No date") - (b === "No date") || a.localeCompare(b)), nums = keys.filter(k => k !== "No date").map(Number), y0 = Math.min(...nums), y1 = Math.max(...nums);
   return keys.map((k, j) => { const f = k === "No date" ? -1 : (Number(k) - y0)/Math.max(1, y1 - y0);
     return {id: j, name: k, short: k, ace: k === "No date" ? "x" : "t", hue: f < 0 ? "#8b8b95" : `hsl(${Math.round(205 - 175*f)}, 58%, ${Math.round(50 + 6*f)}%)`, ids: ys.get(k)}; }); })();
+const CHCAT_G = (() => {   // one arc per first-level tag (biggest first); small tags share "Other tags"; untagged notes at the end
+  const by = new Map(), nm = new Map(); N.forEach((d, i) => { const t = tagTop(i), k = t.toLowerCase(); if (!by.has(k)) { by.set(k, []); nm.set(k, t); } by.get(k).push(i); });
+  const tagged = [...by].filter(([k]) => k).sort((a, b) => b[1].length - a[1].length), keep = tagged.filter(([, ids], j) => j < 20 && ids.length >= Math.max(5, n * .005)), rest = tagged.filter(x => !keep.includes(x)).flatMap(([, ids]) => ids);
+  const list = keep.map(([k, ids], j) => ({ name: "#" + nm.get(k), short: "#" + nm.get(k), ace: "t", hue: `hsl(${Math.round(j * 360 / Math.max(1, keep.length))}, 55%, 56%)`, ids }));
+  if (rest.length) list.push({ name: "Other tags", short: "Other tags", ace: "x", hue: "#8b8b95", ids: rest });
+  if (by.has("")) list.push({ name: "No tag", short: "No tag", ace: "x", hue: "#5f5f68", ids: by.get("") });
+  list.forEach((c, j) => c.id = j); return list; })();
 let ribKey = null, CH_RIB = [], CH_MAX = 0;   // CH_MAX: the biggest band with every note shown (all time), the scale every band is drawn against
-let CHCAT = chordBy === "time" ? CHCAT_T : CHCAT_F;
+let CHCAT = chordBy === "time" ? CHCAT_T : chordBy === "tags" ? CHCAT_G : CHCAT_F;
 // By Folders, unless the notes shown all sit in one folder (a base of one folder, a filter): then by Time, so there are bands between years to see
 let chOneFolder = false;
 function chSetCats(){ let k = 0; if (typeof vis !== "undefined" && vis) for (const c of CHCAT_F) { if (c.ids.some(i => vis[i])) k++; if (k > 1) break; }
-  chOneFolder = chordBy !== "time" && k === 1;
-  const want = chordBy === "time" || chOneFolder ? CHCAT_T : CHCAT_F; if (want === CHCAT && ribKey !== null) return;
+  chOneFolder = chordBy === "folders" && k === 1;
+  const want = chordBy === "time" || chOneFolder ? CHCAT_T : chordBy === "tags" ? CHCAT_G : CHCAT_F; if (want === CHCAT && ribKey !== null) return;
   CHCAT = want; for (const c of CHCAT) for (const i of c.ids) CHC[i] = c.id; ribKey = null; }
 chSetCats();
 // angles: share by count^0.6 so the big folders don't swallow the ring; small gaps between kinds, bigger between ACE folders.
@@ -1413,13 +1422,17 @@ let hiCache = null;
 function shelfHiMap(){ if (hiCache) return hiCache; const m = new Map();
   shelfHi.forEach((p, j) => { const i = N.findIndex(d => d.path === p); if (i < 0) return; const c = HI_COL[j % HI_COL.length]; for (const x of [i, ...out[i], ...inn[i]]) if (!m.has(x)) m.set(x, c); });
   return hiCache = m; }
-let shelfSort = ["call", "az", "created", "modified", "folder"].includes(pref("iv-ssort", "call")) ? pref("iv-ssort", "call") : "call";
+let shelfSort = ["call", "az", "created", "modified", "folder", "tag"].includes(pref("iv-ssort", "call")) && (pref("iv-ssort", "call") !== "tag" || HASTAGS) ? pref("iv-ssort", "call") : "call";
 function layoutShelf(){
   const rows = [], secs = [], calls = [], ghosts = [], tapes = [], index = []; for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
   const right = i => ARCH[i] || ["Calendar", "Efforts", "x"].includes(N[i].ace);
   const topOf = i => N[i].ace === "(root)" || N[i].ace === "+" ? "Root / +" : N[i].ace;   // the vault's top level and + share one shelf, above Atlas
   const width = i => (N[i].level >= 3 ? 3 : 0) + 2 + 2.6*Math.log10(1 + ((N[i].p && N[i].p.w) || 0)/40);
   const height = i => { const lv = N[i].level, h = hash(N[i].path, 41); return SB.SH*(lv === 5 ? .97 : lv === 4 ? .9 : lv === 3 ? .82 : lv === 2 ? .6 + .14*h : .5 + .1*h); };
+  const TAGBAYS = [[], []];
+  if (shelfSort === "tag") { const by = new Map(), nm = new Map(); let tot = 0; for (let i=0;i<n;i++) { if (!vis[i]) continue; const t = tagTop(i), k = t.toLowerCase(); if (!by.has(k)) { by.set(k, []); nm.set(k, t); } by.get(k).push(i); tot++; }
+    const gs = [...by].sort((a, b) => (!a[0]) - (!b[0]) || b[1].length - a[1].length).map(([k, ids]) => ({ label: k ? "#" + nm.get(k) : "No tag", ids }));
+    let acc = 0; for (const g of gs) { TAGBAYS[acc < tot / 2 ? 0 : 1].push(g); acc += g.ids.length; } }
   for (const [bay, x0] of [[0, 0], [1, SB.W + SB.gap]]) {
     let row = 0, x = x0, used = false;
     const baseY = r => (r + 1)*(SB.SH + SB.board + 8);
@@ -1430,13 +1443,15 @@ function layoutShelf(){
     const section = (label) => { newRow(); secs.push({label, x: x0, y: baseY(row) - SB.SH - 4}); };
     // Shelve by A–Z, Created or Modified: one run per section, with a marker where the letter or year changes
     const subOf = i => { const sb = N[i].sub || ""; return sb.includes("/") ? sb.slice(sb.indexOf("/") + 1) : ""; };
-    const sorted = ids => { const tk = i => shelfSort === "az" ? N[i].title.toLowerCase() : shelfSort === "modified" ? (N[i].mt || 0) : shelfSort === "folder" ? subOf(i).toLowerCase() + "\u0000" + String(isNaN(TV[i]) ? 0 : TV[i]).padStart(16, "0") : (isNaN(TV[i]) ? -Infinity : TV[i]);
-      const mk = i => shelfSort === "folder" ? (subOf(i) || "(top)") : shelfSort === "az" ? (N[i].title[0] || "?").toUpperCase() : shelfSort === "modified" ? (N[i].mt ? String(new Date(N[i].mt).getUTCFullYear()) : "?") : (isNaN(TV[i]) ? "?" : String(new Date(TV[i]).getUTCFullYear()));
+    const sorted = ids => { const tk = i => shelfSort === "az" ? N[i].title.toLowerCase() : shelfSort === "modified" ? (N[i].mt || 0) : shelfSort === "folder" ? subOf(i).toLowerCase() + "\u0000" + String(isNaN(TV[i]) ? 0 : TV[i]).padStart(16, "0") : shelfSort === "tag" ? tagSub(i).toLowerCase() + "\u0000" + String(isNaN(TV[i]) ? 0 : TV[i]).padStart(16, "0") : (isNaN(TV[i]) ? -Infinity : TV[i]);
+      const mk = i => shelfSort === "folder" ? (subOf(i) || "(top)") : shelfSort === "tag" ? (tagSub(i) ? tagTop(i) + "/" + tagSub(i) : "(top)") : shelfSort === "az" ? (N[i].title[0] || "?").toUpperCase() : shelfSort === "modified" ? (N[i].mt ? String(new Date(N[i].mt).getUTCFullYear()) : "?") : (isNaN(TV[i]) ? "?" : String(new Date(TV[i]).getUTCFullYear()));
       ids.sort((a, b) => { const p = tk(a), q = tk(b); return p < q ? -1 : p > q ? 1 : 0; }); let last = null, tp = null;
       for (const i of ids) { const m = mk(i);
-        if (shelfSort === "folder") { if (m !== last) { last = m; x += 14; tp = {label: m, ids: [], segs: []}; tapes.push(tp); } put(i, N[i].level === 1); tp.ids.push(i); continue; }   // Subfolder: label tape under each group instead of a marker
+        if (shelfSort === "folder" || shelfSort === "tag") { if (m !== last) { last = m; x += 14; tp = {label: m, ids: [], segs: []}; tapes.push(tp); } put(i, N[i].level === 1); tp.ids.push(i); continue; }   // Subfolder: label tape under each group instead of a marker
         if (m !== last) { last = m; x += 6; put(i, N[i].level === 1); calls.push({x: RX[i], y: RY[i] + Math.abs(RH[i]), t: m, i}); continue; } put(i, N[i].level === 1); } };
-    if (bay === 0) {
+    if (shelfSort === "tag") {   // Shelve by Tag: each first-level tag a bookcase (biggest first), its second level as labelled runs; the left bay fills first
+      for (const g of TAGBAYS[bay]) { section(g.label); sorted(g.ids); }
+    } else if (bay === 0) {
       const ok = i => !right(i), G = mapGroups(ok), mapRank = new Map(G.maps.map((m, j) => [m, j])), hubRank = new Map(G.hubs.map((h_, j) => [h_, j]));
       const rank_ = t => t === "Root / +" ? 0 : t === "Atlas" ? 1 : 2;
       const tops = [...new Set(N.map((d, i) => vis[i] && ok(i) ? topOf(i) : null).filter(Boolean))].sort((a, b) => rank_(a) - rank_(b) || a.localeCompare(b));
@@ -3781,6 +3796,8 @@ $("#gochord").onclick = () => goChord("");
 function syncCB(){ root.querySelectorAll("#chordby button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cb === chordBy))); }
 root.querySelectorAll("#chordby button").forEach(b => b.onclick = () => { if (b.dataset.cb === chordBy) return; chordBy = b.dataset.cb; save("iv-chordby", chordBy); syncCB(); chSetCats(); chPin = -1; chArc = -1; if (view === "chord") { morph(true, () => fitTarget()); legend(); } });
 syncCB();
+// a vault with no tags doesn't offer them
+if (!HASTAGS) for (const b of root.querySelectorAll('#shelfsort button[data-ss="tag"], #chordby button[data-cb="tags"]')) b.hidden = true;
 function syncLR(){ const [a, b] = datedYears(), [y0, y1] = yearRange(), opts = sel_ => Array.from({length: b - a + 1}, (_, j) => a + j).map(y => `<option value="${y}"${y === sel_ ? " selected" : ""}>${y}</option>`).join("");
   html($("#lr0")).v = opts(y0); html($("#lr1")).v = opts(y1); }
 for (const id of ["#lr0", "#lr1"]) $(id).onchange = () => { let y0 = +$("#lr0").value, y1 = +$("#lr1").value; if (id === "#lr0" && y1 < y0) y1 = y0; if (id === "#lr1" && y0 > y1) y0 = y1;
