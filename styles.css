@@ -200,7 +200,7 @@
 .ivm #vmorepop .chip{width:100%;text-align:left}
 .ivm #vmorepop .mexp summary{cursor:pointer;font:500 11px var(--mono);letter-spacing:.06em;color:var(--muted);padding:4px 6px;list-style:none}
 .ivm #vmorepop .mexp summary::before{content:"› ";display:inline-block;transition:transform .15s}
-.ivm #vmorepop .mexp[open] summary::before{transform:rotate(90deg)}
+.ivm #vmorepop .mexp[open] > summary::before{transform:rotate(90deg)}
 .ivm #vmorepop .mexp .chip{margin-top:4px}
 .ivm #vmorepop .mexp2{margin-left:12px}
 .ivm[data-view="chord"] #vseg .vmore,.ivm[data-view="quincunx"] #vseg .vmore,.ivm[data-view="shelf"] #vseg .vmore,.ivm[data-view="tree"] #vseg .vmore,.ivm[data-view="treemap"] #vseg .vmore,.ivm[data-view="skyline"] #vseg .vmore,.ivm[data-view="lincal"] #vseg .vmore,.ivm[data-view="spiral"] #vseg .vmore,.ivm[data-view="lifeline"] #vseg .vmore,.ivm[data-view="planet"] #vseg .vmore{background:var(--ink);color:var(--bg)}
@@ -845,3 +845,4 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .yrctl .srange .yrh.rgt{transform:none}
 /* Show more map names: Filter and Display keep their words while there's room, then drop to icons together */
 @container ivm (max-width:1479px){.ivm[data-vgrid="1"] header.tb2 .tbb .tbl2{display:none}}
+.ivm #vmorepop details > .chip{margin-left:16px}
