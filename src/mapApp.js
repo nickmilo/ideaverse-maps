@@ -1903,7 +1903,7 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
     { const tb_ = box.querySelector('#pmode button[data-pm="timeline"]'); if (tb_) { tb_.hidden = view !== "builder"; const has = o.across.some(a => a.id.endsWith("@end")); tb_.disabled = !has; tb_.title = has ? "" : "No property here holds a span of years (a lifespan like 1879 – 1955)"; } }
     { const bc = box.querySelector(".bcon"); if (bc) { bc.hidden = !con; if (con) builderConUI(bc); } }
     const ar = box.querySelector('.prow[data-k="across"] > span'), ah = box.querySelector('.phint[data-k="across"]');
-    if (ar) ar.setText(md === "mosaic" ? "Narrow by" : "Left to right"); if (ah) ah.setText(md === "mosaic" ? "A date or number. Use its slider to keep part of the set." : "A date or number. Places each card left to right.");
+    if (ar) ar.setText(md === "mosaic" ? "Narrow by" : "Left to right"); if (ah) ah.setText(md === "timeline" ? "Years shown: keeps every life that overlaps them." : md === "mosaic" ? "A date or number. Use its slider to keep part of the set." : "A date or number. Places each card left to right.");
     const lr = box.querySelector('.prow[data-k="lanes"] > span'), lh_ = box.querySelector('.phint[data-k="lanes"]');
     if (lr) lr.setText(md === "mosaic" ? "Blocks by" : md === "timeline" ? "Color by" : "Rows by"); if (lh_) lh_.setText(md === "mosaic" ? "A category. Each value gets its own block." : md === "timeline" ? "A category. Each value gets its own color." : "A category. Each value gets its own row."); }
   for (const key of ["across", "height", "size"]) postersSlider(key); postersLaneChips(); fill($("#planes"), o.lanes, cu ? cu.laneId : o.defLane);
@@ -1957,7 +1957,8 @@ function layoutPosters(){
   let order = [...cnt.keys()]; if (laneId === "@base" && BASEINFO.order) order.sort((a, b) => BASEINFO.order.indexOf(a) - BASEINFO.order.indexOf(b)); else order.sort((a, b) => (a === "—") - (b === "—") || cnt.get(b) - cnt.get(a) || String(a).localeCompare(String(b)));
   if (order.length > 14) { const keep = new Set(order.slice(0, 13)); for (const i of ids) if (!keep.has(lab[i])) lab[i] = "Other"; order = [...order.slice(0, 13), "Other"]; cnt.set("Other", ids.filter(i => lab[i] === "Other").length); }
   PSC().order = order; PSC().spans = null;
-  if (tlOn) { layoutSpans(ids, o, lab, order); postersOptsUI(); return; }
+  // Timeline keeps its own years slider (lives that overlap the years kept), so only the hidden rows filter here
+  if (tlOn) { layoutSpans(all.filter(i => !(lh.size && lh.has(lab[i]))), o, lab, order); postersOptsUI(); return; }
   if (PSC().mosaic) { layoutMosaic(ids, S, s0, s1, lab, order, laneId, o); postersOptsUI(); return; }
   const dots = PSC().dots; PSC().order = order;
   const WD = Math.max(520, Math.min(5200, Math.sqrt(ids.length) * 90)), PW = dots ? 12 : 16, PH = dots ? 12 : 24, STK = dots ? PH * 1.05 : PH * .42, NOV = -90, xOf = v => (v - v0) / (v1 - v0) * WD;
@@ -1982,7 +1983,14 @@ function layoutPosters(){
 // An open end (still alive, still running) fades out toward today. The color is the note's row category (Color by).
 function layoutSpans(ids0, o, lab, order){
   const sp = o.across.find(a => a.id.endsWith("@end")), key = sp.id.slice(0, -4), NOWY = new Date().getUTCFullYear();
-  const rows = []; for (const i of ids0) { const v = fmOf(i) && fmOf(i)[key], s_ = yspan(Array.isArray(v) ? v[0] : v); if (s_) rows.push([i, s_[0], s_[1]]); }
+  const all_ = []; for (const i of ids0) { const v = fmOf(i) && fmOf(i)[key], s_ = yspan(Array.isArray(v) ? v[0] : v); if (s_) all_.push([i, s_[0], s_[1]]); }
+  // the years slider: its histogram counts the lives under way in each stretch of years; it keeps every life that overlaps the years kept
+  // (the slider starts at the 5th-percentile start, so a few ancients don't squash it; its left end at its minimum keeps everyone earlier too)
+  const sid = key + "@span", endOf = r => r[2] ?? (r[1] > NOWY - 110 ? NOWY : r[1] + 80), st0 = all_.map(r => r[1]).sort((a, b) => a - b);
+  const ylo = st0.length ? Math.floor(st0[Math.floor(st0.length * .05)] / 50) * 50 : NOWY;
+  if (all_.length && NOWY - ylo >= 1) { const B = 28, bins = new Array(B).fill(0), w_ = (NOWY - ylo) / B; for (const r of all_) { for (let b = Math.max(0, Math.floor((r[1] - ylo) / w_)); b <= Math.min(B - 1, Math.floor((endOf(r) - ylo) / w_)); b++) bins[b]++; }
+    PSC().ext = { across: { id: sid, kind: "year", lo: ylo, hi: NOWY, bins } }; } else PSC().ext = {};
+  const kept = PSC().rng[sid], k0 = kept && kept[0] > ylo ? kept[0] : -Infinity, rows = kept ? all_.filter(r => r[1] <= kept[1] + 1e-9 && endOf(r) >= k0 - 1e-9) : all_;
   rows.sort((a, b) => a[1] - b[1] || (a[2] ?? 1e9) - (b[2] ?? 1e9));
   // the year scale stretches where many lives fall and tightens where few do: part even years, part "how many notes start or end by now",
   // so a crowd of moderns gets room and a handful of ancients still sits where they belong, far to the left
@@ -1997,7 +2005,7 @@ function layoutSpans(ids0, o, lab, order){
   const ticks = [], cand = [-3000, -2000, -1000, -500, 0, 500, 1000, 1200, 1400, 1500, 1600, 1700, 1750, 1800, 1850, 1900, 1925, 1950, 1975, 2000, 2025]; let lastX = -1e9;
   for (const y of cand) { if (y < lo - 1 || y > NOWY) continue; const x = xOf(y); if (x - lastX < 60) continue; lastX = x; ticks.push({ x, t: y < 0 ? `${-y} BCE` : String(y) }); }
   const H_ = rows.length * ROW;
-  PSC().spans = { key, open: new Set(rows.filter(r => r[2] == null).map(r => r[0])), n: rows.length, miss: ids0.length - rows.length };
+  PSC().spans = { key, open: new Set(rows.filter(r => r[2] == null).map(r => r[0])), n: rows.length, miss: ids0.length - all_.length };
   PSC().lanesOut = []; PSC().ticks = ticks.map(t => ({ ...t })); PSC().WD = WD; PSC().H = H_; PSC().hasNo = false; PSC().img = ""; PSC().lab = lab; PSC().order = order;
   expBox = { x0: -60, y0: -60, x1: WD + 260, y1: H_ + 30 }; }
 // each variable's mini slider: its spread as a little histogram, and two handles that keep only the notes in between
