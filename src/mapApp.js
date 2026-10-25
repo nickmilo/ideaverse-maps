@@ -1006,6 +1006,8 @@ function morph(animate, cam){
   if (csphOn()) { csAngles(); csProject(); tX = DX; tY = DY; }
   const c1 = cam ? cam(tX, tY) : null;
   if (!animate || win.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    // an instant move also ends any move still under way (else "morphing" stays on, and the Obsidian map's live physics stops showing)
+    ++morphId; morphing = false; camBusy = 0;
     X.set(tX); Y.set(tY); buildGrid(); if (c1) { k = c1.k; tx = c1.tx; ty = c1.ty; } draw(); return; }
   const fX = Float32Array.from(X), fY = Float32Array.from(Y), t0 = performance.now(), dur = hopSlow ? 1900 : 750, id = ++morphId;   // autoplay's map hops move slower, so you can watch the notes travel
   const c0 = {k, tx, ty};
@@ -2374,7 +2376,7 @@ function graphForce(m, EA, EB, x, y, act, z) {   // act: Int32Array of node indi
   // dragging: a pinned note follows the pointer; the rest stays warm (alphaTarget) until it's let go, then cools again
   const pin = new Uint8Array(m), fxp = new Float64Array(m), fyp = new Float64Array(m); let aT = 0;
   return { step() { STR = -GF.rep; LD = GF.ld; alpha += (aT - alpha) * aDecay; links(); charge(); center(); for (let k = 0; k < na; k++) { const j = act[k]; if (pin[j]) { x[j] = fxp[j]; y[j] = fyp[j]; vx[j] = vy[j] = vz[j] = 0; continue; } vx[j] *= vDecay; vy[j] *= vDecay; vz[j] *= vDecay; x[j] += vx[j]; y[j] += vy[j]; if (D3) z[j] += vz[j]; } return alpha > aMin || aT > 0; },
-    fix(j, px, py){ pin[j] = 1; fxp[j] = px; fyp[j] = py; x[j] = px; y[j] = py; }, free(j){ pin[j] = 0; }, heat(t){ aT = t; if (alpha < t) alpha = t; }, get alpha() { return alpha; } };
+    fix(j, px, py){ pin[j] = 1; fxp[j] = px; fyp[j] = py; x[j] = px; y[j] = py; }, free(j){ pin[j] = 0; }, heat(t){ aT = t; if (alpha < t) alpha = t; }, get hot() { return aT > 0; }, get alpha() { return alpha; } };
 }
 // The physics settles live, a few steps a frame, so you watch the graph find its shape (like the core graph): the same
 // forces as Obsidian's (d3-force: every note pushes every other away, Barnes–Hut; links pull to 30; a pull to the middle).
@@ -2406,7 +2408,8 @@ function graphSim(ids, key){
   if (!more) return; looping = true;
   const frame = now => { const gapMs = lastF ? now - lastF : 16; lastF = now; if (run !== GPH.run || dead || !GRV()) { looping = false; if (run === GPH.run && more && !GPH.drag) GPH.key = ""; return; }
     // slow frames get more physics each, so the settle takes about the same time on any machine
-    const f0 = performance.now(), bud = Math.min(400, Math.max(14, gapMs * .6)); while (more && performance.now() - f0 < bud) step(); GPH.stepMs = performance.now() - f0; place();
+    // while you drag a note or a slider, frames stay quick so the graph follows your hand
+    const f0 = performance.now(), bud = F.hot ? 16 : Math.min(400, Math.max(14, gapMs * .6)); while (more && performance.now() - f0 < bud) step(); GPH.stepMs = performance.now() - f0; place();
     if (IDV()) { for (let i=0;i<n;i++) if (vis[i]) { G3[3*i] = GPH.x[i]; G3[3*i+1] = GPH.y[i]; G3[3*i+2] = GPH.z[i]; } geoProj(); } else for (let i=0;i<n;i++) if (vis[i]) { EX[i] = GPH.x[i]; EY[i] = GPH.y[i]; }
     const d0 = performance.now(); if (!morphing) { X.set(EX); Y.set(EY); if (!GPH.touched) { layoutGraph(); const t = fitTarget(); k = t.k; tx = t.tx; ty = t.ty; } draw(); } GPH.drawMs = performance.now() - d0; GPH.morph = morphing;
     if (more) RAF(frame); else { looping = false; layoutGraph(); buildGrid(); if (!GPH.touched) fit(true); } };
@@ -4698,7 +4701,8 @@ return {
     if (sig === scopeSig) { if (baseDirty) { baseDirty = false; relayout(!!W, false, () => ({ k, tx, ty })); } return; }
     scopeSig = sig; baseDirty = false; if (paths == null) SCOPE = null; else { SCOPE = new Uint8Array(n); for (const p of paths) { const i = PIDX.get(p); if (i != null) SCOPE[i] = 1; } } relayout(!!W, false, () => fitTarget()); },
   _posters(){ return { pimg: [...PIMG].filter(([, e]) => e.ok).length, cur: PSC().cur, across: PSC().opts && PSC().opts.across.map(a => a.id + ":" + a.kind), lanes: PSC().opts && PSC().opts.lanes.map(a => a.id), img: PSC().img, ticks: PSC().ticks.length, fm: (() => { for (let i=0;i<n;i++) if (vis[i]) return [N[i].path, JSON.stringify(fmOf(i))]; })() }; },
-  _graph(){ return { rms: GPH.x ? Math.round(Math.sqrt([...GPH.x].reduce((t, v, i) => t + v * v + GPH.y[i] * GPH.y[i], 0) / GPH.x.length)) : 0, st: GPH.stepMs, dr: GPH.drawMs, mo: GPH.morph, it: GPH.it, its: GPH.its, key: GPH.key }; },
+  _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
+  _graph(){ return { mlive: morphing, rms: GPH.x ? Math.round(Math.sqrt([...GPH.x].reduce((t, v, i) => t + v * v + GPH.y[i] * GPH.y[i], 0) / GPH.x.length)) : 0, st: GPH.stepMs, dr: GPH.drawMs, mo: GPH.morph, it: GPH.it, its: GPH.its, key: GPH.key }; },
   setBaseInfo(info){ const sig = info ? JSON.stringify([info.sort, info.order, info.cols, info.groups ? [...info.groups].join() : ""]) : ""; if (sig === baseSig) return;
     baseSig = sig; BASEINFO = info || null; FMC.clear(); PSTP.key = PSTB.key = null; baseDirty = true; },
   toggleFollow(){ setFollowing(!following); return following; },
