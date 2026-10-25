@@ -1,5 +1,8 @@
 # Maps of the Ideaverse
 
+![The Obsidian map in 3D: Nick's ideaverse, turning, with one note's links lit](docs/obsidian-3d.webp)
+<sub>The Obsidian map in 3D, turning through Nick Milo's own ideaverse (14,617 notes).</sub>
+
 See your notes as maps. Every note in your vault gets a place, by what it is and how it's linked: from unlinked notes at the bottom up to your maps of maps and home notes at the top. Press play and watch your vault grow, month by month. Then try it another dozen ways: as rings, as galaxies, as a graph, as a bookshelf, as a wall of movie posters.
 
 Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinking, for anyone with an Obsidian vault (an "ideaverse"). Free, open source, and it never changes your notes.
