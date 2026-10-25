@@ -895,3 +895,5 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .gfctl .gfw input{flex:1;min-width:0}
 .ivm .gfctl .gfw b{font:500 11px var(--mono);color:var(--muted);min-width:30px;text-align:right}
 .ivm .gfctl > .pchip{grid-column:1/-1;justify-self:start}
+/* a More map's pill sits at the far left, before Emergence, so its menu opens over the map's edge, not its middle */
+.ivm.ivm header.tb2 #vsegms > .vcurseg{order:-1}
