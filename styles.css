@@ -838,3 +838,7 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm[data-vgrid="1"] header.tb2 .search{flex:0 1 150px;min-width:100px}
 .ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{column-gap:8px;margin:0 2px 0 6px}
 }
+.ivm .yrctl .prng .srange{position:relative}
+.ivm .yrctl .srange .yrh{position:absolute;top:0;transform:translateX(-50%);color:var(--ink);font-weight:600}
+.ivm .yrctl .srange .yrh[hidden]{display:none}
+.ivm.ivm #driftbar .dwob.dim{opacity:.5}
