@@ -140,6 +140,7 @@ subCompute();
 // every filter except focus: archive, folders, collection (years no longer hide notes: older ones gather in Time's "Before" strip)
 // a base (Obsidian Bases) can scope the map to the notes its query returns; scores still come from the whole vault
 let SCOPE = null;
+let tagHide = { on: () => false, hid: () => false };   // set once the tag helpers exist (below)
 function baseOK(i){ const d = N[i];
   return (!SCOPE || SCOPE[i]) && (!ARCH[i] || showArch)
     && (folders.includes(d.ace) || !FOLD.includes(d.ace))
@@ -154,6 +155,8 @@ function computeVis(){ const fs = new Set(folders);
       && !subHid[i]
       && collOK(d)
       && (!fset || fset[i] || curV() === "people")) ? 1 : 0; }
+  // tags switched off (Treemap, Bookshelf and Chord by tags) leave the map
+  if (tagHide.on()) for (let i=0;i<n;i++) if (vis[i] && tagHide.hid(i)) vis[i] = 0;
   if (YRV.has(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
   if (focus >= 0) vis[focus] = 1;
   // a filter, a collection or a base that leaves few notes: draw them bigger, so a small set never looks empty
@@ -1035,7 +1038,7 @@ function setView(v){
   ungrow(); view = v; save("iv-view", v); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
   root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === tabOf())));
   root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : "";
-  if (yrNarrow()) { computeVis(); layoutACE(); layoutTime(); layoutProp(); updateCounts(); }
+  if (yrNarrow() || (HASTAGS && TMOFF.size)) { computeVis(); layoutACE(); layoutTime(); layoutProp(); updateCounts(); }
   syncRange(); legend(); morph(true, () => fitTarget());
   { const bb = root.querySelector(`#vseg button[data-v="${view}"]`); if (bb && isPhone()) bb.scrollIntoView({inline:"nearest", block:"nearest"}); }
 }
@@ -1101,7 +1104,14 @@ const CHX = new Float32Array(n), CHY = new Float32Array(n), CHC = new Int16Array
 const CH_C = {x: WW/2, y: WH/2}, CH_R = 820;
 const CH_HUE = {"+":"#d99a2b", "Atlas":"#3f7fd0", "Calendar":"#2f9f78", "Efforts":"#d0503f", "x":"#8b8b95"};
 // tags (Bookshelf and Chord can group by them): a note's first tag decides; its first level is the group, its second the subgroup
-const tagOf = i => (N[i].tags && N[i].tags[0]) || "", tagTop = i => tagOf(i).split("/")[0], tagSub = i => tagOf(i).split("/")[1] || "", HASTAGS = N.some(d => d.tags && d.tags.length);
+const HASTAGS = N.some(d => d.tags && d.tags.length);
+// Tags can be switched off (TMOFF: lowercase first levels; "" is No tag), on Treemap, Bookshelf and Chord alike.
+// A note's tag is then its first tag that's still on ("" for no tag; null when every tag it has is off, and it leaves the map)
+let tmBy = pref("iv-tmby", "folders") === "tags" ? "tags" : "folders", TMOFF = new Set(Array.isArray(pref("iv-tmtagoff", null)) ? pref("iv-tmtagoff", null) : []);
+const tmTagsOn = () => tmBy === "tags" && HASTAGS;
+function tmTag(i){ const ts = N[i].tags; if (!ts || !ts.length) return TMOFF.has("") ? null : ""; for (const t of ts) if (!TMOFF.has(t.split("/")[0].toLowerCase())) return t; return null; }
+tagHide = { on: () => { if (!HASTAGS || !TMOFF.size) return false; try { const v = curV(); return (v === "treemap" && tmBy === "tags") || (v === "shelf" && shelfSort === "tag") || (v === "chord" && chordBy === "tags"); } catch (e) { return false; /* still starting up */ } }, hid: i => tmTag(i) == null };
+const tagOf = i => tmTag(i) || "", tagTop = i => tagOf(i).split("/")[0], tagSub = i => tagOf(i).split("/")[1] || "";
 let chordBy = ["time", "tags"].includes(pref("iv-chordby", "folders")) && (pref("iv-chordby", "folders") !== "tags" || HASTAGS) ? pref("iv-chordby", "folders") : "folders";   // Chord, Corona and Tesla: arcs by folder, or by year (clockwise from 12 o'clock)
 const CHCAT_F = (() => {
   const by = new Map(); const key = d => d.archive ? "x/z archive" : d.sub || d.ace;
@@ -1116,20 +1126,20 @@ const CHCAT_T = (() => {   // one arc a year, oldest first; undated notes at the
   const keys = [...ys.keys()].sort((a, b) => (a === "No date") - (b === "No date") || a.localeCompare(b)), nums = keys.filter(k => k !== "No date").map(Number), y0 = Math.min(...nums), y1 = Math.max(...nums);
   return keys.map((k, j) => { const f = k === "No date" ? -1 : (Number(k) - y0)/Math.max(1, y1 - y0);
     return {id: j, name: k, short: k, ace: k === "No date" ? "x" : "t", hue: f < 0 ? "#8b8b95" : `hsl(${Math.round(205 - 175*f)}, 58%, ${Math.round(50 + 6*f)}%)`, ids: ys.get(k)}; }); })();
-const CHCAT_G = (() => {   // one arc per first-level tag (biggest first); small tags share "Other tags"; untagged notes at the end
-  const by = new Map(), nm = new Map(); N.forEach((d, i) => { const t = tagTop(i), k = t.toLowerCase(); if (!by.has(k)) { by.set(k, []); nm.set(k, t); } by.get(k).push(i); });
+let CHCAT_G = null; const chTagCats = () => {   // one arc per first-level tag (biggest first); small tags share "Other tags"; untagged notes at the end
+  const by = new Map(), nm = new Map(); N.forEach((d, i) => { if (tmTag(i) == null) return; const t = tagTop(i), k = t.toLowerCase(); if (!by.has(k)) { by.set(k, []); nm.set(k, t); } by.get(k).push(i); });
   const tagged = [...by].filter(([k]) => k).sort((a, b) => b[1].length - a[1].length), keep = tagged.filter(([, ids], j) => j < 20 && ids.length >= Math.max(5, n * .005)), rest = tagged.filter(x => !keep.includes(x)).flatMap(([, ids]) => ids);
   const list = keep.map(([k, ids], j) => ({ name: "#" + nm.get(k), short: "#" + nm.get(k), ace: "t", hue: `hsl(${Math.round(j * 360 / Math.max(1, keep.length))}, 55%, 56%)`, ids }));
   if (rest.length) list.push({ name: "Other tags", short: "Other tags", ace: "x", hue: "#8b8b95", ids: rest });
   if (by.has("")) list.push({ name: "No tag", short: "No tag", ace: "x", hue: "#5f5f68", ids: by.get("") });
-  list.forEach((c, j) => c.id = j); return list; })();
+  list.forEach((c, j) => c.id = j); return list; };
 let ribKey = null, CH_RIB = [], CH_MAX = 0;   // CH_MAX: the biggest band with every note shown (all time), the scale every band is drawn against
-let CHCAT = chordBy === "time" ? CHCAT_T : chordBy === "tags" ? CHCAT_G : CHCAT_F;
+let CHCAT = chordBy === "time" ? CHCAT_T : chordBy === "tags" ? (CHCAT_G = chTagCats()) : CHCAT_F;
 // By Folders, unless the notes shown all sit in one folder (a base of one folder, a filter): then by Time, so there are bands between years to see
 let chOneFolder = false;
 function chSetCats(){ let k = 0; if (typeof vis !== "undefined" && vis) for (const c of CHCAT_F) { if (c.ids.some(i => vis[i])) k++; if (k > 1) break; }
   chOneFolder = chordBy === "folders" && k === 1;
-  const want = chordBy === "time" || chOneFolder ? CHCAT_T : chordBy === "tags" ? CHCAT_G : CHCAT_F; if (want === CHCAT && ribKey !== null) return;
+  const want = chordBy === "time" || chOneFolder ? CHCAT_T : chordBy === "tags" ? (CHCAT_G || (CHCAT_G = chTagCats())) : CHCAT_F; if (want === CHCAT && ribKey !== null) return;
   CHCAT = want; for (const c of CHCAT) for (const i of c.ids) CHC[i] = c.id; ribKey = null; }
 chSetCats();
 // angles: share by count^0.6 so the big folders don't swallow the ring; small gaps between kinds, bigger between ACE folders.
@@ -1636,11 +1646,6 @@ function overLinks(lit){
 const TM = {W: 3200, H: 1800, pad: 6};
 let TMBOX = [];   // folder and subfolder boxes, for their names
 let tmSubs = pref("iv-tmsubs", false) === true;   // Treemap: show subfolder boxes and names
-// Treemap by Tags: a box per first-level tag, a box per nested tag inside it; tags can be switched off (TMOFF, lowercase first levels; "" is No tag)
-let tmBy = pref("iv-tmby", "folders") === "tags" ? "tags" : "folders", TMOFF = new Set(Array.isArray(pref("iv-tmtagoff", null)) ? pref("iv-tmtagoff", null) : []);
-const tmTagsOn = () => tmBy === "tags" && HASTAGS;
-// a note's tag on the Treemap: its first tag whose first level is switched on ("" for no tag; null when every tag it has is off)
-function tmTag(i){ const ts = N[i].tags; if (!ts || !ts.length) return TMOFF.has("") ? null : ""; for (const t of ts) if (!TMOFF.has(t.split("/")[0].toLowerCase())) return t; return null; }
 function squarify(items, x, y, w, h, place){   // items: [{v, …}] sorted by v desc; place(item, x, y, w, h)
   const tot = items.reduce((s_, it) => s_ + it.v, 0); if (!tot || w <= 0 || h <= 0) return;
   const sc = w*h/tot; let i0 = 0;
@@ -3803,7 +3808,7 @@ syncEmd();
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
 $("#gochord").onclick = () => goChord("");
 function syncCB(){ root.querySelectorAll("#chordby button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cb === chordBy))); }
-root.querySelectorAll("#chordby button").forEach(b => b.onclick = () => { if (b.dataset.cb === chordBy) return; chordBy = b.dataset.cb; save("iv-chordby", chordBy); syncCB(); chSetCats(); chPin = -1; chArc = -1; if (view === "chord") { morph(true, () => fitTarget()); legend(); } });
+root.querySelectorAll("#chordby button").forEach(b => b.onclick = () => { if (b.dataset.cb === chordBy) return; chordBy = b.dataset.cb; save("iv-chordby", chordBy); syncCB(); chSetCats(); chPin = -1; chArc = -1; if (typeof tmTagUI === "function") tmTagUI(); if (view === "chord") { if (TMOFF.size) relayout(true, false, () => fitTarget()); else morph(true, () => fitTarget()); legend(); } });
 syncCB();
 // a vault with no tags doesn't offer them
 if (!HASTAGS) for (const b of root.querySelectorAll('#shelfsort button[data-ss="tag"], #chordby button[data-cb="tags"]')) b.hidden = true;
@@ -3826,20 +3831,21 @@ $("#csbands").onclick = () => { csBands = !csBands; save("iv-csbands", csBands);
 $("#tmsubs").setAttribute("aria-pressed", String(tmSubs));
 { const tb = doc.createElement("div"); tb.className = "seg"; tb.id = "tmby"; tb.setAttribute("role", "group"); tb.setAttribute("aria-label", "Treemap boxes by"); tb.hidden = true;
   for (const [v, t, tip] of [["folders", "Folders", "A box per folder, a box per subfolder inside it"], ["tags", "Tags", "A box per first-level tag, a box per nested tag inside it (a note goes under its first tag that's switched on)"]]) {
-    const b = doc.createElement("button"); b.dataset.tb = v; b.textContent = t; b.setAttribute("aria-label", tip); b.onclick = () => { if (tmBy === v) return; tmBy = v; save("iv-tmby", v); syncTmBy(); if (view === "treemap") morph(true, () => fitTarget()); }; tb.appendChild(b); }
+    const b = doc.createElement("button"); b.dataset.tb = v; b.textContent = t; b.setAttribute("aria-label", tip); b.onclick = () => { if (tmBy === v) return; tmBy = v; save("iv-tmby", v); syncTmBy(); if (view === "treemap") { if (TMOFF.size) relayout(true, false, () => fitTarget()); else morph(true, () => fitTarget()); } }; tb.appendChild(b); }
   $("#tmsubs").before(tb);
   const tc = doc.createElement("div"); tc.className = "postctl tmtagctl"; tc.id = "tmtags"; tc.hidden = true; $("#tmsubs").after(tc); }
 function syncTmBy(){ root.querySelectorAll("#tmby button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tb === tmBy))); $("#tmsubs").setText(tmTagsOn() ? "Nested tags" : "Subfolders");
   { const pt = $("#tmsubs").parentElement && $("#tmsubs").parentElement.classList.contains("gsec") ? $("#tmsubs").parentElement.querySelector(".pt") : null; if (pt) pt.setText(tmTagsOn() ? "Nested tags" : "Subfolders"); }
   tmTagUI(); if (typeof syncTB === "function") syncTB(); }
 // the tag chips: every first-level tag with its count (and No tag); click one to switch it off or on; All and None
-function tmTagUI(){ const tc = $("#tmtags"); if (!tc) return; tc.hidden = !(view === "treemap" && tmTagsOn()); if (tc.hidden) return;
-  const cnt = new Map(), nm = new Map(); for (let i=0;i<n;i++) { if (!vis[i]) continue; const ts = N[i].tags; if (!ts || !ts.length) { cnt.set("", (cnt.get("") || 0) + 1); continue; }
+function tmTagUI(){ const tc = $("#tmtags"); if (!tc) return; tc.hidden = !HASTAGS || !((view === "treemap" && tmBy === "tags") || (view === "shelf" && shelfSort === "tag") || (view === "chord" && chordBy === "tags")); if (tc.hidden) return;
+  // counted over the notes the other filters leave (folders, collections, a base), whatever the tag switches say
+  const cnt = new Map(), nm = new Map(); for (let i=0;i<n;i++) { if (!baseOK(i)) continue; const ts = N[i].tags; if (!ts || !ts.length) { cnt.set("", (cnt.get("") || 0) + 1); continue; }
     const seen = new Set(); for (const t of ts) { const top = t.split("/")[0], k = top.toLowerCase(); if (seen.has(k)) continue; seen.add(k); if (!nm.has(k)) nm.set(k, top); cnt.set(k, (cnt.get(k) || 0) + 1); } }
   const keys = [...cnt.keys()].sort((a, b) => (a === "") - (b === "") || cnt.get(b) - cnt.get(a) || a.localeCompare(b));
   const sig = keys.map(k => k + ":" + cnt.get(k) + (TMOFF.has(k) ? "-" : "")).join(","); if (tc.dataset.sig === sig) return; tc.dataset.sig = sig; tc.empty();
   tc.createDiv({ cls: "phint", text: "Tags shown. A note with several tags goes under its first one that's on." });
-  const acts = tc.createDiv({ cls: "plchips" }); const set = off => { TMOFF = new Set(off); save("iv-tmtagoff", [...TMOFF]); tc.dataset.sig = ""; tmTagUI(); if (view === "treemap") morph(true, () => fitTarget()); };
+  const acts = tc.createDiv({ cls: "plchips" }); const set = off => { TMOFF = new Set(off); save("iv-tmtagoff", [...TMOFF]); tc.dataset.sig = ""; CHCAT_G = null; if (chordBy === "tags") { chSetCats(); ribKey = null; } tmTagUI(); relayout(true, false, () => fitTarget()); };
   const all = acts.createEl("button", { cls: "pchip pall", text: "All", attr: { type: "button" } }); all.onclick = e => { e.stopPropagation(); set([]); };
   const none = acts.createEl("button", { cls: "pchip pall", text: "None", attr: { type: "button" } }); none.onclick = e => { e.stopPropagation(); set(keys); };
   const list = tc.createDiv({ cls: "plchips" });
@@ -3847,7 +3853,7 @@ function tmTagUI(){ const tc = $("#tmtags"); if (!tc) return; tc.hidden = !(view
     ch.onclick = e => { e.stopPropagation(); const o = new Set(TMOFF); if (o.has(k)) o.delete(k); else o.add(k); set([...o]); }; } }
 $("#tmsubs").onclick = () => { tmSubs = !tmSubs; save("iv-tmsubs", tmSubs); $("#tmsubs").setAttribute("aria-pressed", String(tmSubs)); draw(); };
 const syncSS = () => root.querySelectorAll("#shelfsort button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ss === shelfSort)));
-root.querySelectorAll("#shelfsort button").forEach(b => b.onclick = () => { shelfSort = b.dataset.ss; save("iv-ssort", shelfSort); syncSS(); if (view === "shelf") morph(true, () => fitTarget()); });
+root.querySelectorAll("#shelfsort button").forEach(b => b.onclick = () => { shelfSort = b.dataset.ss; save("iv-ssort", shelfSort); syncSS(); if (typeof tmTagUI === "function") tmTagUI(); if (view === "shelf") { if (TMOFF.size) relayout(true, false, () => fitTarget()); else morph(true, () => fitTarget()); } });
 syncSS();
 for (const g of ["square", "hex", "mandala", "octa", "shells"]) { const b = root.querySelector("#gogeo" + g); if (b) b.onclick = () => { closePops(); driftStop(); GEO = g; save("iv-geo", g); if (view === "quincunx") { morph(true, () => fitTarget()); legend(); } else setView("quincunx"); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : ""; placePlaybar(); }; }
 for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
