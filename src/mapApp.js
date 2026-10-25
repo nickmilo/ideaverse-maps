@@ -2458,9 +2458,12 @@ function graphSim(ids, key){
   const t0 = performance.now(); while (more && performance.now() - t0 < 250) step(); place();
   let lastF = 0, looping = false;
   // kept for dragging: pin a note to the pointer and wake the physics; let go and it cools and settles again
-  GPH.F = F; GPH.loc = loc; GPH.deg = deg; GPH.wake = () => { more = true; if (!looping && run === GPH.run) { looping = true; lastF = 0; RAF(frame); } };
+  GPH.F = F; GPH.loc = loc; GPH.deg = deg; GPH.m = m; GPH.err = ""; GPH.live = () => looping; GPH.wake = () => { more = true; if (!looping && run === GPH.run) { looping = true; lastF = 0; RAF(frame); } };
   if (!more) return; looping = true;
-  const frame = now => { const gapMs = lastF ? now - lastF : 16; lastF = now; if (run !== GPH.run || dead || !GRV()) { looping = false; if (run === GPH.run && more && !GPH.drag) GPH.key = ""; return; }
+  // a frame that fails (anything thrown while it steps or draws) ends the loop cleanly, so the next drag or slider can start it again,
+  // and leaves its message in GPH.err for the status line in the map's menu
+  const frame = now => { try { frame_(now); } catch (err) { looping = false; GPH.err = String(err && err.message || err); } };
+  const frame_ = now => { const gapMs = lastF ? now - lastF : 16; lastF = now; if (run !== GPH.run || dead || !GRV()) { looping = false; if (run === GPH.run && more && !GPH.drag) GPH.key = ""; return; }
     // slow frames get more physics each, so the settle takes about the same time on any machine
     // while you drag a note or a slider, frames stay quick so the graph follows your hand
     const f0 = performance.now(), bud = F.hot ? 16 : Math.min(400, Math.max(14, gapMs * .6)); while (more && performance.now() - f0 < bud) step(); GPH.stepMs = performance.now() - f0; place();
@@ -4586,6 +4589,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       // the view holds still while you drag (it stops following the graph), so a looser graph takes more room on screen instead of being zoomed back out to the same picture
       r.oninput = () => { GF[key] = +r.value; v.setText(r.value); GPH.touched = true; if (GPH.F) { GPH.F.heat(.3); GPH.wake(); } };
       r.onchange = () => { save("iv-gforce", { ...GF }); if (GPH.F) GPH.F.heat(0); }; }
+    // a small status line: what the physics is doing right now (useful when something seems stuck)
+    const stat = gc.createDiv({ cls: "phint gfstat" }); const statT = () => { if (gc.hidden || !gc.offsetParent) return;
+      stat.setText(`${GPH.F ? (GPH.live && GPH.live() ? "Moving" : "Settled") : "Not started"} · ${(GPH.m || 0).toLocaleString()} notes · step ${GPH.it || 0}${morphing ? " · gliding" : ""}${GPH.touched ? "" : " · view follows"}${GPH.err ? " · error: " + GPH.err : ""}`); };
+    const statIv = win.setInterval(() => { if (dead) win.clearInterval(statIv); else statT(); }, 500);
     const rs = gc.createEl("button", { cls: "pchip", text: "Reset", attr: { type: "button" } }); rs.onclick = e => { e.stopPropagation(); Object.assign(GF, DEF); for (const [key, r, v] of rows) { r.value = String(GF[key]); v.setText(String(GF[key])); } save("iv-gforce", { ...GF }); GPH.touched = true; if (GPH.F) { GPH.F.heat(.3); GPH.wake(); win.setTimeout(() => GPH.F && GPH.F.heat(0), 600); } }; }
   // Posters' own options, in its map menu: Across, Lanes, Size
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "postctl" } }); pc.hidden = true;
