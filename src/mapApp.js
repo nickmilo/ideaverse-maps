@@ -2459,20 +2459,20 @@ function graphSim(ids, key){
   let lastF = 0, looping = false;
   // kept for dragging: pin a note to the pointer and wake the physics; let go and it cools and settles again
   GPH.F = F; GPH.loc = loc; GPH.deg = deg; GPH.m = m; GPH.err = ""; GPH.live = () => looping; GPH.wake = () => { more = true; if (!looping && run === GPH.run) { looping = true; lastF = 0; RAF(frame); } };
-  if (!more) return; looping = true;
+  // (no early return here: a small graph often settles in the first stretch, and wake() still needs frame below, or it would throw and leave the physics stuck)
   // a frame that fails (anything thrown while it steps or draws) ends the loop cleanly, so the next drag or slider can start it again,
   // and leaves its message in GPH.err for the status line in the map's menu
   const frame = now => { try { frame_(now); } catch (err) { looping = false; GPH.err = String(err && err.message || err); } };
   const frame_ = now => { const gapMs = lastF ? now - lastF : 16; lastF = now; if (run !== GPH.run || dead || !GRV()) { looping = false; if (run === GPH.run && more && !GPH.drag) GPH.key = ""; return; }
     // slow frames get more physics each, so the settle takes about the same time on any machine
     // while you drag a note or a slider, frames stay quick so the graph follows your hand
-    const f0 = performance.now(), bud = F.hot ? 16 : Math.min(400, Math.max(14, gapMs * .6)); while (more && performance.now() - f0 < bud) step(); GPH.stepMs = performance.now() - f0; place();
+    const f0 = performance.now(), bud = F.hot ? 16 : Math.min(400, Math.max(14, gapMs * .6)), cap = F.hot ? 4 : 1e9; let ns = 0; while (more && ns++ < cap && performance.now() - f0 < bud) step();    GPH.stepMs = performance.now() - f0; place();
     if (IDV()) { for (let i=0;i<n;i++) if (vis[i]) { G3[3*i] = GPH.x[i]; G3[3*i+1] = GPH.y[i]; G3[3*i+2] = GPH.z[i]; } geoProj(); } else for (let i=0;i<n;i++) if (vis[i]) { EX[i] = GPH.x[i]; EY[i] = GPH.y[i]; }
     const d0 = performance.now(); if (!morphing) { X.set(EX); Y.set(EY); if (!GPH.touched) { layoutGraph(); const t = fitTarget(); k = t.k; tx = t.tx; ty = t.ty; } draw(); } GPH.drawMs = performance.now() - d0; GPH.morph = morphing;
     if (more) RAF(frame); else { looping = false; layoutGraph(); buildGrid(); if (!GPH.touched) fit(true); } };
   // the view follows the settling graph until you zoom or drag it yourself
   GPH.touched = false; if (!GPH.hooked) { GPH.hooked = true; for (const t of ["wheel", "pointerdown"]) cv.addEventListener(t, () => { GPH.touched = true; }, { passive: true }); }
-  RAF(frame); }
+  if (more) { looping = true; RAF(frame); } }
 EXP.graph = {
   layout: layoutGraph,
   // every link, faint, the way the core graph draws them; the picked note's links still light up on top
