@@ -8,7 +8,7 @@ See your notes as maps. Every note in your vault gets a place, by what it is and
 Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinking, for anyone with an Obsidian vault (an "ideaverse"). Free, open source, and it never changes your notes.
 
 ![Emergence: a map of content with links above and below](docs/emergence.png)
-<sub>Emergence in the LYT Mode theme: a map of content with links above it (up to its maps and hubs) and below it (the notes it gathers). All screenshots use a made-up vault of 2,500 notes and 160 made-up films.</sub>
+<sub>Emergence in the LYT Mode theme: a map of content with links above it (up to its maps and hubs) and below it (the notes it gathers). The other screenshots use a made-up vault of 2,500 notes and 160 made-up films.</sub>
 
 ## The maps
 
