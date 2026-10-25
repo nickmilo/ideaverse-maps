@@ -1847,6 +1847,9 @@ const linkName = v => String(v).replace(/^!?\[\[|\]\]$/g, "").replace(/\|.*$/, "
 const isLink = v => typeof v === "string" && /^!?\[\[[^\]]+\]\]$/.test(v.trim());
 const asNum = v => typeof v === "number" ? (isFinite(v) ? v : null) : typeof v === "string" && /^-?\d+(\.\d+)?$/.test(v.trim()) ? +v : null;
 const isImg = (k_, v) => typeof v === "string" && (/^https?:\/\/\S+\.(jpe?g|png|webp|gif|avif)(\?\S*)?$/i.test(v.trim()) || (/image|cover|poster|thumb|banner|art/i.test(k_) && (/^https?:\/\//.test(v.trim()) || /\.(jpe?g|png|webp|gif|avif)\]*$/i.test(v.trim()))));
+const YPART = "(?:c\\.?|ca\\.?|circa|~)?\\s*(\\d{1,4})\\s*(BCE|BC|CE|AD)?", YSPAN = new RegExp(`^\\s*${YPART}\\s*(?:[-–—]|to)\\s*(?:${YPART})?\\s*$`, "i");
+// a span of years, like a lifespan ("1949 -", "1879 – 1955", "c. 563 BCE – 483 BCE"): [start, end] (end null while ongoing)
+function yspan(v){ if (typeof v !== "string") return null; const m = YSPAN.exec(v); if (!m) return null; const y = (d, e) => d == null ? null : (/^BC/i.test(e || "") ? -+d : +d); const a = y(m[1], m[2]), b = y(m[3], m[4] || (m[2] && /^BC/i.test(m[2]) && m[3] ? m[2] : "")); return a == null || (b != null && b < a) ? null : [a, b]; }
 const DATEK = new Set(["created","createdat","created_at","created on","date created","datecreated","creation date","creation_date","date"]);
 function postersDetect(){
   const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
@@ -1855,11 +1858,12 @@ function postersDetect(){
   let got = 0;
   for (let q = 0; q < ids.length; q += step) { const fm = fmOf(ids[q]); if (!fm) continue; got++;
     for (const k_ of Object.keys(fm)) { if (k_ === "position" || k_ === "aliases" || k_ === "cssclasses" || DATEK.has(k_.toLowerCase())) continue; const v = fm[k_]; if (v == null || v === "") continue;
-      let o = st.get(k_); if (!o) st.set(k_, o = { n: 0, num: 0, yr: 0, day: 0, img: 0, link: 0, cat: 0, vals: new Map() });
+      let o = st.get(k_); if (!o) st.set(k_, o = { n: 0, num: 0, yr: 0, day: 0, img: 0, link: 0, cat: 0, span: 0, vals: new Map() });
       o.n++; const vs = Array.isArray(v) ? v.slice(0, 12) : [v];
       const nv = Array.isArray(v) ? null : asNum(v); if (nv != null) { o.num++; if (Number.isInteger(nv) && nv >= 1000 && nv <= 2200) o.yr++; continue; }
       if (!Array.isArray(v) && isImg(k_, v)) { o.img++; continue; }
       if (!Array.isArray(v) && typeof v === "string" && parseDay(v)) { o.day++; continue; }
+      if (!Array.isArray(v) && yspan(v)) { o.span++; continue; }
       for (const x of vs) { if (x == null || typeof x === "object") continue; const t = String(x); if (isLink(t)) o.link++; else if (t.length <= 40) o.cat++; else continue;
         const lab = isLink(t) ? linkName(t) : t.trim(); o.vals.set(lab, (o.vals.get(lab) || 0) + 1); } } }
   if (!got) PSC().key = "";   // nothing read yet (Obsidian still indexing): look again next time instead of remembering an empty set
@@ -1870,6 +1874,8 @@ function postersDetect(){
   for (const [k_, o] of [...st].sort((a, b) => b[1].n - a[1].n)) { if (!ok(o)) continue;
     if (o.num >= o.n * .7) { across.push({ id: k_, name: k_, kind: o.yr >= o.num * .8 ? "year" : "num" }); size.push({ id: k_, name: k_ }); continue; }
     if (o.day >= o.n * .7) { across.push({ id: k_, name: k_, kind: "date" }); continue; }
+    // a span of years (a lifespan, a reign, a run): its start and its end, each a year
+    if (o.span >= o.n * .6) { across.push({ id: k_, name: k_ + " (start)", kind: "year" }, { id: k_ + "@end", name: k_ + " (end)", kind: "year" }); continue; }
     if (o.img >= o.n * .5) { if (!img) img = k_; continue; }
     const d = o.vals.size; if ((o.cat + o.link) >= o.n * .6 && d >= 2 && d <= Math.max(60, sampled * .5)) lanes.push({ id: k_, name: k_, vals: o.vals, people: o.link > o.cat }); }
   const want = BASEINFO && BASEINFO.sort; const rk0 = a => a.id === want ? 0 : a.kind === "year" ? 1 : a.id === "@created" ? 4 : a.kind === "date" ? 2 : 3;
@@ -1913,7 +1919,9 @@ function layoutPosters(){
   const hgt = !PSC().mosaic && PSC().height ? o.across.find(a => a.id === PSC().height && a.id !== acrossId) : null, heightId = hgt ? hgt.id : "";
   const sizeId = PSC().size != null && o.size.some(s_ => s_.id === PSC().size) ? PSC().size : o.defSize && o.defSize !== acrossId ? o.defSize : (o.size.find(s_ => /^(rank|rating|stars|score|my.?rating|runtime|pages|length)$/i.test(s_.id) && s_.id !== heightId && s_.id !== acrossId) || o.size[0]).id;
   PSC().cur = { acrossId, laneId, sizeId, heightId, kind: ac.kind, mosaic: PSC().mosaic };
-  const valBy = (id, kind, i) => { if (id === "@created") return isNaN(TV[i]) ? null : yOf(TV[i]) + yFrac(TV[i]); const v = fmOf(i) && fmOf(i)[id]; if (v == null) return null;
+  const valBy = (id, kind, i) => { if (id === "@created") return isNaN(TV[i]) ? null : yOf(TV[i]) + yFrac(TV[i]);
+    const end = id.endsWith("@end"), key = end ? id.slice(0, -4) : id, v = fmOf(i) && fmOf(i)[key]; if (v == null) return null;
+    if (kind !== "date") { const sp = yspan(Array.isArray(v) ? v[0] : v); if (sp) { const y = end ? sp[1] : sp[0]; return y == null ? null : y + .5; } }   // a span of years: its start, or its end
     if (kind === "date") { const d = parseDay(Array.isArray(v) ? v[0] : v); if (!d) return null; const t = Date.parse(d); return yOf(t) + yFrac(t); } const x = asNum(Array.isArray(v) ? v[0] : v); return x == null ? null : x + (kind === "year" ? .5 : 0); };
   const val = i => valBy(acrossId, ac.kind, i);
   const laneOf = i => { if (!laneId) return ""; if (laneId === "@folder") return N[i].ace === "(root)" ? "Root" : N[i].ace; if (laneId === "@base") return (BASEINFO.groups.get(N[i].path)) ?? "—";
