@@ -47,6 +47,11 @@ function edgeColor(a, b, upward){ const k = EKIND.get(a*n + b);
   // k is the kind as the active note (a) wrote it: 1 up, 4 related, 5 any other property
   if (k === 1) return css.upp; if (k === 4) return css.rel; if (k === 5) return css.prop;
   return upward ? css.up : css.down; }
+// is j "above" hl? a higher level is; between notes of one level, a flat map goes by which sits higher on screen,
+// but a map you turn (Tesla, Corona, the Ideaverse, Starfield 3D, the Planetarium, the PKM globe, 3D Geometric) goes by a fixed order (more links, then file order), so a link keeps its color as the map turns
+function upOf(hl, j){ if (N[j].level !== N[hl].level) return N[j].level > N[hl].level;
+  if (sphOn() || geo3On() || s3dOn() || domeOn()) { const dj = out[j].length + inn[j].length, dh = out[hl].length + inn[hl].length; return dj !== dh ? dj > dh : j < hl; }
+  return Y[j] < Y[hl]; }
 
 // ---------- stable pseudo-random per note ----------
 function hash(s, seed) { let h = 2166136261 ^ seed; for (let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h>>>0) % 100000) / 100000; }
@@ -1294,7 +1299,7 @@ function quinSeeds(m){
 // Obsidian (flat, draggable) and Ideaverse (the same graph in 3D) share the graph engine
 let GR3F = 2000, VGRID = pref("iv-vgrid", false) === true;
 // which main tab a map lights: Space-Time is Emergence's, Tesla is the chord map turned inside a glass globe
-function tabOf(){ return view === "spacetime" ? "emergence" : view === "chord" && CSPH === "in" ? "tesla" : view; }
+function tabOf(){ return view === "spacetime" ? "emergence" : view; }
 function GRV(){ return view === "graph" || view === "ideaverse"; }
 function IDV(){ return view === "ideaverse"; }
 const geo3On = () => (view === "quincunx" && (GEO === "octa" || GEO === "shells")) || (GRV() && IDV());
@@ -1498,7 +1503,7 @@ EXP.shelf = {
     ctx.globalAlpha = 1;
     const hl = sel >= 0 ? sel : hover;   // the nodes the link lines end in, sitting on top of the spines
     if (lit && hl >= 0) for (const j of lit) { if (!RW[j] || !VV(j)) continue; const x = sx(EX[j]), y = sy(EY[j]); if (x < -10 || x > W + 10 || y < -10 || y > H + 10) continue;
-      const up = N[j].level > N[hl].level || (N[j].level === N[hl].level && Y[j] < Y[hl]);
+      const up = upOf(hl, j);
       ctx.fillStyle = j === hl ? css.ink : edgeColor(hl, j, up); ctx.strokeStyle = css.bg; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, j === hl ? 4 : 3, 0, 6.2832); ctx.fill(); ctx.stroke(); }
     const th = Math.max(3, SB.board*k*.8);   // Subfolder: gray label tape along the shelf edge, with the name printed when there's room
     (SHELF.tapes || []).forEach((t, j) => { const on = j === shTape;
@@ -1601,7 +1606,7 @@ function overLinks(lit){
   if (hl < 0 && focus >= 0 && VV(focus)) { hl = focus; lit = new Set([focus, ...out[focus], ...inn[focus]].filter(j => VV(j))); }   // in focus mode the focused note's own links stand out
   if (!lit || hl < 0) { ctx.globalAlpha = 1; return; }
   const ends = [];
-  for (const j of lit) { if (j === hl || !VV(j)) continue; const up = N[j].level > N[hl].level || (N[j].level === N[hl].level && Y[j] < Y[hl]), c = edgeColor(hl, j, up); ends.push([j, c]);
+  for (const j of lit) { if (j === hl || !VV(j)) continue; const up = upOf(hl, j), c = edgeColor(hl, j, up); ends.push([j, c]);
     const x1 = sx(X[hl]), y1 = sy(Y[hl]), x2 = sx(X[j]), y2 = sy(Y[j]), mx = (x1+x2)/2, my = (y1+y2)/2 - Math.abs(x2-x1)*.12;
     ctx.strokeStyle = css.bg; ctx.globalAlpha = .55; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(mx, my, x2, y2); ctx.stroke();   // a dark casing keeps the line readable over bright boxes
     ctx.strokeStyle = c; ctx.globalAlpha = .95; ctx.lineWidth = sel >= 0 ? 1.6 : 1.2; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(mx, my, x2, y2); ctx.stroke(); }
@@ -2894,7 +2899,7 @@ function render(){
     for (const j of nb) {
       lit.add(j);
       if (bundle && N[j].level < 5 && BOD[j] >= 0) { const g = bundle.get(BOD[j]) || bundle.set(BOD[j], []).get(BOD[j]); g.push(j); continue; }
-      const upward = N[j].level > N[hl].level || (N[j].level === N[hl].level && Y[j] < Y[hl]);
+      const upward = upOf(hl, j);
       ctx.strokeStyle = edgeColor(hl, j, upward); ctx.globalAlpha = (sel >= 0 ? .75 : .5)*many; ctx.lineWidth = sel >= 0 ? 1.4 : 1;
       const x1 = sx(X[hl]), y1 = sy(Y[hl]), x2 = sx(X[j]), y2 = sy(Y[j]);
       let mx = (x1+x2)/2, my = (y1+y2)/2 - (view === "planet" ? Math.hypot(x2-x1, y2-y1)*.55 : GRV() ? 0 : Math.abs(x2-x1)*.12);   // PKM Planet: links arc up off the table
@@ -3929,7 +3934,7 @@ function starLegend(){
 }
 function legend(){
   if (view === "stars") { html($("#legend")).v = starLegend(); return; }
-  if (view === "sense") { html($("#legend")).v = `<div class="lh"><span>Legend · Sensemaking</span><span class="lc" id="legclose" aria-hidden="true" title="Click anywhere to collapse">‹</span></div>`
+  if (view === "sense") { html($("#legend")).v = `<div class="lh"><span>Legend · Sensemakers</span><span class="lc" id="legclose" aria-hidden="true" title="Click anywhere to collapse">‹</span></div>`
     + LEVELS.slice(0,3).map(L => `<div><i style="background:linear-gradient(135deg,${GRAD[L.lv][0]},${GRAD[L.lv][1]});${L.lv===5?"border-radius:3px;":L.lv===4?"border-radius:1px;transform:rotate(45deg) scale(.8);":""}"></i>${L.lv} · ${L.name}</div>`).join("")
     + `<div><i style="background:${css.sl2}"></i>2 · Linked notes</div><div><i style="background:${css.sl1}"></i>1 · Unlinked notes</div>`
     + `<div style="margin-top:4px;color:var(--ink)">${senseSrc === "ai" ? `Placed by a one-time AI pass${SAI && SAI.date ? ` (${esc(SAI.date)})` : ""}` : "Placed by rules, no AI"}${syFull() ? "" : ` · ${SY0}–${SY1}`}</div><div style="opacity:.85">Left–right: reflection → expression</div><div style="opacity:.85">Up–down: bottom-up → top-down</div>`
@@ -3970,7 +3975,7 @@ setTheme(pref("iv-theme", autoTheme()));
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
 const PIDX = new Map(N.map((d,i) => [d.path, i]));
-const VIEW_NAME = {planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemaking", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
@@ -4117,8 +4122,8 @@ root.querySelectorAll('input[name="s3d"]').forEach(r => r.onchange = () => { if 
 syncS3D();
 function syncSenseSrc(){ root.querySelectorAll('input[name="ssrc"]').forEach(r => { r.checked = r.value === senseSrc; r.disabled = r.value === "ai" && !SAI; });
   $("#saidate").textContent = SAI ? `one-time read of each note${SAI.date ? ` · ${SAI.date}` : ""}` : "not run yet (no ideaverse-sense-ai.js)";
-  $("#sainfo").textContent = SAI ? aiCount < n ? `${aiCount.toLocaleString()} of ${n.toLocaleString()} notes have an AI placement; newer notes use the rules until the next pass.` : `All ${n.toLocaleString()} notes have an AI placement. Click Sensemaking again to switch.` : "";
-  sBtn.title = !SAI ? "Sensemaking: notes placed by what they are and how they're written (no AI)" : senseSrc === "ai" ? "Sensemaking · placed by AI (click again to switch)" : "Sensemaking · placed by rules (click again to switch)"; }
+  $("#sainfo").textContent = SAI ? aiCount < n ? `${aiCount.toLocaleString()} of ${n.toLocaleString()} notes have an AI placement; newer notes use the rules until the next pass.` : `All ${n.toLocaleString()} notes have an AI placement. Click Sensemakers again to switch.` : "";
+  sBtn.title = !SAI ? "Sensemakers: notes placed by what they are and how they're written (no AI)" : senseSrc === "ai" ? "Sensemakers · placed by AI (click again to switch)" : "Sensemakers · placed by rules (click again to switch)"; }
 root.querySelectorAll('input[name="ssrc"]').forEach(r => r.onchange = () => { if (!r.checked || r.value === senseSrc) return;
   senseSrc = r.value; save("iv-ssrc", senseSrc); SXY = senseSrc === "ai" ? SXA : SXR; layoutSense();
   if (senseT != null) { senseTrail = []; senseSet(+$("#tlrange").value, true); }
@@ -4329,18 +4334,17 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   left.appendChild(root.querySelector(".brand .duo")); left.appendChild($("#vsegms")); { const fbar = $("#focusbar"); fbar.classList.add("mapfb"); cv.parentElement.appendChild(fbar); }   // the focus bar floats at the top of the map
   // the note and link counts sit at the map's top left (the plugin's name sits at the top right, clear of the note panel)
   { const st = $("#stats"); st.classList.add("mapstats"); cv.parentElement.appendChild(st); }
-  // the main tabs: Emergence, Ideaverse, Starfield, Tesla. Gravity and Sensemaking move to the top of More
+  // the main tabs: Emergence, Ideaverse, Starfield, Sensemakers. Gravity and Tesla live in More
   { const vs = $("#vseg"), em = vs.querySelector('button[data-v="emergence"]'), st = vs.querySelector('button[data-v="stars"]');
-    const mk = (v, label, tip, go) => { const b = doc.createElement("button"); b.dataset.v = v; b.textContent = label; b.setAttribute("aria-label", tip); b.onclick = e => { if ((v === "ideaverse" && view === v) || (v === "tesla" && view === "chord" && CSPH === "in")) { e.stopPropagation(); toggleMapOpts(b); return; } closePops(); go(); root.querySelectorAll("#vseg button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.v === tabOf()))); if (typeof syncTB === "function") syncTB(); }; return b; };
+    const mk = (v, label, tip, go) => { const b = doc.createElement("button"); b.dataset.v = v; b.textContent = label; b.setAttribute("aria-label", tip); b.onclick = e => { if ((v === "ideaverse" && view === v)) { e.stopPropagation(); toggleMapOpts(b); return; } closePops(); go(); root.querySelectorAll("#vseg button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.v === tabOf()))); if (typeof syncTB === "function") syncTB(); }; return b; };
     em.after(mk("ideaverse", "Ideaverse", "Your whole vault as a ball of notes in 3D: drag to turn it, scroll to fly in", () => setView("ideaverse")));
-    st.after(mk("tesla", "Tesla", "Every note on a glass globe, grouped by kind; links cross through the inside", () => goChord("in")));
-    for (const v of ["gravity", "sense"]) { const b = vs.querySelector(`button[data-v="${v}"]`); if (b) { b.hidden = true; b.classList.add("vburied"); } } }
+    for (const v of ["gravity"]) { const b = vs.querySelector(`button[data-v="${v}"]`); if (b) { b.hidden = true; b.classList.add("vburied"); } } }
   // it sits outside the scrolling tabs, beside More, so it never scrolls out of sight
   // every main tab gets the ▾ when its map has a menu (Gravity and Sensemaking have Years shown)
   for (const v_ of ["sense"]) { const b_ = root.querySelector(`#vseg button[data-v="${v_}"]`); if (b_ && !b_.querySelector(".vcar")) { b_.createSpan({ cls: "vcar", text: " ▾" }); b_.setAttribute("aria-haspopup", "true"); } }
   // the more-maps grid: the next eight map names in small type, two rows of four, between the tabs and More (Display → Show more map names)
   const vgrid = $("#vsegms").createDiv({ cls: "vgrid", attr: { role: "group", "aria-label": "More maps" } });
-  for (const [v, t, go] of [["gravity", "Gravity", () => setView("gravity")], ["sense", "Sensemaking", () => setView("sense")], ["graph", "Obsidian", () => setView("graph")], ["chord", "Chord", () => goChord("")], ["corona", "Corona", () => goChord("out")], ["treemap", "Treemap", () => setView("treemap")], ["mosaic", "Mosaic", () => setView("mosaic")], ["shelf", "Bookshelf", () => setView("shelf")]]) {
+  for (const [v, t, go] of [["gravity", "Gravity", () => setView("gravity")], ["graph", "Obsidian", () => setView("graph")], ["chord", "Chord", () => goChord("")], ["corona", "Corona", () => goChord("out")], ["tesla", "Tesla", () => goChord("in")], ["treemap", "Treemap", () => setView("treemap")], ["mosaic", "Mosaic", () => setView("mosaic")], ["shelf", "Bookshelf", () => setView("shelf")]]) {
     const b = vgrid.createEl("button", { text: t, cls: "vg", attr: { type: "button" } }); b.dataset.vg = v; b.onclick = e => { e.stopPropagation(); closePops(); driftStop(); go(); if (typeof syncTB === "function") syncTB(); }; }
   const vcurSeg = $("#vsegms").createDiv({ cls: "seg vcurseg" }), vcur = vcurSeg.createEl("button", { cls: "vcur", attr: { id: "vcur", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
   $("#vmore").setText("More ▾"); $("#vmore").setAttribute("aria-label", "More maps");
@@ -4353,9 +4357,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     $("#goshelf").after(gp); gp.onclick = () => { closePops(); driftStop(); setView("posters"); };
     // Graph: our take on the core graph view, first in the list
     const gg = doc.createElement("button"); gg.className = "chip"; gg.id = "gograph"; gg.textContent = "Obsidian"; gg.setAttribute("aria-label", "Like Obsidian's graph view: notes pulled together by their links, drawn with the emergence symbols");
-    for (const [id, v, label, tip] of [["gogravity", "gravity", "Gravity", "The five levels as rings: hubs at the center, unlinked notes on the rim"], ["gosense", "sense", "Sensemaking", "Four ways of working with notes, as a 2×2"]]) {
+    for (const [id, v, label, tip] of [["gogravity", "gravity", "Gravity", "The five levels as rings: hubs at the center, unlinked notes on the rim"]]) {
       const b = doc.createElement("button"); b.className = "chip"; b.id = id; b.textContent = label; b.setAttribute("aria-label", tip); $("#gochord").before(b); b.onclick = () => { closePops(); driftStop(); setView(v); }; }
-    { const co = $("#gocso"); if (co) co.textContent = "Corona"; const te = $("#gocsi"); if (te) { te.textContent = "Tesla"; te.hidden = true; te.classList.add("gone"); } }
+    { const co = $("#gocso"); if (co) co.textContent = "Corona"; const te = $("#gocsi"); if (te) { te.textContent = "Tesla"; te.hidden = false; te.classList.remove("gone"); } }
     $("#gochord").before(gg); gg.onclick = () => { closePops(); driftStop(); setView("graph"); };
     // Mosaic: every note a tile, after Treemap
     const gm = doc.createElement("button"); gm.className = "chip"; gm.id = "gomosaic"; gm.textContent = "Mosaic"; gm.setAttribute("aria-label", "Every note a tile, set like stones: Level 5 at the heart, each level a frame around it");
@@ -4409,10 +4413,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       sel_.onchange = () => { PST[key] = sel_.value; if (key === "height" && sel_.value) PST.lastHeight = sel_.value; save(pk, sel_.value); morph(true, () => fitTarget()); legend(); };
       const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
-  const VN = () => ({ emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemaking", arc: "Arc",
+  const VN = () => ({ emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
     chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
     shelf: "Bookshelf", posters: "Posters", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
-  const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars"]);
+  const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars", "sense"]);
   // the current map's menu: its variants (Emergence, Starfield) and the options that belong to it alone
   const mo = $("#vsegms").createDiv({ cls: "mspop mapopts", attr: { id: "mapopts", role: "dialog", "aria-label": "This map" } }); mo.hidden = true;
   const moT = mo.createDiv({ cls: "pt" });
@@ -4500,7 +4504,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
   const ARR_OFF = new Set(["ideaverse", "people", "mosaic", "graph", "posters", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   syncTB = () => {
-    const core = CORE.has(view) || (view === "chord" && CSPH === "in"); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
+    const core = CORE.has(view); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
     $("#vmore").classList.toggle("on", false);
     root.dataset.mo = variants() || hasLay() ? "1" : "";
     AR.w.hidden = ARR_OFF.has(view); AR.val.setText(axisName(mode));

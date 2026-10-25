@@ -12,7 +12,7 @@ Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinkin
 
 ## The maps
 
-Four main maps sit in the toolbar: Emergence, Ideaverse, Starfield and Tesla. Click a map's tab again for its variants and options. **More** holds the rest, starting with Gravity and Sensemaking.
+Four main maps sit in the toolbar: Emergence, Ideaverse, Starfield and Sensemakers. Click a map's tab again for its variants and options. **More** holds the rest, starting with Gravity. On wide windows, **Display → Show more map names** lists eight more maps in small type beside the tabs.
 
 ### Emergence
 
@@ -36,12 +36,12 @@ Your biggest hubs become galaxy cores. Every note joins the hub it reaches in th
 ![Starfield in 3D: galaxies of notes around their hubs](docs/starfield.png)
 <sub>Starfield in 3D, Dark theme. Each galaxy is a hub and the notes that reach it first.</sub>
 
-### Sensemaking (More)
+### Sensemakers
 
 A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), Producer (expression, top-down), Inner Guide (reflection, bottom-up) and Creative (expression, bottom-up). Each note is placed by plain rules about where it lives and how it's written (folders, maps, headings and lists, checkboxes and due dates, first-person writing, questions). No AI. Click a note to see exactly which clues moved it.
 
-![Sensemaking: the four quadrants, with a note's reasons in the panel](docs/sensemaking.png)
-<sub>Sensemaking in the Soft Paper theme. The panel shows why this note is a Synthesizer.</sub>
+![Sensemakers: the four quadrants, with a note's reasons in the panel](docs/sensemaking.png)
+<sub>Sensemakers in the Soft Paper theme. The panel shows why this note is a Synthesizer.</sub>
 
 ## More maps
 
@@ -54,7 +54,7 @@ Our take on Obsidian's graph view: every note pushes the others away and its lin
 ![Obsidian: a hub and its links](docs/graph.png)
 <sub>The Obsidian map in the Dark theme, zoomed in on a hub and its links.</sub>
 
-### Tesla, Chord and Corona
+### Tesla, Chord and Corona (More)
 
 Every note on a ring, in arcs by folder (or by year). Links between kinds cross the middle as bands that thicken as your vault grows. Hover an arc to light up where its links go. **Corona** puts the ring on a globe and arcs the links over the surface like solar prominences; **Tesla** sends them through a glass globe.
 
@@ -119,8 +119,8 @@ Sketches still taking shape: **Geometric** (your top 25 notes placed by triangle
 
 In **Animations** (bottom left), pick **Timelapse** and press ▶ to replay your vault by month or by week. New notes arrive (comets, rain, or a swirl), and notes move up a level as their links arrive. Click a note at any point to pause and look around; Resume carries on.
 
-![Sensemaking time-lapse: new notes swirl out to their places](docs/swirl.gif)
-<sub>The time-lapse on Sensemaking with Swirl out: each week's new notes spiral out to where they belong.</sub>
+![Sensemakers time-lapse: new notes swirl out to their places](docs/swirl.gif)
+<sub>The time-lapse on Sensemakers with Swirl out: each week's new notes spiral out to where they belong.</sub>
 
 ## How notes get their level
 
