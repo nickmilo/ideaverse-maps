@@ -3466,6 +3466,14 @@ fromIn.min = SLMIN; fromIn.max = NOW_Y;
 $("#fromlo").textContent = SLMIN; $("#fromhi").textContent = NOW_Y;
 function syncYr(){ const yc = $("#yrctl"); if (!yc) return; const [a, b] = yc.querySelectorAll("input"); if (document.activeElement !== a && document.activeElement !== b) { a.value = YR0; b.value = YR1; }
   const f = y => (y - SLMIN) / Math.max(1, NOW_Y - SLMIN), fill = yc.querySelector(".fill"); fill.style.left = `calc(9px + (100% - 18px)*${f(YR0)})`; fill.style.width = `calc((100% - 18px)*${f(YR1) - f(YR0)})`;
+  { const [h0, h1] = yc.querySelectorAll(".yrh"), [e0, e1] = yc.querySelectorAll(".yre"), near = .08;
+    const put = (h, y) => { h.setText(String(y)); h.style.left = `calc(5px + (100% - 10px)*${f(y)})`; };
+    put(h0, YR0); put(h1, YR1);
+    // a handle at an end shows nothing extra; one close to an end hides that end's year; two handles on one year show it once
+    h0.hidden = YR0 === SLMIN; h1.hidden = YR1 === NOW_Y || YR1 === YR0 && !h0.hidden;
+    if (!h0.hidden && !h1.hidden && f(YR1) - f(YR0) < near) { h0.style.transform = "translateX(-100%)"; h1.style.transform = "translateX(0)"; } else { h0.style.transform = h1.style.transform = ""; }
+    e0.style.visibility = (!h0.hidden && f(YR0) < near) || (!h1.hidden && f(YR1) < near) ? "hidden" : "";
+    e1.style.visibility = (!h1.hidden && f(YR1) > 1 - near) || (!h0.hidden && f(YR0) > 1 - near) ? "hidden" : ""; }
   yc.querySelector(".yrv").setText(!yrNarrow() ? `All (${SLMIN}–${NOW_Y})` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
 function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
@@ -4120,10 +4128,10 @@ driftSpeed = DRIFT[pref("iv-drift", "slow")] ? pref("iv-drift", "slow") : "slow"
 { const eb = root.querySelector('#driftseg button[data-d="earth"]'); if (eb && !root.querySelector('#driftseg button[data-d="spin"]')) { const sb = doc.createElement("button"); sb.dataset.d = "spin"; sb.className = "dearth dspin"; sb.textContent = "Spinning"; sb.setAttribute("aria-label", "Earth, fast: a quick spin at a 20° tilt"); eb.after(sb);
   // LYT: 2.5 times faster than Spinning
   const lb = doc.createElement("button"); lb.dataset.d = "lyt"; lb.className = "dearth dspin"; lb.textContent = "LYT"; lb.setAttribute("aria-label", "LYT: Spinning, 2.5 times faster"); sb.after(lb); } }
-const wobLab = doc.createElement("label"); wobLab.className = "pmaps dwob"; wobLab.title = "Earth, Spinning and LYT: the tilt rocks gently once a turn, like a spinning top";
+const wobLab = doc.createElement("label"); wobLab.className = "pmaps dwob"; wobLab.title = "With Earth, Spinning or LYT: the tilt rocks gently once a turn, like a spinning top";
 { const cb = doc.createElement("input"); cb.type = "checkbox"; cb.id = "dwob"; cb.checked = WOB; const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = "Wobble like the Earth"; wobLab.append(cb, sw, t);
   cb.onchange = () => { WOB = cb.checked; save("iv-wob", WOB); }; $("#driftbar").appendChild(wobLab); }
-const syncDrift = () => { root.querySelectorAll("#driftseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.d === driftSpeed))); wobLab.hidden = !earthy(); };
+const syncDrift = () => { root.querySelectorAll("#driftseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.d === driftSpeed))); wobLab.classList.toggle("dim", !earthy()); };
 root.querySelectorAll("#driftseg button").forEach(b => b.onclick = () => { driftSpeed = b.dataset.d; save("iv-drift", driftSpeed); syncDrift(); });
 $("#dplay").onclick = () => drifting ? driftStop() : driftStart(); syncDrift();
 { const c3 = pref("iv-cam3", null); if (Array.isArray(c3)) { yaw3 = +c3[0] || yaw3; pitch3 = +c3[1] || pitch3; } }
@@ -4395,7 +4403,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const hd = yc.createDiv({ cls: "prow" }); hd.createSpan({ text: "Years shown" }); hd.createEl("b", { cls: "yrv" });
     const box = yc.createDiv({ cls: "prng" }), d = box.createDiv({ cls: "dual" }); d.createSpan({ cls: "trk" }); d.createSpan({ cls: "fill" });
     const a = d.createEl("input", { type: "range", attr: { "aria-label": "First year shown" } }), b = d.createEl("input", { type: "range", attr: { "aria-label": "Last year shown" } });
-    for (const x of [a, b]) { x.min = SLMIN; x.max = NOW_Y; x.step = 1; } const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ text: String(SLMIN) }); lb.createSpan({ text: String(NOW_Y) });
+    for (const x of [a, b]) { x.min = SLMIN; x.max = NOW_Y; x.step = 1; } const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ cls: "yre", text: String(SLMIN) }); lb.createSpan({ cls: "yre", text: String(NOW_Y) });
+    // each handle's year sits under it (the ends keep theirs)
+    lb.createSpan({ cls: "yrh" }); lb.createSpan({ cls: "yrh" });
     yc.createDiv({ cls: "phint", text: "Drag either end. With the switch on, notes from other years and notes with no date wait in strips at the edges; off, they leave the map." });
     // the same thin switch as Wander Mode's
     const tg = yc.createEl("label", { cls: "pmaps yrall", attr: { "aria-label": "Show notes with no date, and notes from before or after the years shown, in strips at the edges" } });
