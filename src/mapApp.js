@@ -3,7 +3,7 @@
 import { sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 
-export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
+export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -1836,7 +1836,9 @@ EXP.lifeline = {
 // Across: a date or number property (year, rating, created…). Lanes: a category (genre, status, a base's own groups).
 // Size: a number (your rank). Each note is a card, and when the note has an image property (a poster, a cover),
 // the card shows it once you zoom in. The map reads the properties itself, so it works on any dataset.
-const PST = { across: pref("iv-pacross", null), lanes: pref("iv-planes", null), size: pref("iv-psize", null), height: pref("iv-pheight", null), mosaic: !!pref("iv-pmosaic", false), mbox: [], mosaicOn: false, rng: pref("iv-prng", null) || {}, lhide: pref("iv-plhide", null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" };
+// Posters and Base Builder share this engine, each with its own settings (iv-p… and iv-b…)
+const mkPST = c => ({ across: pref(`iv-${c}across`, null), lanes: pref(`iv-${c}lanes`, null), size: pref(`iv-${c}size`, null), height: pref(`iv-${c}height`, null), mosaic: !!pref(`iv-${c}mosaic`, false), mbox: [], mosaicOn: false, rng: pref(`iv-${c}rng`, null) || {}, lhide: pref(`iv-${c}lhide`, null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" });
+const PSTP = mkPST("p"), PSTB = mkPST("b"), PSC = () => view === "builder" ? PSTB : PSTP, PK = key => "iv-" + (PSC() === PSTB ? "b" : "p") + key;
 let BASEINFO = null;   // from a base: its sort property and each note's group
 // (a note whose properties Obsidian hasn't read yet, right after it starts, is asked again next time instead of remembered as empty)
 const FMC = new Map(); const fmOf = i => { let f = FMC.get(i); if (f === undefined) { f = (host.frontmatter && host.frontmatter(N[i].path)) || null; if (f) FMC.set(i, f); } return f; };
@@ -1847,9 +1849,10 @@ const isImg = (k_, v) => typeof v === "string" && (/^https?:\/\/\S+\.(jpe?g|png|
 const DATEK = new Set(["created","createdat","created_at","created on","date created","datecreated","creation date","creation_date","date"]);
 function postersDetect(){
   const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
-  const key = ids.length + ":" + (ids[0] ?? -1) + ":" + (ids[ids.length - 1] ?? -1) + ":" + (BASEINFO ? BASEINFO.v : 0); if (PST.key === key && PST.opts) return PST.opts; PST.key = key;
+  const key = ids.length + ":" + (ids[0] ?? -1) + ":" + (ids[ids.length - 1] ?? -1) + ":" + (BASEINFO ? BASEINFO.v : 0); if (PSC().key === key && PSC().opts) return PSC().opts; PSC().key = key;
   const step = Math.max(1, Math.floor(ids.length / 3000)), st = new Map();
-  for (let q = 0; q < ids.length; q += step) { const fm = fmOf(ids[q]); if (!fm) continue;
+  let got = 0;
+  for (let q = 0; q < ids.length; q += step) { const fm = fmOf(ids[q]); if (!fm) continue; got++;
     for (const k_ of Object.keys(fm)) { if (k_ === "position" || k_ === "aliases" || k_ === "cssclasses" || DATEK.has(k_.toLowerCase())) continue; const v = fm[k_]; if (v == null || v === "") continue;
       let o = st.get(k_); if (!o) st.set(k_, o = { n: 0, num: 0, yr: 0, day: 0, img: 0, link: 0, cat: 0, vals: new Map() });
       o.n++; const vs = Array.isArray(v) ? v.slice(0, 12) : [v];
@@ -1858,6 +1861,7 @@ function postersDetect(){
       if (!Array.isArray(v) && typeof v === "string" && parseDay(v)) { o.day++; continue; }
       for (const x of vs) { if (x == null || typeof x === "object") continue; const t = String(x); if (isLink(t)) o.link++; else if (t.length <= 40) o.cat++; else continue;
         const lab = isLink(t) ? linkName(t) : t.trim(); o.vals.set(lab, (o.vals.get(lab) || 0) + 1); } } }
+  if (!got) PSC().key = "";   // nothing read yet (Obsidian still indexing): look again next time instead of remembering an empty set
   const sampled = Math.ceil(ids.length / step), ok = o => o.n >= Math.max(3, sampled * .15);
   const across = [{ id: "@created", name: "Created date", kind: "date" }], lanes = [{ id: "", name: "None" }, { id: "@folder", name: "Folder" }], size = [{ id: "", name: "None" }, { id: "@score", name: "Link score" }];
   let img = "";
@@ -1867,15 +1871,22 @@ function postersDetect(){
     if (o.day >= o.n * .7) { across.push({ id: k_, name: k_, kind: "date" }); continue; }
     if (o.img >= o.n * .5) { if (!img) img = k_; continue; }
     const d = o.vals.size; if ((o.cat + o.link) >= o.n * .6 && d >= 2 && d <= Math.max(60, sampled * .5)) lanes.push({ id: k_, name: k_, vals: o.vals, people: o.link > o.cat }); }
-  const want = BASEINFO && BASEINFO.sort; const rk = a => a.id === want ? 0 : a.kind === "year" ? 1 : a.id === "@created" ? 4 : a.kind === "date" ? 2 : 3; across.sort((a, b) => rk(a) - rk(b));
+  const want = BASEINFO && BASEINFO.sort; const rk0 = a => a.id === want ? 0 : a.kind === "year" ? 1 : a.id === "@created" ? 4 : a.kind === "date" ? 2 : 3;
+  // Base Builder: the base's own columns come first, in the order the base shows them
+  const cols = view === "builder" && BASEINFO && Array.isArray(BASEINFO.cols) ? BASEINFO.cols : null, ci = id => cols ? cols.indexOf(id) : -1;
+  const rk = a => a.id === want ? 0 : ci(a.id) >= 0 ? 1 + ci(a.id) / 1000 : 2 + rk0(a); across.sort((a, b) => rk(a) - rk(b));
+  if (cols) { const byCol = (a, b) => (ci(a.id) < 0) - (ci(b.id) < 0) || ci(a.id) - ci(b.id); const lk = lanes.splice(lanes.findIndex(l => l.vals) < 0 ? lanes.length : lanes.findIndex(l => l.vals)); lk.sort(byCol); lanes.push(...lk);
+    const sk = size.splice(2); sk.sort(byCol); size.push(...sk); }
   // the default lanes: the first category whose top 13 values hold most of the notes, else none
   const cover = l => { if (!l.vals) return 0; const top = [...l.vals.values()].sort((a, b) => b - a).slice(0, 13).reduce((a, b) => a + b, 0); return top / Math.max(1, sampled); };
   const dl = lanes.find(l => l.vals && cover(l) >= .5);
-  PST.opts = { across, lanes, size, img, defLane: BASEINFO && BASEINFO.groups && BASEINFO.groups.size ? "@base" : dl ? dl.id : "" }; return PST.opts; }
+  // Base Builder's first guesses: a column that's a category, then a number column for size
+  const bl = cols && lanes.find(l => l.vals && ci(l.id) >= 0 && l.vals.size <= 30), bs = cols && size.find(z => ci(z.id) >= 0 && z.id !== across[0].id);
+  PSC().opts = { across, lanes, size, img, cols: !!cols, defLane: BASEINFO && BASEINFO.groups && BASEINFO.groups.size ? "@base" : bl ? bl.id : dl ? dl.id : "", defSize: bs ? bs.id : null }; return PSC().opts; }
 function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o = postersDetect();
   const fill = (sel_, list, cur) => { sel_.empty(); sel_.disabled = !list.length; if (!list.length) { sel_.createEl("option", { value: "", text: "Nothing to pick" }); return; }
     for (const it of list) sel_.createEl("option", { value: it.id, text: it.name }); sel_.value = list.some(it => it.id === cur) ? cur : list[0].id; };
-  const cu = PST.cur; fill($("#pacross"), o.across, cu ? cu.acrossId : PST.across ?? o.across[0].id); fill($("#pheight"), o.across.filter(a => !cu || a.id !== cu.acrossId), cu ? cu.heightId : "");
+  const cu = PSC().cur; fill($("#pacross"), o.across, cu ? cu.acrossId : PSC().across ?? o.across[0].id); fill($("#pheight"), o.across.filter(a => !cu || a.id !== cu.acrossId), cu ? cu.heightId : "");
   { const sc_ = !!(cu && cu.heightId); box.querySelectorAll('[data-k="lanes"]').forEach(el => el.hidden = sc_); box.querySelectorAll('[data-k="height"]').forEach(el => el.hidden = !sc_);
     const md = cu && cu.mosaic ? "mosaic" : sc_ ? "scatter" : "rows"; box.querySelectorAll("#pmode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pm === md)));
     const ar = box.querySelector('.prow[data-k="across"] > span'), ah = box.querySelector('.phint[data-k="across"]');
@@ -1884,15 +1895,20 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
     if (lr) lr.setText(md === "mosaic" ? "Blocks by" : "Rows by"); if (lh_) lh_.setText(md === "mosaic" ? "A category. Each value gets its own block." : "A category. Each value gets its own row."); }
   for (const key of ["across", "height", "size"]) postersSlider(key); postersLaneChips(); fill($("#planes"), o.lanes, cu ? cu.laneId : o.defLane);
   fill($("#psize"), o.size, cu ? cu.sizeId : "");
-  $("#pimg").setText(o.img ? `Pictures from ${o.img}` : "No image property found"); }
+  $("#pimg").setText(o.img ? `Pictures from ${o.img}` : view === "builder" ? "No picture property, so each note is a dot" : "No image property found");
+  // Base Builder says what it picked, and from where
+  { const bh = $("#bhint"); if (bh) { bh.hidden = view !== "builder"; if (view === "builder" && cu) { const nm = (list, id) => (list.find(x => x.id === id) || {}).name;
+      const parts = [["Left to right", nm(o.across, cu.acrossId)], cu.heightId ? ["Bottom to top", nm(o.across, cu.heightId)] : ["Rows", cu.laneId ? nm(o.lanes, cu.laneId) : ""], ["Size", cu.sizeId ? nm(o.size, cu.sizeId) : ""]].filter(p_ => p_[1]);
+      bh.setText((o.cols ? "From this base's columns: " : "From these notes' properties: ") + parts.map(p_ => p_[0] + " " + p_[1]).join(" · ")); } }
+    const sz = box.querySelector('.prow[data-k="size"] > span'); if (sz) sz.setText(PSC().dots && !(cu && cu.mosaic) ? "Dot size" : "Card size"); } }
 function layoutPosters(){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0; FMC.clear();
-  const o = postersDetect(), acrossId = (o.across.find(a => a.id === PST.across) || o.across.find(a => a.id === (BASEINFO && BASEINFO.sort)) || o.across[0]).id;
+  const o = postersDetect(), acrossId = (o.across.find(a => a.id === PSC().across) || o.across.find(a => a.id === (BASEINFO && BASEINFO.sort)) || o.across[0]).id;
   const ac = o.across.find(a => a.id === acrossId);
-  const laneId = PST.lanes != null && o.lanes.some(l => l.id === PST.lanes) ? PST.lanes : o.defLane;
-  const hgt = !PST.mosaic && PST.height ? o.across.find(a => a.id === PST.height && a.id !== acrossId) : null, heightId = hgt ? hgt.id : "";
-  const sizeId = PST.size != null && o.size.some(s_ => s_.id === PST.size) ? PST.size : (o.size.find(s_ => /^(rank|rating|stars|score|my.?rating|runtime|pages|length)$/i.test(s_.id) && s_.id !== heightId && s_.id !== acrossId) || o.size[0]).id;
-  PST.cur = { acrossId, laneId, sizeId, heightId, kind: ac.kind, mosaic: PST.mosaic };
+  const laneId = PSC().lanes != null && o.lanes.some(l => l.id === PSC().lanes) ? PSC().lanes : o.defLane;
+  const hgt = !PSC().mosaic && PSC().height ? o.across.find(a => a.id === PSC().height && a.id !== acrossId) : null, heightId = hgt ? hgt.id : "";
+  const sizeId = PSC().size != null && o.size.some(s_ => s_.id === PSC().size) ? PSC().size : o.defSize && o.defSize !== acrossId ? o.defSize : (o.size.find(s_ => /^(rank|rating|stars|score|my.?rating|runtime|pages|length)$/i.test(s_.id) && s_.id !== heightId && s_.id !== acrossId) || o.size[0]).id;
+  PSC().cur = { acrossId, laneId, sizeId, heightId, kind: ac.kind, mosaic: PSC().mosaic };
   const valBy = (id, kind, i) => { if (id === "@created") return isNaN(TV[i]) ? null : yOf(TV[i]) + yFrac(TV[i]); const v = fmOf(i) && fmOf(i)[id]; if (v == null) return null;
     if (kind === "date") { const d = parseDay(Array.isArray(v) ? v[0] : v); if (!d) return null; const t = Date.parse(d); return yOf(t) + yFrac(t); } const x = asNum(Array.isArray(v) ? v[0] : v); return x == null ? null : x + (kind === "year" ? .5 : 0); };
   const val = i => valBy(acrossId, ac.kind, i);
@@ -1906,45 +1922,48 @@ function layoutPosters(){
     const B = 28, bins = new Array(B).fill(0); for (const i of all) if (!isNaN(a[i])) bins[Math.min(B - 1, Math.floor((a[i] - lo) / ((hi - lo) || 1) * B))]++;
     ext[key] = { id, kind, lo, hi, bins }; return a; };
   const AV = mk("across", acrossId, ac.kind, val), AS = mk("size", sizeId, "num", szOf), AH = heightId ? mk("height", heightId, hgt.kind, i => valBy(heightId, hgt.kind, i)) : null;
-  PST.ext = ext;
-  const inR = (key, a, i) => { const e = ext[key], r = e && PST.rng[e.id]; if (!r || !a || isNaN(a[i])) return true; const v = e.kind === "year" ? Math.floor(a[i]) : a[i]; return v >= r[0] - 1e-9 && v <= r[1] + 1e-9; };
+  PSC().ext = ext;
+  const inR = (key, a, i) => { const e = ext[key], r = e && PSC().rng[e.id]; if (!r || !a || isNaN(a[i])) return true; const v = e.kind === "year" ? Math.floor(a[i]) : a[i]; return v >= r[0] - 1e-9 && v <= r[1] + 1e-9; };
   const lab = new Array(n), cntAll = new Map(); if (!heightId) for (const i of all) { const L_ = laneOf(i); lab[i] = L_; cntAll.set(L_, (cntAll.get(L_) || 0) + 1); }
-  PST.laneAll = laneId && !heightId ? [...cntAll].sort((a, b) => (a[0] === "—") - (b[0] === "—") || b[1] - a[1]) : [];
-  const lh = new Set(laneId && !heightId ? PST.lhide[laneId] || [] : []);
+  PSC().laneAll = laneId && !heightId ? [...cntAll].sort((a, b) => (a[0] === "—") - (b[0] === "—") || b[1] - a[1]) : [];
+  const lh = new Set(laneId && !heightId ? PSC().lhide[laneId] || [] : []);
   const ids = [], V = new Float64Array(n).fill(NaN), S = new Float64Array(n).fill(NaN); let v0 = Infinity, v1 = -Infinity, s0 = Infinity, s1 = -Infinity; const cnt = new Map();
   for (const i of all) { if (!inR("across", AV, i) || !inR("size", AS, i) || !inR("height", AH, i) || (lh.size && lh.has(lab[i]))) continue; ids.push(i);
     const v = AV ? AV[i] : NaN; if (!isNaN(v)) { V[i] = v; if (v < v0) v0 = v; if (v > v1) v1 = v; }
     const z = AS ? AS[i] : NaN; if (!isNaN(z)) { S[i] = z; if (z < s0) s0 = z; if (z > s1) s1 = z; } if (!heightId) cnt.set(lab[i], (cnt.get(lab[i]) || 0) + 1); }
   if (!isFinite(v0)) { v0 = 0; v1 = 1; } if (v1 - v0 < 1e-9) v1 = v0 + 1;
-  PST.scatter = !!heightId; PST.mosaicOn = false; PST.diag = PST.rings = null; PST.yticks = [];
+  PSC().scatter = !!heightId; PSC().mosaicOn = false; PSC().diag = PSC().rings = null; PSC().yticks = [];
+  PSC().dots = view === "builder" && !o.img; PSC().lab = heightId ? null : lab; PSC().order = null;
   if (heightId) { layoutPostersXY(ids, V, S, v0, v1, s0, s1, ac, hgt, i => AH[i], o); postersOptsUI(); return; }
   // lanes: the base's own order, else biggest first; past 14, the rest share "Other"
   let order = [...cnt.keys()]; if (laneId === "@base" && BASEINFO.order) order.sort((a, b) => BASEINFO.order.indexOf(a) - BASEINFO.order.indexOf(b)); else order.sort((a, b) => (a === "—") - (b === "—") || cnt.get(b) - cnt.get(a) || String(a).localeCompare(String(b)));
   if (order.length > 14) { const keep = new Set(order.slice(0, 13)); for (const i of ids) if (!keep.has(lab[i])) lab[i] = "Other"; order = [...order.slice(0, 13), "Other"]; cnt.set("Other", ids.filter(i => lab[i] === "Other").length); }
-  if (PST.mosaic) { layoutMosaic(ids, S, s0, s1, lab, order, laneId, o); postersOptsUI(); return; }
-  const WD = Math.max(520, Math.min(5200, Math.sqrt(ids.length) * 90)), PW = 16, PH = 24, NOV = -90, xOf = v => (v - v0) / (v1 - v0) * WD;
+  PSC().order = order;
+  if (PSC().mosaic) { layoutMosaic(ids, S, s0, s1, lab, order, laneId, o); postersOptsUI(); return; }
+  const dots = PSC().dots; PSC().order = order;
+  const WD = Math.max(520, Math.min(5200, Math.sqrt(ids.length) * 90)), PW = dots ? 12 : 16, PH = dots ? 12 : 24, STK = dots ? PH * 1.05 : PH * .42, NOV = -90, xOf = v => (v - v0) / (v1 - v0) * WD;
   const sc = i => isNaN(S[i]) || s1 <= s0 ? 1 : .7 + .8 * (S[i] - s0) / (s1 - s0);
   // stack each lane's cards in columns, later (higher-ranked) on top; a lane is as tall as its tallest pile
   const piles = new Map(), stackOf = new Int32Array(n); const byLane = new Map(order.map(l => [l, []])); for (const i of ids) byLane.get(lab[i]).push(i);
   const lanesOut = []; let y = 0;
   for (const L_ of order) { const arr = byLane.get(L_) || []; arr.sort((a, b) => (S[a] || 0) - (S[b] || 0)); const col = new Map(); let top = 0;
     for (const i of arr) { const x = isNaN(V[i]) ? NOV : xOf(V[i]), c = Math.round(x / (PW * .9)), h = (col.get(c) || 0); col.set(c, h + 1); stackOf[i] = h; if (h > top) top = h; }
-    const LH_ = Math.max(PH * 1.6, PH * 1.5 + top * PH * .42) + 26; lanesOut.push({ name: L_ === "" ? "All" : L_, n: arr.length, y0: y, y1: y + LH_ });
-    for (const i of arr) { const s_ = sc(i), w = PW * s_, h = PH * s_, x = isNaN(V[i]) ? NOV : xOf(V[i]), by = y + LH_ - 10 - stackOf[i] * PH * .42;
+    const LH_ = Math.max(PH * 1.6, PH * 1.5 + top * STK) + 26; lanesOut.push({ name: L_ === "" ? "All" : L_, n: arr.length, y0: y, y1: y + LH_ });
+    for (const i of arr) { const s_ = sc(i), w = PW * s_, h = PH * s_, x = isNaN(V[i]) ? NOV : xOf(V[i]), by = y + LH_ - 10 - stackOf[i] * STK;
       RX[i] = x - w / 2; RY[i] = by - h; RW[i] = w; RH[i] = h; EX[i] = x; EY[i] = by - h / 2; }
     y += LH_; }
   // ticks across the top
   const span = v1 - v0, raw = span / 9, mag = Math.pow(10, Math.floor(Math.log10(raw))), tk = [1, 2, 5, 10].map(m => m * mag).find(t => t >= raw) || 10 * mag, ticks = [];
   for (let t = Math.ceil(v0 / tk) * tk; t <= v1 + 1e-9; t += tk) ticks.push({ x: xOf(ac.kind === "year" || ac.kind === "date" ? t : t), t: ac.kind === "year" || ac.kind === "date" ? String(Math.round(t)) : String(+t.toFixed(2)) });
-  PST.lanesOut = lanesOut; PST.ticks = ticks; PST.WD = WD; PST.H = y; PST.img = o.img; PST.hasNo = ids.some(i => isNaN(V[i]));
-  expBox = { x0: (PST.hasNo ? NOV - 40 : -40) - 150, y0: -60, x1: WD + 40, y1: y + 20 }; postersOptsUI(); }
+  PSC().lanesOut = lanesOut; PSC().ticks = ticks; PSC().WD = WD; PSC().H = y; PSC().img = o.img; PSC().hasNo = ids.some(i => isNaN(V[i]));
+  expBox = { x0: (PSC().hasNo ? NOV - 40 : -40) - 150, y0: -60, x1: WD + 40, y1: y + 20 }; postersOptsUI(); }
 // each variable's mini slider: its spread as a little histogram, and two handles that keep only the notes in between
 const prngFmt = (v, kind) => kind === "year" ? String(Math.round(v)) : kind === "date" ? String(Math.floor(v)) : String(+v.toFixed(Math.abs(v) < 10 ? 1 : 0));
 let prngRaf = 0; const prngRelayout = fit => { if (fit) { morph(true, () => fitTarget()); legend(); return; } if (prngRaf) return; prngRaf = RAF(() => { prngRaf = 0; morph(false); }); };
-function postersSlider(key){ const box = $("#rng-" + key); if (!box) return; const e = PST.ext[key];
+function postersSlider(key){ const box = $("#rng-" + key); if (!box) return; const e = PSC().ext[key];
   if (!e || e.hi - e.lo < 1e-9) { box.hidden = true; box.dataset.sig = ""; return; } box.hidden = false;
   const yr = e.kind === "year", lo = yr ? Math.floor(e.lo) : e.lo, hi = yr ? Math.floor(e.hi) : e.hi, step = yr ? 1 : (hi - lo) / 200, sig = e.id + "|" + lo + "|" + hi + "|" + e.bins.join(",");
-  const r = PST.rng[e.id] || [lo, hi];
+  const r = PSC().rng[e.id] || [lo, hi];
   if (box.dataset.sig !== sig) { box.dataset.sig = sig; box.empty();
     const hist = box.createDiv({ cls: "phist" }), mx = Math.max(...e.bins); e.bins.forEach(b => hist.createEl("i").style.height = (b ? 8 + 92 * b / mx : 0) + "%");
     const d = box.createDiv({ cls: "dual" }); d.createSpan({ cls: "trk" }); d.createSpan({ cls: "fill" });
@@ -1952,7 +1971,7 @@ function postersSlider(key){ const box = $("#rng-" + key); if (!box) return; con
     for (const x of [a, b]) { x.min = lo; x.max = hi; x.step = step; }
     const labs = box.createDiv({ cls: "srange" }); labs.createSpan(); labs.createSpan();
     const upd = (commit) => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; const full = p <= lo + step / 2 && q >= hi - step / 2;
-      if (full) delete PST.rng[e.id]; else PST.rng[e.id] = [p, q]; postersSliderPaint(box, e, lo, hi); if (commit) save("iv-prng", { ...PST.rng }); prngRelayout(commit); };
+      if (full) delete PSC().rng[e.id]; else PSC().rng[e.id] = [p, q]; postersSliderPaint(box, e, lo, hi); if (commit) save(PK("rng"), { ...PSC().rng }); prngRelayout(commit); };
     a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true); }
   const [a, b] = box.querySelectorAll("input"); a.value = r[0]; b.value = r[1]; postersSliderPaint(box, e, lo, hi); }
 function postersSliderPaint(box, e, lo, hi){ const [a, b] = box.querySelectorAll("input"); let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p];
@@ -1960,19 +1979,19 @@ function postersSliderPaint(box, e, lo, hi){ const [a, b] = box.querySelectorAll
   box.querySelectorAll(".phist i").forEach((el, j, all) => { const c = (j + .5) / all.length; el.classList.toggle("off", c < f(p) - .5 / all.length || c > f(q) + .5 / all.length); });
   const [l0, l1] = box.querySelectorAll(".srange span"); l0.setText(prngFmt(p, e.kind)); l1.setText(prngFmt(q, e.kind)); }
 // Lanes: a category has no range, so its values are chips to switch off and on
-function postersLaneChips(){ const box = $("#rng-lanes"); if (!box) return; const id = PST.cur && PST.cur.laneId, L = PST.laneAll;
+function postersLaneChips(){ const box = $("#rng-lanes"); if (!box) return; const id = PSC().cur && PSC().cur.laneId, L = PSC().laneAll;
   if (!id || !L.length || L.length < 2) { box.hidden = true; box.dataset.sig = ""; return; } box.hidden = false;
-  const hid = new Set(PST.lhide[id] || []), sig = id + "|" + L.map(x => x[0] + ":" + x[1]).join(",") + "|" + [...hid].join(",");
+  const hid = new Set(PSC().lhide[id] || []), sig = id + "|" + L.map(x => x[0] + ":" + x[1]).join(",") + "|" + [...hid].join(",");
   if (box.dataset.sig === sig) return; box.dataset.sig = sig; box.empty();
   const show = L.slice(0, 24);
   for (const [v, c] of show) { const ch = box.createEl("button", { cls: "pchip" + (hid.has(v) ? " off" : "") }); ch.createSpan({ text: v === "—" ? "No value" : v }); ch.createEl("b", { text: c.toLocaleString() });
     ch.setAttribute("aria-pressed", String(!hid.has(v)));
-    ch.onclick = ev => { ev.stopPropagation(); const h = new Set(PST.lhide[id] || []);
+    ch.onclick = ev => { ev.stopPropagation(); const h = new Set(PSC().lhide[id] || []);
       if (ev.altKey || ev.metaKey) { const only = !(h.size === L.length - 1 && !h.has(v)); h.clear(); if (only) for (const [w] of L) if (w !== v) h.add(w); }   // ⌥/⌘-click: only this one (again: all)
       else if (h.has(v)) h.delete(v); else if (h.size < L.length - 1) h.add(v);
-      if (h.size) PST.lhide[id] = [...h]; else delete PST.lhide[id]; save("iv-plhide", { ...PST.lhide }); prngRelayout(true); }; }
+      if (h.size) PSC().lhide[id] = [...h]; else delete PSC().lhide[id]; save(PK("lhide"), { ...PSC().lhide }); prngRelayout(true); }; }
   if (L.length > 24) box.createSpan({ cls: "pn", text: `+${L.length - 24} more in Other` });
-  if (hid.size) { const all_ = box.createEl("button", { cls: "pchip pall", text: "Show all" }); all_.onclick = ev => { ev.stopPropagation(); delete PST.lhide[id]; save("iv-plhide", { ...PST.lhide }); prngRelayout(true); }; } }
+  if (hid.size) { const all_ = box.createEl("button", { cls: "pchip pall", text: "Show all" }); all_.onclick = ev => { ev.stopPropagation(); delete PSC().lhide[id]; save(PK("lhide"), { ...PSC().lhide }); prngRelayout(true); }; } }
 
 // Mosaic: the cards as tiles with no gaps, a block per row value, each tile sized by Card size (pictures fill their tile)
 function layoutMosaic(ids, S, s0, s1, lab, order, laneId, o){
@@ -1984,7 +2003,7 @@ function layoutMosaic(ids, S, s0, s1, lab, order, laneId, o){
   squarify(groups, 0, 0, WD, HT, (g, x, y, w, h) => { mbox.push({ name: g.t === "" ? "All" : g.t, n: g.items.length, x, y, w, h });
     squarify(g.items, x + pad, y + pad + head, Math.max(1, w - 2 * pad), Math.max(1, h - 2 * pad - head), (it, x2, y2, w2, h2) => { const i = it.i;
       RX[i] = x2 + gap / 2; RY[i] = y2 + gap / 2; RW[i] = Math.max(.5, w2 - gap); RH[i] = Math.max(.5, h2 - gap); EX[i] = x2 + w2 / 2; EY[i] = y2 + h2 / 2; }); });
-  PST.mbox = mbox; PST.mosaicOn = true; PST.lanesOut = []; PST.ticks = []; PST.WD = WD; PST.H = HT; PST.img = o.img; PST.hasNo = false; PST.miss = 0;
+  PSC().mbox = mbox; PSC().mosaicOn = true; PSC().lanesOut = []; PSC().ticks = []; PSC().WD = WD; PSC().H = HT; PSC().img = o.img; PSC().hasNo = false; PSC().miss = 0;
   expBox = { x0: -20, y0: -20, x1: WD + 20, y1: HT + 20 }; }
 
 // Posters with Height: a number up the side too, so each card sits at (Across, Height). When the two are the same kind
@@ -2017,67 +2036,83 @@ function layoutPostersXY(ids, V, S, v0, v1, s0, s1, ac, hgt, hv, o){
   if (yr(ac.kind) && yr(hgt.kind)) { f = x => x; dlab = "same year"; }
   else if (ac.kind === "num" && hgt.kind === "num" && v0 >= 0 && h0 >= 0) { const r = top(h1) / top(v1); f = x => x * r; dlab = "same score"; }
   if (f) { const pts = []; for (let q = 0; q <= 200; q++) { const x = X0 + (X1 - X0) * q / 200, h = f(x); if (h >= Y0 && h <= Y1) pts.push([xOf(x), yOfH(h)]); }
-    if (pts.length > 1) PST.diag = { a: pts[0], b: pts[pts.length - 1], label: dlab, above: `${hgt.name} higher`, below: `${ac.name} higher`, yr: yr(ac.kind) };
+    if (pts.length > 1) PSC().diag = { a: pts[0], b: pts[pts.length - 1], label: dlab, above: `${hgt.name} higher`, below: `${ac.name} higher`, yr: yr(ac.kind) };
     const res = ids.filter(i => !isNaN(V[i]) && !isNaN(Hh[i])).map(i => [i, (Hh[i] - f(V[i])) / (Y1 - Y0)]).filter(r => Math.abs(r[1]) > .18).sort((a, b) => b[1] - a[1]);
-    PST.rings = new Set([...res.slice(0, 4), ...res.slice(-4)].map(r => r[0])); }
-  PST.lanesOut = []; PST.ticks = ticks; PST.yticks = yticks; PST.WD = WD; PST.H = HT; PST.img = o.img; PST.hasNo = ids.some(i => isNaN(V[i]) && !isNaN(Hh[i])); PST.miss = miss ? MISS : 0;
-  PST.axes = { x: ac.name, y: hgt.name };
-  expBox = { x0: (PST.hasNo ? NOV - 30 : -20) - 70, y0: -60, x1: WD + 40, y1: (miss ? MISS + 60 : HT + 40) }; }
+    PSC().rings = new Set([...res.slice(0, 4), ...res.slice(-4)].map(r => r[0])); }
+  PSC().lanesOut = []; PSC().ticks = ticks; PSC().yticks = yticks; PSC().WD = WD; PSC().H = HT; PSC().img = o.img; PSC().hasNo = ids.some(i => isNaN(V[i]) && !isNaN(Hh[i])); PSC().miss = miss ? MISS : 0;
+  PSC().axes = { x: ac.name, y: hgt.name };
+  expBox = { x0: (PSC().hasNo ? NOV - 30 : -20) - 70, y0: -60, x1: WD + 40, y1: (miss ? MISS + 60 : HT + 40) }; }
 // pictures: loaded only for cards on screen and big enough to see, a few at a time
 const PIMG = new Map(); let pimgBusy = 0, pimgRaf = 0;
-function posterImg(i){ if (!PST.img) return null; const fm = fmOf(i); let v = fm && fm[PST.img]; if (Array.isArray(v)) v = v[0]; if (!v || typeof v !== "string") return null; v = v.trim();
+function posterImg(i){ if (!PSC().img) return null; const fm = fmOf(i); let v = fm && fm[PSC().img]; if (Array.isArray(v)) v = v[0]; if (!v || typeof v !== "string") return null; v = v.trim();
   let src = /^https?:\/\//.test(v) ? v : (host.resource ? host.resource(linkName(v), N[i].path) : null); if (!src) return null;
   let e = PIMG.get(src); if (e) return e.ok ? e.img : null; if (pimgBusy >= 8) return null;
   e = { img: new Image(), ok: false }; PIMG.set(src, e); pimgBusy++; e.img.decoding = "async"; e.img.referrerPolicy = "no-referrer";
-  e.img.onload = () => { pimgBusy--; e.ok = true; if (!pimgRaf) pimgRaf = RAF(() => { pimgRaf = 0; if (view === "posters" || view === "people") draw(); }); };
-  e.img.onerror = () => { pimgBusy--; if (!pimgRaf) pimgRaf = RAF(() => { pimgRaf = 0; if (view === "posters" || view === "people") draw(); }); };
+  e.img.onload = () => { pimgBusy--; e.ok = true; if (!pimgRaf) pimgRaf = RAF(() => { pimgRaf = 0; if (view === "posters" || view === "builder" || view === "people") draw(); }); };
+  e.img.onerror = () => { pimgBusy--; if (!pimgRaf) pimgRaf = RAF(() => { pimgRaf = 0; if (view === "posters" || view === "builder" || view === "people") draw(); }); };
   e.img.src = src; return null; }
 const PPAL = ["#c9563c", "#d9a441", "#3f7cac", "#5b8c5a", "#8d5a97", "#c77d9b", "#2f6f8a", "#e0b07a", "#6b9ac4", "#a33b3b", "#4f8f80", "#b8763e"];
 EXP.posters = {
   layout: layoutPosters, pick: (x, y) => rectPick(x, y), ownLabels: true,
   guides(){ const gd = sel >= 0 ? .55 : 1;
     ctx.textBaseline = "middle"; ctx.lineWidth = 1;
-    if (PST.mosaicOn) { ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
-      for (const b of PST.mbox) { const x = sx(b.x), y = sy(b.y), w = b.w * k, h = b.h * k; if (x > W || y > H || x + w < 0 || y + h < 0) continue;
+    if (PSC().mosaicOn) { ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+      for (const b of PSC().mbox) { const x = sx(b.x), y = sy(b.y), w = b.w * k, h = b.h * k; if (x > W || y > H || x + w < 0 || y + h < 0) continue;
         ctx.globalAlpha = .9 * gd; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.strokeRect(x + .5, y + .5, w - 1, h - 1);
-        if (PST.mbox.length > 1 && w > 46 && 26 * k > 9) { const fs_ = Math.max(9, Math.min(13, 26 * k * .45)); ctx.font = `600 ${fs_}px ${css.mono}`; ctx.fillStyle = css.ink; let t = String(b.name).toUpperCase(); while (t.length > 3 && ctx.measureText(t + "  " + b.n).width > w - 12) t = t.slice(0, -2) + "…";
+        if (PSC().mbox.length > 1 && w > 46 && 26 * k > 9) { const fs_ = Math.max(9, Math.min(13, 26 * k * .45)); ctx.font = `600 ${fs_}px ${css.mono}`; ctx.fillStyle = css.ink; let t = String(b.name).toUpperCase(); while (t.length > 3 && ctx.measureText(t + "  " + b.n).width > w - 12) t = t.slice(0, -2) + "…";
           ctx.fillText(t, x + 7, y + 5 * k + 26 * k * .62); const tw = ctx.measureText(t + "  ").width; ctx.font = `400 ${fs_ * .9}px ${css.mono}`; ctx.fillStyle = css.muted; ctx.fillText(b.n.toLocaleString(), x + 7 + tw, y + 5 * k + 26 * k * .62); } }
       ctx.globalAlpha = 1; return; }
-    if (PST.scatter) { ctx.font = `400 10.5px ${css.mono}`; ctx.textAlign = "right";
-      for (const t of PST.yticks) { const y = sy(t.y); if (y < -20 || y > H + 20) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(sx(0), y); ctx.lineTo(sx(PST.WD), y); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillStyle = css.muted; ctx.fillText(t.t, Math.max(sx(0) - 8, 40), y); }
+    if (PSC().scatter) { ctx.font = `400 10.5px ${css.mono}`; ctx.textAlign = "right";
+      for (const t of PSC().yticks) { const y = sy(t.y); if (y < -20 || y > H + 20) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(sx(0), y); ctx.lineTo(sx(PSC().WD), y); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillStyle = css.muted; ctx.fillText(t.t, Math.max(sx(0) - 8, 40), y); }
       ctx.textAlign = "left"; ctx.fillStyle = css.muted; ctx.globalAlpha = gd;
-      ctx.save(); ctx.translate(Math.max(sx(0) - 52, 14), sy(PST.H / 2)); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillText(String(PST.axes.y).toUpperCase() + " →", 0, 0); ctx.restore();
-      ctx.textAlign = "center"; ctx.fillText(String(PST.axes.x).toUpperCase() + " →", sx(PST.WD / 2), sy(PST.H) + 30);
-      if (PST.miss) { ctx.textAlign = "left"; ctx.fillText("MISSING " + String(PST.axes.y).toUpperCase(), sx(0), sy(PST.miss) - 30); }
-      const d = PST.diag; if (d) { ctx.save(); ctx.beginPath(); ctx.rect(sx(0), sy(0), PST.WD * k, PST.H * k); ctx.clip(); ctx.strokeStyle = css.accent; ctx.globalAlpha = .55 * gd; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(sx(d.a[0]), sy(d.a[1])); ctx.lineTo(sx(d.b[0]), sy(d.b[1])); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.translate(Math.max(sx(0) - 52, 14), sy(PSC().H / 2)); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillText(String(PSC().axes.y).toUpperCase() + " →", 0, 0); ctx.restore();
+      ctx.textAlign = "center"; ctx.fillText(String(PSC().axes.x).toUpperCase() + " →", sx(PSC().WD / 2), sy(PSC().H) + 30);
+      if (PSC().miss) { ctx.textAlign = "left"; ctx.fillText("MISSING " + String(PSC().axes.y).toUpperCase(), sx(0), sy(PSC().miss) - 30); }
+      const d = PSC().diag; if (d) { ctx.save(); ctx.beginPath(); ctx.rect(sx(0), sy(0), PSC().WD * k, PSC().H * k); ctx.clip(); ctx.strokeStyle = css.accent; ctx.globalAlpha = .55 * gd; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(sx(d.a[0]), sy(d.a[1])); ctx.lineTo(sx(d.b[0]), sy(d.b[1])); ctx.stroke(); ctx.restore();
         ctx.globalAlpha = gd; ctx.fillStyle = css.accent; ctx.font = `400 11px ${css.mono}`; ctx.textAlign = "right"; ctx.fillText(d.label, sx(d.b[0]) - 6, sy(d.b[1]) + 14);
-        if (!d.yr) { ctx.font = `400 18px ${css.display}`; ctx.fillStyle = css.ink; ctx.globalAlpha = .6 * gd; ctx.textAlign = "left"; ctx.fillText(d.above, sx(PST.WD * .03), sy(PST.H * .06)); ctx.textAlign = "right"; ctx.fillText(d.below, sx(PST.WD * .97), sy(PST.H * .94)); } }
+        if (!d.yr) { ctx.font = `400 18px ${css.display}`; ctx.fillStyle = css.ink; ctx.globalAlpha = .6 * gd; ctx.textAlign = "left"; ctx.fillText(d.above, sx(PSC().WD * .03), sy(PSC().H * .06)); ctx.textAlign = "right"; ctx.fillText(d.below, sx(PSC().WD * .97), sy(PSC().H * .94)); } }
       ctx.textAlign = "center"; ctx.font = `400 15px ${css.display}`; ctx.globalAlpha = gd; ctx.fillStyle = css.ink;
-      for (const t of PST.ticks) { const x = sx(t.x); if (x < -40 || x > W + 40) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(x, sy(0)); ctx.lineTo(x, sy(PST.H)); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillText(t.t, x, Math.min(sy(PST.H) + 14, H - 20)); }
-      if (PST.hasNo) { ctx.fillStyle = css.muted; ctx.font = `500 10.5px ${css.mono}`; ctx.fillText("NO " + String(PST.axes.x).toUpperCase(), sx(-80), sy(-24)); }
+      for (const t of PSC().ticks) { const x = sx(t.x); if (x < -40 || x > W + 40) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(x, sy(0)); ctx.lineTo(x, sy(PSC().H)); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillText(t.t, x, Math.min(sy(PSC().H) + 14, H - 20)); }
+      if (PSC().hasNo) { ctx.fillStyle = css.muted; ctx.font = `500 10.5px ${css.mono}`; ctx.fillText("NO " + String(PSC().axes.x).toUpperCase(), sx(-80), sy(-24)); }
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.globalAlpha = 1; return; }
-    for (const L_ of PST.lanesOut) { const y0 = sy(L_.y0), y1 = sy(L_.y1); if (y1 < 0 || y0 > H) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .8 * gd; ctx.beginPath(); ctx.moveTo(0, y1); ctx.lineTo(W, y1); ctx.stroke();
+    for (const L_ of PSC().lanesOut) { const y0 = sy(L_.y0), y1 = sy(L_.y1); if (y1 < 0 || y0 > H) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .8 * gd; ctx.beginPath(); ctx.moveTo(0, y1); ctx.lineTo(W, y1); ctx.stroke();
       ctx.globalAlpha = gd; ctx.font = `600 11px ${css.mono}`; ctx.fillStyle = css.ink; const lx = Math.max(12, sx(expBox.x0 + 10)), ly = Math.max(y0 + 14, Math.min(y1 - 22, 70));
       ctx.lineWidth = 4; ctx.strokeStyle = css.bg; const t = String(L_.name).toUpperCase(); ctx.strokeText(t, lx, y0 + 16); ctx.fillText(t, lx, y0 + 16); ctx.font = `400 10.5px ${css.mono}`; ctx.fillStyle = css.muted; ctx.strokeText(L_.n.toLocaleString(), lx, y0 + 30); ctx.fillText(L_.n.toLocaleString(), lx, y0 + 30); ctx.lineWidth = 1; }
     ctx.textAlign = "center"; ctx.font = `400 15px ${css.display}`;
-    for (const t of PST.ticks) { const x = sx(t.x); if (x < -40 || x > W + 40) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(x, Math.max(sy(0), 40)); ctx.lineTo(x, sy(PST.H)); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillStyle = css.ink; ctx.fillText(t.t, x, Math.max(sy(-28), 22)); }
-    if (PST.hasNo) { ctx.fillStyle = css.muted; ctx.font = `500 10.5px ${css.mono}`; ctx.fillText("NO VALUE", sx(-90), Math.max(sy(-28), 22)); }
+    for (const t of PSC().ticks) { const x = sx(t.x); if (x < -40 || x > W + 40) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(x, Math.max(sy(0), 40)); ctx.lineTo(x, sy(PSC().H)); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillStyle = css.ink; ctx.fillText(t.t, x, Math.max(sy(-28), 22)); }
+    if (PSC().hasNo) { ctx.fillStyle = css.muted; ctx.font = `500 10.5px ${css.mono}`; ctx.fillText("NO VALUE", sx(-90), Math.max(sy(-28), 22)); }
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.globalAlpha = 1; },
   notes(lit, dim){
     const ord = []; for (let i=0;i<n;i++) if (RW[i] && VV(i)) ord.push(i); ord.sort((a, b) => RY[b] - RY[a]);   // lower cards first, so each pile reads top-down
     for (const i of ord) { const x = sx(RX[i]), y = sy(RY[i]), w = RW[i] * k, h = RH[i] * k; if (x > W || y > H || x + w < 0 || y + h < 0) continue;
       ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .22 : .65) : 1;
+      const P_ = PSC();
+      if (P_.dots && !P_.mosaicOn) { const r = Math.max(1.5, Math.min(w, h) / 2 * .85), cx = x + w / 2, cy = y + h / 2;   // Base Builder without pictures: a dot, colored by its row
+        ctx.fillStyle = builderHue(i); ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
+        if (i === sel) { ctx.strokeStyle = css.accent; ctx.lineWidth = 2.5; ctx.stroke(); }
+        if (P_.rings && P_.rings.has(i)) { ctx.strokeStyle = css.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, r + Math.max(3, r * .5), 0, 6.2832); ctx.stroke(); }
+        if (r >= 9) { ctx.fillStyle = css.ink; ctx.font = `500 ${Math.min(12, r * .9)}px ${css.body}`; ctx.textBaseline = "middle"; let t = N[i].title; const mw = Math.max(60, r * 9); while (t.length > 3 && ctx.measureText(t).width > mw) t = t.slice(0, -2); if (t !== N[i].title) t += "…"; ctx.fillText(t, cx + r + 4, cy); ctx.textBaseline = "alphabetic"; }
+        continue; }
       const img = w >= 9 ? posterImg(i) : null;
-      if (img) { if (PST.mosaicOn) { const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, r = Math.max(w / iw, h / ih), sw = w / r, sh = h / r; ctx.drawImage(img, (iw - sw) / 2, (ih - sh) * .3, sw, sh, x, y, w, h); } else ctx.drawImage(img, x, y, w, h); }
-      else { ctx.fillStyle = PPAL[Math.floor(hash(N[i].path, 171) * PPAL.length)]; ctx.fillRect(x, y, w, h);
+      if (img) { if (PSC().mosaicOn) { const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, r = Math.max(w / iw, h / ih), sw = w / r, sh = h / r; ctx.drawImage(img, (iw - sw) / 2, (ih - sh) * .3, sw, sh, x, y, w, h); } else ctx.drawImage(img, x, y, w, h); }
+      else { ctx.fillStyle = view === "builder" ? builderHue(i) : PPAL[Math.floor(hash(N[i].path, 171) * PPAL.length)]; ctx.fillRect(x, y, w, h);
         if (w > 44) { ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.font = `600 ${Math.min(13, w * .12)}px ${css.body}`; ctx.textBaseline = "bottom";
           const words = N[i].title.split(/\s+/), lines = []; let cur = ""; for (const wd of words) { const t = cur ? cur + " " + wd : wd; if (ctx.measureText(t).width > w - 8 && cur) { lines.push(cur); cur = wd; } else cur = t; } if (cur) lines.push(cur);
           const lh = Math.min(13, w * .12) * 1.15; lines.slice(-4).forEach((t, j, a) => ctx.fillText(t, x + 4, y + h - 4 - (a.length - 1 - j) * lh)); ctx.restore(); } }
       ctx.strokeStyle = i === sel ? css.accent : "rgba(0,0,0,.45)"; ctx.lineWidth = i === sel ? 2.5 : 1; ctx.strokeRect(x + .5, y + .5, w - 1, h - 1);
-      if (PST.rings && PST.rings.has(i)) { const p = Math.max(3, w * .18); ctx.strokeStyle = css.ink; ctx.globalAlpha *= .8; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(x - p, y - p, w + 2 * p, h + 2 * p, p * 1.4); ctx.stroke(); }
-      if (w >= 60 && img && !PST.mosaicOn) { ctx.fillStyle = css.ink; ctx.font = `500 ${Math.min(12, w * .1)}px ${css.body}`; ctx.textBaseline = "top"; let t = N[i].title; while (t.length > 3 && ctx.measureText(t).width > w) t = t.slice(0, -2); if (t !== N[i].title) t += "…"; ctx.fillText(t, x, y + h + 3); ctx.textBaseline = "alphabetic"; } }
+      if (PSC().rings && PSC().rings.has(i)) { const p = Math.max(3, w * .18); ctx.strokeStyle = css.ink; ctx.globalAlpha *= .8; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(x - p, y - p, w + 2 * p, h + 2 * p, p * 1.4); ctx.stroke(); }
+      if (w >= 60 && img && !PSC().mosaicOn) { ctx.fillStyle = css.ink; ctx.font = `500 ${Math.min(12, w * .1)}px ${css.body}`; ctx.textBaseline = "top"; let t = N[i].title; while (t.length > 3 && ctx.measureText(t).width > w) t = t.slice(0, -2); if (t !== N[i].title) t += "…"; ctx.fillText(t, x, y + h + 3); ctx.textBaseline = "alphabetic"; } }
     ctx.globalAlpha = 1; },
   legend: "Posters: the notes on screen laid out by their own properties. Across is a date or number (release year, created, your rating); lanes are a category (genre, status, this base's own groups); size is a number. Pick a Height and lanes give way to a second number up the side (your rating against the crowd's, the year you watched it against the year it came out), with a line where the two agree and rings on the notes furthest from it. Notes with an image property (a poster, a cover) show it once you zoom in. Click the map's tab for Across, Lanes and Size.",
+};
+
+// ---------- Base Builder: any base (any targeted set), laid out by the base's own columns ----------
+// The same engine as Posters, with its own settings. Its first guesses come from the base: Left to right is the first date
+// or number column, Rows the base's groups (else its first category column), Size the next number column. Notes with a
+// picture are cards; without one, dots colored by their row. A base opens on this map until you pick another.
+function builderHue(i){ const P_ = PSC(), lab = P_.lab, ord = P_.order; if (!lab || !ord || ord.length < 2) return css.accent; const j = ord.indexOf(lab[i]); return j < 0 || lab[i] === "—" ? css.muted : PPAL[j % PPAL.length]; }
+EXP.builder = { ...EXP.posters,
+  legend: "Base Builder: the notes in this base, laid out by the base's own columns. Left to right is a date or number, rows are a category (or the base's groups), size is a number; pick a second number for Bottom to top and the rows give way to a scatter. Notes with a picture show as cards; the rest are dots, colored by their row. Click the map's tab to change any of it.",
 };
 
 // ---------- People: a constellation of the people your notes name ----------
@@ -2101,7 +2136,7 @@ function peopleDetect(){
 function layoutPeople(){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
   const cand = peopleDetect(), props = (PPL.props && PPL.props.length ? cand.filter(c => PPL.props.includes(c.id)) : cand.filter(c => c.def)).map(c => c.id);
-  PPL.active = props; PST.img = postersDetect().img; const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
+  PPL.active = props; PSC().img = postersDetect().img; const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
   const np = new Map(), cnt = new Map(), propOf = new Map();
   for (const i of ids) { const fm = fmOf(i); if (!fm) continue; const got = [];
     for (const k_ of props) { const v = fm[k_]; const vs = Array.isArray(v) ? v : v == null ? [] : [v];
@@ -2179,7 +2214,7 @@ EXP.people = {
   notes(lit, dim){ const r = Math.max(2, Math.min(6, 3.4 * Math.sqrt(k))), big = 10 * k;
     for (let i=0;i<n;i++) { if (!VV(i) || !PPL.np.has(i)) continue; const x = sx(X[i]), y = sy(Y[i]); if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
       const act = PPL.act; ctx.globalAlpha = act ? (act.notes.has(i) ? 1 : .1) : lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .2 : .55) : .9;
-      const img = big >= 14 && PST.img ? posterImg(i) : null;
+      const img = big >= 14 && PSC().img ? posterImg(i) : null;
       if (img) { const w = big * .8, h = big * 1.2; ctx.drawImage(img, x - w / 2, y - h / 2, w, h); if (i === sel) { ctx.strokeStyle = css.accent; ctx.lineWidth = 2; ctx.strokeRect(x - w / 2, y - h / 2, w, h); } }
       else { ctx.fillStyle = i === sel ? css.accent : css.ink; ctx.beginPath(); ctx.arc(x, y, i === sel ? r * 1.8 : r, 0, Math.PI * 2); ctx.fill(); } }
     ctx.globalAlpha = 1; },
@@ -3483,7 +3518,7 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters", msv = view === "mosaic", ppv = view === "people", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view)));   // the Layout section shows only where there are layout settings
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters" || view === "builder", msv = view === "mosaic", ppv = view === "people", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view)));   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv;  const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } }
   if (lay) { $("#startms").hidden = true; $("#sensems").hidden = true; $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = true; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
@@ -4380,6 +4415,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     // Posters: a targeted dataset by its own properties, right after Bookshelf
     const gp = doc.createElement("button"); gp.className = "chip"; gp.id = "goposters"; gp.textContent = "Posters"; gp.setAttribute("aria-label", "Your notes as cards, laid out by their own properties (a year, a genre, a rating), with their pictures");
     $("#goshelf").after(gp); gp.onclick = () => { closePops(); driftStop(); setView("posters"); };
+    // Base Builder: any base (any targeted set) by its own columns, right after Bookshelf
+    const gbb = doc.createElement("button"); gbb.className = "chip"; gbb.id = "gobuilder"; gbb.textContent = "Base Builder"; gbb.setAttribute("aria-label", "The notes in a base laid out by the base's own columns: a date or number left to right, a category per row, a number for size");
+    $("#goshelf").after(gbb); gbb.onclick = () => { closePops(); driftStop(); setView("builder"); };
     // Graph: our take on the core graph view, first in the list
     const gg = doc.createElement("button"); gg.className = "chip"; gg.id = "gograph"; gg.textContent = "Obsidian"; gg.setAttribute("aria-label", "Like Obsidian's graph view: notes pulled together by their links, drawn with the emergence symbols");
     for (const [id, v, label, tip] of [["gogravity", "gravity", "Gravity", "The five levels as rings: hubs at the center, unlinked notes on the rim"]]) {
@@ -4424,25 +4462,26 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true); }
   // Posters' own options, in its map menu: Across, Lanes, Size
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "postctl" } }); pc.hidden = true;
+    pc.createDiv({ cls: "phint bhint", attr: { id: "bhint" } }).hidden = true;
     // Rows (a category per row) or Scatter (a second number bottom to top)
     const pm = pc.createDiv({ cls: "pmode" }); pm.createSpan({ text: "Layout" }); const pseg = pm.createDiv({ cls: "seg", attr: { id: "pmode", role: "group", "aria-label": "Posters layout" } });
     for (const [m, t, tip] of [["rows", "Rows", "One row per value of a category (genre, status, director)"], ["scatter", "Scatter", "Two numbers: one left to right, one bottom to top (your rating against the crowd's)"], ["mosaic", "Mosaic", "Every card as a tile, no gaps: a block per category, each tile sized by Card size"]]) {
       const b = pseg.createEl("button", { text: t, attr: { type: "button", "data-pm": m, "aria-label": tip } });
-      b.onclick = e => { e.stopPropagation(); let h = ""; PST.mosaic = m === "mosaic"; save("iv-pmosaic", PST.mosaic);
+      b.onclick = e => { e.stopPropagation(); let h = ""; PSC().mosaic = m === "mosaic"; save(PK("mosaic"), PSC().mosaic);
         if (m === "mosaic") { morph(true, () => fitTarget()); legend(); return; }
-        if (m === "scatter") { const o = postersDetect(), cu = PST.cur || {}, c = o.across.filter(a => a.id !== cu.acrossId && a.id !== "@created");
-          const pick = c.find(a => a.id === PST.lastHeight) || c.find(a => /^(rank|rating|stars|score|my.?rating)$/i.test(a.id)) || c[0]; if (!pick) return; h = pick.id; }
-        PST.height = h; save("iv-pheight", h); morph(true, () => fitTarget()); legend(); }; }
+        if (m === "scatter") { const o = postersDetect(), cu = PSC().cur || {}, c = o.across.filter(a => a.id !== cu.acrossId && a.id !== "@created");
+          const pick = c.find(a => a.id === PSC().lastHeight) || c.find(a => /^(rank|rating|stars|score|my.?rating)$/i.test(a.id)) || c[0]; if (!pick) return; h = pick.id; }
+        PSC().height = h; save(PK("height"), h); morph(true, () => fitTarget()); legend(); }; }
     const HINT = { across: "A date or number. Places each card left to right.", height: "A second number. Places each card bottom to top.", lanes: "A category. Each value gets its own row.", size: "A number. The bigger it is, the bigger the card." };
     for (const [id, lab_, pk, key] of [["pacross", "Left to right", "iv-pacross", "across"], ["pheight", "Bottom to top", "iv-pheight", "height"], ["planes", "Rows by", "iv-planes", "lanes"], ["psize", "Card size", "iv-psize", "size"]]) {
       const row = pc.createEl("label", { cls: "prow", attr: { "data-k": key } }); row.createSpan({ text: lab_ }); const sel_ = row.createEl("select", { attr: { id } });
       pc.createDiv({ cls: "phint", text: HINT[key], attr: { "data-k": key } });
-      sel_.onchange = () => { PST[key] = sel_.value; if (key === "height" && sel_.value) PST.lastHeight = sel_.value; save(pk, sel_.value); morph(true, () => fitTarget()); legend(); };
+      sel_.onchange = () => { PSC()[key] = sel_.value; if (key === "height" && sel_.value) PSC().lastHeight = sel_.value; save(PK(key), sel_.value); morph(true, () => fitTarget()); legend(); };
       const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
   const VN = () => ({ emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
     chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
-    shelf: "Bookshelf", posters: "Posters", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
+    shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars", "sense"]);
   // the current map's menu: its variants (Emergence, Starfield) and the options that belong to it alone
   const mo = $("#vsegms").createDiv({ cls: "mspop mapopts", attr: { id: "mapopts", role: "dialog", "aria-label": "This map" } }); mo.hidden = true;
@@ -4529,7 +4568,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     st.createSpan({ cls: "tbadge", text: c ? String(c) : "" }); const t = `${c || "Some"} notes changed · rescan`; st.setAttribute("aria-label", t); st.title = t; right.appendChild(st); } }
   const thSlot = right.createDiv({ cls: "thslot" }); thSlot.appendChild($("#themeseg"));
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
-  const ARR_OFF = new Set(["ideaverse", "people", "mosaic", "graph", "posters", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
+  const ARR_OFF = new Set(["ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   syncTB = () => { syncDrift();
     const core = CORE.has(view); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
     $("#vmore").classList.toggle("on", false);
@@ -4565,10 +4604,10 @@ return {
   setScope(paths){ const sig = paths == null ? "*" : paths.length + ":" + paths.join("\n"); if (dead) return;
     if (sig === scopeSig) { if (baseDirty) { baseDirty = false; relayout(!!W, false, () => ({ k, tx, ty })); } return; }
     scopeSig = sig; baseDirty = false; if (paths == null) SCOPE = null; else { SCOPE = new Uint8Array(n); for (const p of paths) { const i = PIDX.get(p); if (i != null) SCOPE[i] = 1; } } relayout(!!W, false, () => fitTarget()); },
-  _posters(){ return { pimg: [...PIMG].filter(([, e]) => e.ok).length, cur: PST.cur, across: PST.opts && PST.opts.across.map(a => a.id + ":" + a.kind), lanes: PST.opts && PST.opts.lanes.map(a => a.id), img: PST.img, ticks: PST.ticks.length, fm: (() => { for (let i=0;i<n;i++) if (vis[i]) return [N[i].path, JSON.stringify(fmOf(i))]; })() }; },
+  _posters(){ return { pimg: [...PIMG].filter(([, e]) => e.ok).length, cur: PSC().cur, across: PSC().opts && PSC().opts.across.map(a => a.id + ":" + a.kind), lanes: PSC().opts && PSC().opts.lanes.map(a => a.id), img: PSC().img, ticks: PSC().ticks.length, fm: (() => { for (let i=0;i<n;i++) if (vis[i]) return [N[i].path, JSON.stringify(fmOf(i))]; })() }; },
   _graph(){ return { st: GPH.stepMs, dr: GPH.drawMs, mo: GPH.morph, it: GPH.it, its: GPH.its, key: GPH.key }; },
-  setBaseInfo(info){ const sig = info ? JSON.stringify([info.sort, info.order, info.groups ? [...info.groups].join() : ""]) : ""; if (sig === baseSig) return;
-    baseSig = sig; BASEINFO = info || null; FMC.clear(); PST.key = null; baseDirty = true; },
+  setBaseInfo(info){ const sig = info ? JSON.stringify([info.sort, info.order, info.cols, info.groups ? [...info.groups].join() : ""]) : ""; if (sig === baseSig) return;
+    baseSig = sig; BASEINFO = info || null; FMC.clear(); PSTP.key = PSTB.key = null; baseDirty = true; },
   toggleFollow(){ setFollowing(!following); return following; },
   themeChanged(){ const t = pref("iv-theme", null); if (t == null) setTheme(autoTheme()); else if (t === "obsidian") setTheme("obsidian"); },   // Obsidian's theme or mode changed
 };

@@ -86,6 +86,10 @@ Every note as a book on a double-wide shelf, shelved by call number (a decimal s
 ![Bookshelf: notes as books](docs/bookshelf.png)
 <sub>Bookshelf in the Play theme, shelved by call number.</sub>
 
+### Base Builder (More)
+
+For any base: the notes it returns, laid out by the base's own columns. Its first guesses come from the base. Left to right is the first date or number column, rows are the base's groups (or its first category column), and size is the next number column. A line in its menu says what it picked, and every choice can be changed there, with a mini slider for each. Pick a second number for Bottom to top and the rows become a scatter, or switch to Mosaic. Notes with a picture property show as cards; the rest are dots, colored by their row. A base opens on Base Builder until you pick another map, and it remembers its settings in the .base file.
+
 ### Posters (More → Experimental → Specialized)
 
 For a smaller, targeted set: a collection, a folder, or a base view (your movies, your books, a learning pack). Each note becomes a card, laid out by its own properties, and if notes have an image property (a poster, a cover, a link to an image in your vault), the card shows it. Click the Posters tab for its menu:
