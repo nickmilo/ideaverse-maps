@@ -984,9 +984,10 @@ function sensePlay(){ if (sensePlaying) { senseStop(); return; }
   if (senseT == null || +$("#tlrange").value >= SSTEPS.length - 1) senseSet(0, true);
   sensePlaying = true; $("#tlplay").textContent = "❚❚"; $("#tlplay").setAttribute("aria-label", "Pause"); senseTimer = win.setTimeout(senseTick, 300); }
 function placePlaybar(){ const pb = $("#playbar"), tb = $("#timebar");   // Sensemaking and Starfield (desktop): autoplay sits just under the timeline bar, however many rows it wraps to
-  pb.style.top = !isPhone() && !tb.hidden && (view === "sense" || view === "stars" || view === "gravity" || view === "chord" || expOn()) ? (tb.offsetTop + tb.offsetHeight + 8) + "px" : "";
+  const docked = !!pb.closest("#animdock");   // in the Animations dock, the bars sit in its own flow
+  pb.style.top = !docked && !isPhone() && !tb.hidden && (view === "sense" || view === "stars" || view === "gravity" || view === "chord" || expOn()) ? (tb.offsetTop + tb.offsetHeight + 8) + "px" : "";
   const db = $("#driftbar"); db.hidden = false;   // Orbit runs on every map (Earth, a fixed tilt, shows only on 3D maps)
-  db.style.top = !isPhone() && pb.style.top ? (pb.offsetTop + pb.offsetHeight + 8) + "px" : ""; syncTB(); }
+  db.style.top = !docked && !isPhone() && pb.style.top ? (pb.offsetTop + pb.offsetHeight + 8) + "px" : ""; syncTB(); }
 on(win, "resize", () => { placePlaybar(); placeAnitab(); });
 function syncTimebar(){ const on = true; win.setTimeout(placePlaybar, 0);
   root.querySelectorAll("#tlstep button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === senseStep)));
@@ -4382,7 +4383,7 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
 // the whole top bar (title, maps, filters, options) can tuck away; a small tab brings it back
 { const hd = root.querySelector("header"), hb = hd.querySelector("h1").createEl("button", { cls: "hcol", text: "︿", attr: { "aria-label": "Hide the top bar", title: "Hide the top bar" } });
   const tab = $("#main").createEl("button", { cls: "htab", text: "﹀", attr: { "aria-label": "Show the top bar", title: "Show the top bar" } });
-  const set = c => { hd.hidden = c; tab.hidden = !c; save("iv-hcol", c); };
+  const set = c => { hd.hidden = c; hd.parentElement.classList.toggle("hdrhid", !!c); tab.hidden = !c; save("iv-hcol", c); };
   const flip = c => { set(c); win.setTimeout(() => { resize(); if (sel >= 0) flyTo(sel); else fit(true); }, 30); };   // reframe for the new height
   // centered chevrons (Obsidian's own icons) in place of the wide ︿ ﹀ characters
   for (const [b, ic] of [[hb, "chevron-up"], [tab, "chevron-down"]]) { b.empty(); setIcon(b, ic); const sv = b.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } }
