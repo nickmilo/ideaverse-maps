@@ -1636,6 +1636,11 @@ function overLinks(lit){
 const TM = {W: 3200, H: 1800, pad: 6};
 let TMBOX = [];   // folder and subfolder boxes, for their names
 let tmSubs = pref("iv-tmsubs", false) === true;   // Treemap: show subfolder boxes and names
+// Treemap by Tags: a box per first-level tag, a box per nested tag inside it; tags can be switched off (TMOFF, lowercase first levels; "" is No tag)
+let tmBy = pref("iv-tmby", "folders") === "tags" ? "tags" : "folders", TMOFF = new Set(Array.isArray(pref("iv-tmtagoff", null)) ? pref("iv-tmtagoff", null) : []);
+const tmTagsOn = () => tmBy === "tags" && HASTAGS;
+// a note's tag on the Treemap: its first tag whose first level is switched on ("" for no tag; null when every tag it has is off)
+function tmTag(i){ const ts = N[i].tags; if (!ts || !ts.length) return TMOFF.has("") ? null : ""; for (const t of ts) if (!TMOFF.has(t.split("/")[0].toLowerCase())) return t; return null; }
 function squarify(items, x, y, w, h, place){   // items: [{v, …}] sorted by v desc; place(item, x, y, w, h)
   const tot = items.reduce((s_, it) => s_ + it.v, 0); if (!tot || w <= 0 || h <= 0) return;
   const sc = w*h/tot; let i0 = 0;
@@ -1648,12 +1653,16 @@ function squarify(items, x, y, w, h, place){   // items: [{v, …}] sorted by v 
 function layoutTreemap(){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0; TMBOX = [];
   const val = i => .35 + N[i].score;
-  const tops = new Map(); for (let i=0;i<n;i++) { if (!vis[i]) continue; const t = ARCH[i] ? "Archive" : N[i].ace === "(root)" ? "Root" : N[i].ace, s_ = ARCH[i] ? "Archive" : N[i].sub || t;
+  const tops = new Map(), byTag = tmTagsOn(), tagName = new Map();
+  for (let i=0;i<n;i++) { if (!vis[i]) continue; let t, s_;
+    if (byTag) { const tg = tmTag(i); if (tg == null) continue; const parts = tg.split("/"), k = parts[0].toLowerCase(); if (!tagName.has(k)) tagName.set(k, parts[0]);
+      t = tg ? "#" + tagName.get(k) : "No tag"; s_ = tg && parts.length > 1 ? t + "/" + parts.slice(1).join("/") : t; }
+    else { t = ARCH[i] ? "Archive" : N[i].ace === "(root)" ? "Root" : N[i].ace; s_ = ARCH[i] ? "Archive" : N[i].sub || t; }
     if (!tops.has(t)) tops.set(t, new Map()); const m = tops.get(t); if (!m.has(s_)) m.set(s_, []); m.get(s_).push(i); }
   const T = [...tops].map(([t, subs]) => ({t, subs, v: [...subs.values()].flat().reduce((s_, i) => s_ + val(i), 0)})).sort((a, b) => b.v - a.v);
   squarify(T, 0, 0, TM.W, TM.H, (tt, x, y, w, h) => { TMBOX.push({name: tt.t, x, y, w, h, lv: 0});
     const p = TM.pad, S = [...tt.subs].map(([s_, ids]) => ({s: s_, ids, v: ids.reduce((a, i) => a + val(i), 0)})).sort((a, b) => b.v - a.v);
-    squarify(S, x + p, y + p + 14, w - 2*p, h - 2*p - 14, (ss, x2, y2, w2, h2) => { if (S.length > 1) TMBOX.push({name: ss.s.split("/").pop(), x: x2, y: y2, w: w2, h: h2, lv: 1});
+    squarify(S, x + p, y + p + 14, w - 2*p, h - 2*p - 14, (ss, x2, y2, w2, h2) => { if (S.length > 1) TMBOX.push({name: byTag ? (ss.s === tt.t ? "(" + tt.t + " only)" : ss.s.slice(tt.t.length + 1)) : ss.s.split("/").pop(), x: x2, y: y2, w: w2, h: h2, lv: 1});
       const q = S.length > 1 ? 2 : 0, items = ss.ids.map(i => ({i, v: val(i)})).sort((a, b) => b.v - a.v);
       squarify(items, x2 + q, y2 + q, w2 - 2*q, h2 - 2*q, (it, x3, y3, w3, h3) => { const i = it.i; RX[i] = x3; RY[i] = y3; RW[i] = w3; RH[i] = h3; EX[i] = x3 + w3/2; EY[i] = y3 + h3/2; }); }); });
   expBounds(20); }
@@ -3653,8 +3662,8 @@ function syncRange(){
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
   const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters" || view === "builder", msv = view === "mosaic", ppv = view === "people", gv = GRV(), lay = gv || sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view)));   // the Layout section shows only where there are layout settings
-  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv;  const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } const gf = $("#gfctl"); if (gf) gf.hidden = !gv; }
-  if (lay) { $("#startms").hidden = true; $("#sensems").hidden = true; $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = true; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
+  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs", "#tmby", "#tmtags"]) { const el_ = $(id); if (el_) el_.hidden = true; } { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv;  const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } const gf = $("#gfctl"); if (gf) gf.hidden = !gv; }
+  if (lay) { $("#startms").hidden = true; $("#sensems").hidden = true; $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = true; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; { const tb_ = $("#tmby"); if (tb_) { tb_.hidden = !tmv || !HASTAGS; syncTmBy(); } } if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -3815,6 +3824,27 @@ root.querySelectorAll("#planetseg button").forEach(b => b.onclick = () => { if (
 $("#csbands").setAttribute("aria-pressed", String(csBands));
 $("#csbands").onclick = () => { csBands = !csBands; save("iv-csbands", csBands); $("#csbands").setAttribute("aria-pressed", String(csBands)); draw(); };
 $("#tmsubs").setAttribute("aria-pressed", String(tmSubs));
+{ const tb = doc.createElement("div"); tb.className = "seg"; tb.id = "tmby"; tb.setAttribute("role", "group"); tb.setAttribute("aria-label", "Treemap boxes by"); tb.hidden = true;
+  for (const [v, t, tip] of [["folders", "Folders", "A box per folder, a box per subfolder inside it"], ["tags", "Tags", "A box per first-level tag, a box per nested tag inside it (a note goes under its first tag that's switched on)"]]) {
+    const b = doc.createElement("button"); b.dataset.tb = v; b.textContent = t; b.setAttribute("aria-label", tip); b.onclick = () => { if (tmBy === v) return; tmBy = v; save("iv-tmby", v); syncTmBy(); if (view === "treemap") morph(true, () => fitTarget()); }; tb.appendChild(b); }
+  $("#tmsubs").before(tb);
+  const tc = doc.createElement("div"); tc.className = "postctl tmtagctl"; tc.id = "tmtags"; tc.hidden = true; $("#tmsubs").after(tc); }
+function syncTmBy(){ root.querySelectorAll("#tmby button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tb === tmBy))); $("#tmsubs").setText(tmTagsOn() ? "Nested tags" : "Subfolders");
+  { const pt = $("#tmsubs").parentElement && $("#tmsubs").parentElement.classList.contains("gsec") ? $("#tmsubs").parentElement.querySelector(".pt") : null; if (pt) pt.setText(tmTagsOn() ? "Nested tags" : "Subfolders"); }
+  tmTagUI(); if (typeof syncTB === "function") syncTB(); }
+// the tag chips: every first-level tag with its count (and No tag); click one to switch it off or on; All and None
+function tmTagUI(){ const tc = $("#tmtags"); if (!tc) return; tc.hidden = !(view === "treemap" && tmTagsOn()); if (tc.hidden) return;
+  const cnt = new Map(), nm = new Map(); for (let i=0;i<n;i++) { if (!vis[i]) continue; const ts = N[i].tags; if (!ts || !ts.length) { cnt.set("", (cnt.get("") || 0) + 1); continue; }
+    const seen = new Set(); for (const t of ts) { const top = t.split("/")[0], k = top.toLowerCase(); if (seen.has(k)) continue; seen.add(k); if (!nm.has(k)) nm.set(k, top); cnt.set(k, (cnt.get(k) || 0) + 1); } }
+  const keys = [...cnt.keys()].sort((a, b) => (a === "") - (b === "") || cnt.get(b) - cnt.get(a) || a.localeCompare(b));
+  const sig = keys.map(k => k + ":" + cnt.get(k) + (TMOFF.has(k) ? "-" : "")).join(","); if (tc.dataset.sig === sig) return; tc.dataset.sig = sig; tc.empty();
+  tc.createDiv({ cls: "phint", text: "Tags shown. A note with several tags goes under its first one that's on." });
+  const acts = tc.createDiv({ cls: "plchips" }); const set = off => { TMOFF = new Set(off); save("iv-tmtagoff", [...TMOFF]); tc.dataset.sig = ""; tmTagUI(); if (view === "treemap") morph(true, () => fitTarget()); };
+  const all = acts.createEl("button", { cls: "pchip pall", text: "All", attr: { type: "button" } }); all.onclick = e => { e.stopPropagation(); set([]); };
+  const none = acts.createEl("button", { cls: "pchip pall", text: "None", attr: { type: "button" } }); none.onclick = e => { e.stopPropagation(); set(keys); };
+  const list = tc.createDiv({ cls: "plchips" });
+  for (const k of keys) { const ch = list.createEl("button", { cls: "pchip" + (TMOFF.has(k) ? " off" : ""), attr: { type: "button", title: TMOFF.has(k) ? "Show these notes" : "Leave these notes out" } }); ch.createSpan({ text: k ? "#" + nm.get(k) : "No tag" }); ch.createEl("b", { text: cnt.get(k).toLocaleString() });
+    ch.onclick = e => { e.stopPropagation(); const o = new Set(TMOFF); if (o.has(k)) o.delete(k); else o.add(k); set([...o]); }; } }
 $("#tmsubs").onclick = () => { tmSubs = !tmSubs; save("iv-tmsubs", tmSubs); $("#tmsubs").setAttribute("aria-pressed", String(tmSubs)); draw(); };
 const syncSS = () => root.querySelectorAll("#shelfsort button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ss === shelfSort)));
 root.querySelectorAll("#shelfsort button").forEach(b => b.onclick = () => { shelfSort = b.dataset.ss; save("iv-ssort", shelfSort); syncSS(); if (view === "shelf") morph(true, () => fitTarget()); });
@@ -4756,7 +4786,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     root.dataset.mo = variants() || hasLay() ? "1" : "";
     AR.w.hidden = ARR_OFF.has(view); AR.val.setText(axisName(mode));
     let g = false; for (const [w, el] of GS) { w.hidden = el.hidden; g = g || !el.hidden; } GR.w.hidden = !g;
-    GR.val.setText(view === "shelf" ? (($("#shelfsort button[aria-pressed=true]") || {}).textContent || "") : view === "chord" ? (chOneFolder ? "Time · one folder" : (($("#chordby button[aria-pressed=true]") || {}).textContent || "")) : view === "treemap" ? ($("#tmsubs").getAttribute("aria-pressed") === "true" ? "Subfolders" : "Folders") : "");
+    GR.val.setText(view === "shelf" ? (($("#shelfsort button[aria-pressed=true]") || {}).textContent || "") : view === "chord" ? (chOneFolder ? "Time · one folder" : (($("#chordby button[aria-pressed=true]") || {}).textContent || "")) : view === "treemap" ? ($("#tmsubs").getAttribute("aria-pressed") === "true" ? (tmTagsOn() ? "Nested tags" : "Subfolders") : (tmTagsOn() ? "Tags" : "Folders")) : "");
     turnSync(); twWake();
     // themes sit at the far right, or in Display on phones and when the map-name grid is on (it needs the room)
     { const inD = isPhone() || VGRID, th = $("#themeseg"), want = inD ? thSec : thSlot; if (th.parentElement !== want) want.appendChild(th); thSec.hidden = !inD; thSlot.hidden = inD; }
