@@ -801,3 +801,14 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm[data-view="ideaverse"] #driftseg .dspin{display:inline-block}
 
 .ivm #vmorepop .chip[hidden]{display:none}
+/* Display → Show more map names: a small two-row grid between the tabs and More, on wide windows only */
+.ivm header.tb2 #vsegms > .vgrid{display:none}
+.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{order:1;display:grid;grid-template-columns:repeat(4,auto);grid-auto-rows:13px;column-gap:10px;row-gap:1px;align-content:center;margin:0 4px 0 8px}
+.ivm header.tb2 .vgrid .vg{all:unset;font:500 10px var(--mono);letter-spacing:.02em;color:var(--muted);cursor:pointer;line-height:13px;white-space:nowrap}
+.ivm header.tb2 .vgrid .vg:hover,.ivm header.tb2 .vgrid .vg[aria-pressed="true"]{color:var(--ink)}
+.ivm header.tb2 .vgrid .vg[aria-pressed="true"]{text-decoration:underline;text-underline-offset:2px}
+.ivm[data-vgrid="1"] header.tb2 #vsegms > .vcurseg{order:2}
+.ivm[data-vgrid="1"] header.tb2 #vsegms > #vmore{order:3}
+.ivm[data-vgrid="1"] header.tb2 #vsegms > #vseg,.ivm[data-vgrid="1"] header.tb2 #vsegms{flex:none}
+.ivm[data-vgrid="1"] header.tb2 .tbl{flex:0 0 auto}
+@container ivm (max-width:1499px){.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{display:none}.ivm[data-vgrid="1"] header.tb2 .tbl{flex:1 1 auto}.ivm[data-vgrid="1"] header.tb2 #vsegms{flex:0 1 auto}}

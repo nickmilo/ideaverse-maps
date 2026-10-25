@@ -1292,7 +1292,7 @@ function quinSeeds(m){
 // at its center, the emptiest first, which splits it in four. Other notes gather in a small cloud around their top note.
 // the Obsidian map in 3D uses the same turntable camera as the 3D Geometric sketches
 // Obsidian (flat, draggable) and Ideaverse (the same graph in 3D) share the graph engine
-let GR3F = 2000;
+let GR3F = 2000, VGRID = pref("iv-vgrid", false) === true;
 // which main tab a map lights: Space-Time is Emergence's, Tesla is the chord map turned inside a glass globe
 function tabOf(){ return view === "spacetime" ? "emergence" : view === "chord" && CSPH === "in" ? "tesla" : view; }
 function GRV(){ return view === "graph" || view === "ideaverse"; }
@@ -4338,6 +4338,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // it sits outside the scrolling tabs, beside More, so it never scrolls out of sight
   // every main tab gets the ▾ when its map has a menu (Gravity and Sensemaking have Years shown)
   for (const v_ of ["sense"]) { const b_ = root.querySelector(`#vseg button[data-v="${v_}"]`); if (b_ && !b_.querySelector(".vcar")) { b_.createSpan({ cls: "vcar", text: " ▾" }); b_.setAttribute("aria-haspopup", "true"); } }
+  // the more-maps grid: the next eight map names in small type, two rows of four, between the tabs and More (Display → Show more map names)
+  const vgrid = $("#vsegms").createDiv({ cls: "vgrid", attr: { role: "group", "aria-label": "More maps" } });
+  for (const [v, t, go] of [["gravity", "Gravity", () => setView("gravity")], ["sense", "Sensemaking", () => setView("sense")], ["graph", "Obsidian", () => setView("graph")], ["chord", "Chord", () => goChord("")], ["corona", "Corona", () => goChord("out")], ["treemap", "Treemap", () => setView("treemap")], ["mosaic", "Mosaic", () => setView("mosaic")], ["shelf", "Bookshelf", () => setView("shelf")]]) {
+    const b = vgrid.createEl("button", { text: t, cls: "vg", attr: { type: "button" } }); b.dataset.vg = v; b.onclick = e => { e.stopPropagation(); closePops(); driftStop(); go(); if (typeof syncTB === "function") syncTB(); }; }
   const vcurSeg = $("#vsegms").createDiv({ cls: "seg vcurseg" }), vcur = vcurSeg.createEl("button", { cls: "vcur", attr: { id: "vcur", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
   $("#vmore").setText("More ▾"); $("#vmore").setAttribute("aria-label", "More maps");
   $("#vsegms").insertBefore($("#vmore"), $("#vseg").nextSibling);   // More sits outside the tabs, so it never scrolls out of sight
@@ -4472,6 +4476,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const dsec = (title, el) => { const w = DI.p.createDiv({ cls: "fsec" }); w.createDiv({ cls: "pt", text: title }); w.appendChild(el); };
   // Display: a short list, no headings: a switch for every link, then how scoring works
   DI.p.classList.add("dlist"); const hold = DI.p.createDiv({ cls: "dhold" }); hold.hidden = true; hold.appendChild($("#alllinks"));
+  // Show more map names: the grid beside the tabs (wide windows), with the themes moved in here
+  const vgSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Show eight more map names in small type beside the tabs, on wide windows; the theme buttons move into Display" } }); const vgCb = vgSw.createEl("input", { type: "checkbox" }); vgSw.createEl("i", { cls: "sw" }); vgSw.createSpan({ text: "Show more map names" });
+  vgCb.checked = VGRID; vgCb.onchange = () => { VGRID = vgCb.checked; save("iv-vgrid", VGRID); syncTB(); };
   const alSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Draw every link on the map, faintly" } }); const alCb = alSw.createEl("input", { type: "checkbox" }); alSw.createEl("i", { cls: "sw" }); alSw.createSpan({ text: "Show all links" });
   alCb.onchange = () => { if (alCb.checked !== showAll) $("#alllinks").click(); };
   const thSec = DI.p.createDiv({ cls: "fsec thsec" }); thSec.createDiv({ cls: "pt", text: "Theme" });
@@ -4500,7 +4507,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     let g = false; for (const [w, el] of GS) { w.hidden = el.hidden; g = g || !el.hidden; } GR.w.hidden = !g;
     GR.val.setText(view === "shelf" ? (($("#shelfsort button[aria-pressed=true]") || {}).textContent || "") : view === "chord" ? (chOneFolder ? "Time · one folder" : (($("#chordby button[aria-pressed=true]") || {}).textContent || "")) : view === "treemap" ? ($("#tmsubs").getAttribute("aria-pressed") === "true" ? "Subfolders" : "Folders") : "");
     turnSync(); twWake();
-    { const th = $("#themeseg"), want = isPhone() ? thSec : thSlot; if (th.parentElement !== want) want.appendChild(th); thSec.hidden = !isPhone(); thSlot.hidden = isPhone(); }
+    // themes sit at the far right, or in Display on phones and when the map-name grid is on (it needs the room)
+    { const inD = isPhone() || VGRID, th = $("#themeseg"), want = inD ? thSec : thSlot; if (th.parentElement !== want) want.appendChild(th); thSec.hidden = !inD; thSlot.hidden = inD; }
+    root.dataset.vgrid = VGRID ? "1" : ""; vgrid.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.vg === (view === "chord" ? (CSPH === "out" ? "corona" : CSPH === "in" ? "tesla" : "chord") : view))));
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }
     yrSec.hidden = !YRV.has(view); $("#yrctl").hidden = !YRV.has(view); syncYr();
