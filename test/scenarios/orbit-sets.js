@@ -1,0 +1,21 @@
+module.exports = async ({ page, sleep }) => {
+  const errs = []; page.on('pageerror', e => errs.push(e.message));
+  await page.evaluate(() => app.commands.executeCommandById('ideaverse-maps:open')); await page.waitForSelector('.ivm canvas', { timeout: 120000 }); await sleep(1500);
+  const st = () => page.evaluate(() => [...document.querySelectorAll('.ivm #driftseg button')].filter(b => getComputedStyle(b).display !== 'none').map(b => b.textContent + (b.getAttribute('aria-pressed') === 'true' ? '*' : '')).join(',') + ' | wob:' + getComputedStyle(document.querySelector('.ivm .dwob')).display);
+  const go = async (n, f) => { await page.evaluate(f); await sleep(2500); console.log(n.padEnd(10), await st()); };
+  await go('emergence', () => {});
+  await page.evaluate(() => document.querySelector('.ivm #driftseg button[data-d="lively"]').click());
+  await go('ideaverse', () => document.querySelector('.ivm #vseg button[data-v="ideaverse"]').click());
+  await page.evaluate(() => document.querySelector('.ivm #driftseg button[data-d="lyt"]').click());
+  await go('tesla', () => { document.querySelector('.ivm #vmore').click(); document.querySelector('.ivm #gocsi').click(); });
+  await go('chord', () => { document.querySelector('.ivm #vmore').click(); document.querySelector('.ivm #gochord').click(); });
+  await go('octa', () => document.querySelector('.ivm #gogeoocta').click());
+  await go('square', () => document.querySelector('.ivm #gogeosquare').click());
+  await go('globe', () => document.querySelector('.ivm #goplglobe').click());
+  await go('tabletop', () => document.querySelector('.ivm #gopltable').click());
+  await go('starfield', () => document.querySelector('.ivm #vseg button[data-v="stars"]').click());
+  await page.evaluate(() => document.querySelector('.ivm #dplay').click()); await sleep(2000); await page.evaluate(() => document.querySelector('.ivm #dplay').click());
+  await go('ideaverse', () => document.querySelector('.ivm #vseg button[data-v="ideaverse"]').click());
+  await page.evaluate(() => document.querySelector('.ivm #dplay').click()); await sleep(2000);
+  console.log('errors:', errs.join(' | ') || 'none');
+};
