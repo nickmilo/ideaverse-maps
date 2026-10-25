@@ -904,3 +904,5 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm header.tb2 #vsegms > .vcurseg{order:-1}
 /* Base Builder · Timeline: only Color by (and its chips) under the layout switch */
 .ivm .postctl.ptl [data-k="across"],.ivm .postctl.ptl [data-k="height"],.ivm .postctl.ptl [data-k="size"],.ivm .postctl.ptl #rng-across,.ivm .postctl.ptl #rng-height,.ivm .postctl.ptl #rng-size,.ivm .postctl.ptl #pimg{display:none}
+/* five layouts (Base Builder): the switch wraps onto a second line rather than hiding the last ones */
+.ivm .postctl .pmode #pmode{display:flex;flex-wrap:wrap;height:auto;border-radius:14px}
