@@ -854,3 +854,9 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm.ivm.ivm[data-view="ideaverse"] #driftseg .dearth,.ivm.ivm.ivm.ivm[data-view="chord"][data-dome="1"] #driftseg .dearth,.ivm.ivm.ivm.ivm[data-view="quincunx"][data-dome="1"] #driftseg .dearth,.ivm.ivm.ivm.ivm[data-view="planet"][data-dome="1"] #driftseg .dearth{display:inline-block}
 .ivm.ivm.ivm.ivm[data-view="ideaverse"] #driftbar .dwob,.ivm.ivm.ivm.ivm[data-view="chord"][data-dome="1"] #driftbar .dwob,.ivm.ivm.ivm.ivm[data-view="quincunx"][data-dome="1"] #driftbar .dwob,.ivm.ivm.ivm.ivm[data-view="planet"][data-dome="1"] #driftbar .dwob{display:flex}
 .ivm.ivm.ivm.ivm #driftbar .dwob[hidden]{display:none}
+/* Base Builder · Constellation: only the layout switch and the line saying where the stars come from */
+.ivm .postctl.pcon > :not(.pmode):not(.bhint){display:none}
+/* four layouts (Base Builder): the switch takes its own line under "Layout", buttons a little tighter */
+.ivm .postctl .pmode{flex-wrap:wrap;row-gap:4px}
+.ivm .postctl .pmode #pmode{max-width:100%}
+.ivm .postctl .pmode #pmode button{padding-left:8px;padding-right:8px}

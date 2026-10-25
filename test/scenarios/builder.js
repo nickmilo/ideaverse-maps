@@ -1,7 +1,7 @@
 module.exports = async ({ page, sleep, shot }) => {
   const errs = []; page.on('pageerror', e => errs.push(e.message + ' @ ' + (e.stack || '').split('\n').slice(1, 3).join(' < ')));
   await sleep(2000);
-  const base = `filters:\n  and:\n    - file.inFolder("Atlas/Films")\nviews:\n  - type: ideaverse-map\n    name: Builder\n    order:\n      - file.name\n      - status\n      - year\n      - imdbRating\n      - rank\n`;
+  const base = `filters:\n  and:\n    - file.inFolder("Atlas/Films")\nviews:\n  - type: ideaverse-map\n    name: Builder\n    order:\n      - file.name\n      - status\n      - year\n      - imdbRating\n      - director\n      - rank\n`;
   await page.evaluate(async b => { const f = app.vault.getAbstractFileByPath('Films Builder.base'); if (f) await app.vault.modify(f, b); else await app.vault.create('Films Builder.base', b); }, base); await sleep(800);
   await page.evaluate(async () => { const f = app.vault.getAbstractFileByPath('Films Builder.base'); await app.workspace.getLeaf('tab').openFile(f); });
   await sleep(7000); await page.mouse.move(1599, 300); await shot('builder-base');
@@ -9,6 +9,12 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.evaluate(() => { const v = [...app.plugins.plugins['ideaverse-maps'].basesViews][0]; v.hostEl.querySelector('#vcur').click(); }); await sleep(600);
   console.log('hint:', await page.evaluate(() => { const v = [...app.plugins.plugins['ideaverse-maps'].basesViews][0]; const h = v.hostEl.querySelector('#bhint'); return h && !h.hidden ? h.textContent : '(hidden)'; }));
   await shot('builder-menu');
+  await page.evaluate(() => { const v = [...app.plugins.plugins['ideaverse-maps'].basesViews][0]; v.hostEl.querySelector('#pmode button[data-pm="constellation"]').click(); }); await sleep(3000);
+  console.log('con hint:', await page.evaluate(() => { const v = [...app.plugins.plugins['ideaverse-maps'].basesViews][0]; return v.hostEl.querySelector('#bhint').textContent + ' | pressed ' + [...v.hostEl.querySelectorAll('#pmode button')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.textContent); }));
+  await shot('builder-con-menu'); await page.mouse.click(1000, 800); await sleep(800); await page.mouse.move(1599, 300); await shot('builder-con');
+  await page.evaluate(() => { const v = [...app.plugins.plugins['ideaverse-maps'].basesViews][0]; v.hostEl.querySelector('#vcur').click(); }); await sleep(500);
+  await page.evaluate(() => { const v = [...app.plugins.plugins['ideaverse-maps'].basesViews][0]; v.hostEl.querySelector('#pmode button[data-pm="rows"]').click(); }); await sleep(2500);
+  console.log('back to rows:', await page.evaluate(() => { const v = [...app.plugins.plugins['ideaverse-maps'].basesViews][0]; return v.hostEl.querySelector('#bhint').textContent; }));
   // whole vault, no pictures: dots
   await page.evaluate(() => app.commands.executeCommandById('ideaverse-maps:open')); await sleep(4000);
   await page.evaluate(() => { const l = app.workspace.getLeavesOfType('ideaverse-maps')[0]; const r = l.view.containerEl; r.querySelector('#vmore').click(); r.querySelector('#gobuilder').click(); }); await sleep(4000);

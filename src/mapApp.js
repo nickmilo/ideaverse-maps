@@ -1837,7 +1837,7 @@ EXP.lifeline = {
 // Size: a number (your rank). Each note is a card, and when the note has an image property (a poster, a cover),
 // the card shows it once you zoom in. The map reads the properties itself, so it works on any dataset.
 // Posters and Base Builder share this engine, each with its own settings (iv-p… and iv-b…)
-const mkPST = c => ({ across: pref(`iv-${c}across`, null), lanes: pref(`iv-${c}lanes`, null), size: pref(`iv-${c}size`, null), height: pref(`iv-${c}height`, null), mosaic: !!pref(`iv-${c}mosaic`, false), mbox: [], mosaicOn: false, rng: pref(`iv-${c}rng`, null) || {}, lhide: pref(`iv-${c}lhide`, null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" });
+const mkPST = c => ({ across: pref(`iv-${c}across`, null), lanes: pref(`iv-${c}lanes`, null), size: pref(`iv-${c}size`, null), height: pref(`iv-${c}height`, null), mosaic: !!pref(`iv-${c}mosaic`, false), con: c === "b" && pref("iv-bcon", false) === true, mbox: [], mosaicOn: false, rng: pref(`iv-${c}rng`, null) || {}, lhide: pref(`iv-${c}lhide`, null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" });
 const PSTP = mkPST("p"), PSTB = mkPST("b"), PSC = () => view === "builder" ? PSTB : PSTP, PK = key => "iv-" + (PSC() === PSTB ? "b" : "p") + key;
 let BASEINFO = null;   // from a base: its sort property and each note's group
 // (a note whose properties Obsidian hasn't read yet, right after it starts, is asked again next time instead of remembered as empty)
@@ -1888,7 +1888,9 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
     for (const it of list) sel_.createEl("option", { value: it.id, text: it.name }); sel_.value = list.some(it => it.id === cur) ? cur : list[0].id; };
   const cu = PSC().cur; fill($("#pacross"), o.across, cu ? cu.acrossId : PSC().across ?? o.across[0].id); fill($("#pheight"), o.across.filter(a => !cu || a.id !== cu.acrossId), cu ? cu.heightId : "");
   { const sc_ = !!(cu && cu.heightId); box.querySelectorAll('[data-k="lanes"]').forEach(el => el.hidden = sc_); box.querySelectorAll('[data-k="height"]').forEach(el => el.hidden = !sc_);
-    const md = cu && cu.mosaic ? "mosaic" : sc_ ? "scatter" : "rows"; box.querySelectorAll("#pmode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pm === md)));
+    const con = view === "builder" && PSTB.con && PSTB.conProps && PSTB.conProps.ids.length, md = con ? "constellation" : cu && cu.mosaic ? "mosaic" : sc_ ? "scatter" : "rows"; box.querySelectorAll("#pmode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pm === md)));
+    { const cb_ = box.querySelector('#pmode button[data-pm="constellation"]'); if (cb_) { cb_.hidden = view !== "builder"; const has = peopleDetect().length > 0; cb_.disabled = !has; cb_.title = has ? "" : "No property here lists people (director, cast, author…)"; } }
+    box.classList.toggle("pcon", !!con);
     const ar = box.querySelector('.prow[data-k="across"] > span'), ah = box.querySelector('.phint[data-k="across"]');
     if (ar) ar.setText(md === "mosaic" ? "Narrow by" : "Left to right"); if (ah) ah.setText(md === "mosaic" ? "A date or number. Use its slider to keep part of the set." : "A date or number. Places each card left to right.");
     const lr = box.querySelector('.prow[data-k="lanes"] > span'), lh_ = box.querySelector('.phint[data-k="lanes"]');
@@ -1899,7 +1901,8 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
   // Base Builder says what it picked, and from where
   { const bh = $("#bhint"); if (bh) { bh.hidden = view !== "builder"; if (view === "builder" && cu) { const nm = (list, id) => (list.find(x => x.id === id) || {}).name;
       const parts = [["Left to right", nm(o.across, cu.acrossId)], cu.heightId ? ["Bottom to top", nm(o.across, cu.heightId)] : ["Rows", cu.laneId ? nm(o.lanes, cu.laneId) : ""], ["Size", cu.sizeId ? nm(o.size, cu.sizeId) : ""]].filter(p_ => p_[1]);
-      bh.setText((o.cols ? "From this base's columns: " : "From these notes' properties: ") + parts.map(p_ => p_[0] + " " + p_[1]).join(" · ")); } }
+      const cp = PSTB.con && PSTB.conProps && PSTB.conProps.ids.length ? PSTB.conProps : null;
+      bh.setText(cp ? (cp.cols ? "From this base's columns: " : "From these notes' properties: ") + "Stars from " + cp.ids.join(" · ") : (o.cols ? "From this base's columns: " : "From these notes' properties: ") + parts.map(p_ => p_[0] + " " + p_[1]).join(" · ")); } }
     const sz = box.querySelector('.prow[data-k="size"] > span'); if (sz) sz.setText(PSC().dots && !(cu && cu.mosaic) ? "Dot size" : "Card size"); } }
 function layoutPosters(){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0; FMC.clear();
@@ -2111,8 +2114,19 @@ EXP.posters = {
 // or number column, Rows the base's groups (else its first category column), Size the next number column. Notes with a
 // picture are cards; without one, dots colored by their row. A base opens on this map until you pick another.
 function builderHue(i){ const P_ = PSC(), lab = P_.lab, ord = P_.order; if (!lab || !ord || ord.length < 2) return css.accent; const j = ord.indexOf(lab[i]); return j < 0 || lab[i] === "—" ? css.muted : PPAL[j % PPAL.length]; }
-EXP.builder = { ...EXP.posters,
-  legend: "Base Builder: the notes in this base, laid out by the base's own columns. Left to right is a date or number, rows are a category (or the base's groups), size is a number; pick a second number for Bottom to top and the rows give way to a scatter. Notes with a picture show as cards; the rest are dots, colored by their row. Click the map's tab to change any of it.",
+// Constellation (Base Builder's fourth layout): the People constellation, from the people columns of this base
+const pplOn = () => view === "people" || (view === "builder" && PSTB.con);
+function builderPeople(){ const cand = peopleDetect(), cols = BASEINFO && Array.isArray(BASEINFO.cols) ? BASEINFO.cols : null;
+  const inCols = cols ? cand.filter(c => cols.includes(c.id)).sort((a, b) => cols.indexOf(a.id) - cols.indexOf(b.id)) : [];
+  const pick = inCols.length ? inCols : cand.filter(c => c.def).length ? cand.filter(c => c.def) : cand.slice(0, 1); return { ids: pick.map(c => c.id), cols: inCols.length > 0 }; }
+const BPOST = EXP.posters;
+EXP.builder = { ownLabels: true,
+  layout(){ if (PSTB.con) { const bp = builderPeople(); PSTB.conProps = bp; if (bp.ids.length) { layoutPeople(bp.ids); postersOptsUI(); return; } } layoutPosters(); },
+  get pick(){ return PSTB.con ? undefined : BPOST.pick; },
+  get labels(){ return PSTB.con ? EXP.people.labels : BPOST.labels; },
+  guides(){ return (PSTB.con ? EXP.people : BPOST).guides(); },
+  notes(lit, dim){ return (PSTB.con ? EXP.people : BPOST).notes(lit, dim); },
+  get legend(){ return PSTB.con ? "Base Builder · Constellation: the people this base's notes name (director, cast, author…) as stars, sized by how many notes name them, joined by the notes they share. Each note orbits its main person. Click a person to light up their notes." : "Base Builder: the notes in this base, laid out by the base's own columns. Left to right is a date or number, rows are a category (or the base's groups), size is a number; pick a second number for Bottom to top and the rows give way to a scatter. Notes with a picture show as cards; the rest are dots, colored by their row. Click the map's tab to change any of it."; },
 };
 
 // ---------- People: a constellation of the people your notes name ----------
@@ -2133,9 +2147,9 @@ function peopleDetect(){
   PPL.cand = [...st].filter(([k_, o]) => o.n >= Math.max(3, sampled * .05) && o.vals.size >= 3).map(([k_, o]) => ({ id: k_, n: o.n, d: o.vals.size, def: PPL_RX.test(k_) }))
     .filter(c => c.def || c.d >= 12).sort((a, b) => b.def - a.def || b.n - a.n).slice(0, 10);
   return PPL.cand; }
-function layoutPeople(){
+function layoutPeople(only){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
-  const cand = peopleDetect(), props = (PPL.props && PPL.props.length ? cand.filter(c => PPL.props.includes(c.id)) : cand.filter(c => c.def)).map(c => c.id);
+  const cand = peopleDetect(), props = only || (PPL.props && PPL.props.length ? cand.filter(c => PPL.props.includes(c.id)) : cand.filter(c => c.def)).map(c => c.id);
   PPL.active = props; PSC().img = postersDetect().img; const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
   const np = new Map(), cnt = new Map(), propOf = new Map();
   for (const i of ids) { const fm = fmOf(i); if (!fm) continue; const got = [];
@@ -2857,7 +2871,7 @@ function sideW(){ // width covered on the right by the note panel and any open s
 function visTarget(xs, ys){   // camera that frames every visible note, given where the notes are (or will be)
   const phone = isPhone(), dw = sideW(), vw = W - dw, vh = phone && sel >= 0 ? H*.48 : H, pad = phone ? 40 : 80;
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, c = 0;
-  const pa = view === "people" && typeof pplActive === "function" ? pplActive() : null;   // People: frame the note, its people and (two steps) their notes
+  const pa = pplOn() && typeof pplActive === "function" ? pplActive() : null;   // People: frame the note, its people and (two steps) their notes
   if (pa) { for (const i of pa.notes) { c++; x0 = Math.min(x0, xs[i]); x1 = Math.max(x1, xs[i]); y0 = Math.min(y0, ys[i]); y1 = Math.max(y1, ys[i]); }
     for (const h of pa.hubs) { const p_ = PPL.hubs[h]; if (!p_) continue; c++; x0 = Math.min(x0, p_.x); x1 = Math.max(x1, p_.x); y0 = Math.min(y0, p_.y); y1 = Math.max(y1, p_.y); } }
   else for (let i=0;i<n;i++) if (vis[i] && !(EHID[i] && expOn())) { c++; x0 = Math.min(x0, xs[i]); x1 = Math.max(x1, xs[i]); y0 = Math.min(y0, ys[i]); y1 = Math.max(y1, ys[i]); }
@@ -3342,7 +3356,7 @@ cv.addEventListener("pointermove", e => {
   }
   const i = pick(e.offsetX, e.offsetY);
   if (i !== hover) { hover = i; cv.classList.toggle("hot", i >= 0); draw(); }
-  if (view === "people" && i < 0) cv.classList.toggle("hot", pplHubAt(e.offsetX, e.offsetY) >= 0);
+  if (pplOn() && i < 0) cv.classList.toggle("hot", pplHubAt(e.offsetX, e.offsetY) >= 0);
   if (i < 0 && view === "chord" && !csphOn()) { const a = chordArcAt(e.offsetX, e.offsetY);   // hovering an arc: its ribbons light up, with the counts
     if (a !== chArc) { chArc = a; draw(); }
     if (a >= 0) { showArcTip(a); return; }
@@ -3360,7 +3374,7 @@ const end = e => { pts.delete(e.pointerId);
   if (GPH.drag) { const g = GPH.drag; GPH.drag = null; if (moved) { GPH.F.free(g.j); GPH.F.heat(0); GPH.wake(); cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
-  if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (view === "people" && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
+  if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (isPhone() || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hover = -1; shTape = -1; draw(); } tip.hidden = true; });
@@ -3819,7 +3833,7 @@ function setFocus(i, fromTrail){
 function renderFocusBar(){
   const fb = $("#focusbar");
   if (focus < 0) { fb.hidden = true; fitFocus(); return; }
-  let c = 0; const pa = view === "people" ? pplActive() : null;
+  let c = 0; const pa = pplOn() ? pplActive() : null;
   if (pa) c = pa.notes.size - (pa.notes.has(focus) ? 1 : 0) + pa.hubs.size; else for (let i=0;i<n;i++) if (vis[i] && i !== focus && !(EHID[i] && expOn())) c++;
   const pos = EFF_ORDER.indexOf(focus);
   html(fb).v = `<span class="fl">Focus</span><span class="fn" title="${esc(N[focus].title)}">${esc(N[focus].title)}</span><span class="fc">${c.toLocaleString()} linked</span>
@@ -4465,9 +4479,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     pc.createDiv({ cls: "phint bhint", attr: { id: "bhint" } }).hidden = true;
     // Rows (a category per row) or Scatter (a second number bottom to top)
     const pm = pc.createDiv({ cls: "pmode" }); pm.createSpan({ text: "Layout" }); const pseg = pm.createDiv({ cls: "seg", attr: { id: "pmode", role: "group", "aria-label": "Posters layout" } });
-    for (const [m, t, tip] of [["rows", "Rows", "One row per value of a category (genre, status, director)"], ["scatter", "Scatter", "Two numbers: one left to right, one bottom to top (your rating against the crowd's)"], ["mosaic", "Mosaic", "Every card as a tile, no gaps: a block per category, each tile sized by Card size"]]) {
+    for (const [m, t, tip] of [["rows", "Rows", "One row per value of a category (genre, status, director)"], ["scatter", "Scatter", "Two numbers: one left to right, one bottom to top (your rating against the crowd's)"], ["mosaic", "Mosaic", "Every card as a tile, no gaps: a block per category, each tile sized by Card size"], ["constellation", "Constellation", "The people the notes name (director, cast, author…) as stars, joined by the notes they share"]]) {
       const b = pseg.createEl("button", { text: t, attr: { type: "button", "data-pm": m, "aria-label": tip } });
-      b.onclick = e => { e.stopPropagation(); let h = ""; PSC().mosaic = m === "mosaic"; save(PK("mosaic"), PSC().mosaic);
+      b.onclick = e => { e.stopPropagation(); let h = "";
+        if (view === "builder") { const on = m === "constellation"; if (on !== PSTB.con) { PSTB.con = on; save("iv-bcon", on); } if (on) { PPL.pick = -1; morph(true, () => fitTarget()); legend(); return; } } PSC().mosaic = m === "mosaic"; save(PK("mosaic"), PSC().mosaic);
         if (m === "mosaic") { morph(true, () => fitTarget()); legend(); return; }
         if (m === "scatter") { const o = postersDetect(), cu = PSC().cur || {}, c = o.across.filter(a => a.id !== cu.acrossId && a.id !== "@created");
           const pick = c.find(a => a.id === PSC().lastHeight) || c.find(a => /^(rank|rating|stars|score|my.?rating)$/i.test(a.id)) || c[0]; if (!pick) return; h = pick.id; }
