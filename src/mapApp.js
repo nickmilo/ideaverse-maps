@@ -2677,7 +2677,9 @@ function driftFrame(now){
     const gSp = GRV() ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[driftSpeed] : null;
     g3Yaw -= (gSp != null ? gSp : spin)*1.6*dt; g3Pitch = earthy() ? 20*Math.PI/180 : .35 + .3*Math.sin(t*2*Math.PI/((breath || 30)*1.4)); geoProj(); X.set(EX); Y.set(EY); render(); return; }
   if (sphOn()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;   // the globe turns slowly, tilting as it goes
-    csYaw += spin*1.6*dt; csPitch = earthy() ? 20*Math.PI/180 : .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); return; }
+    // Tesla and Corona share the Ideaverse's orbit speeds (Calm, Slow, Lively, Earth, Spinning)
+    const cSp = csphOn() ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[driftSpeed] : null;
+    csYaw += (cSp != null ? cSp : spin)*1.6*dt; csPitch = earthy() ? 20*Math.PI/180 : .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); return; }
   const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[earthy() ? "slow" : driftSpeed], t = (now - driftT0)/1000;
   if (earthy()) { yaw3 += DRIFT[driftSpeed][0]*dt; pitch3 = 20*Math.PI/180; project3D(); X.set(P3X); Y.set(P3Y); render(); return; }   // Earth: a steady turn at a fixed 20° tilt, no zooming in
   yaw3 += spin*dt; pitch3 = .62 + .38*Math.sin(t*2*Math.PI/(breath*1.7));
