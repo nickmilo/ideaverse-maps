@@ -2677,11 +2677,11 @@ function driftFrame(now){
     render(); return; }
   if (geo3On()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;
     // (the Obsidian map turns faster, still swaying as it goes: Lively as fast as Spinning, Slow what Lively was at 2½×, Calm what Slow was)
-    const gSp = GRV() ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[driftSpeed] : null;
+    const gSp = GRV() || view === "quincunx" ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[driftSpeed] : null;
     g3Yaw -= (gSp != null ? gSp : spin)*1.6*dt; g3Pitch = earthy() ? tilt(g3Yaw) : .35 + .3*Math.sin(t*2*Math.PI/((breath || 30)*1.4)); geoProj(); X.set(EX); Y.set(EY); render(); return; }
   if (sphOn()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;   // the globe turns slowly, tilting as it goes
-    // Tesla and Corona share the Ideaverse's orbit speeds (Calm, Slow, Lively, Earth, Spinning)
-    const cSp = csphOn() ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[driftSpeed] : null;
+    // Tesla, Corona and the PKM Globe share the Ideaverse's orbit speeds (Calm, Slow, Lively, Earth, Spinning)
+    const cSp = sphOn() ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[driftSpeed] : null;
     csYaw += (cSp != null ? cSp : spin)*1.6*dt; csPitch = earthy() ? tilt(csYaw) : .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); return; }
   const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[earthy() ? "slow" : driftSpeed], t = (now - driftT0)/1000;
   if (earthy()) { yaw3 += DRIFT[driftSpeed][0]*dt; pitch3 = tilt(yaw3); project3D(); X.set(P3X); Y.set(P3Y); render(); return; }   // Earth: a steady turn at a fixed 20° tilt, no zooming in
