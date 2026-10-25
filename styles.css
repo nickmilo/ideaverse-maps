@@ -890,3 +890,8 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .dlist .bacto .bccurve .sw::after{content:"";position:absolute;top:1px;left:1px;width:6px;height:6px;border-radius:50%;background:var(--muted);transition:left .15s}
 .ivm .dlist .bacto .bccurve input:checked + .sw{background:var(--accent)}
 .ivm .dlist .bacto .bccurve input:checked + .sw::after{left:11px;background:var(--bg)}
+/* Obsidian and Ideaverse: the forces */
+.ivm .gfctl .gfw{display:flex;align-items:center;gap:8px;min-width:0}
+.ivm .gfctl .gfw input{flex:1;min-width:0}
+.ivm .gfctl .gfw b{font:500 11px var(--mono);color:var(--muted);min-width:30px;text-align:right}
+.ivm .gfctl > .pchip{grid-column:1/-1;justify-self:start}

@@ -49,7 +49,7 @@ A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), P
 
 ### Obsidian
 
-Our take on Obsidian's graph view: every note pushes the others away and its links pull it toward its neighbors, settling live as you watch. Drag a note and its links tug the rest along; let go and it settles. Drawn with the emergence symbols, so hubs and maps stand out, and with everything the other maps have: the Timelapse, Wander Mode, Focus mode, filters. Unlinked notes ring the outside.
+Our take on Obsidian's graph view: every note pushes the others away and its links pull it toward its neighbors, settling live as you watch. Drag a note and its links tug the rest along; let go and it settles. Drawn with the emergence symbols, so hubs and maps stand out, and with everything the other maps have: the Timelapse, Wander Mode, Focus mode, filters. Unlinked notes ring the outside. Its menu has the forces, as in Obsidian's graph settings: **Gravity** (the pull to the middle; lower it to let a big graph spread out), **Repel** and **Link length**. The graph moves as you drag.
 
 ![Obsidian: a hub and its links](docs/graph.png)
 <sub>The Obsidian map in the Dark theme, zoomed in on a hub and its links.</sub>
