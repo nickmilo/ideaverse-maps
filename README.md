@@ -76,7 +76,7 @@ Chord arranges every note around a ring, grouped into arcs by folder, by year, o
 
 ### Treemap
 
-Treemap draws every folder and note as a rectangle, sized by how well-linked the note is. You can outline and name subfolders too. If you use tags, switch the menu to **Tags** and the boxes follow your tags instead, with a box for each top-level tag and smaller boxes inside it for nested tags. Each tag has a chip you can click to hide it or show it again, so you could keep only your `#garden` notes and see how they're laid out.
+Treemap draws every folder and note as a rectangle, sized by how well-linked the note is. You can outline and name subfolders too. If you use tags, set **Group → Boxes by** to **Tags** and the boxes follow your tags instead, with a box for each top-level tag. Turn on **Show nested tags** in the map's menu to get smaller boxes inside for nested tags. Each tag has a chip you can click to hide it or show it again, so you could keep only your `#garden` notes and see how they're laid out.
 
 ![Treemap: folders and notes as rectangles](docs/treemap.png)
 <sub>Treemap in the Soft Paper theme.</sub>
@@ -93,7 +93,7 @@ Tree treats your home note as the trunk. Every other note hangs from the branch 
 
 Bookshelf turns every note into a book on a long double shelf. You can shelve the books by call number, title, date, subfolder or tag. The call numbers work like a library's, except they come from your own links.
 
-If you shelve by tag, each top-level tag gets its own bookcase. Turn on **Show nested tags** and each bookcase splits into labelled sections, one for each nested tag. This is meant for vaults that use tags instead of folders. A note with several tags is shelved under the first one. Treemap, Bookshelf and Chord share the same tag chips, so hiding a tag on one hides it on the others.
+If you shelve by tag, each top-level tag gets its own bookcase. Turn on **Show nested tags** and each bookcase splits into labelled sections, one for each nested tag. This is meant for vaults that use tags instead of folders. A note with several tags is shelved under the first one. Treemap, Bookshelf and Chord handle tags the same way. You choose tags in the **Group** menu, and the map's own menu holds the **Show nested tags** switch and the tag chips. Hiding a tag on one of these maps hides it on the others too.
 
 An Index panel lists every call number, and you can copy it as a Markdown list.
 
