@@ -2883,7 +2883,7 @@ function rad(i){ if (view === "stars") return Math.max(.7*BOOST, Math.min(SR[i]*
 
 // ---------- Way home (Kevin Bacon): from the note you're on, the fewest links back to one note (Home by default) ----------
 // Any map: the path lights up as a line through each note on it, named, with the count of steps. Display → Show the way home.
-let BACON = pref("iv-bacon", false) === true, BACTO = pref("iv-bacto", null);   // BACTO: the path of the note to find the way to (null: Home)
+let BACON = pref("iv-bacon", false) === true, BACTO = pref("iv-bacto", null), BACCURVE = pref("iv-baccurve", false) === true;   // BACTO: the path of the note to find the way to (null: Home)
 const BAC = { key: "", par: null, to: -1 };
 function baconHome(){ let r = -1, b = -1; for (let i=0;i<n;i++) if (vis[i] && N[i].home && !ARCH[i]) { const d = out[i].length + inn[i].length; if (d > b) { b = d; r = i; } }
   if (r < 0) for (let i=0;i<n;i++) if (vis[i] && !ARCH[i] && (r < 0 || byRank(i, r) < 0)) r = i; return r; }
@@ -2899,10 +2899,11 @@ function drawBacon(){ const hl = sel >= 0 ? sel : hover; if (hl < 0 || !vis[hl])
   if (!p) { badge(`No way to ${to} from here`); return; }
   if (p.length < 2) return;
   ctx.save(); ctx.lineCap = ctx.lineJoin = "round";
-  // each step a gentle arc (bending the same way, so the way reads as one flowing line), thin enough that the links under it still show
+  // straight steps (they stand apart from the links, which curve); or, with the mini switch, each step a gentle arc, all bending the same way
   const line = () => { ctx.beginPath(); for (let q = 0; q < p.length; q++) { const x = sx(X[p[q]]), y = sy(Y[p[q]]); if (!q) { ctx.moveTo(x, y); continue; }
+      if (!BACCURVE) { ctx.lineTo(x, y); continue; }
       const x0_ = sx(X[p[q - 1]]), y0_ = sy(Y[p[q - 1]]), dx = x - x0_, dy = y - y0_; ctx.quadraticCurveTo((x0_ + x) / 2 - dy * .14, (y0_ + y) / 2 + dx * .14, x, y); } ctx.stroke(); };
-  ctx.strokeStyle = css.bg; ctx.globalAlpha = .45; ctx.lineWidth = 5; line(); ctx.strokeStyle = css.accent; ctx.globalAlpha = .8; ctx.lineWidth = 2; line();
+  ctx.strokeStyle = css.bg; ctx.globalAlpha = .6; ctx.lineWidth = 6; line(); ctx.strokeStyle = css.accent; ctx.globalAlpha = .9; ctx.lineWidth = 2.5; line();
   ctx.globalAlpha = 1; for (const i of p) { const x = sx(X[i]), y = sy(Y[i]), r = i === b.to ? 7 : 4.5; ctx.fillStyle = css.accent; ctx.strokeStyle = css.bg; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill(); ctx.stroke(); }
   // each note on the way is named (unless the map named it already); the count of steps sits under the note it leads to
   const named = new Set(LH.map(h => h[4])); ctx.font = `600 11.5px ${css.body}`; ctx.textBaseline = "middle"; ctx.lineWidth = 4;
@@ -4605,6 +4606,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     bcUse.title = sel < 0 ? "Click a note on the map first" : `Find the way to ${N[sel].title} instead`; };
   bcCb.onchange = () => { BACON = bcCb.checked; save("iv-bacon", BACON); syncBac(); draw(); };
   bcUse.onclick = e => { e.stopPropagation(); if (sel < 0) return; BACTO = N[sel].path; save("iv-bacto", BACTO); syncBac(); draw(); };
+  const bcCv = bcTo.createEl("label", { cls: "bccurve", attr: { title: "Draw the way home as gentle arcs instead of straight lines" } }), bcCvIn = bcCv.createEl("input", { type: "checkbox" }); bcCv.createEl("i", { cls: "sw" }); bcCv.createSpan({ text: "Turn straight lines slightly curved" });
+  bcCvIn.checked = BACCURVE; bcCvIn.onchange = () => { BACCURVE = bcCvIn.checked; save("iv-baccurve", BACCURVE); draw(); }; bcCv.onclick = e => e.stopPropagation();
   bcHome.onclick = e => { e.stopPropagation(); BACTO = null; save("iv-bacto", null); syncBac(); draw(); };
   // click the name to pick any note: type a few letters, pick from the matches
   const bcFind = DI.p.createDiv({ cls: "bcfind" }); bcFind.hidden = true; const bcIn = bcFind.createEl("input", { type: "text", attr: { placeholder: "Find the note to head for…", "aria-label": "Find the note to head for" } }), bcHits = bcFind.createDiv({ cls: "bchits" });

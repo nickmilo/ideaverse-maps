@@ -881,3 +881,9 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .dlist .bacto{row-gap:4px}
 .ivm .dlist .bacto .bcbtns{display:flex;gap:6px;flex-basis:100%}
 .ivm .dlist .bacto,.ivm .dlist .bcfind{padding-left:30px}
+.ivm .dlist .bacto .bccurve{display:flex;align-items:center;gap:6px;flex-basis:100%;margin-top:2px;font:500 10px var(--mono);letter-spacing:.04em;color:var(--muted);cursor:pointer;white-space:nowrap}
+.ivm .dlist .bacto .bccurve input{position:absolute;opacity:0;width:1px;height:1px}
+.ivm .dlist .bacto .bccurve .sw{width:18px;height:8px;border-radius:5px;background:var(--line);position:relative;flex:none}
+.ivm .dlist .bacto .bccurve .sw::after{content:"";position:absolute;top:1px;left:1px;width:6px;height:6px;border-radius:50%;background:var(--muted);transition:left .15s}
+.ivm .dlist .bacto .bccurve input:checked + .sw{background:var(--accent)}
+.ivm .dlist .bacto .bccurve input:checked + .sw::after{left:11px;background:var(--bg)}
