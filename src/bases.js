@@ -24,7 +24,7 @@ const makeView = BasesView => class MapBasesView extends BasesView {
     const load = () => { if (loaded || !this.config) return; loaded = true;   // the config can arrive after the view is created
       try { const v = this.config.get(KEY); if (v && typeof v === "object") this.own = Object.assign({}, v, this.own); } catch { /* keep what we have */ } };
     return {
-      get: key => { load(); return Object.prototype.hasOwnProperty.call(this.own, key) ? this.own[key] : main.get(key); },
+      get: key => { load(); if (Object.prototype.hasOwnProperty.call(this.own, key)) return this.own[key]; return key === "iv-view" ? "builder" : main.get(key); },   // a base opens on Base Builder until you pick another map
       set: (key, value) => { load();
         if (SHARED.has(key) || key.startsWith("iv-mig")) { main.set(key, value); return; }   // housekeeping and panel tucks stay with the plugin, so opening a base never edits its file
         if (JSON.stringify(value) === JSON.stringify(Object.prototype.hasOwnProperty.call(this.own, key) ? this.own[key] : main.get(key))) return;
@@ -49,8 +49,10 @@ const makeView = BasesView => class MapBasesView extends BasesView {
     let groups = null, order = null;
     try { const g = d && d.groupedData; if (Array.isArray(g) && g.length > 1 || (g && g[0] && g[0].hasKey && g[0].hasKey())) { groups = new Map(); order = [];
       for (const grp of g) { const k = grp.hasKey && grp.hasKey() ? String(grp.key).replace(/^\[\[([^\]|]+)(\|[^\]]*)?\]\]$/, "$1") : "—"; order.push(k); for (const e of grp.entries || []) if (e && e.file) groups.set(e.file.path, k); } } } catch (e) { /* an older Obsidian without Sort or Group: nothing to follow */ }
+    // the columns the base shows, in its order (Base Builder reads its first guesses from these)
+    let cols = null; try { const o = this.config && this.config.getOrder && this.config.getOrder(); if (Array.isArray(o)) cols = o.map(strip); } catch (e) { /* an older Obsidian without column order */ }
     this.biv = (this.biv || 0) + 1;
-    return { sort, groups, order, v: this.biv };
+    return { sort, groups, order, cols, v: this.biv };
   }
   currentPaths() { const d = this.data, rows = d && Array.isArray(d.data) ? d.data : []; return rows.map(e => e && e.file && e.file.path).filter(Boolean); }
   onDataUpdated() { this.paths = this.currentPaths(); if (this.map) { this.map.setBaseInfo && this.map.setBaseInfo(this.baseInfo()); this.map.setScope(this.paths); } }
