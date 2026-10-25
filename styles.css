@@ -781,3 +781,21 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .dlist .thsec[hidden]{display:none}
 /* Tree's own key in the legend: one row each */
 .ivm .legend .lgtree{flex-direction:column;align-items:stretch;gap:2px;margin-top:4px}
+/* Filter: Folders and Collections side by side, their lists open */
+.ivm header.tb2 #filtpop{width:min(600px,calc(100cqw - 24px));max-width:none}
+.ivm .fcols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;border-top:1px solid var(--line);padding-top:8px}
+.ivm .fcols .fcol{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ivm .fcols .fhd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ivm .fcols .fhd .pt{margin:0}
+.ivm .fcols .facts{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)}
+.ivm.ivm .fcols .facts .chip{padding:2px 8px;font-size:11px;height:auto;min-height:0}
+.ivm .fcols #foldlist,.ivm .fcols #colllist{max-height:min(300px,45vh);overflow-y:auto}
+.ivm .fcols .msh{display:flex;gap:6px;align-items:center}
+.ivm .fcols #collq{flex:1;min-width:0}
+.ivm.ivm.ivm .ms.gone{display:none}
+@container ivm (max-width:620px){.ivm .fcols{grid-template-columns:minmax(0,1fr)}}
+.ivm .fcols #colllist{flex:none;align-content:start}
+/* Orbit: Earth on the 3D Obsidian map too, and Spinning (a fast Earth) only there */
+.ivm[data-view="graph"][data-dome="1"] #driftseg .dearth{display:inline-block}
+.ivm.ivm #driftseg .dspin{display:none}
+.ivm.ivm[data-view="graph"][data-dome="1"] #driftseg .dspin{display:inline-block}

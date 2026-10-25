@@ -879,10 +879,13 @@ function drawGrowth(){
 function popCentre(i){
   if (view === "stars") { const b = BOD[i] >= 0 ? BODIES[BOD[i]] : null;
     return b ? (([bx_, by_]) => [sx(bx_), sy(by_), Math.max(40, b.r*k*1.25)])(bodyPos(b)) : [sx(UC.x), sy(UC.y), Math.max(60, (UB.x1 - UB.x0)*k*.3)]; }
-  if (view === "graph") return [sx((expBox.x0 + expBox.x1) / 2), sy((expBox.y0 + expBox.y1) / 2), Math.max(60, (expBox.x1 - expBox.x0) * k * .5)];   // the Obsidian map: from its middle
+  if (view === "graph") return [sx((expBox.x0 + expBox.x1) / 2), sy((expBox.y0 + expBox.y1) / 2), Math.max(50, (expBox.x1 - expBox.x0) * k * .3)];   // the Obsidian map: from its middle
   return [sx(SC_.x), sy(SC_.y), SR0*k*1.25];
 }
+let SOFT = 1;
 function drawPops(){
+  // the Obsidian map is busy already: its comets and swirls are fainter and travel less far (rain stays as it is)
+  SOFT = view === "graph" ? .4 : 1;
   if (senseT != null && POP.some(v => v)) { const now = popNow, few = [], fly = new Map();
     for (let i=0;i<n;i++) { const t0 = POP[i]; if (!t0 || now < t0 || now - t0 >= popMs() || !vis[i] || (view === "sense" && !inYears(i))) continue; few.push(i); }
     few.sort((a,b) => N[a].level - N[b].level);
@@ -905,19 +908,19 @@ function drawPops(){
           return [(1-q)*(1-q)*sxp + 2*(1-q)*q*bx + q*q*hx, (1-q)*(1-q)*syp + 2*(1-q)*q*by + q*q*hy]; };
         const fly = Math.min(1, e/.7); [x, y] = at(fly);
         if (fly < 1) { ctx.lineCap = "round"; for (let s = 0; s < 6; s++) { const f0 = Math.max(0, fly - (s + 1)*.05), f1 = Math.max(0, fly - s*.05), [ax, ay] = at(f0), [bx2, by2] = at(f1);
-            ctx.globalAlpha = .55*(1 - s/6); ctx.strokeStyle = col; ctx.lineWidth = r*1.6*(1 - s/7); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx2, by2); ctx.stroke(); } }
-        else { const g = (e - .7)/.3; ctx.globalAlpha = .6*(1 - g); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(hx, hy, r*(1 + 4*g), 0, 6.2832); ctx.fill(); }   // a flash on landing
-        sc = fly < 1 ? 1.6 : 1; ctx.globalAlpha = 1; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r*sc, 0, 6.2832); ctx.fill();
-        ctx.fillStyle = "#ffffff"; ctx.globalAlpha = fly < 1 ? .9 : .9*(1 - (e - .7)/.3); ctx.beginPath(); ctx.arc(x, y, r*sc*.45, 0, 6.2832); ctx.fill(); }
+            ctx.globalAlpha = .55*(1 - s/6)*SOFT; ctx.strokeStyle = col; ctx.lineWidth = r*1.6*(1 - s/7)*(SOFT < 1 ? .6 : 1); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx2, by2); ctx.stroke(); } }
+        else { const g = (e - .7)/.3; ctx.globalAlpha = .6*(1 - g)*SOFT; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(hx, hy, r*(1 + 4*g*SOFT), 0, 6.2832); ctx.fill(); }   // a flash on landing
+        sc = fly < 1 ? (SOFT < 1 ? 1.15 : 1.6) : 1; ctx.globalAlpha = SOFT < 1 ? .8 : 1; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r*sc, 0, 6.2832); ctx.fill();
+        ctx.fillStyle = "#ffffff"; ctx.globalAlpha = (fly < 1 ? .9 : .9*(1 - (e - .7)/.3))*SOFT; ctx.beginPath(); ctx.arc(x, y, r*sc*.45, 0, 6.2832); ctx.fill(); }
       else if (senseFx === "swirl" || senseFx === "swirlin") {   // swirl out: born at the core, spiralling out along an arm; swirl in: drawn in from the rim, like a galaxy forming
         const [cx0, cy0, Rr] = popCentre(i), dx = hx - cx0, dy = hy - cy0, rf = Math.hypot(dx, dy), th = Math.atan2(dy, dx), turns = 1.1 + .35*gauss(N[i].path, 73), inw = senseFx === "swirlin";
         const r0 = Math.max(rf*1.6, Rr*1.15);
         const at = q => { const rr = inw ? rf + (r0 - rf)*Math.pow(1 - q, 1.3) : rf*Math.pow(q, .85), a = th - turns*2*Math.PI*(1 - q) /* clockwise on screen, in and out */; return [cx0 + rr*Math.cos(a), cy0 + rr*Math.sin(a)]; };
         const fly = Math.min(1, e/.8), q = 1 - Math.pow(1 - fly, 2.2); [x, y] = at(q);
-        if (fly < 1) for (let s = 1; s <= 16; s++) { const [tx_, ty_] = at(Math.max(0, q - s*.028)); ctx.globalAlpha = .6*(1 - s/17)*(1 - fly*.3); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(tx_, ty_, r*Math.max(.25, 1.1 - s*.055), 0, 6.2832); ctx.fill(); }
+        if (fly < 1) for (let s = 1; s <= 16; s++) { const [tx_, ty_] = at(Math.max(0, q - s*.028)); ctx.globalAlpha = .6*(1 - s/17)*(1 - fly*.3)*SOFT; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(tx_, ty_, r*Math.max(.25, 1.1 - s*.055), 0, 6.2832); ctx.fill(); }
         else { const g = (e - .8)/.2; ctx.globalAlpha = .5*(1 - g); ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(hx, hy, r*(1.4 + 3*g), 0, 6.2832); ctx.stroke(); }
-        sc = fly < 1 ? 1.4 : 1; ctx.globalAlpha = 1; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r*sc, 0, 6.2832); ctx.fill();
-        ctx.fillStyle = "#ffffff"; ctx.globalAlpha = fly < 1 ? .85 : 0; ctx.beginPath(); ctx.arc(x, y, r*sc*.4, 0, 6.2832); ctx.fill(); }
+        sc = fly < 1 ? (SOFT < 1 ? 1.1 : 1.4) : 1; ctx.globalAlpha = SOFT < 1 ? .8 : 1; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r*sc, 0, 6.2832); ctx.fill();
+        ctx.fillStyle = "#ffffff"; ctx.globalAlpha = (fly < 1 ? .85 : 0)*SOFT; ctx.beginPath(); ctx.arc(x, y, r*sc*.4, 0, 6.2832); ctx.fill(); }
       else {   // rain: a soft landing with two ripples
         for (const lag of [0, .22]) { const g = (e - lag)/(1 - lag); if (g <= 0) continue;
           ctx.globalAlpha = .5*Math.pow(1 - g, 1.5); ctx.strokeStyle = col; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.ellipse(hx, hy, r*(1 + 9*g), r*(1 + 9*g)*.55, 0, 0, 6.2832); ctx.stroke(); }
@@ -2347,7 +2350,7 @@ EXP.graph = {
   guides(){ const on = []; for (let e = 0; e < E.length; e++) { const a = E[e][0], b = E[e][1]; if (!VV(a) || !VV(b)) continue; const x1 = sx(X[a]), y1 = sy(Y[a]), x2 = sx(X[b]), y2 = sy(Y[b]);
       if ((x1 < 0 && x2 < 0) || (x1 > W && x2 > W) || (y1 < 0 && y2 < 0) || (y1 > H && y2 > H)) continue; on.push(e); }
     const stp = Math.max(1, Math.ceil(on.length / 7000));
-    ctx.strokeStyle = css["edge-faint"]; ctx.globalAlpha = (sel >= 0 || hover >= 0 ? .5 : 1) * Math.min(1, .45 + .55 / stp); ctx.lineWidth = 1; ctx.beginPath();
+    ctx.strokeStyle = css["edge-faint"]; ctx.globalAlpha = (sel >= 0 || hover >= 0 ? .75 : 1) * Math.min(1, .45 + .55 / stp); ctx.lineWidth = 1; ctx.beginPath();
     for (let q = 0; q < on.length; q += stp) { const [a, b] = E[on[q]]; ctx.moveTo(sx(X[a]), sy(Y[a])); ctx.lineTo(sx(X[b]), sy(Y[b])); }
     ctx.stroke(); ctx.globalAlpha = 1; },
   legend: "Obsidian: every note pulled toward the notes it links to and pushed away from the rest, like Obsidian's graph view, drawn with the emergence symbols so hubs and maps stand out. Unlinked notes ring the outside. Drag a note and its links tug the rest along; let go and it settles. In 3D (click the Obsidian tab) it's a ball: drag to turn it, scroll to fly in. Click a note to light up its links; the Timelapse grows it, and Focus mode and Wander Mode work here too.",
@@ -2645,23 +2648,25 @@ const s3dOn = () => view === "stars" && S3D;
 // ---- Drift: a screensaver for 3D Starfield. The camera circles the universe, its tilt sways, and every ~40 s it breathes in
 // toward one galaxy (a different one each time, bigger ones more often) and back out again. Any touch, drag or scroll stops it.
 let drifting = false, driftRaf = 0, driftT0 = 0, driftLast = 0, driftGal = -1, driftCyc = -1, driftK0 = 1, driftSpeed = "slow";
-const DRIFT = {calm: [.018, 70], slow: [.035, 44], lively: [.07, 26], earth: [.05, 0]};   // earth: every 3D map, a steady spin at a fixed 20° tilt   // [radians of orbit per second, seconds per in-and-out breath]
+const DRIFT = {calm: [.018, 70], slow: [.035, 44], lively: [.07, 26], earth: [.05, 0], spin: [.45, 0]};   // spin: Earth, fast (the 3D Obsidian map)
+const earthy = () => driftSpeed === "earth" || driftSpeed === "spin";   // earth: every 3D map, a steady spin at a fixed 20° tilt   // [radians of orbit per second, seconds per in-and-out breath]
 function driftPick(){ const gals = BODIES.filter(b => b.kind === "gal" && b.members.some(i => VV(i)));
   if (!gals.length) return -1; let tot = 0; for (const b of gals) tot += Math.sqrt(b.members.length);
   let r = Math.random()*tot; for (const b of gals) { r -= Math.sqrt(b.members.length); if (r <= 0 && b.id !== driftGal) return b.id; } return gals[0].id; }
 function driftFrame(now){
   if (!drifting) return; driftRaf = RAF(driftFrame);
   if (!(s3dOn() || sphOn() || geo3On())) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; if (!dt || morphing) return;   // flat maps: a slow glide and a gentle in-and-out, faster at Lively
-    const sp = DRIFT[driftSpeed === "earth" ? "slow" : driftSpeed][0]/.035, t = (now - driftT0)/1000*sp;
+    const sp = DRIFT[earthy() ? "slow" : driftSpeed][0]/.035, t = (now - driftT0)/1000*sp;
     if (domeOn()) { domeYaw += .03*sp*dt; domeProject(); X.set(DX); Y.set(DY); }
     else { const px = 9*sp*Math.sin(t*.23), py = 6*sp*Math.cos(t*.17); tx += px*dt; ty += py*dt; const f = 1 + .012*Math.cos(t*.5)*sp*dt, cx = W/2, cy = H/2; tx = cx - (cx - tx)*f; ty = cy - (cy - ty)*f; k *= f; }
     render(); return; }
   if (geo3On()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;
-    g3Yaw -= spin*1.6*dt; g3Pitch = driftSpeed === "earth" ? 20*Math.PI/180 : .35 + .3*Math.sin(t*2*Math.PI/((breath || 30)*1.4)); geoProj(); X.set(EX); Y.set(EY); render(); return; }
+    // (the Obsidian map's Lively: two and a half times as lively)
+    g3Yaw -= spin*1.6*dt*(view === "graph" && driftSpeed === "lively" ? 2.5 : 1); g3Pitch = earthy() ? 20*Math.PI/180 : .35 + .3*Math.sin(t*2*Math.PI/((breath || 30)*1.4)); geoProj(); X.set(EX); Y.set(EY); render(); return; }
   if (sphOn()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;   // the globe turns slowly, tilting as it goes
-    csYaw += spin*1.6*dt; csPitch = driftSpeed === "earth" ? 20*Math.PI/180 : .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); return; }
-  const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed === "earth" ? "slow" : driftSpeed], t = (now - driftT0)/1000;
-  if (driftSpeed === "earth") { yaw3 += DRIFT.earth[0]*dt; pitch3 = 20*Math.PI/180; project3D(); X.set(P3X); Y.set(P3Y); render(); return; }   // Earth: a steady turn at a fixed 20° tilt, no zooming in
+    csYaw += spin*1.6*dt; csPitch = earthy() ? 20*Math.PI/180 : .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); return; }
+  const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[earthy() ? "slow" : driftSpeed], t = (now - driftT0)/1000;
+  if (earthy()) { yaw3 += DRIFT[driftSpeed][0]*dt; pitch3 = 20*Math.PI/180; project3D(); X.set(P3X); Y.set(P3Y); render(); return; }   // Earth: a steady turn at a fixed 20° tilt, no zooming in
   yaw3 += spin*dt; pitch3 = .62 + .38*Math.sin(t*2*Math.PI/(breath*1.7));
   project3D(); X.set(P3X); Y.set(P3Y);
   const cyc = Math.floor(t/breath), ph = (t % breath)/breath, inA = Math.pow(Math.sin(ph*Math.PI), 2);   // 0 far out → 1 close in → 0
@@ -2909,7 +2914,8 @@ function render(){
   // notes: bottom levels first, batched
   const vx0 = -30, vx1 = W+30, vy0 = -30, vy1 = H+30;
   // hovering fades the rest gently; a click (selection) fades it fully, like the link lines
-  const dim = lit && !(focus >= 0 && (sel === focus || sel < 0) && hover < 0) ? (sel >= 0 ? .25 : .7) : 1;
+  // the rest fades to a quarter when a note is picked; on the Obsidian map half as much (to about 60%), so the graph stays visible around it
+  const dim = lit && !(focus >= 0 && (sel === focus || sel < 0) && hover < 0) ? (sel >= 0 ? (view === "graph" ? .62 : .25) : (view === "graph" ? .85 : .7)) : 1;
   if (view === "stars") starsNotes(lit, dim); else if (expOn() && EXP[view].notes) EXP[view].notes(lit, dim); else {
   for (const lv of [1,2]) for (const ar of [1,0]) {   // archive notes as rings, vault notes as dots
     ctx.globalAlpha = dim; ctx.beginPath();
@@ -4093,6 +4099,7 @@ const sBtn = $('#vseg button[data-v="sense"]');
 POPS.push(['#vseg button[data-v="sense"]', "#sensepop", "#vsegms"]);
 POPS.push(['#vseg button[data-v="stars"]', "#starpop", "#vsegms"]);
 driftSpeed = DRIFT[pref("iv-drift", "slow")] ? pref("iv-drift", "slow") : "slow";
+{ const eb = root.querySelector('#driftseg button[data-d="earth"]'); if (eb && !root.querySelector('#driftseg button[data-d="spin"]')) { const sb = doc.createElement("button"); sb.dataset.d = "spin"; sb.className = "dearth dspin"; sb.textContent = "Spinning"; sb.setAttribute("aria-label", "Earth, fast: a quick spin at a 20° tilt"); eb.after(sb); } }
 const syncDrift = () => root.querySelectorAll("#driftseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.d === driftSpeed)));
 root.querySelectorAll("#driftseg button").forEach(b => b.onclick = () => { driftSpeed = b.dataset.d; save("iv-drift", driftSpeed); syncDrift(); });
 $("#dplay").onclick = () => drifting ? driftStop() : driftStart(); syncDrift();
@@ -4441,8 +4448,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const fsec = (title, el) => { const w = FI.p.createDiv({ cls: "fsec" }); w.createDiv({ cls: "pt", text: title }); w.appendChild(el); };
   // Years shown: one setting for every map of the whole vault, so it lives here rather than in each map's menu
   const yrSec = FI.p.createDiv({ cls: "fsec yrsec" }); yrSec.appendChild($("#yrctl"));
-  fsec("Select folders", $("#foldms")); fsec("Select collections", $("#collms")); fsec("Efforts", $("#effbtn")); $("#effbtn").setText("Light up areas and projects");
-  opener(FI);
+  // Folders and Collections, open side by side: every choice in view, no pill to open first
+  const fcols = FI.p.createDiv({ cls: "fcols" });
+  { const fc = fcols.createDiv({ cls: "fcol" }), hd = fc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Folders" }); const ac = hd.createSpan({ cls: "facts" }); ac.appendChild($("#foldall")); ac.appendChild($("#foldnone"));
+    fc.appendChild($("#foldlist")); const sp = $("#specialt"); if (sp) { const sbox = sp.nextElementSibling; fc.appendChild(sp); if (sbox) fc.appendChild(sbox); } }
+  { const cc = fcols.createDiv({ cls: "fcol" }), hd = cc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Collections" }); const ac = hd.createSpan({ cls: "facts" }); ac.appendChild($("#collcount")); ac.appendChild($("#collclear"));
+    cc.appendChild($("#collq").parentElement); cc.appendChild($("#colllist")); if (!COLL.length) cc.createEl("p", { cls: "pn", text: "No collections yet (a collection shows here once 10 notes name it)." }); }
+  $("#foldms").hidden = true; $("#collms").hidden = true; $("#foldms").classList.add("gone"); $("#collms").classList.add("gone"); fsec("Efforts", $("#effbtn")); $("#effbtn").setText("Light up areas and projects");
+  opener(FI, () => { renderFoldList(); renderCollList(true); syncColl(); });
   // Display: links, theme, how scoring works
   const DI = popBtn("disp", "Display", "display");
   const dsec = (title, el) => { const w = DI.p.createDiv({ cls: "fsec" }); w.createDiv({ cls: "pt", text: title }); w.appendChild(el); };
