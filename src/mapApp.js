@@ -2661,8 +2661,9 @@ function driftFrame(now){
     else { const px = 9*sp*Math.sin(t*.23), py = 6*sp*Math.cos(t*.17); tx += px*dt; ty += py*dt; const f = 1 + .012*Math.cos(t*.5)*sp*dt, cx = W/2, cy = H/2; tx = cx - (cx - tx)*f; ty = cy - (cy - ty)*f; k *= f; }
     render(); return; }
   if (geo3On()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;
-    // (the Obsidian map's Lively turns as fast as Spinning, still swaying as it goes)
-    g3Yaw -= spin*1.6*dt*(view === "graph" && driftSpeed === "lively" ? DRIFT.spin[0] / DRIFT.lively[0] : 1); g3Pitch = earthy() ? 20*Math.PI/180 : .35 + .3*Math.sin(t*2*Math.PI/((breath || 30)*1.4)); geoProj(); X.set(EX); Y.set(EY); render(); return; }
+    // (the Obsidian map turns faster, still swaying as it goes: Lively as fast as Spinning, Slow what Lively was at 2½×, Calm what Slow was)
+    const gSp = view === "graph" ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[driftSpeed] : null;
+    g3Yaw -= (gSp != null ? gSp : spin)*1.6*dt; g3Pitch = earthy() ? 20*Math.PI/180 : .35 + .3*Math.sin(t*2*Math.PI/((breath || 30)*1.4)); geoProj(); X.set(EX); Y.set(EY); render(); return; }
   if (sphOn()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;   // the globe turns slowly, tilting as it goes
     csYaw += spin*1.6*dt; csPitch = earthy() ? 20*Math.PI/180 : .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); return; }
   const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[earthy() ? "slow" : driftSpeed], t = (now - driftT0)/1000;
