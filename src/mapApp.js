@@ -4127,7 +4127,7 @@ POPS.push(['#vseg button[data-v="stars"]', "#starpop", "#vsegms"]);
 driftSpeed = DRIFT[pref("iv-drift", "slow")] ? pref("iv-drift", "slow") : "slow";
 { const eb = root.querySelector('#driftseg button[data-d="earth"]'); if (eb && !root.querySelector('#driftseg button[data-d="spin"]')) { const sb = doc.createElement("button"); sb.dataset.d = "spin"; sb.className = "dearth dspin"; sb.textContent = "Spinning"; sb.setAttribute("aria-label", "Earth, fast: a quick spin at a 20° tilt"); eb.after(sb);
   // LYT: 2.5 times faster than Spinning
-  const lb = doc.createElement("button"); lb.dataset.d = "lyt"; lb.className = "dearth dspin"; lb.textContent = "LYT"; lb.setAttribute("aria-label", "LYT: Spinning, 2.5 times faster"); sb.after(lb); } }
+  const lb = doc.createElement("button"); lb.dataset.d = "lyt"; lb.className = "dearth dspin"; lb.textContent = "LYT Speed"; lb.setAttribute("aria-label", "LYT Speed: Spinning, 2.5 times faster"); sb.after(lb); } }
 const wobLab = doc.createElement("label"); wobLab.className = "pmaps dwob"; wobLab.title = "With Earth, Spinning or LYT: the tilt rocks gently once a turn, like a spinning top";
 { const cb = doc.createElement("input"); cb.type = "checkbox"; cb.id = "dwob"; cb.checked = WOB; const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = "Wobble like the Earth"; wobLab.append(cb, sw, t);
   cb.onchange = () => { WOB = cb.checked; save("iv-wob", WOB); }; $("#driftbar").appendChild(wobLab); }
