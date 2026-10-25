@@ -83,7 +83,7 @@ Home is the trunk; every note hangs from the path it reaches Home by in the fewe
 
 ### Bookshelf
 
-Every note as a book on a double-wide shelf, shelved by call number (a decimal system that comes from your own linking), title, date, subfolder or tag. By tag, each first-level tag is a bookcase and its second level a labelled run (a note goes under its first tag), for vaults that use tags instead of folders. An Index panel lists every call number, ready to copy as a Markdown list.
+Every note as a book on a double-wide shelf, shelved by call number (a decimal system that comes from your own linking), title, date, subfolder or tag. By tag, each first-level tag is a bookcase and its second level a labelled run (a note goes under its first tag that's switched on), for vaults that use tags instead of folders. Treemap, Bookshelf and Chord share one set of tag chips in their menus, to switch tags off and on. An Index panel lists every call number, ready to copy as a Markdown list.
 
 ![Bookshelf: notes as books](docs/bookshelf.png)
 <sub>Bookshelf in the Play theme, shelved by call number.</sub>
