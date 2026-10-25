@@ -54,7 +54,8 @@
 .ivm :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .ivm .app{display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100%}
 .ivm .app > header{grid-row:1}.ivm .app > main{grid-row:2}.ivm .app > nav{grid-row:3}   /* fixed rows, so hiding the top bar gives its space to the map */
-.ivm .trail{position:relative;display:flex;gap:4px;align-items:center;padding:6px 16px calc(env(safe-area-inset-bottom,0px) + 6px + var(--tpad,0px));border-top:1px solid var(--line);background:var(--bg);overflow-x:auto;white-space:nowrap;scrollbar-width:thin;font-size:12.5px}
+.ivm .trail{position:relative;display:flex;gap:4px;align-items:center;padding:6px 16px calc(env(safe-area-inset-bottom,0px) + 6px + var(--tpad,0px));border-top:1px solid var(--line);background:var(--bg);overflow-x:auto;white-space:nowrap;font-size:12.5px}
+.ivm .trail::-webkit-scrollbar{height:6px}
 .ivm .trail .tl{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:6px;flex:none}
 .ivm .trail button.cr{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;background:none;color:var(--ink);padding:3px 8px;border-radius:999px;cursor:pointer;flex:none;max-width:240px}
 .ivm .trail button.cr span{overflow:hidden;text-overflow:ellipsis}
@@ -170,7 +171,7 @@
 .ivm .tourctl #tlabel{font:500 11.5px var(--mono);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;padding:0 4px}
 .ivm .playbar.touring #playseg,.ivm .playbar.touring .pl{display:none}
 .ivm #foldpop{width:min(280px,calc(100vw - 32px))}
-.ivm .laygrp{display:contents}
+.ivm .laygrp{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .ivm #startpop{width:min(320px,calc(100vw - 32px))}
 .ivm .mspop.seethru{background:color-mix(in srgb,var(--bg) 72%,transparent);-webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px)}
 .ivm #startpop .pt{display:none}
@@ -208,7 +209,8 @@
 @container ivm (min-width:761px){.ivm.ivm.ivm.ivm[data-view="gravity"] .timebar,.ivm.ivm.ivm.ivm[data-view="chord"] .timebar,.ivm.ivm.ivm.ivm[data-view="quincunx"] .timebar,.ivm.ivm.ivm.ivm[data-view="shelf"] .timebar,.ivm.ivm.ivm.ivm[data-view="tree"] .timebar,.ivm.ivm.ivm.ivm[data-view="treemap"] .timebar,.ivm.ivm.ivm.ivm[data-view="skyline"] .timebar,.ivm.ivm.ivm.ivm[data-view="lincal"] .timebar,.ivm.ivm.ivm.ivm[data-view="spiral"] .timebar,.ivm.ivm.ivm.ivm[data-view="lifeline"] .timebar,.ivm.ivm.ivm.ivm[data-view="planet"] .timebar{top:14px;bottom:auto;left:14px}
 .ivm.ivm[data-view="gravity"] .playbar,.ivm.ivm[data-view="chord"] .playbar,.ivm.ivm[data-view="quincunx"] .playbar,.ivm.ivm[data-view="shelf"] .playbar,.ivm.ivm[data-view="tree"] .playbar,.ivm.ivm[data-view="treemap"] .playbar,.ivm.ivm[data-view="skyline"] .playbar,.ivm.ivm[data-view="lincal"] .playbar,.ivm.ivm[data-view="spiral"] .playbar,.ivm.ivm[data-view="lifeline"] .playbar,.ivm.ivm[data-view="planet"] .playbar{left:14px;transform:none;bottom:auto}}
 @container ivm (max-width:760px){.ivm #vsegms{max-width:calc(100vw - 32px);min-width:0}
-.ivm #vseg{overflow-x:auto;scrollbar-width:none;max-width:100%}
+.ivm #vseg{overflow-x:auto;max-width:100%}
+.ivm #vseg::-webkit-scrollbar{display:none}
 .ivm #vseg::-webkit-scrollbar{display:none}
 .ivm #vseg button{flex:none}}
 .ivm .yrv{padding:2px 6px;font:600 15px var(--mono);color:var(--ink)}
@@ -423,7 +425,7 @@
 .ivm #themeseg{order:1}
 .ivm .subctl{flex-wrap:wrap;border-radius:14px;max-width:100%}
 .ivm .subctl .sl2{display:none}
-.ivm .views{display:contents}
+.ivm .views{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .ivm #maplbl{display:none}
 .ivm #bylbl{display:none}
 .ivm #vseg{order:2}
@@ -525,7 +527,7 @@ body.is-phone .ivm div main.has-drawer .playbar{display:none}
 @container ivm (max-width:760px){.ivm .playbar.collapsed{right:auto}}
 /* phones, while Find a note has focus (keyboard up): just the search box, results scroll, no room kept for the toolbar */
 body.is-phone .workspace-leaf-content .view-content.ivm-host.kb{padding-bottom:0}
-body.is-phone .ivm.kb header > :not(.search){display:none !important}
+body.is-phone .ivm.ivm.ivm.kb header > :not(.search){display:none}
 body.is-phone .ivm.kb header .search{flex:1 1 100%;width:100%}
 body.is-phone .ivm.kb header .results{max-height:min(320px, 45vh);overflow-y:auto;-webkit-overflow-scrolling:touch}
 /* Animations: Timelapse, Wander Mode and Orbit in one dock at the bottom left */
@@ -536,8 +538,8 @@ body.is-phone .ivm.kb header .results{max-height:min(320px, 45vh);overflow-y:aut
 .ivm #animdock .anihead .pl{font:500 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding-left:4px}
 .ivm #animdock .acol{margin-left:auto;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font:500 12px var(--mono);color:var(--muted);cursor:pointer;flex:none;background:none}
 .ivm #animdock .acol:hover{color:var(--ink);border-color:var(--ink)}
-.ivm.ivm.ivm.ivm.ivm #animdock .anisec{position:static !important;transform:none !important;inset:auto !important;width:auto !important;max-width:none !important;background:none !important;border:0 !important;border-radius:0 !important;padding:0 2px !important;margin:0 !important;box-shadow:none !important;display:none !important;flex-wrap:wrap;align-items:center;gap:6px 8px;row-gap:6px}
-.ivm.ivm.ivm.ivm.ivm #animdock .anisec:not([hidden]){display:flex !important}
+.ivm.ivm.ivm.ivm.ivm #animdock .anisec{position:static;transform:none;inset:auto;width:auto;max-width:none;background:none;border:0;border-radius:0;padding:0 2px;margin:0;box-shadow:none;display:none;flex-wrap:wrap;align-items:center;gap:6px 8px;row-gap:6px}
+.ivm.ivm.ivm.ivm.ivm #animdock .anisec:not([hidden]){display:flex}
 .ivm #animdock .anibody{display:flex;flex-direction:column;gap:8px}
 .ivm #animdock .aniwrap[hidden]{display:none}
 .ivm #animdock .aniwrap + .aniwrap:not([hidden]){border-top:1px solid var(--line);padding-top:7px}
@@ -545,7 +547,7 @@ body.is-phone .ivm.kb header .results{max-height:min(320px, 45vh);overflow-y:aut
 .ivm #animdock .aniwrap.run .anilbl{color:var(--accent)}
 .ivm #animdock .aniwrap.run .anilbl::after{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:6px;vertical-align:middle}
 .ivm.ivm.ivm.ivm.ivm #animdock .anisec > .pl{display:none}
-.ivm.ivm.ivm.ivm.ivm #animdock #timebar input{width:auto !important;flex:1;min-width:120px}
+.ivm.ivm.ivm.ivm.ivm #animdock #timebar input{width:auto;flex:1;min-width:120px}
 .ivm.ivm.ivm.ivm.ivm #animdock .tlopts{display:flex;flex-wrap:wrap;gap:6px 8px;width:100%}
 @container ivm (min-width:761px){.ivm .app main.legend-open #animdock{left:390px}}
 @container ivm (max-width:760px){.ivm #animdock{left:34px;right:56px;max-width:none;width:auto}
@@ -569,13 +571,13 @@ body.is-phone .ivm.kb header .results{max-height:min(320px, 45vh);overflow-y:aut
 .ivm header.tb2 .tbr{display:flex;align-items:center;gap:4px;flex:0 1 auto;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
 .ivm header.tb2 .duo{flex:none;margin:0 2px 0 2px}
 .ivm header.tb2 #vsegms{order:0;flex:0 1 auto;min-width:0}
-.ivm header.tb2 #vseg{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.ivm header.tb2 #vseg{max-width:100%;overflow-x:auto}
 .ivm header.tb2 #vseg::-webkit-scrollbar{display:none}
 .ivm header.tb2 #vseg button{white-space:nowrap}
-.ivm header.tb2 #vseg .vburied{display:none !important}
+.ivm.ivm.ivm header.tb2 #vseg .vburied{display:none}
 .ivm header.tb2 #vseg .vcur[hidden]{display:none}
-.ivm header.tb2 #vseg .vcar{display:none !important;font-size:10px;margin-left:3px}
-.ivm[data-mo="1"] header.tb2 #vseg button[aria-pressed="true"] .vcar{display:inline !important}
+.ivm.ivm header.tb2 #vseg .vcar{display:none;font-size:10px;margin-left:3px}
+.ivm.ivm.ivm[data-mo="1"] header.tb2 #vseg button[aria-pressed="true"] .vcar{display:inline}
 .ivm header.tb2 #vmore{font:500 12px var(--mono)}
 .ivm header.tb2 #stats{order:1;font-size:11px}
 .ivm header.tb2 .focusbar{order:2}
@@ -633,8 +635,9 @@ body.is-phone .ivm.kb header .results{max-height:min(320px, 45vh);overflow-y:aut
 .ivm header.tb2 .fsec > .chip,.ivm header.tb2 .fsec > button{margin-left:0}
 .ivm.ivm.ivm header.tb2 #vseg #vmore{background:none;color:var(--muted)}
 .ivm.ivm.ivm header.tb2 #vseg #vmore:hover{color:var(--ink)}
-body.is-phone .ivm.kb header.tb2 > .tbr{display:flex !important;flex:1 1 100%}
-body.is-phone .ivm.kb header.tb2 > .tbr > :not(.search){display:none !important}
+body.is-phone .ivm.ivm.ivm.ivm.kb header.tb2 > .tbr{display:flex;flex:1 1 100%}
+body.is-phone .ivm.ivm.ivm.ivm.kb header.tb2 > .tbr > :not(.search){display:none}
+body.is-phone .ivm.kb header.tb2 > .tbr > #viewms{display:none}
 body.is-phone .ivm.kb header.tb2 .search{flex:1 1 100%;max-width:none;margin:0}
 @container ivm (max-width:760px){
 .ivm header.tb2 .tbr{flex-wrap:nowrap;gap:2px}
@@ -703,7 +706,7 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm header.tb2 .hcol:hover{color:var(--ink);background:var(--panel);border-color:var(--line)}
 .ivm.ivm .htab{left:auto;right:14px;top:11px;transform:none;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:1px solid var(--line);border-radius:8px;font:500 13px/1 var(--mono);letter-spacing:0}
 .ivm.ivm .htab[hidden]{display:none}
-.ivm .app:has(> header[hidden]) .wm-name{margin-right:40px}
+.ivm .app.hdrhid .wm-name{margin-right:40px}
 .ivm.ivm .htab{white-space:nowrap;overflow:hidden}
 .ivm header.tb2 .hcol svg,.ivm.ivm .htab svg{display:block}
 .ivm header.tb2 .mapopts .sglow{display:flex;align-items:center;gap:10px;margin-top:6px;padding-top:8px;border-top:1px solid var(--line)}
@@ -720,7 +723,7 @@ body.is-phone .ivm .wm-name{display:none}
 /* Posters: Across, Lanes, Size in the map's own menu */
 .ivm .postctl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;align-items:center;padding:2px 2px 4px;min-width:240px}
 .ivm .postctl[hidden]{display:none}
-.ivm .postctl .prow{display:contents}
+.ivm .postctl .prow{grid-column:1/-1;display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center}
 .ivm .postctl .prow[hidden]{display:none}
 .ivm .postctl .prow > span{font-size:var(--font-ui-small);color:var(--muted)}
 .ivm .postctl select{width:100%;min-width:0}
