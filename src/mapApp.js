@@ -4526,9 +4526,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     for (const [key, lab_, min, max, step, tip] of [["grav", "Gravity", 0, 1, .01, "The pull toward the middle. Lower lets a big graph spread out."], ["rep", "Repel", 0, 300, 1, "How hard every note pushes the others away."], ["ld", "Link length", 10, 200, 1, "How far apart linked notes like to sit."]]) {
       const row = gc.createEl("label", { cls: "prow", attr: { title: tip } }); row.createSpan({ text: lab_ }); const w = row.createDiv({ cls: "gfw" }); const r = w.createEl("input", { type: "range" }); r.min = String(min); r.max = String(max); r.step = String(step); r.value = String(GF[key]);
       const v = w.createEl("b", { text: String(GF[key]) }); rows.push([key, r, v]);
-      r.oninput = () => { GF[key] = +r.value; v.setText(r.value); if (GPH.F) { GPH.F.heat(.3); GPH.wake(); } };
+      // the view holds still while you drag (it stops following the graph), so a looser graph takes more room on screen instead of being zoomed back out to the same picture
+      r.oninput = () => { GF[key] = +r.value; v.setText(r.value); GPH.touched = true; if (GPH.F) { GPH.F.heat(.3); GPH.wake(); } };
       r.onchange = () => { save("iv-gforce", { ...GF }); if (GPH.F) GPH.F.heat(0); }; }
-    const rs = gc.createEl("button", { cls: "pchip", text: "Reset", attr: { type: "button" } }); rs.onclick = e => { e.stopPropagation(); Object.assign(GF, DEF); for (const [key, r, v] of rows) { r.value = String(GF[key]); v.setText(String(GF[key])); } save("iv-gforce", { ...GF }); if (GPH.F) { GPH.F.heat(.3); GPH.wake(); win.setTimeout(() => GPH.F && GPH.F.heat(0), 600); } }; }
+    const rs = gc.createEl("button", { cls: "pchip", text: "Reset", attr: { type: "button" } }); rs.onclick = e => { e.stopPropagation(); Object.assign(GF, DEF); for (const [key, r, v] of rows) { r.value = String(GF[key]); v.setText(String(GF[key])); } save("iv-gforce", { ...GF }); GPH.touched = true; if (GPH.F) { GPH.F.heat(.3); GPH.wake(); win.setTimeout(() => GPH.F && GPH.F.heat(0), 600); } }; }
   // Posters' own options, in its map menu: Across, Lanes, Size
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "postctl" } }); pc.hidden = true;
     pc.createDiv({ cls: "phint bhint", attr: { id: "bhint" } }).hidden = true;
