@@ -12,13 +12,17 @@ Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinkin
 
 ## The maps
 
-Four main maps sit in the toolbar. Click a map's tab again for its variants and options.
+Four main maps sit in the toolbar: Emergence, Ideaverse, Starfield and Tesla. Click a map's tab again for its variants and options. **More** holds the rest, starting with Gravity and Sensemaking.
 
 ### Emergence
 
 Five bands, one per Idea Emergence level. Left to right is time (when each note was created), or your top folders. **Filter** sets the **years shown**: drag either end to keep only, say, 2022 to 2024 (every map of the whole vault shares it: Gravity, Starfield, Sensemaking, Obsidian, Chord, Treemap, Mosaic and the rest; Posters and People have their own sliders). Notes from other years and notes with no date wait in No date, Before and After strips at the edges; turn off **Show notes outside the date range** to leave them off the map. Click any note to light up its links: up to the maps above it, down to the notes it gathers. Its menu also has **Space-Time** (your top folders as rows) and **Planetarium** (stand inside it: Level 5 overhead).
 
-### Gravity
+### Ideaverse
+
+Your whole vault as a ball of notes in 3D: every note pushes the others away and its links pull it toward its neighbors, drawn with the emergence symbols so hubs and maps stand out. Drag to turn it, scroll to fly in, and let Orbit (in Animations) turn it slowly, like the Earth, or Spinning. It's the animation at the top of this page.
+
+### Gravity (More)
 
 The same levels as rings: home notes and hubs at the center, unlinked notes on the rim. Time or folders go around the circle.
 
@@ -32,7 +36,7 @@ Your biggest hubs become galaxy cores. Every note joins the hub it reaches in th
 ![Starfield in 3D: galaxies of notes around their hubs](docs/starfield.png)
 <sub>Starfield in 3D, Dark theme. Each galaxy is a hub and the notes that reach it first.</sub>
 
-### Sensemaking
+### Sensemaking (More)
 
 A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), Producer (expression, top-down), Inner Guide (reflection, bottom-up) and Creative (expression, bottom-up). Each note is placed by plain rules about where it lives and how it's written (folders, maps, headings and lists, checkboxes and due dates, first-person writing, questions). No AI. Click a note to see exactly which clues moved it.
 
@@ -45,12 +49,12 @@ A 2×2 of four ways of working with notes: Synthesizer (reflection, top-down), P
 
 ### Obsidian
 
-Our take on Obsidian's graph view: every note pushes the others away and its links pull it toward its neighbors, settling live as you watch. Drag a note and its links tug the rest along; let go and it settles. Click the Obsidian tab for **3D**: the same graph as a ball of notes, to turn in your hand (drag) and fly into (scroll); Orbit in Animations turns it slowly, or like the Earth, or Spinning. Drawn with the emergence symbols, so hubs and maps stand out, and with everything the other maps have: the Timelapse, Wander Mode, Focus mode, filters. Unlinked notes ring the outside.
+Our take on Obsidian's graph view: every note pushes the others away and its links pull it toward its neighbors, settling live as you watch. Drag a note and its links tug the rest along; let go and it settles. Drawn with the emergence symbols, so hubs and maps stand out, and with everything the other maps have: the Timelapse, Wander Mode, Focus mode, filters. Unlinked notes ring the outside.
 
 ![Obsidian: a hub and its links](docs/graph.png)
 <sub>The Obsidian map in the Dark theme, zoomed in on a hub and its links.</sub>
 
-### Chord, Corona and Tesla
+### Tesla, Chord and Corona
 
 Every note on a ring, in arcs by folder (or by year). Links between kinds cross the middle as bands that thicken as your vault grows. Hover an arc to light up where its links go. **Corona** puts the ring on a globe and arcs the links over the surface like solar prominences; **Tesla** sends them through a glass globe.
 

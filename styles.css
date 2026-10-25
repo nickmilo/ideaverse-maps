@@ -796,6 +796,8 @@ body.is-phone .ivm .wm-name{display:none}
 @container ivm (max-width:620px){.ivm .fcols{grid-template-columns:minmax(0,1fr)}}
 .ivm .fcols #colllist{flex:none;align-content:start}
 /* Orbit: Earth on the 3D Obsidian map too, and Spinning (a fast Earth) only there */
-.ivm[data-view="graph"][data-dome="1"] #driftseg .dearth{display:inline-block}
+.ivm[data-view="ideaverse"] #driftseg .dearth{display:inline-block}
 .ivm.ivm #driftseg .dspin{display:none}
-.ivm.ivm[data-view="graph"][data-dome="1"] #driftseg .dspin{display:inline-block}
+.ivm.ivm[data-view="ideaverse"] #driftseg .dspin{display:inline-block}
+
+.ivm #vmorepop .chip[hidden]{display:none}
