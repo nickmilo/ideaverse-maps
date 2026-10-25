@@ -2320,6 +2320,8 @@ function layoutGraph(){
   for (let i=0;i<n;i++) { if (!IDV()) { EX[i] = GPH.x[i]; EY[i] = GPH.y[i]; } if (vis[i]) { if (EX[i] < x0) x0 = EX[i]; if (EX[i] > x1) x1 = EX[i]; if (EY[i] < y0) y0 = EY[i]; if (EY[i] > y1) y1 = EY[i]; } }
   if (!isFinite(x0)) { x0 = y0 = -100; x1 = y1 = 100; } expBox = { x0: x0 - 40, y0: y0 - 40, x1: x1 + 40, y1: y1 + 40 }; }
 // d3-force style: many-body (Barnes–Hut) + links + centering, velocity Verlet with alpha cooling
+// the forces, as in Obsidian's graph settings: Gravity (the pull to the middle), Repel (every note pushing the others away), Link length
+const GF = (() => { const g = pref("iv-gforce", null) || {}; return { grav: isFinite(g.grav) ? +g.grav : .1, rep: isFinite(g.rep) ? +g.rep : 30, ld: isFinite(g.ld) ? +g.ld : 30 }; })();
 function graphForce(m, EA, EB, x, y, act, z) {   // act: Int32Array of node indices that move; z: a third axis for 3D (optional)
   const D3 = !!z, K = D3 ? 8 : 4;
   const vx = new Float64Array(m), vy = new Float64Array(m), vz = new Float64Array(m), cnt = new Int32Array(m), ne = EA.length; if (!z) z = new Float64Array(m);
@@ -2330,7 +2332,7 @@ function graphForce(m, EA, EB, x, y, act, z) {   // act: Int32Array of node indi
   // quadtree (octree in 3D) as flat arrays: K children per node, mass, center of mass, leaf point
   const ch = new Int32Array(cap * K), qm = new Float64Array(cap), qx = new Float64Array(cap), qy = new Float64Array(cap), qz = new Float64Array(cap), qp = new Int32Array(cap);
   let nq = 0, S0;
-  const STR = -30, TH2 = .81, LD = 30;
+  const TH2 = .81; let STR = -GF.rep, LD = GF.ld;
   let alpha = 1; const aMin = .001, aDecay = 1 - Math.pow(aMin, 1 / (na > 5000 ? 220 : 300)), vDecay = .6;
   const isLeaf = q => { for (let c = 0; c < K; c++) if (ch[q * K + c] !== -1) return false; return true; };
   const newQ = () => { const q = nq++; for (let c = 0; c < K; c++) ch[q * K + c] = -1; qm[q] = 0; qx[q] = qy[q] = qz[q] = 0; qp[q] = -1; return q; };
@@ -2360,10 +2362,10 @@ function graphForce(m, EA, EB, x, y, act, z) {   // act: Int32Array of node indi
         for (let c = 0; c < K; c++) { const kq = ch[q * K + c]; if (kq >= 0) { stack[sp] = kq; sz[sp++] = s / 2; } } } } }
   function links() { for (let e = 0; e < ne; e++) { const s = EA[e], t = EB[e]; let dx = x[t] + vx[t] - x[s] - vx[s] || 1e-6, dy = y[t] + vy[t] - y[s] - vy[s] || 1e-6, dz = D3 ? z[t] + vz[t] - z[s] - vz[s] : 0, l = Math.sqrt(dx * dx + dy * dy + dz * dz);
       l = (l - LD) / l * alpha * str[e]; dx *= l; dy *= l; dz *= l; const b = bias[e]; vx[t] -= dx * b; vy[t] -= dy * b; vz[t] -= dz * b; vx[s] += dx * (1 - b); vy[s] += dy * (1 - b); vz[s] += dz * (1 - b); } }
-  function center() { for (let k = 0; k < na; k++) { const j = act[k]; vx[j] -= x[j] * .1 * alpha; vy[j] -= y[j] * .1 * alpha; if (D3) vz[j] -= z[j] * .1 * alpha; } }
+  function center() { const g = GF.grav; for (let k = 0; k < na; k++) { const j = act[k]; vx[j] -= x[j] * g * alpha; vy[j] -= y[j] * g * alpha; if (D3) vz[j] -= z[j] * g * alpha; } }
   // dragging: a pinned note follows the pointer; the rest stays warm (alphaTarget) until it's let go, then cools again
   const pin = new Uint8Array(m), fxp = new Float64Array(m), fyp = new Float64Array(m); let aT = 0;
-  return { step() { alpha += (aT - alpha) * aDecay; links(); charge(); center(); for (let k = 0; k < na; k++) { const j = act[k]; if (pin[j]) { x[j] = fxp[j]; y[j] = fyp[j]; vx[j] = vy[j] = vz[j] = 0; continue; } vx[j] *= vDecay; vy[j] *= vDecay; vz[j] *= vDecay; x[j] += vx[j]; y[j] += vy[j]; if (D3) z[j] += vz[j]; } return alpha > aMin || aT > 0; },
+  return { step() { STR = -GF.rep; LD = GF.ld; alpha += (aT - alpha) * aDecay; links(); charge(); center(); for (let k = 0; k < na; k++) { const j = act[k]; if (pin[j]) { x[j] = fxp[j]; y[j] = fyp[j]; vx[j] = vy[j] = vz[j] = 0; continue; } vx[j] *= vDecay; vy[j] *= vDecay; vz[j] *= vDecay; x[j] += vx[j]; y[j] += vy[j]; if (D3) z[j] += vz[j]; } return alpha > aMin || aT > 0; },
     fix(j, px, py){ pin[j] = 1; fxp[j] = px; fyp[j] = py; x[j] = px; y[j] = py; }, free(j){ pin[j] = 0; }, heat(t){ aT = t; if (alpha < t) alpha = t; }, get alpha() { return alpha; } };
 }
 // The physics settles live, a few steps a frame, so you watch the graph find its shape (like the core graph): the same
@@ -3567,8 +3569,8 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters" || view === "builder", msv = view === "mosaic", ppv = view === "people", lay = sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view)));   // the Layout section shows only where there are layout settings
-  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv;  const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } }
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters" || view === "builder", msv = view === "mosaic", ppv = view === "people", gv = GRV(), lay = gv || sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view)));   // the Layout section shows only where there are layout settings
+  root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs"]) $(id).hidden = true; { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv;  const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } const gf = $("#gfctl"); if (gf) gf.hidden = !gv; }
   if (lay) { $("#startms").hidden = true; $("#sensems").hidden = true; $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = true; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv; if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
@@ -4509,6 +4511,16 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       if (view === "sense" && typeof senseSteps === "function") { senseStop(); senseT = null; senseTrail = []; SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; $("#tldate").textContent = "All time"; }
       win.clearTimeout(t_); if (commit) { save("iv-yr0", YR0); save("iv-yr1", YR1); } t_ = win.setTimeout(() => { relayout(false); if (typeof syncTB === "function") syncTB(); }, commit ? 0 : 90); };
     a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true); }
+  // Obsidian and Ideaverse: the forces, live (drag a slider and the graph moves as you go)
+  { const gc = $("#laygrp").createDiv({ cls: "postctl gfctl", attr: { id: "gfctl" } }); gc.hidden = true;
+    gc.createDiv({ cls: "phint", text: "Forces. Drag a slider and watch the notes move." });
+    const DEF = { grav: .1, rep: 30, ld: 30 }, rows = [];
+    for (const [key, lab_, min, max, step, tip] of [["grav", "Gravity", 0, 1, .01, "The pull toward the middle. Lower lets a big graph spread out."], ["rep", "Repel", 0, 300, 1, "How hard every note pushes the others away."], ["ld", "Link length", 10, 200, 1, "How far apart linked notes like to sit."]]) {
+      const row = gc.createEl("label", { cls: "prow", attr: { title: tip } }); row.createSpan({ text: lab_ }); const w = row.createDiv({ cls: "gfw" }); const r = w.createEl("input", { type: "range" }); r.min = String(min); r.max = String(max); r.step = String(step); r.value = String(GF[key]);
+      const v = w.createEl("b", { text: String(GF[key]) }); rows.push([key, r, v]);
+      r.oninput = () => { GF[key] = +r.value; v.setText(r.value); if (GPH.F) { GPH.F.heat(.3); GPH.wake(); } };
+      r.onchange = () => { save("iv-gforce", { ...GF }); if (GPH.F) GPH.F.heat(0); }; }
+    const rs = gc.createEl("button", { cls: "pchip", text: "Reset", attr: { type: "button" } }); rs.onclick = e => { e.stopPropagation(); Object.assign(GF, DEF); for (const [key, r, v] of rows) { r.value = String(GF[key]); v.setText(String(GF[key])); } save("iv-gforce", { ...GF }); if (GPH.F) { GPH.F.heat(.3); GPH.wake(); win.setTimeout(() => GPH.F && GPH.F.heat(0), 600); } }; }
   // Posters' own options, in its map menu: Across, Lanes, Size
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "postctl" } }); pc.hidden = true;
     pc.createDiv({ cls: "phint bhint", attr: { id: "bhint" } }).hidden = true;
@@ -4677,7 +4689,7 @@ return {
     if (sig === scopeSig) { if (baseDirty) { baseDirty = false; relayout(!!W, false, () => ({ k, tx, ty })); } return; }
     scopeSig = sig; baseDirty = false; if (paths == null) SCOPE = null; else { SCOPE = new Uint8Array(n); for (const p of paths) { const i = PIDX.get(p); if (i != null) SCOPE[i] = 1; } } relayout(!!W, false, () => fitTarget()); },
   _posters(){ return { pimg: [...PIMG].filter(([, e]) => e.ok).length, cur: PSC().cur, across: PSC().opts && PSC().opts.across.map(a => a.id + ":" + a.kind), lanes: PSC().opts && PSC().opts.lanes.map(a => a.id), img: PSC().img, ticks: PSC().ticks.length, fm: (() => { for (let i=0;i<n;i++) if (vis[i]) return [N[i].path, JSON.stringify(fmOf(i))]; })() }; },
-  _graph(){ return { st: GPH.stepMs, dr: GPH.drawMs, mo: GPH.morph, it: GPH.it, its: GPH.its, key: GPH.key }; },
+  _graph(){ return { rms: GPH.x ? Math.round(Math.sqrt([...GPH.x].reduce((t, v, i) => t + v * v + GPH.y[i] * GPH.y[i], 0) / GPH.x.length)) : 0, st: GPH.stepMs, dr: GPH.drawMs, mo: GPH.morph, it: GPH.it, its: GPH.its, key: GPH.key }; },
   setBaseInfo(info){ const sig = info ? JSON.stringify([info.sort, info.order, info.cols, info.groups ? [...info.groups].join() : ""]) : ""; if (sig === baseSig) return;
     baseSig = sig; BASEINFO = info || null; FMC.clear(); PSTP.key = PSTB.key = null; baseDirty = true; },
   toggleFollow(){ setFollowing(!following); return following; },
