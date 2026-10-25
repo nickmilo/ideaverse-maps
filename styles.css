@@ -906,3 +906,10 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .postctl.ptl .prow[data-k="across"],.ivm .postctl.ptl [data-k="height"],.ivm .postctl.ptl [data-k="size"],.ivm .postctl.ptl #rng-height,.ivm .postctl.ptl #rng-size,.ivm .postctl.ptl #pimg{display:none}
 /* five layouts (Base Builder): the switch wraps onto a second line rather than hiding the last ones */
 .ivm .postctl .pmode #pmode{display:flex;flex-wrap:wrap;height:auto;border-radius:14px}
+/* the "Show nested tags" switch in the tag chips (Bookshelf, Chord) */
+.ivm .tmtagctl .pmaps{grid-column:1/-1;display:flex;align-items:center;gap:7px;font:500 10px var(--mono);letter-spacing:.06em;color:var(--muted);cursor:pointer;padding:2px 0 4px;line-height:1}
+.ivm .tmtagctl .pmaps input{position:absolute;opacity:0;width:1px;height:1px}
+.ivm .tmtagctl .pmaps .sw{width:22px;height:10px;border-radius:6px;background:var(--line);position:relative;flex:none}
+.ivm .tmtagctl .pmaps .sw::after{content:"";position:absolute;top:1px;left:1px;width:8px;height:8px;border-radius:50%;background:var(--muted);transition:left .15s}
+.ivm .tmtagctl .pmaps input:checked + .sw{background:var(--accent)}
+.ivm .tmtagctl .pmaps input:checked + .sw::after{left:13px;background:var(--bg)}

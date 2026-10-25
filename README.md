@@ -66,7 +66,7 @@ The map's menu has the same forces as Obsidian's graph settings. **Gravity** is 
 
 ### Chord, Corona and Tesla
 
-Chord arranges every note around a ring, grouped into arcs by folder, by year, or by tag. The links between groups cross the middle of the ring as bands, and the bands thicken as your vault grows. Hover over an arc to see where its links go. **Corona** wraps the ring around a globe, with the links arcing over its surface. **Tesla** does the same with a glass globe, so the links pass through the inside.
+Chord arranges every note around a ring, grouped into arcs by folder, by year, or by tag. When grouped by tag, **Show nested tags** gives each nested tag its own arc, shaded in its family's color. The links between groups cross the middle of the ring as bands, and the bands thicken as your vault grows. Hover over an arc to see where its links go. **Corona** wraps the ring around a globe, with the links arcing over its surface. **Tesla** does the same with a glass globe, so the links pass through the inside.
 
 ![Chord: folders as arcs, links as bands](docs/chord.png)
 <sub>Chord in LYT Mode. Each arc is a folder, and each band is the links between two folders.</sub>
@@ -93,7 +93,7 @@ Tree treats your home note as the trunk. Every other note hangs from the branch 
 
 Bookshelf turns every note into a book on a long double shelf. You can shelve the books by call number, title, date, subfolder or tag. The call numbers work like a library's, except they come from your own links.
 
-If you shelve by tag, each top-level tag gets its own bookcase, and its nested tags become labelled sections inside it. This is meant for vaults that use tags instead of folders. A note with several tags is shelved under the first one. Treemap, Bookshelf and Chord share the same tag chips, so hiding a tag on one hides it on the others.
+If you shelve by tag, each top-level tag gets its own bookcase. Turn on **Show nested tags** and each bookcase splits into labelled sections, one for each nested tag. This is meant for vaults that use tags instead of folders. A note with several tags is shelved under the first one. Treemap, Bookshelf and Chord share the same tag chips, so hiding a tag on one hides it on the others.
 
 An Index panel lists every call number, and you can copy it as a Markdown list.
 
