@@ -842,3 +842,5 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .yrctl .srange .yrh{position:absolute;top:0;transform:translateX(-50%);color:var(--ink);font-weight:600}
 .ivm .yrctl .srange .yrh[hidden]{display:none}
 .ivm.ivm #driftbar .dwob.dim{opacity:.5}
+.ivm .yrctl .srange .yrh.lft{transform:translateX(-100%)}
+.ivm .yrctl .srange .yrh.rgt{transform:none}
