@@ -1109,6 +1109,8 @@ const HASTAGS = N.some(d => d.tags && d.tags.length);
 // A note's tag is then its first tag that's still on ("" for no tag; null when every tag it has is off, and it leaves the map)
 let tmBy = pref("iv-tmby", "folders") === "tags" ? "tags" : "folders", TMOFF = new Set(Array.isArray(pref("iv-tmtagoff", null)) ? pref("iv-tmtagoff", null) : []);
 const tmTagsOn = () => tmBy === "tags" && HASTAGS;
+// Bookshelf and Chord by tags: show nested tags too (Bookshelf: a labelled run per nested tag; Chord: an arc per nested tag, grouped by family)
+let TAGNEST = pref("iv-tagnest", false) === true;
 function tmTag(i){ const ts = N[i].tags; if (!ts || !ts.length) return TMOFF.has("") ? null : ""; for (const t of ts) if (!TMOFF.has(t.split("/")[0].toLowerCase())) return t; return null; }
 tagHide = { on: () => { if (!HASTAGS || !TMOFF.size) return false; try { const v = curV(); return (v === "treemap" && tmBy === "tags") || (v === "shelf" && shelfSort === "tag") || (v === "chord" && chordBy === "tags"); } catch (e) { return false; /* still starting up */ } }, hid: i => tmTag(i) == null };
 const tagOf = i => tmTag(i) || "", tagTop = i => tagOf(i).split("/")[0], tagSub = i => tagOf(i).split("/")[1] || "";
@@ -1129,7 +1131,14 @@ const CHCAT_T = (() => {   // one arc a year, oldest first; undated notes at the
 let CHCAT_G = null; const chTagCats = () => {   // one arc per first-level tag (biggest first); small tags share "Other tags"; untagged notes at the end
   const by = new Map(), nm = new Map(); N.forEach((d, i) => { if (tmTag(i) == null) return; const t = tagTop(i), k = t.toLowerCase(); if (!by.has(k)) { by.set(k, []); nm.set(k, t); } by.get(k).push(i); });
   const tagged = [...by].filter(([k]) => k).sort((a, b) => b[1].length - a[1].length), keep = tagged.filter(([, ids], j) => j < 20 && ids.length >= Math.max(5, n * .005)), rest = tagged.filter(x => !keep.includes(x)).flatMap(([, ids]) => ids);
-  const list = keep.map(([k, ids], j) => ({ name: "#" + nm.get(k), short: "#" + nm.get(k), ace: "t", hue: `hsl(${Math.round(j * 360 / Math.max(1, keep.length))}, 55%, 56%)`, ids }));
+  const list = [];
+  keep.forEach(([k, ids], j) => { const hue = Math.round(j * 360 / Math.max(1, keep.length));
+    if (!TAGNEST) { list.push({ name: "#" + nm.get(k), short: "#" + nm.get(k), ace: "t:" + k, hue: `hsl(${hue}, 55%, 56%)`, ids }); return; }
+    // nested: an arc per full nested tag inside this family (small ones share "· other"), the family's color in lighter and darker shades
+    const sub = new Map(); for (const i of ids) { const t = tagOf(i), key = t.toLowerCase(); if (!sub.has(key)) sub.set(key, { t, ids: [] }); sub.get(key).ids.push(i); }
+    const subs = [...sub.values()].sort((a, b) => (a.t.toLowerCase() === k) - (b.t.toLowerCase() === k) || b.ids.length - a.ids.length), big = subs.filter(x => x.ids.length >= Math.max(4, n * .002)), small = subs.filter(x => !big.includes(x)).flatMap(x => x.ids);
+    const parts = [...big.map(x => ({ name: "#" + x.t, ids: x.ids })), ...(small.length ? [{ name: "#" + nm.get(k) + " · other", ids: small }] : [])];
+    parts.forEach((pt, q) => list.push({ name: pt.name, short: pt.name, ace: "t:" + k, hue: `hsl(${hue}, 55%, ${Math.round(46 + 22 * (q / Math.max(1, parts.length - 1)))}%)`, ids: pt.ids })); });
   if (rest.length) list.push({ name: "Other tags", short: "Other tags", ace: "x", hue: "#8b8b95", ids: rest });
   if (by.has("")) list.push({ name: "No tag", short: "No tag", ace: "x", hue: "#5f5f68", ids: by.get("") });
   list.forEach((c, j) => c.id = j); return list; };
@@ -1453,11 +1462,11 @@ function layoutShelf(){
     const section = (label) => { newRow(); secs.push({label, x: x0, y: baseY(row) - SB.SH - 4}); };
     // Shelve by A–Z, Created or Modified: one run per section, with a marker where the letter or year changes
     const subOf = i => { const sb = N[i].sub || ""; return sb.includes("/") ? sb.slice(sb.indexOf("/") + 1) : ""; };
-    const sorted = ids => { const tk = i => shelfSort === "az" ? N[i].title.toLowerCase() : shelfSort === "modified" ? (N[i].mt || 0) : shelfSort === "folder" ? subOf(i).toLowerCase() + "\u0000" + String(isNaN(TV[i]) ? 0 : TV[i]).padStart(16, "0") : shelfSort === "tag" ? tagSub(i).toLowerCase() + "\u0000" + String(isNaN(TV[i]) ? 0 : TV[i]).padStart(16, "0") : (isNaN(TV[i]) ? -Infinity : TV[i]);
-      const mk = i => shelfSort === "folder" ? (subOf(i) || "(top)") : shelfSort === "tag" ? (tagSub(i) ? tagTop(i) + "/" + tagSub(i) : "(top)") : shelfSort === "az" ? (N[i].title[0] || "?").toUpperCase() : shelfSort === "modified" ? (N[i].mt ? String(new Date(N[i].mt).getUTCFullYear()) : "?") : (isNaN(TV[i]) ? "?" : String(new Date(TV[i]).getUTCFullYear()));
+    const sorted = ids => { const tk = i => shelfSort === "az" ? N[i].title.toLowerCase() : shelfSort === "modified" ? (N[i].mt || 0) : shelfSort === "folder" ? subOf(i).toLowerCase() + "\u0000" + String(isNaN(TV[i]) ? 0 : TV[i]).padStart(16, "0") : shelfSort === "tag" ? (TAGNEST ? tagOf(i).toLowerCase() : "") + "\u0000" + String(isNaN(TV[i]) ? 0 : TV[i]).padStart(16, "0") : (isNaN(TV[i]) ? -Infinity : TV[i]);
+      const mk = i => shelfSort === "folder" ? (subOf(i) || "(top)") : shelfSort === "tag" ? (tagOf(i).includes("/") ? tagOf(i) : "#" + tagTop(i)) : shelfSort === "az" ? (N[i].title[0] || "?").toUpperCase() : shelfSort === "modified" ? (N[i].mt ? String(new Date(N[i].mt).getUTCFullYear()) : "?") : (isNaN(TV[i]) ? "?" : String(new Date(TV[i]).getUTCFullYear()));
       ids.sort((a, b) => { const p = tk(a), q = tk(b); return p < q ? -1 : p > q ? 1 : 0; }); let last = null, tp = null;
       for (const i of ids) { const m = mk(i);
-        if (shelfSort === "folder" || shelfSort === "tag") { if (m !== last) { last = m; x += 14; tp = {label: m, ids: [], segs: []}; tapes.push(tp); } put(i, N[i].level === 1); tp.ids.push(i); continue; }   // Subfolder: label tape under each group instead of a marker
+        if (shelfSort === "folder" || (shelfSort === "tag" && TAGNEST)) { if (m !== last) { last = m; x += 14; tp = {label: m, ids: [], segs: []}; tapes.push(tp); } put(i, N[i].level === 1); tp.ids.push(i); continue; }   // Subfolder: label tape under each group instead of a marker
         if (m !== last) { last = m; x += 6; put(i, N[i].level === 1); calls.push({x: RX[i], y: RY[i] + Math.abs(RH[i]), t: m, i}); continue; } put(i, N[i].level === 1); } };
     if (shelfSort === "tag") {   // Shelve by Tag: each first-level tag a bookcase (biggest first), its second level as labelled runs; the left bay fills first
       for (const g of TAGBAYS[bay]) { section(g.label); sorted(g.ids); }
@@ -3843,7 +3852,9 @@ function tmTagUI(){ const tc = $("#tmtags"); if (!tc) return; tc.hidden = !HASTA
   const cnt = new Map(), nm = new Map(); for (let i=0;i<n;i++) { if (!baseOK(i)) continue; const ts = N[i].tags; if (!ts || !ts.length) { cnt.set("", (cnt.get("") || 0) + 1); continue; }
     const seen = new Set(); for (const t of ts) { const top = t.split("/")[0], k = top.toLowerCase(); if (seen.has(k)) continue; seen.add(k); if (!nm.has(k)) nm.set(k, top); cnt.set(k, (cnt.get(k) || 0) + 1); } }
   const keys = [...cnt.keys()].sort((a, b) => (a === "") - (b === "") || cnt.get(b) - cnt.get(a) || a.localeCompare(b));
-  const sig = keys.map(k => k + ":" + cnt.get(k) + (TMOFF.has(k) ? "-" : "")).join(","); if (tc.dataset.sig === sig) return; tc.dataset.sig = sig; tc.empty();
+  const sig = view + "|" + TAGNEST + "|" + keys.map(k => k + ":" + cnt.get(k) + (TMOFF.has(k) ? "-" : "")).join(","); if (tc.dataset.sig === sig) return; tc.dataset.sig = sig; tc.empty();
+  if (view !== "treemap") { const nb = tc.createEl("label", { cls: "pmaps tagnest", attr: { title: view === "shelf" ? "Split each bookcase into labelled runs, one per nested tag" : "An arc per nested tag, grouped by its top-level tag" } }); const cb = nb.createEl("input", { type: "checkbox" }); cb.checked = TAGNEST; nb.createEl("i", { cls: "sw" }); nb.createSpan({ text: "Show nested tags" });
+    cb.onchange = () => { TAGNEST = cb.checked; save("iv-tagnest", TAGNEST); CHCAT_G = null; if (chordBy === "tags") { chSetCats(); ribKey = null; } tc.dataset.sig = ""; relayout(true, false, () => fitTarget()); }; nb.onclick = e => e.stopPropagation(); }
   tc.createDiv({ cls: "phint", text: "Tags shown. A note with several tags goes under its first one that's on." });
   const acts = tc.createDiv({ cls: "plchips" }); const set = off => { TMOFF = new Set(off); save("iv-tmtagoff", [...TMOFF]); tc.dataset.sig = ""; CHCAT_G = null; if (chordBy === "tags") { chSetCats(); ribKey = null; } tmTagUI(); relayout(true, false, () => fitTarget()); };
   const all = acts.createEl("button", { cls: "pchip pall", text: "All", attr: { type: "button" } }); all.onclick = e => { e.stopPropagation(); set([]); };
