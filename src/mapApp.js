@@ -3471,7 +3471,7 @@ function syncYr(){ const yc = $("#yrctl"); if (!yc) return; const [a, b] = yc.qu
     put(h0, YR0); put(h1, YR1);
     // a handle at an end shows nothing extra; one close to an end hides that end's year; two handles on one year show it once
     h0.hidden = YR0 === SLMIN; h1.hidden = YR1 === NOW_Y || YR1 === YR0 && !h0.hidden;
-    if (!h0.hidden && !h1.hidden && f(YR1) - f(YR0) < near) { h0.style.transform = "translateX(-100%)"; h1.style.transform = "translateX(0)"; } else { h0.style.transform = h1.style.transform = ""; }
+    if (!h0.hidden && !h1.hidden && f(YR1) - f(YR0) < near) { h0.classList.add("lft"); h1.classList.add("rgt"); } else { h0.classList.remove("lft"); h1.classList.remove("rgt"); }
     e0.style.visibility = (!h0.hidden && f(YR0) < near) || (!h1.hidden && f(YR1) < near) ? "hidden" : "";
     e1.style.visibility = (!h1.hidden && f(YR1) > 1 - near) || (!h0.hidden && f(YR0) > 1 - near) ? "hidden" : ""; }
   yc.querySelector(".yrv").setText(!yrNarrow() ? `All (${SLMIN}–${NOW_Y})` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
