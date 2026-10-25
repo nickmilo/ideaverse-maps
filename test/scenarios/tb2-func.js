@@ -8,7 +8,7 @@ module.exports = async ({ page, sleep, shot }) => {
   ok('header is one row', await E(() => document.querySelector('.ivm header').getBoundingClientRect().height < 60), await E(() => Math.round(document.querySelector('.ivm header').getBoundingClientRect().height)));
   // map menu, nested Starts popover
   await C('#vseg button[data-v=emergence]'); ok('Emergence ▾ opens its menu', await shown('#mapopts'));
-  ok('Years shown sits in the map menu', (await shown('#yrctl')) && (await shown('#mapopts')));
+  ok('Years shown is not in the map menu', !(await E(() => !!document.querySelector('.ivm #mapopts #yrctl'))));
   await page.keyboard.press('Escape'); await sleep(200); ok('Escape closes both', !(await shown('#mapopts')) && !(await shown('#startpop')));
   // Space-Time from the menu
   await C('#vseg button[data-v=emergence]'); await E(() => { const r = [...document.querySelectorAll('.ivm #emerpop input, .ivm #emerpop label')].find(e => /Space-Time/.test(e.textContent || '') || e.value === 'spacetime'); r && r.click(); }); await sleep(1500);
@@ -20,13 +20,13 @@ module.exports = async ({ page, sleep, shot }) => {
   ok('Arrange → year', await E(() => document.querySelector('.ivm #arrbtn b').textContent === 'year'), await E(() => document.querySelector('.ivm #arrbtn b').textContent));
   await C('#arrbtn'); await E(() => [...document.querySelectorAll('.ivm #arrpop .orow')].find(b => /^Time/.test(b.textContent)).click()); await sleep(1200);
   // Filter: drop a folder → badge
-  await C('#filtbtn'); await C('#foldbtn'); await E(() => { const c = document.querySelector('.ivm #foldlist input[type=checkbox]'); c.click(); }); await sleep(800);
+  await C('#filtbtn'); await E(() => { const c = document.querySelector('.ivm #foldlist input[type=checkbox]'); c.click(); }); await sleep(800);
   const notes = await E(() => document.querySelector('.ivm #stats').textContent);
   await page.keyboard.press('Escape'); await sleep(300);
   ok('Filter shows a count', await E(() => document.querySelector('.ivm #filtbtn .tbadge').textContent === '1' && document.querySelector('.ivm #filtbtn').classList.contains('lit')), notes);
-  await C('#filtbtn'); await C('#foldx'); await sleep(600); await page.keyboard.press('Escape'); ok('Clearing removes the count', await E(() => document.querySelector('.ivm #filtbtn .tbadge').hidden));
+  await C('#filtbtn'); await C('#foldall'); await sleep(600); await page.keyboard.press('Escape'); ok('Clearing removes the count', await E(() => document.querySelector('.ivm #filtbtn .tbadge').hidden));
   // Display
-  await C('#dispbtn'); await C('#alllinks'); ok('All links toggles', await E(() => document.querySelector('.ivm #alllinks').getAttribute('aria-pressed') === 'true')); await C('#alllinks');
+  await C('#dispbtn'); await C('#disppop label.drow'); ok('All links toggles', await E(() => document.querySelector('.ivm #alllinks').getAttribute('aria-pressed') === 'true')); await C('#disppop label.drow');
   await E(() => document.querySelector('.ivm #themeseg button:first-child').click()); await sleep(400); ok('Theme changes', await E(() => document.querySelector('.ivm').dataset.theme), await E(() => document.querySelector('.ivm').dataset.theme));
   await E(() => document.querySelector('.ivm #themeseg button[data-th=dark]').click()); await sleep(300);
   await C('#scorebtn'); ok('Scoring panel opens, Display closes', (await shown('#scorepanel')) && !(await shown('#disppop'))); await E(() => document.querySelector('.ivm #spx').click());
