@@ -123,6 +123,8 @@ export async function mountInto(owner, el, opts) {
     // Posters: a note's properties, and a picture a note links to (wikilink or vault path)
     frontmatter: (path) => { const f = app.vault.getAbstractFileByPath(path); return f instanceof TFile ? (app.metadataCache.getFileCache(f)?.frontmatter || null) : null; },
     resource: (link, from) => { if (!link) return null; const f = app.metadataCache.getFirstLinkpathDest(link, from || "") || app.vault.getAbstractFileByPath(normalizePath(link)); return f instanceof TFile ? app.vault.getResourcePath(f) : null; },
+    // Show the way home: the note it heads for by default (Settings), if one is set
+    wayHome: () => plugin.settings.wayHome || (plugin.settings.homeNotes || [])[0] || "",
     savedFolder: () => plugin.settings.viewsFolder || null,
     pickSavedFolder: async () => {
       const dir = await new Promise(res => new FolderPicker(app, res).open());

@@ -2885,10 +2885,12 @@ function rad(i){ if (view === "stars") return Math.max(.7*BOOST, Math.min(SR[i]*
 // Any map: the path lights up as a line through each note on it, named, with the count of steps. Display → Show the way home.
 let BACON = pref("iv-bacon", false) === true, BACTO = pref("iv-bacto", null), BACCURVE = pref("iv-baccurve", false) === true;   // BACTO: the path of the note to find the way to (null: Home)
 const BAC = { key: "", par: null, to: -1 };
-function baconHome(){ let r = -1, b = -1; for (let i=0;i<n;i++) if (vis[i] && N[i].home && !ARCH[i]) { const d = out[i].length + inn[i].length; if (d > b) { b = d; r = i; } }
+function baconHome(){ let r = -1, b = -1;
+  // Settings → Show the way home: a note named there (or its path) comes first
+  { const w = (host.wayHome ? host.wayHome() : "").trim().toLowerCase().replace(/\.md$/, ""); if (w) { const i = N.findIndex(d => d.title.toLowerCase() === w || d.path.toLowerCase().replace(/\.md$/, "") === w); if (i >= 0 && vis[i]) return i; } } for (let i=0;i<n;i++) if (vis[i] && N[i].home && !ARCH[i]) { const d = out[i].length + inn[i].length; if (d > b) { b = d; r = i; } }
   if (r < 0) for (let i=0;i<n;i++) if (vis[i] && !ARCH[i] && (r < 0 || byRank(i, r) < 0)) r = i; return r; }
 function baconTarget(){ if (BACTO) { const i = N.findIndex(d => d.path === BACTO); if (i >= 0 && vis[i]) return i; } return baconHome(); }
-function baconPar(){ let vc = 0; for (let i=0;i<n;i++) if (vis[i]) vc++; const key = (BACTO || "") + ":" + vc; if (key === BAC.key) return BAC;
+function baconPar(){ let vc = 0; for (let i=0;i<n;i++) if (vis[i]) vc++; const key = (BACTO || "") + ":" + (host.wayHome ? host.wayHome() : "") + ":" + vc; if (key === BAC.key) return BAC;
   const t = baconTarget(), par = new Int32Array(n).fill(-2); BAC.key = key; BAC.to = t; BAC.par = par; if (t < 0) return BAC;
   par[t] = -1; let q = [t]; while (q.length) { const nq = []; for (const i of q) for (const j of UND(i)) { if (par[j] !== -2 || !vis[j] || ARCH[j]) continue; par[j] = i; nq.push(j); } q = nq; }
   return BAC; }
@@ -4601,7 +4603,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Show the way home (Kevin Bacon): from the note you're on, the fewest links back to Home, or to a note you choose
   const bcSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Kevin Bacon: from the note you're on, light up the fewest links back to Home (or a note you choose)" } }); const bcCb = bcSw.createEl("input", { type: "checkbox" }); bcSw.createEl("i", { cls: "sw" }); bcSw.createSpan({ text: "Show the way home" });
   const bcTo = DI.p.createDiv({ cls: "bacto" }); bcTo.createSpan({ cls: "btl", text: "To" }); const bcName = bcTo.createEl("button", { cls: "bcname", attr: { type: "button", "aria-label": "Choose the note to find the way to" } });
-  const bcBtns = bcTo.createSpan({ cls: "bcbtns" }), bcUse = bcBtns.createEl("button", { cls: "pchip", text: "Use this note", attr: { type: "button" } }), bcHome = bcBtns.createEl("button", { cls: "pchip", text: "Home", attr: { type: "button" } });
+  const bcBtns = bcTo.createSpan({ cls: "bcbtns" }), bcUse = bcBtns.createEl("button", { cls: "pchip", text: "Use this note", attr: { type: "button" } }), bcHome = bcBtns.createEl("button", { cls: "pchip", text: "Default", attr: { type: "button", title: "Head for the default note again (set in Settings → Show the way home)" } });
   const syncBac = () => { bcCb.checked = BACON; bcTo.hidden = !BACON; if (!BACON && typeof bcClose === "function") bcClose(); const t = baconTarget(); bcName.setText(t >= 0 ? N[t].title : "nothing"); bcUse.disabled = sel < 0 || (t >= 0 && sel === t); bcHome.hidden = !BACTO;
     bcUse.title = sel < 0 ? "Click a note on the map first" : `Find the way to ${N[sel].title} instead`; };
   bcCb.onchange = () => { BACON = bcCb.checked; save("iv-bacon", BACON); syncBac(); draw(); };

@@ -63,6 +63,13 @@ export class MapsSettingTab extends PluginSettingTab {
       .setPlaceholder("Folder/Creator's Continent.png").setValue(s.creatorImage || "")
       .onChange(async v => { s.creatorImage = v.trim() ? normalizePath(v.trim()) : ""; await p.saveSettings(); }));
 
+    new Setting(containerEl).setName("Show the way home").setHeading();
+    // filled in with the note it heads for now, so it's clear what goes here
+    const wayNow = s.wayHome || (s.homeNotes || [])[0] || "Home";
+    new Setting(containerEl).setName("Default note").setDesc("The note Display → Show the way home heads for, unless you pick another on the map. A note name (or its path). Left empty, it's your first home note.").addText(t => t
+      .setPlaceholder("Home").setValue(wayNow)
+      .onChange(async v => { s.wayHome = v.trim(); await p.saveSettings(); }));
+
     new Setting(containerEl).setName("Saved views and tours").setHeading();
     new Setting(containerEl).setName("Folder").setDesc("The folder that keeps your saved views and tours (one JSON file, updated as you save). Left empty, the map asks before your first save. Use / for the vault root.").addText(t => t
       .setPlaceholder("Folder/path").setValue(s.viewsFolder || "")
