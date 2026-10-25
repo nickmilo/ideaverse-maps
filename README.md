@@ -68,7 +68,7 @@ Every note on a ring, in arcs by folder, by year, or by first-level tag. Links b
 
 ### Treemap
 
-Every folder and note as a rectangle, sized by its score. Subfolders can be outlined and named.
+Every folder and note as a rectangle, sized by its score. Subfolders can be outlined and named. Switch its menu to **Tags** and the boxes become your tags instead: a box per first-level tag, a box per nested tag inside it. Every tag has a chip to switch it off or on (with All and None), so you can keep just one family of tags, say `#garden`, and see it laid out.
 
 ![Treemap: folders and notes as rectangles](docs/treemap.png)
 <sub>Treemap in Soft Paper.</sub>
