@@ -846,3 +846,6 @@ body.is-phone .ivm .wm-name{display:none}
 /* Show more map names: Filter and Display keep their words while there's room, then drop to icons together */
 @container ivm (max-width:1479px){.ivm[data-vgrid="1"] header.tb2 .tbb .tbl2{display:none}}
 .ivm #vmorepop details > .chip{margin-left:16px}
+/* Orbit: maps you turn like a globe show Earth, Spinning and LYT Speed only; Starfield shows Calm, Slow and Lively only */
+.ivm.ivm.ivm[data-view="ideaverse"] #driftseg .dflat,.ivm.ivm.ivm[data-view="chord"][data-dome="1"] #driftseg .dflat,.ivm.ivm.ivm[data-view="quincunx"][data-dome="1"] #driftseg .dflat,.ivm.ivm.ivm[data-view="planet"][data-dome="1"] #driftseg .dflat{display:none}
+.ivm.ivm.ivm[data-view="stars"] #driftseg .dearth,.ivm.ivm.ivm[data-view="stars"] #driftbar .dwob{display:none}

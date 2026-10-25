@@ -2659,32 +2659,36 @@ function project3D(){
 const s3dOn = () => view === "stars" && S3D;
 // ---- Drift: a screensaver for 3D Starfield. The camera circles the universe, its tilt sways, and every ~40 s it breathes in
 // toward one galaxy (a different one each time, bigger ones more often) and back out again. Any touch, drag or scroll stops it.
-let drifting = false, driftRaf = 0, driftT0 = 0, driftLast = 0, driftGal = -1, driftCyc = -1, driftK0 = 1, driftSpeed = "slow";
+let drifting = false, driftRaf = 0, driftT0 = 0, driftLast = 0, driftGal = -1, driftCyc = -1, driftK0 = 1, DSF = "slow", DSG = "earth";
 const DRIFT = {calm: [.018, 70], slow: [.035, 44], lively: [.07, 26], earth: [.05, 0], spin: [.45, 0], lyt: [1.125, 0]};   // spin: Earth, fast (the 3D Obsidian map)
 // Earth, Spinning and LYT hold a 20° tilt; with Wobble on, the tilt rocks 8° either way once a turn, like a spinning top
 let WOB = pref("iv-wob", false) === true;
 const tilt = yaw => (20 + (WOB ? 8*Math.sin(yaw) : 0))*Math.PI/180;
-const earthy = () => driftSpeed === "earth" || driftSpeed === "spin" || driftSpeed === "lyt";   // earth: every 3D map, a steady spin at a fixed 20° tilt   // [radians of orbit per second, seconds per in-and-out breath]
+// two Orbit choices, kept apart: maps you turn like a globe (the Ideaverse, Tesla, Corona, Octahedron, Shells, the PKM Globe) use Earth, Spinning or LYT Speed;
+// every other map uses Calm, Slow or Lively (a few flat ones also offer Earth; Starfield doesn't)
+const globeSet = () => sphOn() || geo3On();
+const dSp = () => globeSet() ? DSG : view === "stars" && DSF === "earth" ? "slow" : DSF;
+const earthy = () => { const d = dSp(); return d === "earth" || d === "spin" || d === "lyt"; };   // earth: every 3D map, a steady spin at a fixed 20° tilt   // [radians of orbit per second, seconds per in-and-out breath]
 function driftPick(){ const gals = BODIES.filter(b => b.kind === "gal" && b.members.some(i => VV(i)));
   if (!gals.length) return -1; let tot = 0; for (const b of gals) tot += Math.sqrt(b.members.length);
   let r = Math.random()*tot; for (const b of gals) { r -= Math.sqrt(b.members.length); if (r <= 0 && b.id !== driftGal) return b.id; } return gals[0].id; }
 function driftFrame(now){
   if (!drifting) return; driftRaf = RAF(driftFrame);
   if (!(s3dOn() || sphOn() || geo3On())) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; if (!dt || morphing) return;   // flat maps: a slow glide and a gentle in-and-out, faster at Lively
-    const sp = DRIFT[earthy() ? "slow" : driftSpeed][0]/.035, t = (now - driftT0)/1000*sp;
+    const sp = DRIFT[earthy() ? "slow" : dSp()][0]/.035, t = (now - driftT0)/1000*sp;
     if (domeOn()) { domeYaw += .03*sp*dt; domeProject(); X.set(DX); Y.set(DY); }
     else { const px = 9*sp*Math.sin(t*.23), py = 6*sp*Math.cos(t*.17); tx += px*dt; ty += py*dt; const f = 1 + .012*Math.cos(t*.5)*sp*dt, cx = W/2, cy = H/2; tx = cx - (cx - tx)*f; ty = cy - (cy - ty)*f; k *= f; }
     render(); return; }
-  if (geo3On()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;
+  if (geo3On()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[dSp()], t = (now - driftT0)/1000;
     // (the Obsidian map turns faster, still swaying as it goes: Lively as fast as Spinning, Slow what Lively was at 2½×, Calm what Slow was)
-    const gSp = GRV() || view === "quincunx" ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[driftSpeed] : null;
+    const gSp = GRV() || view === "quincunx" ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[dSp()] : null;
     g3Yaw -= (gSp != null ? gSp : spin)*1.6*dt; g3Pitch = earthy() ? tilt(g3Yaw) : .35 + .3*Math.sin(t*2*Math.PI/((breath || 30)*1.4)); geoProj(); X.set(EX); Y.set(EY); render(); return; }
-  if (sphOn()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[driftSpeed], t = (now - driftT0)/1000;   // the globe turns slowly, tilting as it goes
+  if (sphOn()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[dSp()], t = (now - driftT0)/1000;   // the globe turns slowly, tilting as it goes
     // Tesla, Corona and the PKM Globe share the Ideaverse's orbit speeds (Calm, Slow, Lively, Earth, Spinning)
-    const cSp = sphOn() ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[driftSpeed] : null;
+    const cSp = sphOn() ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[dSp()] : null;
     csYaw += (cSp != null ? cSp : spin)*1.6*dt; csPitch = earthy() ? tilt(csYaw) : .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); return; }
-  const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[earthy() ? "slow" : driftSpeed], t = (now - driftT0)/1000;
-  if (earthy()) { yaw3 += DRIFT[driftSpeed][0]*dt; pitch3 = tilt(yaw3); project3D(); X.set(P3X); Y.set(P3Y); render(); return; }   // Earth: a steady turn at a fixed 20° tilt, no zooming in
+  const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[earthy() ? "slow" : dSp()], t = (now - driftT0)/1000;
+  if (earthy()) { yaw3 += DRIFT[dSp()][0]*dt; pitch3 = tilt(yaw3); project3D(); X.set(P3X); Y.set(P3Y); render(); return; }   // Earth: a steady turn at a fixed 20° tilt, no zooming in
   yaw3 += spin*dt; pitch3 = .62 + .38*Math.sin(t*2*Math.PI/(breath*1.7));
   project3D(); X.set(P3X); Y.set(P3Y);
   const cyc = Math.floor(t/breath), ph = (t % breath)/breath, inA = Math.pow(Math.sin(ph*Math.PI), 2);   // 0 far out → 1 close in → 0
@@ -4124,15 +4128,18 @@ $("#sensebtn").onclick = e => { e.stopPropagation(); const el = $("#sensepop2"),
 const sBtn = $('#vseg button[data-v="sense"]');
 POPS.push(['#vseg button[data-v="sense"]', "#sensepop", "#vsegms"]);
 POPS.push(['#vseg button[data-v="stars"]', "#starpop", "#vsegms"]);
-driftSpeed = DRIFT[pref("iv-drift", "slow")] ? pref("iv-drift", "slow") : "slow";
+{ const d2 = pref("iv-drift", "slow"), d3 = pref("iv-drift3", null);
+  DSF = ["calm", "slow", "lively", "earth"].includes(d2) ? d2 : "slow";
+  DSG = ["earth", "spin", "lyt"].includes(d3) ? d3 : ["spin", "lyt"].includes(d2) ? d2 : "earth"; }
 { const eb = root.querySelector('#driftseg button[data-d="earth"]'); if (eb && !root.querySelector('#driftseg button[data-d="spin"]')) { const sb = doc.createElement("button"); sb.dataset.d = "spin"; sb.className = "dearth dspin"; sb.textContent = "Spinning"; sb.setAttribute("aria-label", "Earth, fast: a quick spin at a 20° tilt"); eb.after(sb);
   // LYT: 2.5 times faster than Spinning
   const lb = doc.createElement("button"); lb.dataset.d = "lyt"; lb.className = "dearth dspin"; lb.textContent = "LYT Speed"; lb.setAttribute("aria-label", "LYT Speed: Spinning, 2.5 times faster"); sb.after(lb); } }
 const wobLab = doc.createElement("label"); wobLab.className = "pmaps dwob"; wobLab.title = "With Earth, Spinning or LYT: the tilt rocks gently once a turn, like a spinning top";
 { const cb = doc.createElement("input"); cb.type = "checkbox"; cb.id = "dwob"; cb.checked = WOB; const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = "Wobble like the Earth"; wobLab.append(cb, sw, t);
   cb.onchange = () => { WOB = cb.checked; save("iv-wob", WOB); }; $("#driftbar").appendChild(wobLab); }
-const syncDrift = () => { root.querySelectorAll("#driftseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.d === driftSpeed))); wobLab.classList.toggle("dim", !earthy()); };
-root.querySelectorAll("#driftseg button").forEach(b => b.onclick = () => { driftSpeed = b.dataset.d; save("iv-drift", driftSpeed); syncDrift(); });
+const syncDrift = () => { root.querySelectorAll("#driftseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.d === dSp()))); wobLab.classList.toggle("dim", !earthy()); };
+root.querySelectorAll("#driftseg button").forEach(b => b.onclick = () => { const d = b.dataset.d; if (globeSet()) { DSG = d; save("iv-drift3", d); } else { DSF = d; save("iv-drift", d); } syncDrift(); });
+root.querySelectorAll("#driftseg button").forEach(b => { if (!b.classList.contains("dearth")) b.classList.add("dflat"); });
 $("#dplay").onclick = () => drifting ? driftStop() : driftStart(); syncDrift();
 { const c3 = pref("iv-cam3", null); if (Array.isArray(c3)) { yaw3 = +c3[0] || yaw3; pitch3 = +c3[1] || pitch3; } }
 const syncS3D = () => { root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = (r.value === "3d") === S3D); $('#vseg button[data-v="stars"]').title = S3D ? "Starfield · 3D (click again to switch)" : "Starfield · 2D (click again to switch)"; };
@@ -4523,7 +4530,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const thSlot = right.createDiv({ cls: "thslot" }); thSlot.appendChild($("#themeseg"));
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
   const ARR_OFF = new Set(["ideaverse", "people", "mosaic", "graph", "posters", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
-  syncTB = () => {
+  syncTB = () => { syncDrift();
     const core = CORE.has(view); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
     $("#vmore").classList.toggle("on", false);
     root.dataset.mo = variants() || hasLay() ? "1" : "";
