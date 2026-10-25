@@ -2665,9 +2665,9 @@ const DRIFT = {calm: [.018, 70], slow: [.035, 44], lively: [.07, 26], earth: [.0
 let WOB = pref("iv-wob", false) === true;
 const tilt = yaw => (20 + (WOB ? 8*Math.sin(yaw) : 0))*Math.PI/180;
 // two Orbit choices, kept apart: maps you turn like a globe (the Ideaverse, Tesla, Corona, Octahedron, Shells, the PKM Globe) use Earth, Mercury or LYT Speed;
-// every other map uses Calm, Slow or Lively (a few flat ones also offer Earth; Starfield doesn't)
+// every other map uses Calm, Slow or Lively
 const globeSet = () => sphOn() || geo3On();
-const dSp = () => globeSet() ? DSG : view === "stars" && DSF === "earth" ? "slow" : DSF;
+const dSp = () => globeSet() ? DSG : DSF === "earth" ? "slow" : DSF;
 const earthy = () => { const d = dSp(); return d === "earth" || d === "spin" || d === "lyt"; };   // earth: every 3D map, a steady spin at a fixed 20° tilt   // [radians of orbit per second, seconds per in-and-out breath]
 function driftPick(){ const gals = BODIES.filter(b => b.kind === "gal" && b.members.some(i => VV(i)));
   if (!gals.length) return -1; let tot = 0; for (const b of gals) tot += Math.sqrt(b.members.length);
@@ -4129,7 +4129,7 @@ const sBtn = $('#vseg button[data-v="sense"]');
 POPS.push(['#vseg button[data-v="sense"]', "#sensepop", "#vsegms"]);
 POPS.push(['#vseg button[data-v="stars"]', "#starpop", "#vsegms"]);
 { const d2 = pref("iv-drift", "slow"), d3 = pref("iv-drift3", null);
-  DSF = ["calm", "slow", "lively", "earth"].includes(d2) ? d2 : "slow";
+  DSF = ["calm", "slow", "lively"].includes(d2) ? d2 : "slow";
   DSG = ["earth", "spin", "lyt"].includes(d3) ? d3 : ["spin", "lyt"].includes(d2) ? d2 : "earth"; }
 { const eb = root.querySelector('#driftseg button[data-d="earth"]'); if (eb && !root.querySelector('#driftseg button[data-d="spin"]')) { const sb = doc.createElement("button"); sb.dataset.d = "spin"; sb.className = "dearth dspin"; sb.textContent = "Mercury"; sb.setAttribute("aria-label", "Earth, fast: a quick spin at a 20° tilt"); eb.after(sb);
   // LYT: 2.5 times faster than Mercury

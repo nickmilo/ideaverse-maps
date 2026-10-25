@@ -849,3 +849,8 @@ body.is-phone .ivm .wm-name{display:none}
 /* Orbit: maps you turn like a globe show Earth, Spinning and LYT Speed only; Starfield shows Calm, Slow and Lively only */
 .ivm.ivm.ivm[data-view="ideaverse"] #driftseg .dflat,.ivm.ivm.ivm[data-view="chord"][data-dome="1"] #driftseg .dflat,.ivm.ivm.ivm[data-view="quincunx"][data-dome="1"] #driftseg .dflat,.ivm.ivm.ivm[data-view="planet"][data-dome="1"] #driftseg .dflat{display:none}
 .ivm.ivm.ivm[data-view="stars"] #driftseg .dearth,.ivm.ivm.ivm[data-view="stars"] #driftbar .dwob{display:none}
+/* Earth (and the Wobble switch) only on maps you turn like a globe */
+.ivm.ivm.ivm.ivm #driftseg .dearth,.ivm.ivm.ivm.ivm #driftbar .dwob{display:none}
+.ivm.ivm.ivm.ivm[data-view="ideaverse"] #driftseg .dearth,.ivm.ivm.ivm.ivm[data-view="chord"][data-dome="1"] #driftseg .dearth,.ivm.ivm.ivm.ivm[data-view="quincunx"][data-dome="1"] #driftseg .dearth,.ivm.ivm.ivm.ivm[data-view="planet"][data-dome="1"] #driftseg .dearth{display:inline-block}
+.ivm.ivm.ivm.ivm[data-view="ideaverse"] #driftbar .dwob,.ivm.ivm.ivm.ivm[data-view="chord"][data-dome="1"] #driftbar .dwob,.ivm.ivm.ivm.ivm[data-view="quincunx"][data-dome="1"] #driftbar .dwob,.ivm.ivm.ivm.ivm[data-view="planet"][data-dome="1"] #driftbar .dwob{display:flex}
+.ivm.ivm.ivm.ivm #driftbar .dwob[hidden]{display:none}
