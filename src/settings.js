@@ -51,6 +51,16 @@ export class MapsSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Markdown links").setDesc("Also count markdown-style links to notes, [text](folder/Note.md), the kind some tools write. Off by default: most vaults link with [[wikilinks]].")
       .addToggle(t => t.setValue(!!s.mdLinks).onChange(async v => { s.mdLinks = v; await save(); }));
 
+    new Setting(containerEl).setName("Property names").setHeading();
+    // the names this vault uses for up, related, collections and rank (any capitalization; a note may use any name in a list)
+    const names = (name, desc, key, def) => new Setting(containerEl).setName(name).setDesc(desc).addText(t => t
+      .setPlaceholder(def).setValue((s[key] && s[key].length ? s[key] : def.split(", ")).join(", "))
+      .onChange(async v => { const l = v.split(",").map(x => x.trim()).filter(Boolean); s[key] = l.length ? l : def.split(", "); await save(); }));
+    names("Up", "The property that links a note up to its parent maps. Comma-separated if your notes use more than one name. Rescan after changing.", "upProps", "up");
+    names("Related", "The property that links a note sideways to related notes.", "relatedProps", "related");
+    names("Collections", "The property that lists the collections a note belongs to (for example collections, or collection). Map collections below read it.", "collectionProps", "collections");
+    names("Rank", "A number property that ranks notes (the first name a note has wins).", "rankProps", "rank");
+
     new Setting(containerEl).setName("Properties to plot").setDesc("Number properties offered under By → More… (comma-separated), for example year, rating, pages. Each becomes an axis: notes line up left to right by its value. Rescan after changing.").addText(t => t
       .setPlaceholder("year, rating").setValue((s.axisProps || ["year"]).join(", "))
       .onChange(async v => { s.axisProps = v.split(",").map(x => x.trim()).filter(Boolean); await p.saveSettings(); }));
