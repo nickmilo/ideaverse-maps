@@ -11,7 +11,7 @@ const WORD = /[\p{L}\p{N}_]+/gu;
 const KEYS = /^([\p{L}_][\p{L}\p{N}_-]*):/gmu;   // property names in any language (création, Sammlung)
 
 /** Everything the scan needs from one note's text, so a note's text is read only when it changes (see adapter.cache). */
-export const EXTRACT_VERSION = 7;
+export const EXTRACT_VERSION = 8;
 function extractNote(t){
   const [fm, body0] = splitFm(t), body = body0.replace(FENCE, ""), lines = nonEmptyLines(body);
   const keys = []; KEYS.lastIndex = 0; let km; while ((km = KEYS.exec(fm))) if (!keys.includes(km[1])) keys.push(km[1]);
@@ -24,7 +24,14 @@ function extractNote(t){
   props.w = words(body); props.kb = kb(t); props.sf = senseFeatures(fm, body0, lines);
   const num = {}; for (const key of keys) { const v = fmScalar(fm, key).replace(/%+$/, ""); if (v !== "" && /^-?[\d.,]+$/.test(v)) { const f = Number(v.replace(/,/g, "")); if (isFinite(f)) num[key] = Math.round(f*100)/100; } }   // every number-valued property, for the By → More… axes
   const dates = dateFields(fm);
-  return { num, dates, B: links(body), PL, lines: lines.length, linkLines: lines.filter(l => l.includes("[[")).length, props }; }
+  return { num, dates, B: links(body), PL, tags: tagsOf(fm, body), lines: lines.length, linkLines: lines.filter(l => l.includes("[[")).length, props }; }
+/** A note's tags, in the order written: the tags property first (a list, [a, b], or a, b), then #tags in the text. Without the #; case kept from first use. */
+const TAGRX = /(^|[\s(])#([\p{L}\p{N}_][\p{L}\p{N}_/-]*)/gu;
+function tagsOf(fm, body){ const out = [], seen = new Set(), add = t => { t = String(t).trim().replace(/^#/, "").replace(/^["']|["']$/g, "").replace(/\/+$/, ""); if (!t || /^\d+$/.test(t)) return; const k = t.toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push(t); } };
+  for (const key of ["tags", "tag", "Tags", "Tag"]) { const raw = fmField(fm, key); if (!raw.trim()) continue;
+    const v = raw.trim(); if (v.startsWith("[")) v.replace(/^\[|\]$/g, "").split(",").forEach(add); else if (/^\s*-/m.test(raw)) raw.split("\n").forEach(l => { const m = /^\s*-\s*(.+)$/.exec(l); if (m) add(m[1]); }); else v.split(/[,\s]+/).forEach(add); }
+  TAGRX.lastIndex = 0; let m; while ((m = TAGRX.exec(body))) add(m[2]);
+  return out; }
 function extractArchive(t, isMd){
   const [fm, b0] = isMd ? splitFm(t) : ["", t], b = b0.replace(FENCE, ""), ls = nonEmptyLines(b);
   return { B: links(b), dates: dateFields(fm), w: words(b), kb: kb(t), sf: senseFeatures(fm, b0, ls), density: ls.length ? r3(ls.filter(l => l.includes("[[")).length / ls.length) : 0 }; }
@@ -186,7 +193,7 @@ export async function scanVault(adapter, settings, onProgress) {
     let date = created;
     if (!date) { const m = /(\d{4}-\d{2}-\d{2})/.exec(title); date = m ? m[1] : ""; }
     if (!date && C.fileDates && ctime.get(p)) date = new Date(ctime.get(p)).toISOString().slice(0, 10);   // no date in the note: when the file was made
-    info.set(p, { title, created, date, rank, collections: colls, lines: lines.length, props,
+    info.set(p, { title, created, date, rank, collections: colls, tags: e.tags || [], lines: lines.length, props,
       density: lines.length ? r3(linkLines / lines.length) : 0,
       named_map: under(p, C.mapFolders) || /\bMOC\b/.test(title) || colls.some(x => C.mapCollections.some(m => m.toLowerCase() === x.toLowerCase())) });
   }
@@ -239,7 +246,7 @@ export async function scanVault(adapter, settings, onProgress) {
   const cnt = s => { let c = 0; for (const x of s) if (keepSet.has(x)) c++; return c; };
   const nodes = keep.map(p => { const i = info.get(p), parts = p.split("/");
     return { id: idx.get(p), path: p, mt: mtime.get(p) || 0, title: i.title, ace: p.includes("/") ? parts[0] : "(root)", sub: parts.length > 2 ? parts.slice(0, 2).join("/") : parts[0],
-      created: i.created, date: i.date, rank: i.rank, collections: i.collections, p: i.props,
+      created: i.created, date: i.date, rank: i.rank, collections: i.collections, tags: i.tags && i.tags.length ? i.tags : undefined, p: i.props,
       body_in: cnt(get(bodyIn, p)), body_out: cnt(get(bodyOut, p)), up_in: cnt(get(upIn, p)), coll_in: cnt(get(collIn, p)),
       series: series.get(p) || 0, density: i.density, is_map: i.is_map, maps_linked: i.maps_linked, score: i.score, level: i.level, why: i.why,
       s: [effIn.get(p), effOut.get(p), get(upIn, p).size, get(collIn, p).size], home: homes.has(p),
