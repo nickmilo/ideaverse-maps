@@ -8,14 +8,15 @@
 const LINK = /\[\[([^\]|#^]+)/g;
 const FENCE = /```[\s\S]*?```/g;
 const WORD = /[\p{L}\p{N}_]+/gu;
-const KEYS = /^([A-Za-z_][\w-]*):/gm;
+const KEYS = /^([\p{L}_][\p{L}\p{N}_-]*):/gmu;   // property names in any language (création, Sammlung)
 
 /** Everything the scan needs from one note's text, so a note's text is read only when it changes (see adapter.cache). */
-export const EXTRACT_VERSION = 6;
+export const EXTRACT_VERSION = 7;
 function extractNote(t){
   const [fm, body0] = splitFm(t), body = body0.replace(FENCE, ""), lines = nonEmptyLines(body);
   const keys = []; KEYS.lastIndex = 0; let km; while ((km = KEYS.exec(fm))) if (!keys.includes(km[1])) keys.push(km[1]);
-  const P = []; for (const key of keys) { if (key === "up" || key === "related" || key === "collections") continue; for (const l of links(fmField(fm, key))) P.push(l); }
+  // every property's links, by property name; which names mean up, related and collections is decided at scan time (Settings → Property names)
+  const PL = {}; for (const key of keys) { const l = links(fmField(fm, key)); if (l.length) PL[key] = l; }
   const props = {};
   for (const [key, short] of [["year", "y"], ["yearXP", "yx"], ["imdbRating", "im"], ["open_rate", "or"]]) {
     const v = fmScalar(fm, key).replace(/%+$/, ""); const f = v === "" ? NaN : Number(v); if (isFinite(f)) props[short] = Math.round(f * 100) / 100; }
@@ -23,8 +24,7 @@ function extractNote(t){
   props.w = words(body); props.kb = kb(t); props.sf = senseFeatures(fm, body0, lines);
   const num = {}; for (const key of keys) { const v = fmScalar(fm, key).replace(/%+$/, ""); if (v !== "" && /^-?[\d.,]+$/.test(v)) { const f = Number(v.replace(/,/g, "")); if (isFinite(f)) num[key] = Math.round(f*100)/100; } }   // every number-valued property, for the By → More… axes
   const dates = dateFields(fm);
-  return { num, dates, B: links(body), U: links(fmField(fm, "up")), R: links(fmField(fm, "related")), P, C: links(fmField(fm, "collections")),
-    rank: fmScalar(fm, "rank"), lines: lines.length, linkLines: lines.filter(l => l.includes("[[")).length, props }; }
+  return { num, dates, B: links(body), PL, lines: lines.length, linkLines: lines.filter(l => l.includes("[[")).length, props }; }
 function extractArchive(t, isMd){
   const [fm, b0] = isMd ? splitFm(t) : ["", t], b = b0.replace(FENCE, ""), ls = nonEmptyLines(b);
   return { B: links(b), dates: dateFields(fm), w: words(b), kb: kb(t), sf: senseFeatures(fm, b0, ls), density: ls.length ? r3(ls.filter(l => l.includes("[[")).length / ls.length) : 0 }; }
@@ -39,6 +39,7 @@ export const DEFAULTS = {
   dateProps: ["created", "createdAt", "created_at", "created on", "date created", "dateCreated", "creation date", "creation_date", "date"],  // the property that says when a note was made; the first one a note has wins (any capitalization)    // number properties offered under By → More… (as well as the built-in axes)
   mapFolders: [],         // every note in these folders counts as a map
   mapCollections: ["Maps", "Views"],   // notes listed in these collections count as maps
+  upProps: ["up"], relatedProps: ["related"], collectionProps: ["collections"], rankProps: ["rank"],   // property names (any capitalization); a note may use any of a list
   mdLinks: false,         // also count markdown links to notes ([text](Note.md)); off by default
   fileDates: true,        // a note with no created date and no date in its name is dated by when its file was made
   l5Top: 0,               // the N highest-scoring notes become Level 5; 0 = scale with the vault
@@ -57,7 +58,7 @@ function splitFm(text) {
   return ["", text];
 }
 function fmField(fm, key) {
-  const m = new RegExp("^" + esc(key) + ":([\\s\\S]*?)(?=^[A-Za-z_][\\w-]*:|(?![\\s\\S]))", "m").exec(fm);
+  const m = new RegExp("^" + esc(key) + ":([\\s\\S]*?)(?=^[\\p{L}_][\\p{L}\\p{N}_-]*:|(?![\\s\\S]))", "mu").exec(fm);
   return m ? m[1] : "";
 }
 /** Every property whose value looks like it holds a date (a four-digit year), keyed in lower case, so the date property can be chosen in Settings without reading notes again. */
@@ -153,10 +154,17 @@ export async function scanVault(adapter, settings, onProgress) {
   const info = new Map(); let unresolved = 0;
 
   // markdown links come marked from the extract: kept (unmarked) when the setting is on, dropped when it's off
-  const mdk = a => C.mdLinks ? a.map(x => x[0] === "\u0001" ? x.slice(1) : x) : a.filter(x => x[0] !== "\u0001");
+  const mdk = a => !a ? [] : C.mdLinks ? a.map(x => x[0] === "\u0001" ? x.slice(1) : x) : a.filter(x => x[0] !== "\u0001");   // (archive notes have only body links)
+  // which properties are up, related, collections and rank: the names in Settings (any capitalization), first match wins for rank
+  const nm = (l, d) => (Array.isArray(l) && l.length ? l : d).map(x => String(x).trim().toLowerCase()).filter(Boolean);
+  const UPK = nm(C.upProps, ["up"]), RLK = nm(C.relatedProps, ["related"]), CLK = nm(C.collectionProps, ["collections"]), RKK = nm(C.rankProps, ["rank"]), ROLE = new Set([...UPK, ...RLK, ...CLK]);
+  const roles = e => { if (!e || !e.PL) return e; const U = [], R_ = [], P = [], Cs = []; for (const k of Object.keys(e.PL)) { const lk = k.toLowerCase(), l = e.PL[k];
+      if (UPK.includes(lk)) U.push(...l); if (RLK.includes(lk)) R_.push(...l); if (CLK.includes(lk)) Cs.push(...l); if (!ROLE.has(lk)) P.push(...l); }
+    let rank = ""; if (e.num) { const nk = {}; for (const k of Object.keys(e.num)) nk[k.toLowerCase()] = e.num[k]; for (const k of RKK) if (nk[k] != null) { rank = nk[k]; break; } }
+    return { ...e, U, R: R_, P, C: Cs, rank }; };
   const mdl = e => e && { ...e, B: mdk(e.B), U: mdk(e.U), R: mdk(e.R), P: mdk(e.P), C: mdk(e.C) };
   for (const p of paths) {
-    const e = mdl(ex.get(p)); if (!e) continue;
+    const e = mdl(roles(ex.get(p))); if (!e) continue;
     const colls = e.C.map(x => base(x.trim()));
     const title = stem(p);
     for (const l of e.B) {

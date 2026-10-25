@@ -161,6 +161,8 @@ The first time it runs, the plugin looks for home notes (named Home, Home Base o
 
 Notes are dated by their `created` property (any capitalization; `createdAt`, `date created`, `date` and similar names work too, and you can add your own or reorder them in Settings → Date property; the first one a note has wins), or a date in the file name, or (if you leave it on) when the file was made. A month or year alone (`2024-05`, `2024`) counts as its first day. If your files' dates come from git checkouts or a sync, turn off Dates from files and point at your own property instead.
 
+If your vault names its properties differently (`collection` instead of `collections`, `parent` instead of `up`), set them in Settings → Property names: Up, Related, Collections and Rank each take a comma-separated list, in any capitalization.
+
 Links are `[[wikilinks]]`. If your vault also has markdown links to notes (`[text](folder/Note.md)`, often written by tools), turn on Settings → Markdown links.
 
 ## Privacy
