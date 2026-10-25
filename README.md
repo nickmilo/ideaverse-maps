@@ -20,7 +20,7 @@ Five bands, one per Idea Emergence level. Left to right is time (when each note 
 
 ### Ideaverse
 
-Your whole vault as a ball of notes in 3D: every note pushes the others away and its links pull it toward its neighbors, drawn with the emergence symbols so hubs and maps stand out. Drag to turn it, scroll to fly in, and let Orbit (in Animations) turn it slowly, like the Earth, or Spinning. It's the animation at the top of this page.
+Your whole vault as a ball of notes in 3D: every note pushes the others away and its links pull it toward its neighbors, drawn with the emergence symbols so hubs and maps stand out. Drag to turn it, scroll to fly in, and let Orbit (in Animations) turn it slowly, like the Earth, or Mercury. It's the animation at the top of this page.
 
 ### Gravity (More)
 

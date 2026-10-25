@@ -2366,7 +2366,7 @@ EXP.graph = {
   legend: "Obsidian: every note pulled toward the notes it links to and pushed away from the rest, like Obsidian's graph view, drawn with the emergence symbols so hubs and maps stand out. Unlinked notes ring the outside. Drag a note and its links tug the rest along; let go and it settles. Click a note to light up its links; the Timelapse grows it, and Focus mode and Wander Mode work here too.",
 };
 
-EXP.ideaverse = { ...EXP.graph, legend: "Ideaverse: your whole vault as a ball of notes, pulled together by their links and pushed apart by each other, drawn with the emergence symbols. Drag to turn it, scroll to fly in; Orbit in Animations turns it (Earth and Spinning too). Unlinked notes sit on a shell around the rest. Click a note to light up its links." };
+EXP.ideaverse = { ...EXP.graph, legend: "Ideaverse: your whole vault as a ball of notes, pulled together by their links and pushed apart by each other, drawn with the emergence symbols. Drag to turn it, scroll to fly in; Orbit in Animations turns it (Earth, Mercury or LYT Speed). Unlinked notes sit on a shell around the rest. Click a note to light up its links." };
 
 // ---------- PKM Planet: the six domains of personal knowledge as a world map on a table ----------
 // Each note settles around a landmark in its domain (by folder and title); hubs and maps sit at the heart of each
@@ -2661,10 +2661,10 @@ const s3dOn = () => view === "stars" && S3D;
 // toward one galaxy (a different one each time, bigger ones more often) and back out again. Any touch, drag or scroll stops it.
 let drifting = false, driftRaf = 0, driftT0 = 0, driftLast = 0, driftGal = -1, driftCyc = -1, driftK0 = 1, DSF = "slow", DSG = "earth";
 const DRIFT = {calm: [.018, 70], slow: [.035, 44], lively: [.07, 26], earth: [.05, 0], spin: [.45, 0], lyt: [1.125, 0]};   // spin: Earth, fast (the 3D Obsidian map)
-// Earth, Spinning and LYT hold a 20° tilt; with Wobble on, the tilt rocks 8° either way once a turn, like a spinning top
+// Earth, Mercury and LYT hold a 20° tilt; with Wobble on, the tilt rocks 8° either way once a turn, like a spinning top
 let WOB = pref("iv-wob", false) === true;
 const tilt = yaw => (20 + (WOB ? 8*Math.sin(yaw) : 0))*Math.PI/180;
-// two Orbit choices, kept apart: maps you turn like a globe (the Ideaverse, Tesla, Corona, Octahedron, Shells, the PKM Globe) use Earth, Spinning or LYT Speed;
+// two Orbit choices, kept apart: maps you turn like a globe (the Ideaverse, Tesla, Corona, Octahedron, Shells, the PKM Globe) use Earth, Mercury or LYT Speed;
 // every other map uses Calm, Slow or Lively (a few flat ones also offer Earth; Starfield doesn't)
 const globeSet = () => sphOn() || geo3On();
 const dSp = () => globeSet() ? DSG : view === "stars" && DSF === "earth" ? "slow" : DSF;
@@ -2680,11 +2680,11 @@ function driftFrame(now){
     else { const px = 9*sp*Math.sin(t*.23), py = 6*sp*Math.cos(t*.17); tx += px*dt; ty += py*dt; const f = 1 + .012*Math.cos(t*.5)*sp*dt, cx = W/2, cy = H/2; tx = cx - (cx - tx)*f; ty = cy - (cy - ty)*f; k *= f; }
     render(); return; }
   if (geo3On()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[dSp()], t = (now - driftT0)/1000;
-    // (the Obsidian map turns faster, still swaying as it goes: Lively as fast as Spinning, Slow what Lively was at 2½×, Calm what Slow was)
+    // (the Obsidian map turns faster, still swaying as it goes: Lively as fast as Mercury, Slow what Lively was at 2½×, Calm what Slow was)
     const gSp = GRV() || view === "quincunx" ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[dSp()] : null;
     g3Yaw -= (gSp != null ? gSp : spin)*1.6*dt; g3Pitch = earthy() ? tilt(g3Yaw) : .35 + .3*Math.sin(t*2*Math.PI/((breath || 30)*1.4)); geoProj(); X.set(EX); Y.set(EY); render(); return; }
   if (sphOn()) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[dSp()], t = (now - driftT0)/1000;   // the globe turns slowly, tilting as it goes
-    // Tesla, Corona and the PKM Globe share the Ideaverse's orbit speeds (Calm, Slow, Lively, Earth, Spinning)
+    // Tesla, Corona and the PKM Globe share the Ideaverse's orbit speeds (Calm, Slow, Lively, Earth, Mercury)
     const cSp = sphOn() ? { calm: .035, slow: .175, lively: DRIFT.spin[0] }[dSp()] : null;
     csYaw += (cSp != null ? cSp : spin)*1.6*dt; csPitch = earthy() ? tilt(csYaw) : .3 + .32*Math.sin(t*2*Math.PI/(breath*1.4)); csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); return; }
   const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; const [spin, breath] = DRIFT[earthy() ? "slow" : dSp()], t = (now - driftT0)/1000;
@@ -4131,10 +4131,10 @@ POPS.push(['#vseg button[data-v="stars"]', "#starpop", "#vsegms"]);
 { const d2 = pref("iv-drift", "slow"), d3 = pref("iv-drift3", null);
   DSF = ["calm", "slow", "lively", "earth"].includes(d2) ? d2 : "slow";
   DSG = ["earth", "spin", "lyt"].includes(d3) ? d3 : ["spin", "lyt"].includes(d2) ? d2 : "earth"; }
-{ const eb = root.querySelector('#driftseg button[data-d="earth"]'); if (eb && !root.querySelector('#driftseg button[data-d="spin"]')) { const sb = doc.createElement("button"); sb.dataset.d = "spin"; sb.className = "dearth dspin"; sb.textContent = "Spinning"; sb.setAttribute("aria-label", "Earth, fast: a quick spin at a 20° tilt"); eb.after(sb);
-  // LYT: 2.5 times faster than Spinning
-  const lb = doc.createElement("button"); lb.dataset.d = "lyt"; lb.className = "dearth dspin"; lb.textContent = "LYT Speed"; lb.setAttribute("aria-label", "LYT Speed: Spinning, 2.5 times faster"); sb.after(lb); } }
-const wobLab = doc.createElement("label"); wobLab.className = "pmaps dwob"; wobLab.title = "With Earth, Spinning or LYT: the tilt rocks gently once a turn, like a spinning top";
+{ const eb = root.querySelector('#driftseg button[data-d="earth"]'); if (eb && !root.querySelector('#driftseg button[data-d="spin"]')) { const sb = doc.createElement("button"); sb.dataset.d = "spin"; sb.className = "dearth dspin"; sb.textContent = "Mercury"; sb.setAttribute("aria-label", "Earth, fast: a quick spin at a 20° tilt"); eb.after(sb);
+  // LYT: 2.5 times faster than Mercury
+  const lb = doc.createElement("button"); lb.dataset.d = "lyt"; lb.className = "dearth dspin"; lb.textContent = "LYT Speed"; lb.setAttribute("aria-label", "LYT Speed: Mercury, 2.5 times faster"); sb.after(lb); } }
+const wobLab = doc.createElement("label"); wobLab.className = "pmaps dwob"; wobLab.title = "With Earth, Mercury or LYT: the tilt rocks gently once a turn, like a spinning top";
 { const cb = doc.createElement("input"); cb.type = "checkbox"; cb.id = "dwob"; cb.checked = WOB; const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = "Wobble like the Earth"; wobLab.append(cb, sw, t);
   cb.onchange = () => { WOB = cb.checked; save("iv-wob", WOB); }; $("#driftbar").appendChild(wobLab); }
 const syncDrift = () => { root.querySelectorAll("#driftseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.d === dSp()))); wobLab.classList.toggle("dim", !earthy()); };
