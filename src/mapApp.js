@@ -3380,11 +3380,14 @@ function labels(lit){
     const w = ctx.measureText(t).width, r = rad(i), h = 15, edge = W - sideW() - 6;
     // a name starts at its dot; if that's taken (or past the right edge), it ends at its dot instead; if both are taken it waits for more zoom (the note you're on and the one under the pointer always show)
     const R_ = x + r + 4, L_ = x - r - 4 - w, rOK = R_ + w <= edge, lOK = L_ >= 4;
-    let lx = rOK || !lOK ? R_ : L_;
-    if (!fits(lx-2, y-h/2, w+4, h)) { const alt = lx === R_ ? L_ : R_; if ((alt === L_ ? lOK : rOK) && fits(alt-2, y-h/2, w+4, h)) lx = alt; else if (!(i === sel || i === hover)) continue; }
-    taken.push([lx-2, y-h/2, w+4, h]); LH.push([lx-2, y-h/2, w+4, h, i]);
-    ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.lineJoin = "round"; ctx.strokeText(t, lx, y);
-    ctx.fillStyle = css.ink; ctx.fillText(t, lx, y);
+    // still taken on both sides: the name moves a line up or down, with a hairline back to its dot
+    const first = rOK || !lOK ? R_ : L_, other = first === R_ ? L_ : R_, otherOK = first === R_ ? lOK : rOK, dy = h + 2;
+    const tries = [[first, 0], ...(otherOK ? [[other, 0]] : []), [first, -dy], [first, dy], ...(otherOK ? [[other, -dy], [other, dy]] : [])];
+    let lx = first, ly = y; { const ok = tries.find(([tx_, oy]) => fits(tx_-2, y+oy-h/2, w+4, h) && y+oy > 8 && y+oy < H-8); if (ok) { lx = ok[0]; ly = y + ok[1]; } else if (!(i === sel || i === hover)) continue; }
+    taken.push([lx-2, ly-h/2, w+4, h]); LH.push([lx-2, ly-h/2, w+4, h, i]);
+    if (ly !== y) { const right = lx > x, ex = right ? lx - 2 : lx + w + 2; ctx.save(); ctx.strokeStyle = css.muted; ctx.globalAlpha = .9; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + (right ? r * .7 : -r * .7), y + (ly < y ? -r * .7 : r * .7)); ctx.lineTo(ex, ly); ctx.stroke(); ctx.restore(); }
+    ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.lineJoin = "round"; ctx.strokeText(t, lx, ly);
+    ctx.fillStyle = css.ink; ctx.fillText(t, lx, ly);
     if (++count > 260) break;
   }
 }
