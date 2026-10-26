@@ -1014,3 +1014,5 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm #themeseg .thn{display:none}
 .ivm header.tb2 .thpop #themeseg .thn{display:block}
 .ivm .fcols .fhd.fhdt{cursor:pointer;min-height:24px}
+.ivm.ivm header.tb2 .tbl > #dispms{flex:none}
+.ivm.ivm header.tb2 .tbl > #dispms > #disppop{left:0;right:auto}
