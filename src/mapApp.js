@@ -4735,7 +4735,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     for (const x of [a, b]) { x.min = SLMIN; x.max = NOW_Y; x.step = 1; } const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ cls: "yre", text: String(SLMIN) }); lb.createSpan({ cls: "yre", text: String(NOW_Y) });
     // each handle's year sits under it (the ends keep theirs)
     lb.createSpan({ cls: "yrh" }); lb.createSpan({ cls: "yrh" });
-    yc.createDiv({ cls: "phint", text: "Drag either end. With the switch on, notes from other years and notes with no date wait in strips at the edges; off, they leave the map." });
+    yc.createDiv({ cls: "phint", text: 'You can control the "Date Property" in the Settings, but the default is "Created."' });
     // the same thin switch as Wander Mode's
     const tg = yc.createEl("label", { cls: "pmaps yrall", attr: { "aria-label": "Show notes with no date, and notes from before or after the years shown, in strips at the edges" } });
     const cb = tg.createEl("input", { type: "checkbox", attr: { id: "yrall" } }); cb.checked = YRALL; tg.createEl("i", { cls: "sw" }); tg.createSpan({ text: "Show notes outside the date range" });
