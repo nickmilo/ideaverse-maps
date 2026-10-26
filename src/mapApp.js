@@ -2926,9 +2926,14 @@ function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.m
 // while "Share my ideaverse" records in a square or vertical frame, the map shrinks to fit inside the frame
 function fitTarget(){ const f = fitTarget0(); if (!CAPFIT) return f; const a = capArea(), c = capCrop(), s_ = 1.1 * Math.min(c.w, c.h) / dpr / Math.min(a.x1 - a.x0, H), cx = (a.x0 + a.x1) / 2, cy = H / 2;
   return { k: f.k * s_, tx: cx - (cx - f.tx) * s_, ty: cy - (cy - f.ty) * s_ }; }
+// the room the open Legend and Animations dock take on the left (desktop); tucked away, just their tabs. Fit all used to keep 400 px free
+// whatever was open, leaving Ideaverse, Obsidian, Treemap, Mosaic and the rest small and pushed right
+function leftCol(){ if (isPhone()) return 0; const c = cv.getBoundingClientRect(); let r = 40;
+  for (const el of [$("#legend"), $("#animdock")]) { if (!el || el.hidden || el.classList.contains("collapsed")) continue; const b = el.getBoundingClientRect(); if (b.width > 0) r = Math.max(r, b.right - c.left + 12); }
+  return Math.min(r, 400); }
 function fitTarget0(){ const pad = 56;
-  if (globeOn()) { const lc = isPhone() ? 0 : 400, vw = W - sideW() - lc; return {k: .44*Math.min(vw, H)/(CS_R*1.08), tx: lc + vw/2, ty: H/2}; }
-  if (expOn()) { const lc = isPhone() ? 0 : 400, vw = W - sideW() - lc, b = expBox, bw = b.x1 - b.x0, bh = b.y1 - b.y0, kk = Math.min((vw - pad)/bw, (H - pad)/bh);   // beside the bars' column
+  if (globeOn()) { const lc = leftCol(), vw = W - sideW() - lc; return {k: .44*Math.min(vw, H)/(CS_R*1.08), tx: lc + vw/2, ty: H/2}; }
+  if (expOn()) { const lc = leftCol(), vw = W - sideW() - lc, b = expBox, bw = b.x1 - b.x0, bh = b.y1 - b.y0, kk = Math.min((vw - pad)/bw, (H - pad)/bh);   // beside the bars' column
     return {k: kk, tx: lc + vw/2 - (b.x0 + bw/2)*kk, ty: H/2 - (b.y0 + bh/2)*kk}; }
   if (csphOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: .4*Math.min(vw, H)/(CS_R*1.08), tx: vw/2, ty: H/2}; }
   if (domeOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: Math.max(vw, H*1.2)/2/(DF_*Math.tan(52*Math.PI/180)), tx: vw/2, ty: H/2}; }   // about a 104° view
@@ -3608,7 +3613,8 @@ cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
   const f = Math.min(1.35, Math.max(.74, Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)))); zoomAt(e.offsetX, e.offsetY, f); }, {passive:false});
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
 $("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoomAt(W/2, H/2, 1/1.6); $("#zfit").onclick = () => { if (globeOn()) { csYaw = 0; csPitch = 0; csKeep(); }   // the globe faces the Sea of Knowledge again
-  if (sphOn()) { morph(true, () => fitTarget()); return; } if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, 0]; domeKeep(); morph(true, () => fitTarget()); return; } fit(true); };   // in a dome: face forward again
+  if (sphOn()) { morph(true, () => fitTarget()); return; } if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, 0]; domeKeep(); morph(true, () => fitTarget()); return; }
+  fit(true); };   // in a dome: face forward again
 root.querySelectorAll("#xseg button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.x === mode)); b.onclick = () => setMode(b.dataset.x); });
 $("#xmore").onchange = e => setMode(e.target.value || "time");
 for (const key of Object.keys(AXES)) if (key.startsWith("n:") && !root.querySelector(`#xmore option[value="${CSS.escape(key)}"]`)) $("#xmore").createEl("option", { value: key, text: AXES[key].name });   // your own number properties
@@ -5163,6 +5169,7 @@ return {
     relayout(!!W, false, big ? () => fitTarget() : () => ({ k, tx, ty })); },
   _posters(){ return { pimg: [...PIMG].filter(([, e]) => e.ok).length, cur: PSC().cur, across: PSC().opts && PSC().opts.across.map(a => a.id + ":" + a.kind), lanes: PSC().opts && PSC().opts.lanes.map(a => a.id), img: PSC().img, ticks: PSC().ticks.length, fm: (() => { for (let i=0;i<n;i++) if (vis[i]) return [N[i].path, JSON.stringify(fmOf(i))]; })() }; },
   _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
+  _cam(){ let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i=0;i<n;i++) if (vis[i]) { x0 = Math.min(x0, sx(X[i])); x1 = Math.max(x1, sx(X[i])); y0 = Math.min(y0, sy(Y[i])); y1 = Math.max(y1, sy(Y[i])); } return { view, k, tx, ty, W, H, box: [x0, y0, x1, y1].map(Math.round), side: sideW() }; },
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
   _graph(){ return { mlive: morphing, rms: GPH.x ? Math.round(Math.sqrt([...GPH.x].reduce((t, v, i) => t + v * v + GPH.y[i] * GPH.y[i], 0) / GPH.x.length)) : 0, st: GPH.stepMs, dr: GPH.drawMs, mo: GPH.morph, it: GPH.it, its: GPH.its, key: GPH.key }; },
   setBaseInfo(info){ const sig = info ? JSON.stringify([info.sort, info.order, info.cols, info.groups ? [...info.groups].join() : ""]) : ""; if (sig === baseSig) return;
