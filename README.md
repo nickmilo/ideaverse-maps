@@ -200,7 +200,9 @@ The map reads `[[wikilinks]]`. If your vault also has markdown links to notes, l
 
 ## Privacy
 
-Everything runs on your computer. The plugin reads your notes to draw the map and never changes them. The only file it writes is your saved-views file, in the folder you choose. It also keeps a scan cache in your device's own app storage, not in the vault, which stores each note's links and counts (never its text) so later scans only read what changed. Because it isn't a file in the vault, sync services never have to carry it. It sends nothing anywhere, with one exception. In the Posters map, if a note's image property is a web address, such as a movie poster URL, the map loads that picture from the web, the same way Obsidian does when it shows the picture in a note. Pictures stored in your vault load locally.
+Everything runs on your computer. The plugin lists and reads the notes in your vault to draw the map, and never changes them. The only files it writes are your saved-views file, in the folder you choose, and the pictures and clips you make with Capture, saved to your attachments folder. It also keeps a scan cache in your device's own app storage, not in the vault, which stores each note's links and counts (never its text) so later scans only read what changed. Because it isn't a file in the vault, sync services never have to carry it. It sends nothing anywhere, with one exception. In the Posters map, if a note's image property is a web address, such as a movie poster URL, the map loads that picture from the web, the same way Obsidian does when it shows the picture in a note. Pictures stored in your vault load locally.
+
+Two buttons on the Capture card open a website, and only when you press them: **Post on X** opens x.com with your caption ready to post, and **Instagram** opens www.instagram.com in your browser. Nothing is uploaded for you; you post it yourself. The Copy buttons (a caption, a picture, Bookshelf's index of call numbers) put text or an image on your clipboard; the plugin never reads what's already there.
 
 ## Notes
 

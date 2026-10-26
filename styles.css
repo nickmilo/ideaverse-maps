@@ -807,8 +807,8 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm #vmorepop .chip[hidden]{display:none}
 /* Display → Show more map names: a small two-row grid between the tabs and More, on wide windows only */
 .ivm header.tb2 #vsegms > .vgrid{display:none}
-.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{order:1;display:grid;grid-template-columns:repeat(4,auto);grid-auto-rows:13px;column-gap:10px;row-gap:1px;align-content:center;margin:0 4px 0 8px}
-.ivm header.tb2 .vgrid .vg{all:unset;font:500 10px var(--mono);letter-spacing:.02em;color:var(--muted);cursor:pointer;line-height:13px;white-space:nowrap}
+.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{order:1;display:grid;grid-template-columns:repeat(4,auto);grid-auto-rows:13px;gap:1px 10px;align-content:center;margin:0 4px 0 8px}
+.ivm header.tb2 .vgrid .vg{text-align:left;appearance:none;background:none;border:0;box-shadow:none;margin:0;padding:0;height:auto;font:500 10px var(--mono);letter-spacing:.02em;color:var(--muted);cursor:pointer;line-height:13px;white-space:nowrap}
 .ivm header.tb2 .vgrid .vg:hover,.ivm header.tb2 .vgrid .vg[aria-pressed="true"]{color:var(--ink)}
 .ivm header.tb2 .vgrid .vg[aria-pressed="true"]{text-decoration:underline;text-underline-offset:2px}
 .ivm[data-vgrid="1"] header.tb2 #vsegms > .vcurseg{order:2}
@@ -838,7 +838,7 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm[data-vgrid="1"] header.tb2 #vsegms .seg button,.ivm[data-vgrid="1"] header.tb2 #vmore{padding-left:7px;padding-right:7px}
 .ivm[data-vgrid="1"] header.tb2 .tbr .tbb b{display:none}
 .ivm[data-vgrid="1"] header.tb2 .search{flex:0 1 150px;min-width:100px}
-.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{column-gap:8px;margin:0 2px 0 6px}
+.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{gap:1px 8px;margin:0 2px 0 6px}
 }
 .ivm .yrctl .prng .srange{position:relative}
 .ivm .yrctl .srange .yrh{position:absolute;top:0;transform:translateX(-50%);color:var(--ink);font-weight:600}
@@ -874,16 +874,16 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .dlist .bacto b{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
 .ivm .dlist .bacto .pchip[hidden]{display:none}
 .ivm .dlist .bacto .pchip:disabled{opacity:.45;cursor:default}
-.ivm.ivm .dlist .bacto .bcname{all:unset;color:var(--ink);font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;border-bottom:1px dashed var(--muted)}
+.ivm.ivm .dlist .bacto .bcname{appearance:none;background:none;border:0;box-shadow:none;margin:0;padding:0;height:auto;font:inherit;color:var(--ink);font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;border-bottom:1px dashed var(--muted)}
 .ivm.ivm .dlist .bacto .bcname:hover{color:var(--accent);border-bottom-color:var(--accent)}
 .ivm .dlist .bcfind{display:flex;flex-direction:column;gap:2px;padding:0 4px 6px 34px;max-width:280px}
 .ivm .dlist .bcfind[hidden]{display:none}
 .ivm .dlist .bcfind input{width:100%;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:12px}
-.ivm.ivm .dlist .bchit{all:unset;display:flex;justify-content:space-between;gap:8px;padding:3px 6px;border-radius:5px;font-size:12px;color:var(--ink);cursor:pointer}
+.ivm.ivm .dlist .bchit{appearance:none;background:none;border:0;box-shadow:none;margin:0;height:auto;font:inherit;display:flex;justify-content:space-between;gap:8px;padding:3px 6px;border-radius:5px;font-size:12px;color:var(--ink);cursor:pointer}
 .ivm.ivm .dlist .bchit:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .ivm .dlist .bchit span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ivm .dlist .bclv,.ivm .dlist .bcnone{color:var(--muted);font:400 10.5px var(--mono)}
-.ivm.ivm .dlist .bacto .pchip{all:unset;display:inline-flex;align-items:center;padding:1px 8px;border:1px solid var(--line);border-radius:999px;font:500 11px var(--font-interface,inherit);color:var(--muted);cursor:pointer;white-space:nowrap}
+.ivm.ivm .dlist .bacto .pchip{appearance:none;background:none;box-shadow:none;margin:0;height:auto;display:inline-flex;align-items:center;padding:1px 8px;border:1px solid var(--line);border-radius:999px;font:500 11px var(--font-interface,inherit);color:var(--muted);cursor:pointer;white-space:nowrap}
 .ivm.ivm .dlist .bacto .pchip:hover:not(:disabled){color:var(--ink);border-color:var(--muted)}
 .ivm.ivm .dlist .bacto .pchip[hidden]{display:none}
 .ivm .dlist .bacto{row-gap:4px}
