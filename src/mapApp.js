@@ -96,6 +96,8 @@ const yrEnd = () => YRV.has(curV()) ? YR1 : NOW_Y;
 const yrNarrow = () => YR0 > SLMIN || YR1 < NOW_Y, yrOn = () => YRV.has(curV()) && yrNarrow();
 let subOff = new Set(Array.isArray(pref("iv-subsoff", null)) ? pref("iv-subsoff", null) : []);   // subfolders switched off inside a shown folder (the buried › in Folders)
 let folders = pref("iv-folders", null); if (!Array.isArray(folders)) folders = [...FOLD]; folders = folders.filter(f => FOLD.includes(f));
+// Bases (Filter → Bases): the base views picked, as "path::view name"; BQS marks the notes they hold (null: no base filter)
+let BQ = pref("iv-bq", []); if (!Array.isArray(BQ)) BQ = []; let BQS = null, BQCTX = false, applyBQ = async () => {};
 let colls = pref("iv-coll", []); if (!Array.isArray(colls)) colls = colls ? [String(colls).toLowerCase()] : [];
 let collMode = pref("iv-collmode", "any") === "all" ? "all" : "any";
 N.forEach(d => d._cl = (d.collections || []).map(c => c.toLowerCase()));
@@ -154,14 +156,16 @@ function computeVis(){ const fs = new Set(folders);
       && (fs.has(d.ace) || !FOLD.includes(d.ace))    // vault-root notes always show
       && !subHid[i]
       && collOK(d)
+      && (!BQS || BQS[i])
       && (!fset || fset[i] || curV() === "people")) ? 1 : 0; }
   // tags switched off (Treemap, Bookshelf and Chord by tags) leave the map
   if (tagHide.on()) for (let i=0;i<n;i++) if (vis[i] && tagHide.hid(i)) vis[i] = 0;
   if (YRV.has(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
   if (focus >= 0) vis[focus] = 1;
+  if (BQCTX && BQS && sel >= 0) vis[sel] = 1;   // a base view that follows the picked note keeps that note on the map
   // a filter, a collection or a base that leaves few notes: draw them bigger, so a small set never looks empty
   let nv = 0; for (let i=0;i<n;i++) nv += vis[i]; NVIS = nv;
-  NARROW = colls.length > 0 || !!SCOPE || FOLD.some(f => !fs.has(f));
+  NARROW = colls.length > 0 || !!SCOPE || !!BQS || FOLD.some(f => !fs.has(f));
   BOOST = NARROW && nv ? Math.max(1, Math.min(2.2, Math.pow(n / nv, .25))) : 1; }
 
 const XA = new Float32Array(n), XT = new Float32Array(n), X = new Float32Array(n), Y = new Float32Array(n), R = new Float32Array(n);
@@ -3664,6 +3668,7 @@ function renderTrail(){
   addTrailGrip(el);
 }
 function select(i, fromTrail){
+  if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
   if (rec && i >= 0 && rec.notes[rec.notes.length - 1] !== N[i].path) { rec.notes.push(N[i].path); syncRec(); }   // recording a tour
   if (!fromTrail && i >= 0 && sel >= 0 && sel !== i) { trail.push(sel); if (trail.length > TRAIL_MAX) trail.shift(); }
@@ -4838,6 +4843,36 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     fc.appendChild($("#foldlist")); const sp = $("#specialt"); if (sp) { const sbox = sp.nextElementSibling; fc.appendChild(sp); if (sbox) fc.appendChild(sbox); } }
   { const cc = fcols.createDiv({ cls: "fcol" }), hd = cc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Collections" }); const ac = hd.createSpan({ cls: "facts" }); ac.appendChild($("#collcount")); ac.appendChild($("#collclear"));
     cc.appendChild($("#collq").parentElement); cc.appendChild($("#colllist")); if (!COLL.length) cc.createEl("p", { cls: "pn", text: "No collections yet (a collection shows here once 10 notes name it)." }); }
+  // Bases: every base in the vault, A–Z; open one to pick its views. The map keeps only the notes those views hold (any of them).
+  if (host.baseList) { const bc = fcols.createDiv({ cls: "fcol bcol" }), hd = bc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Bases" }); const ac = hd.createSpan({ cls: "facts" });
+    const bn = ac.createSpan({ cls: "bqn" }); const bclr = ac.createEl("button", { cls: "chip", text: "Clear", attr: { type: "button" } });
+    const bq = bc.createEl("input", { type: "search", attr: { placeholder: "Filter bases", "aria-label": "Filter bases", autocomplete: "off" } }); const bl = bc.createDiv({ cls: "mlist blist" }); const bst = bc.createDiv({ cls: "pn bqst" });
+    let BASES = null, loading = false; const open_ = new Set(BQ.map(k => k.split("::")[0]));
+    const render = () => { bl.empty(); if (!BASES) { bl.createDiv({ cls: "pn", text: loading ? "Reading your bases…" : "" }); return; }
+      const s_ = (bq.value || "").trim().toLowerCase(), rows = BASES.filter(b => !s_ || b.name.toLowerCase().includes(s_) || b.views.some(v => v.name.toLowerCase().includes(s_)));
+      if (!BASES.length) { bl.createDiv({ cls: "pn", text: "No bases in this vault yet." }); return; } if (!rows.length) { bl.createDiv({ cls: "pn", text: "No match." }); return; }
+      for (const b of rows) { const det = bl.createEl("details", { cls: "bqb" }); det.open = open_.has(b.path) || !!s_; det.ontoggle = () => { if (det.open) open_.add(b.path); else open_.delete(b.path); };
+        const sm = det.createEl("summary"); sm.createSpan({ cls: "t", text: b.name }); const nOn = b.views.filter(v => BQ.includes(b.path + "::" + v.name)).length; sm.createSpan({ cls: "m", text: nOn ? `${nOn} on` : String(b.views.length) });
+        if (b.err) det.createDiv({ cls: "pn", text: "Couldn't read this base's file." });
+        for (const v of b.views) { const key = b.path + "::" + v.name, l = det.createEl("label", { cls: "bqv" + (v.err ? " off" : "") }); l.title = v.err ? `The map can't read this view's filter yet (${v.err}).` : v.ctx ? "This view's filter depends on the note it sits in; here it follows the note you pick on the map." : "";
+          const cb = l.createEl("input", { type: "checkbox" }); cb.checked = BQ.includes(key); cb.disabled = !!v.err && !cb.checked; l.createSpan({ cls: "t", text: v.name }); l.createSpan({ cls: "m", text: v.err ? "can't read" : v.ctx ? "follows your note" : v.type });
+          cb.onchange = () => { BQ = cb.checked ? [...BQ, key] : BQ.filter(x => x !== key); save("iv-bq", BQ); applyBQ(); render(); }; } } };
+    const load = async () => { if (loading) return; loading = true; render(); try { BASES = await host.baseList(); } catch (e) { BASES = []; console.warn("Maps of the Ideaverse: couldn't list bases", e); } loading = false; render(); };
+    bq.addEventListener("input", render); bclr.onclick = e => { e.stopPropagation(); BQ = []; save("iv-bq", BQ); applyBQ(); render(); };
+    FI.b.addEventListener("click", () => { void load(); });
+    // work out the notes the picked views hold; views that follow "this" note use the note you've picked on the map (and wait for one)
+    let bqRun = 0; applyBQ = async () => { const run = ++bqRun; bn.setText(""); if (!BQ.length) { BQS = null; BQCTX = false; bst.setText(""); relayout(true); syncTB(); return; }
+      const set = new Uint8Array(n); let any = false, waits = 0, errs = []; BQCTX = false;
+      for (const key of BQ) { const k2 = key.indexOf("::"), path = key.slice(0, k2), vname = key.slice(k2 + 2);
+        const r = await host.baseNotes(path, vname, sel >= 0 ? N[sel].path : null); if (run !== bqRun) return;
+        if (r.need) { BQCTX = true; waits++; continue; } if (r.err) { errs.push(`${vname}: ${r.err}`); continue; }
+        if (BASES) { const vv = (BASES.find(b => b.path === path) || { views: [] }).views.find(v => v.name === vname); if (vv && vv.ctx) BQCTX = true; }
+        any = true; for (const p_ of r.paths) { const i = PIDX.get(p_); if (i != null) set[i] = 1; } }
+      BQS = any ? set : null; let cnt = 0; if (BQS) for (let i = 0; i < n; i++) cnt += BQS[i];
+      bn.setText(BQS ? `${cnt.toLocaleString()} notes` : "");
+      bst.setText([waits ? "Pick a note on the map: a view that follows its note shows the notes that go with it." : "", errs.length ? "Couldn't read: " + errs.join("; ") : ""].filter(Boolean).join(" "));
+      relayout(true, false, () => fitTarget()); syncTB(); };
+    if (BQ.length) win.setTimeout(() => { void applyBQ(); }, 0); }
   $("#foldms").hidden = true; $("#collms").hidden = true; $("#foldms").classList.add("gone"); $("#collms").classList.add("gone"); $("#effbtn").setText("Light up areas and projects");
   opener(FI, () => { renderFoldList(); renderCollList(true); syncColl(); });
   // Display: links, theme, how scoring works
@@ -4969,7 +5004,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }
     yrSec.hidden = !YRV.has(view); $("#yrctl").hidden = !YRV.has(view); syncYr();
-    const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (YRV.has(view) && yrNarrow() ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0);
+    const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (BQ.length ? 1 : 0) + (YRV.has(view) && yrNarrow() ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0);
   };
   const mo2 = new MutationObserver(() => syncTB());
   for (const id of ["#foldx", "#collx"]) mo2.observe($(id), { attributes: true, attributeFilter: ["hidden"] });

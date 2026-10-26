@@ -952,3 +952,20 @@ body.is-phone .ivm .wm-name{display:none}
 
 .ivm .deff{padding:6px 0 2px;border-top:1px solid var(--line);margin-top:4px}
 .ivm .deff .chip{width:100%;justify-content:center}
+
+.ivm header.tb2 #filtpop.bqwide,.ivm header.tb2 #filtpop{width:min(860px,calc(100cqw - 24px))}
+.ivm .fcols{grid-template-columns:repeat(3,minmax(0,1fr))}
+@container ivm (max-width:820px){.ivm .fcols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ivm .fcols .bcol{grid-column:1/-1}}
+.ivm .fcols .blist{max-height:min(300px,45vh);overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+.ivm .blist details>summary{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer;font-size:13px;list-style:none}
+.ivm .blist details>summary::-webkit-details-marker{display:none}
+.ivm .blist details>summary::before{content:"▸";font-size:10px;color:var(--muted);width:10px;flex:none}
+.ivm .blist details[open]>summary::before{content:"▾"}
+.ivm .blist details>summary:hover{background:var(--accent-soft)}
+.ivm .blist .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ivm .blist .m{font-size:11px;color:var(--muted);flex:none}
+.ivm .blist label.bqv{display:flex;align-items:center;gap:8px;padding:3px 6px 3px 26px;border-radius:6px;cursor:pointer;font-size:12.5px;min-width:0}
+.ivm .blist label.bqv:hover{background:var(--accent-soft)}
+.ivm .blist label.bqv.off{opacity:.5;cursor:default}
+.ivm .bqst:empty{display:none}
+.ivm .fcols .bqn{font-size:11px;color:var(--muted)}

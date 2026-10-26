@@ -1,3 +1,4 @@
+import { BaseQ, NeedThis, Unsupported } from "./baseq.js";
 import { Component, FuzzySuggestModal, ItemView, TFile, TFolder, normalizePath } from "obsidian";
 
 /** Pick a folder in the vault, or type a new one (resolves null if closed without choosing). */
@@ -129,6 +130,12 @@ export async function mountInto(owner, el, opts) {
     resource: (link, from) => { if (!link) return null; const f = app.metadataCache.getFirstLinkpathDest(link, from || "") || app.vault.getAbstractFileByPath(normalizePath(link)); return f instanceof TFile ? app.vault.getResourcePath(f) : null; },
     // Show the way home: the note it heads for by default (Settings), if one is set
     wayHome: () => plugin.settings.wayHome || (plugin.settings.homeNotes || [])[0] || "",
+    // filter by a base's view: every base in the vault with its views, and the notes a view holds (read from the .base file; see baseq.js)
+    baseList: async () => { const q = plugin.baseQ || (plugin.baseQ = new BaseQ(app)); const list = q.listBases();
+      for (const b of list) { const r = await q.readBase(b.path); b.err = r ? r.err || null : "the file"; b.views = r ? r.views.map(v => ({ name: v.name, type: v.type, err: v.err, ctx: v.ctx })) : []; } return list; },
+    baseNotes: async (path, viewName, thisPath) => { const q = plugin.baseQ || (plugin.baseQ = new BaseQ(app)); q.back = null; const r = await q.readBase(path); if (!r) return { err: "the base is gone" };
+      const v = r.views.find(x => x.name === viewName); if (!v) return { err: "the view is gone" }; if (v.err) return { err: v.err };
+      try { return { paths: [...q.run(v, thisPath || null)] }; } catch (e) { if (e instanceof NeedThis) return { need: "this" }; if (e instanceof Unsupported) { v.err = e.what; return { err: e.what }; } console.warn("Maps of the Ideaverse: couldn't read the base", path, e); return { err: String(e && e.message || e) }; } },
     savedFolder: () => plugin.settings.viewsFolder || null,
     pickSavedFolder: async () => {
       const dir = await new Promise(res => new FolderPicker(app, res).open());
