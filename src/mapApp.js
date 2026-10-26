@@ -4891,7 +4891,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Display: a short list, no headings: a switch for every link, then how scoring works
   DI.p.classList.add("dlist"); const hold = DI.p.createDiv({ cls: "dhold" }); hold.hidden = true; hold.appendChild($("#alllinks"));
   // Show more map names: the grid beside the tabs (wide windows), with the themes moved in here
-  const vgSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Show eight more map names in small type beside the tabs, on wide windows; the theme buttons move into Display" } }); const vgCb = vgSw.createEl("input", { type: "checkbox" }); vgSw.createEl("i", { cls: "sw" }); vgSw.createSpan({ text: "Show more map names" });
+  const vgSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Show eight more map names in small type beside the tabs, on wide windows" } }); const vgCb = vgSw.createEl("input", { type: "checkbox" }); vgSw.createEl("i", { cls: "sw" }); vgSw.createSpan({ text: "Show more map names" });
   vgCb.checked = VGRID; vgCb.onchange = () => { VGRID = vgCb.checked; save("iv-vgrid", VGRID); syncTB(); };
   const alSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Draw every link on the map, faintly" } }); const alCb = alSw.createEl("input", { type: "checkbox" }); alSw.createEl("i", { cls: "sw" }); alSw.createSpan({ text: "Show all links" });
   alCb.onchange = () => { if (alCb.checked !== showAll) $("#alllinks").click(); };
@@ -5035,8 +5035,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     let g = false; for (const [w, el] of GS) { w.hidden = el.hidden; g = g || !el.hidden; } GR.w.hidden = !g;
     GR.val.setText(view === "shelf" ? (shelfSort === "tag" && TAGNEST ? "Nested tags" : (($("#shelfsort button[aria-pressed=true]") || {}).textContent || "")) : view === "chord" ? (chOneFolder ? "Time · one folder" : chordBy === "tags" && TAGNEST ? "Nested tags" : (($("#chordby button[aria-pressed=true]") || {}).textContent || "")) : view === "treemap" ? (tmTagsOn() ? (TAGNEST ? "Nested tags" : "Tags") : $("#tmsubs").getAttribute("aria-pressed") === "true" ? "Subfolders" : "Folders") : "");
     turnSync(); twWake();
-    // themes sit at the far right, or in Display on phones and when the map-name grid is on (it needs the room)
-    { const inD = isPhone() || VGRID, th = $("#themeseg"), want = inD ? thSec : thSlot; if (th.parentElement !== want) want.appendChild(th); thSec.hidden = !inD; thSlot.hidden = inD; }
+    // the theme buttons live in Display (since 0.6.49), keeping the toolbar short
+    { const inD = true, th = $("#themeseg"), want = inD ? thSec : thSlot; if (th.parentElement !== want) want.appendChild(th); thSec.hidden = !inD; thSlot.hidden = inD; }
     root.dataset.vgrid = VGRID ? "1" : ""; vgrid.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.vg === (view === "chord" ? (CSPH === "out" ? "corona" : CSPH === "in" ? "tesla" : "chord") : view))));
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }
