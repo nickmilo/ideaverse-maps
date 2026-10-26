@@ -3002,7 +3002,8 @@ function visTarget(xs, ys){   // camera that frames every visible note, given wh
   const kk = Math.min(4, Math.max(.1, Math.min((vw - pad*2) / Math.max(x1-x0, 40), (vh - pad*2 - 40) / Math.max(y1-y0, 40))));
   return {k:kk, tx: vw/2 - (x0+x1)/2*kk, ty: (vh + 40)/2 - (y0+y1)/2*kk};
 }
-function rad(i){ if (view === "stars") return Math.max(.7*BOOST, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1)*BOOST, 16)); return Math.max((view === "lincal" ? 1.8 : 1.1)*BOOST, Math.min(R[i]*Math.pow(k, .55)*(geo3On() ? DS3[i] : view === "lincal" ? 1.5 : 1)*BOOST, 30)); }   // 3D Geometric: nearer notes are bigger
+function rad(i){ if (view === "lincal") return Math.max(1.8*BOOST, Math.min(R[i]*Math.pow(k, .55)*1.5*BOOST, 30, LC.C*k*(N[i].level >= 3 ? .17 : .12)));   // Linear Calendar: a dot stays small for its day box (maps and hubs a little bigger), so it never covers its neighbors
+  if (view === "stars") return Math.max(.7*BOOST, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1)*BOOST, 16)); return Math.max((view === "lincal" ? 1.8 : 1.1)*BOOST, Math.min(R[i]*Math.pow(k, .55)*(geo3On() ? DS3[i] : view === "lincal" ? 1.5 : 1)*BOOST, 30)); }   // 3D Geometric: nearer notes are bigger
 
 // ---------- Way home (Kevin Bacon): from the note you're on, the fewest links back to one note (Home by default) ----------
 // Any map: the path lights up as a line through each note on it, named, with the count of steps. Display → Show the way home.
@@ -3366,7 +3367,7 @@ function labels(lit){
   const nv = NVIS;
   // in focus, or with a filter that leaves few notes, name the low levels too
   let minLv = ((focus >= 0 || NARROW) && nv <= 400) ? 1 : k >= 9 ? 1 : k >= 5 ? 2 : k >= 2.2 ? 3 : k >= 1.25 ? 4 : 5; if (NARROW && nv <= 2000) minLv = Math.min(minLv, 2);
-  const taken = []; const fits = (x,y,w,h) => { for (const t of taken) if (x < t[0]+t[2] && x+w > t[0] && y < t[1]+t[3] && y+h > t[1]) return false; return true; };
+  let curI = -1; const taken = []; const fits = (x,y,w,h) => { for (const t of taken) if (x < t[0]+t[2] && x+w > t[0] && y < t[1]+t[3] && y+h > t[1]) return false; return fitsFor(curI, x, y, w, h); };
   ctx.textBaseline = "middle";
   const must = [];
   if (sel >= 0) must.push(sel); if (hover >= 0) must.push(hover);
@@ -3375,8 +3376,11 @@ function labels(lit){
   if (lit) [...lit].filter(j => j !== hl).sort((a,b) => (N[b].level-N[a].level) || (N[b].score-N[a].score)).forEach(j => must.push(j));
   const seen = new Set(), list = [...must, ...order];
   let count = 0, lowN = 0;
+  // the dots of maps and hubs (Level 3 and up) on screen: no other note's name may cover them
+  const dotsTaken = []; if (!(view === "chord" || view === "stars" || domeOn() || sphOn())) for (let i=0;i<n;i++) { if (N[i].level < 3 || !VV(i)) continue; const x_ = sx(X[i]), y_ = sy(Y[i]); if (x_ < -20 || x_ > W+20 || y_ < -20 || y_ > H+20) continue; const r_ = rad(i); dotsTaken.push([x_ - r_, y_ - r_, 2*r_, 2*r_, i]); }
+  const fitsFor = (j, x, y, w, h) => { for (const t of dotsTaken) if (t[4] !== j && x < t[0]+t[2] && x+w > t[0] && y < t[1]+t[3] && y+h > t[1]) return false; return true; };
   for (const i of list) {
-    if (seen.has(i) || !VV(i)) continue; seen.add(i);
+    if (seen.has(i) || !VV(i)) continue; seen.add(i); curI = i;
     const isMust = must.includes(i);
     if (!isMust && N[i].level < minLv) continue;
     if (!isMust && expOn() && EXP[view].ownLabels) continue;   // these maps name things their own way; titles show for the note you're on and its links
@@ -3505,7 +3509,7 @@ dbg.__ivPickTest = () => { if (sel < 0) return null; let ok = 0, other = 0, tot 
 function dotPick(x, y){ const rr = Math.max(12/k, 2); let best = -1, bd = Infinity;
   const c0 = Math.floor((x-rr-30)/CELL), c1 = Math.floor((x+rr+30)/CELL), r0 = Math.floor((y-rr-30)/CELL), r1 = Math.floor((y+rr+30)/CELL);
   for (let a=c0;a<=c1;a++) for (let b=r0;b<=r1;b++) { const g = grid.get(a+","+b); if (!g) continue;
-    for (const i of g) { if (!VV(i)) continue; const d = Math.hypot((X[i]-x)*k, (Y[i]-y)*k); if (d < Math.max(rad(i) + 8, 10) && d < bd) { bd = d; best = i; } } }
+    for (const i of g) { if (!VV(i)) continue; const d = Math.hypot((X[i]-x)*k, (Y[i]-y)*k), e_ = d - rad(i); if (d < Math.max(rad(i) + 8, 10) && e_ < bd) { bd = e_; best = i; } } }   // closest to its edge wins, so a big dot isn't stolen by a small one beside it
   return best; }
 function pick(px, py){
   if (expOn() && EXP[view].pick && !(morphing && senseT == null)) { if (EXP[view].spinePick) return EXP[view].pick(wx(px), wy(py));   // Bookshelf: names never block the books, so a finger can glide along the shelf either way
