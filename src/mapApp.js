@@ -4700,6 +4700,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     // Base Builder: any base (any targeted set) by its own columns, right after Bookshelf
     const gbb = doc.createElement("button"); gbb.className = "chip"; gbb.id = "gobuilder"; gbb.textContent = "Base Builder"; gbb.setAttribute("aria-label", "The notes in a base laid out by the base's own columns: a date or number left to right, a category per row, a number for size");
     $("#goshelf").after(gbb); gbb.onclick = () => { closePops(); driftStop(); setView("builder"); };
+    // Linear Calendar: up from Experimental → Linear, right after Base Builder
+    { const lc = $("#golincal"); if (lc) gbb.after(lc); }
     // Graph: our take on the core graph view, first in the list
     const gg = doc.createElement("button"); gg.className = "chip"; gg.id = "gograph"; gg.textContent = "Obsidian"; gg.setAttribute("aria-label", "Like Obsidian's graph view: notes pulled together by their links, drawn with the emergence symbols");
     for (const [id, v, label, tip] of [["gogravity", "gravity", "Gravity", "The five levels as rings: hubs at the center, unlinked notes on the rim"]]) {
@@ -4911,7 +4913,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Efforts: light up areas and projects (it changes what stands out, not what is shown, so it lives in Display)
   { const eb = $("#effbtn"), pnl = $("#effpanel"); eb.hidden = true; hold.appendChild(eb);
     const sw_ = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "A panel to pick areas and projects; each one picked lights up its notes" } }); const cb = sw_.createEl("input", { type: "checkbox" }); sw_.createEl("i", { cls: "sw" }); sw_.createSpan({ text: "Show area and projects selector" });
-    sw_.hidden = !EFF.length; cb.checked = !pnl.hidden; cb.onchange = () => { if (cb.checked === pnl.hidden) eb.click(); if (cb.checked) closePops(); };
+    sw_.hidden = !EFF.length; cb.checked = !pnl.hidden; cb.onchange = () => { if (cb.checked === pnl.hidden) eb.click(); };   // Display stays open as the panel comes and goes
     new MutationObserver(() => { cb.checked = !pnl.hidden; }).observe(pnl, { attributes: true, attributeFilter: ["hidden"] }); }
   const thSec = DI.p.createDiv({ cls: "fsec thsec" }); thSec.createDiv({ cls: "pt", text: "Theme" });
   DI.p.appendChild($("#scorebtn")); $("#scorebtn").className = "drow dlink"; $("#scorebtn").setText("How notes are scored ›");
