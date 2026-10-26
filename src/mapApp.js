@@ -4688,7 +4688,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   for (const [v, t, go] of [["gravity", "Gravity", () => setView("gravity")], ["graph", "Obsidian", () => setView("graph")], ["chord", "Chord", () => goChord("")], ["corona", "Corona", () => goChord("out")], ["tesla", "Tesla", () => goChord("in")], ["treemap", "Treemap", () => setView("treemap")], ["mosaic", "Mosaic", () => setView("mosaic")], ["shelf", "Bookshelf", () => setView("shelf")]]) {
     const b = vgrid.createEl("button", { text: t, cls: "vg", attr: { type: "button" } }); b.dataset.vg = v; b.onclick = e => { e.stopPropagation(); closePops(); driftStop(); go(); if (typeof syncTB === "function") syncTB(); }; }
   const vcurSeg = $("#vsegms").createDiv({ cls: "seg vcurseg" }), vcur = vcurSeg.createEl("button", { cls: "vcur", attr: { id: "vcur", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
-  $("#vmore").setText("More ▾"); $("#vmore").setAttribute("aria-label", "More maps");
+  // every map, one click away: a ☰ before the tabs opens the full list (the four main maps first, then the rest)
+  { const mo = $("#vmore"); mo.empty(); setIcon(mo, "menu"); const sv = mo.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } mo.setAttribute("aria-label", "All maps"); mo.title = "All maps"; mo.classList.add("vham"); }
   $("#vsegms").insertBefore($("#vmore"), $("#vseg").nextSibling);   // More sits outside the tabs, so it never scrolls out of sight
   // More: Chord, Corona, Tesla, Treemap and Bookshelf straight away; Geometric, Linear, Planet and Unfinished under Experimental
   { const pop = $("#vmorepop"), ex = $("#mexp"), sk = ex.querySelector(":scope > details"); for (const b of [...ex.querySelectorAll(":scope > button")]) pop.insertBefore(b, ex);
@@ -4995,17 +4996,17 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const ARR_OFF = new Set(["ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   // a narrow map: the main tabs that don't fit fold into More (from the right: Sensemakers, then Starfield, then Ideaverse), which becomes More maps, with them at the top
   const MAIN = [...$("#vseg").querySelectorAll(":scope > button[data-v]")].filter(b => !b.hidden && !b.classList.contains("vburied"));
-  // the folded tabs sit at the top of the list as ordinary entries, above a thin line (the list needs no "More maps" title: the button says it)
-  const FOLD_T = new Set(), vfold = doc.createElement("div"); vfold.className = "vfold"; { const pop = $("#vmorepop"), t0 = pop.querySelector(":scope > .pt"); if (t0) t0.remove(); pop.prepend(vfold); }
+  // the list: "Maps of the Ideaverse", the four main maps, a thin line, then the rest
+  const FOLD_T = new Set(), vfold = doc.createElement("div"); vfold.className = "vfold"; { const pop = $("#vmorepop"), t0 = pop.querySelector(":scope > .pt"); if (t0) { t0.setText("Maps of the Ideaverse"); t0.after(vfold); } else pop.prepend(vfold); }
   const tabV = v => v === "spacetime" ? "emergence" : v;
   const fitTabs = () => { const vs = $("#vseg"), mo = $("#vmore"), sm = $("#vsegms"), tl = sm.parentElement; if (!vs || !vs.isConnected || !vs.clientWidth) return;
     const over = () => sm.scrollWidth > sm.clientWidth + 1 || tl.scrollWidth > tl.clientWidth + 1;
-    const fold = () => { for (const b of MAIN) b.hidden = false; FOLD_T.clear(); mo.setText("More ▾");
-      for (let j = MAIN.length - 1; j >= 1 && over(); j--) { MAIN[j].hidden = true; FOLD_T.add(MAIN[j].dataset.v); if (FOLD_T.size === 1) mo.setText("More maps ▾"); } };
+    const fold = () => { for (const b of MAIN) b.hidden = false; FOLD_T.clear();
+      for (let j = MAIN.length - 1; j >= 1 && over(); j--) { MAIN[j].hidden = true; FOLD_T.add(MAIN[j].dataset.v); } };
     // one row if it fits (folding tabs as needed); if even Emergence alone doesn't fit beside the tools, the tools drop to a second row and the tabs get the whole first row
     root.dataset.tbwrap = ""; fold(); if (over() || FOLD_T.size >= MAIN.length - 1 && FOLD_T.size) { root.dataset.tbwrap = "1"; fold(); }
-    $("#vmorepop").querySelectorAll(":scope > .vfoldb").forEach(x => x.remove()); vfold.hidden = !FOLD_T.size;
-    for (const b of MAIN) if (FOLD_T.has(b.dataset.v)) { const c = $("#vmorepop").createEl("button", { cls: "chip", text: b.textContent.replace(/\s*▾\s*$/, ""), attr: { type: "button" } }); if (tabV(view) === b.dataset.v) c.classList.add("on");
+    $("#vmorepop").querySelectorAll(":scope > .vfoldb").forEach(x => x.remove()); vfold.hidden = false;
+    for (const b of MAIN) { const c = $("#vmorepop").createEl("button", { cls: "chip", text: b.textContent.replace(/\s*▾\s*$/, ""), attr: { type: "button" } }); if (tabV(view) === b.dataset.v) c.classList.add("on");
       c.classList.add("vfoldb"); vfold.before(c);
       c.onclick = e => { e.stopPropagation(); closePops(); driftStop(); if (tabV(view) !== b.dataset.v) setView(b.dataset.v); syncTB(); }; } };
   let fitRaf = 0; const fitSoon = () => { if (fitRaf) return; fitRaf = RAF(() => { fitRaf = 0; const was = [...FOLD_T].join(); fitTabs(); if ([...FOLD_T].join() !== was) syncTB(); }); };

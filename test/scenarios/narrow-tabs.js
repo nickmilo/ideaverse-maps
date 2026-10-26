@@ -3,7 +3,7 @@ module.exports = async ({ page, sleep, shot }) => {
   const errs = []; page.on('pageerror', e => errs.push(e.message));
   if (process.env.DESK) { await page.evaluate(() => app.emulateMobile(false)); await sleep(3000); }
   await page.evaluate(() => app.commands.executeCommandById('ideaverse-maps:open')); await page.waitForSelector('.ivm canvas', { timeout: 120000 }); await sleep(2500);
-  const state = () => page.evaluate(() => ({ tabs: [...document.querySelectorAll('.ivm #vseg > button[data-v]')].filter(b => !b.hidden && b.offsetParent).map(b => b.dataset.v).join(','), more: document.querySelector('.ivm #vmore').textContent, fold: [...document.querySelectorAll('.ivm .vfoldb')].map(b => b.textContent).join(','), w: document.querySelector('.ivm canvas').clientWidth }));
+  const state = () => page.evaluate(() => ({ tabs: [...document.querySelectorAll('.ivm #vseg > button[data-v]')].filter(b => !b.hidden && b.offsetParent).map(b => b.dataset.v).join(','), more: document.querySelector('.ivm #vmore').getAttribute('aria-label'), fold: [...document.querySelectorAll('.ivm .vfoldb')].map(b => b.textContent).join(','), w: document.querySelector('.ivm canvas').clientWidth }));
   const split = async w => { await page.evaluate(w => { const el = document.querySelector('.workspace-split.mod-root'); el.style.width = w + 'px'; el.style.flex = 'none'; window.dispatchEvent(new Event('resize')); }, w); await sleep(1200); };
   console.log('wide', JSON.stringify(await state()));
   await split(780); console.log('780', JSON.stringify(await state())); await shot('nt-780');

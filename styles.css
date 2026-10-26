@@ -977,3 +977,6 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm[data-tbwrap="1"] header.tb2{flex-wrap:wrap}
 .ivm.ivm[data-tbwrap="1"] header.tb2 .tbl{flex:1 1 100%}
 .ivm.ivm[data-tbwrap="1"] header.tb2 .tbr{flex:1 1 100%;justify-content:flex-start;flex-wrap:wrap}
+.ivm.ivm header.tb2 #vsegms > #vmore.vham{order:-1;border:none;background:none;padding:4px 6px;display:flex;align-items:center;color:var(--muted);border-radius:8px}
+.ivm.ivm header.tb2 #vsegms > #vmore.vham:hover,.ivm.ivm header.tb2 #vsegms > #vmore.vham[aria-expanded="true"]{color:var(--ink);background:var(--accent-soft)}
+.ivm.ivm header.tb2 #vmorepop{left:0;right:auto}

@@ -14,7 +14,7 @@ Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinkin
 
 ## The maps
 
-The toolbar shows four main maps: Emergence, Ideaverse, Starfield and Sensemakers. Click a map's tab a second time to see its variants and options. The **More** menu holds every other map. If your window is wide, you can turn on **Display → Show more map names** to list eight of them in small type next to the tabs.
+The toolbar shows four main maps: Emergence, Ideaverse, Starfield and Sensemakers. Click a map's tab a second time to see its variants and options. The **☰** menu before the tabs lists every map, the four main ones first. If your window is wide, you can turn on **Display → Show more map names** to list eight of them in small type next to the tabs.
 
 ### Emergence
 
@@ -53,7 +53,7 @@ Sensemakers sorts your notes into four ways of working with ideas. A Synthesizer
 
 ## More maps
 
-These maps live in the **More** menu.
+These maps live in the **☰** menu.
 
 ### Obsidian
 
@@ -162,7 +162,7 @@ A note's score counts the links coming in, the links going out, links that go bo
 
 - Open the map from the orbit icon in the ribbon, or with the command **Maps of the Ideaverse: Open map**.
 - Click a note to see its links. **Open note** opens it beside the map. Cmd-click a note (Ctrl-click on Windows and Linux), on the map or on Open note, and it opens in a new tab in the left sidebar, so the map stays where it is.
-- The toolbar runs along the top in one row. The maps are on the left. Click the current map's tab to see its options, and use **More** for the other maps. Next come **Arrange**, which sets how notes are placed, and **Group**, on maps that group notes. Then **Filter** narrows the map by years, folders, collections or bases, and **Display** holds the drawing options. After those are **Find**, **Focus on active note**, **Sync active note with Obsidian editor** and **Saved**.
+- The toolbar runs along the top in one row. The maps are on the left. Click the current map's tab to see its options. The ☰ before the tabs lists every map: the four main ones first, then the rest. On a narrow pane, main tabs that don't fit leave the bar but stay in that list. Next come **Arrange**, which sets how notes are placed, and **Group**, on maps that group notes. Then **Filter** narrows the map by years, folders, collections or bases, and **Display** holds the drawing options. After those are **Find**, **Focus on active note**, **Sync active note with Obsidian editor** and **Saved**.
 - **Filter → Bases** lists every base in your vault, A to Z. Open one to see its views, and check a view to keep only the notes it holds; check several and you get the notes in any of them. The map reads each base's filters itself, so it works without opening the base. A view whose filter depends on the note it sits in (one that uses `this`) follows the note you pick on the map. If a filter uses something the map can't read yet, that view is marked "can't read" instead of showing the wrong notes.
 - **Show the way home** is in Display. When it's on, the note you're looking at lights up the shortest chain of links back to your home note, names every note along the way, and counts the steps, like six degrees of Kevin Bacon. To aim at a different note, click the destination's name and search for any note, or click a note on the map and choose **Use this note**. **Default** sends it back to your home note, and you can change which note that is in Settings. A small switch bends the straight lines into gentle curves if you prefer.
 - Press `/` to search. Drag to move around, and scroll to zoom. **Focus** shows one note and its neighbors. You can turn it on with the target icon in the toolbar or with **Focus on its links** in a note's panel.
