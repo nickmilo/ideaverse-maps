@@ -1,6 +1,6 @@
 /* Maps of the Ideaverse: the map itself. Ported from the standalone HTML map (index.html) with its logic intact:
    the page's code runs inside the plugin's view, scoped to `root`, with Obsidian handling storage, events and notes. */
-import { sanitizeHTMLToDom, setIcon } from "obsidian";
+import { Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 
 export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
@@ -3546,7 +3546,7 @@ const end = e => { pts.delete(e.pointerId);
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
-  if (i >= 0 && host.openNote && (e.metaKey || (e.ctrlKey && !/Mac/i.test(navigator.platform)))) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
+  if (i >= 0 && host.openNote && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (isPhone() || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hover = -1; shTape = -1; draw(); } tip.hidden = true; });
