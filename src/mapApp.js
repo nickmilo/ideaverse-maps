@@ -20,7 +20,7 @@ const html = el => ({ set v(h) { el.empty(); el.append(sanitizeHTMLToDom(h)); } 
 const PACKS0 = (D.settings && D.settings.packs) || "";
 const cv = $("#cv"), ctx = cv.getContext("2d");
 let placeAnitab = () => {};   // set by the Animations dock (below)
-let syncTB = () => {}, toggleMapOpts = () => {}, lastDown = null;   // lastDown: where the last press landed on the map   // set by the toolbar (below): labels, counts and which buttons show
+let CAPFIT = false, syncTB = () => {}, toggleMapOpts = () => {}, lastDown = null;   // lastDown: where the last press landed on the map   // set by the toolbar (below): labels, counts and which buttons show
 
 const N = D.nodes, E = D.edges, n = N.length;
 const LEVELS = [
@@ -2907,7 +2907,10 @@ function syncCls(){ const m = root.querySelector("main"), hd = root.querySelecto
   if (hd && fb) hd.toggleClass("has-fb", !fb.hidden); syncTB();
   root.querySelectorAll(".ms").forEach(ms => { const x = ms.querySelector(":scope > .qx"); ms.toggleClass("has-x", !!x && !x.hidden); }); }
 function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(doc.body.classList.contains("is-mobile") ? 1.5 : 2, win.devicePixelRatio||1);   /* phones and tablets draw a little lighter */ const firstSize = !(W > 0) && r.width > 0, cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); if (firstSize || !isFinite(k) || !isFinite(tx)) { const f = fitTarget(); if (isFinite(f.k) && f.k > 0) { k = f.k; tx = f.tx; ty = f.ty; } } draw(); }   // opened while hidden (a base still laying out): fit once it has a size
-function fitTarget(){ const pad = 56;
+// while "Share my ideaverse" records in a square or vertical frame, the map shrinks to fit inside the frame
+function fitTarget(){ const f = fitTarget0(); if (!CAPFIT) return f; const a = capArea(), c = capCrop(), s_ = 1.1 * Math.min(c.w, c.h) / dpr / Math.min(a.x1 - a.x0, H), cx = (a.x0 + a.x1) / 2, cy = H / 2;
+  return { k: f.k * s_, tx: cx - (cx - f.tx) * s_, ty: cy - (cy - f.ty) * s_ }; }
+function fitTarget0(){ const pad = 56;
   if (globeOn()) { const lc = isPhone() ? 0 : 400, vw = W - sideW() - lc; return {k: .44*Math.min(vw, H)/(CS_R*1.08), tx: lc + vw/2, ty: H/2}; }
   if (expOn()) { const lc = isPhone() ? 0 : 400, vw = W - sideW() - lc, b = expBox, bw = b.x1 - b.x0, bh = b.y1 - b.y0, kk = Math.min((vw - pad)/bw, (H - pad)/bh);   // beside the bars' column
     return {k: kk, tx: lc + vw/2 - (b.x0 + bw/2)*kk, ty: H/2 - (b.y0 + bh/2)*kk}; }
@@ -3025,9 +3028,22 @@ function drawBacon(){ const hl = sel >= 0 ? sel : hover; if (hl < 0 || !vis[hl])
   ctx.restore(); }
 
 // Capture (toolbar camera): while a snapshot or clip is being taken, titles can be hidden and a small credit drawn in the corner
-const CAP = { on: false, hide: pref("iv-caphide", false) === true, credit: pref("iv-capcredit", true) !== false, len: +pref("iv-caplen", 10) || 10, start: ["none", "orbit", "timelapse"].includes(pref("iv-capstart", "orbit")) ? pref("iv-capstart", "orbit") : "orbit" };
-function capCredit(){ const t = "Maps of the Ideaverse", fs = Math.max(11, Math.min(16, W / 90)); ctx.save(); ctx.font = `600 ${fs}px ${css.display}`; ctx.textAlign = "right"; ctx.textBaseline = "bottom";
-  ctx.globalAlpha = .75; ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.fillStyle = css.ink; ctx.strokeText(t, W - 14, H - 12); ctx.fillText(t, W - 14, H - 12); ctx.restore(); }
+const CAP = { on: false, frame: ["map", "square", "vertical"].includes(pref("iv-capframe", "map")) ? pref("iv-capframe", "map") : "map", hide: pref("iv-caphide", false) === true, credit: pref("iv-capcredit", true) !== false, len: +pref("iv-caplen", 10) || 10, start: ["none", "orbit", "timelapse"].includes(pref("iv-capstart", "orbit")) ? pref("iv-capstart", "orbit") : "orbit" };
+// the part of the map a capture keeps, in canvas pixels: all of it, or a centered square (Instagram) or 9:16 (TikTok, Reels, Stories)
+// the stretch of the screen the map is drawn in: right of the left column (where a map has one) and left of the note panel
+function capArea(){ const ph = isPhone(), lc = !ph && (globeOn() || expOn() || view === "sense" || view === "stars") ? 400 : 0; return { x0: lc, x1: W - (ph || view === "chord" || view === "stars" ? 0 : sideW()) }; }
+function capCrop(){ const cw = cv.width, ch = cv.height, a = CAP.frame === "square" ? 1 : CAP.frame === "vertical" ? 9 / 16 : cw / ch; if (CAP.frame === "map") return { x: 0, y: 0, w: cw, h: ch };
+  const ar = capArea(), aw = (ar.x1 - ar.x0) * dpr; let w = ch * a, h = ch; if (w > aw) { w = aw; h = aw / a; } const cx = (ar.x0 + ar.x1) / 2 * dpr; return { x: Math.max(0, Math.min(cw - w, cx - w / 2)), y: (ch - h) / 2, w, h }; }
+// one frame of a capture: the map, cropped to its frame, scaled to the output, with the credit in the corner
+function capCompose(out){ const c = capCrop(), o = out.getContext("2d"); o.drawImage(cv, c.x, c.y, c.w, c.h, 0, 0, out.width, out.height);
+  if (CAP.credit) { const t = "Maps of the Ideaverse", fs = Math.round(out.width / 42); o.save(); o.font = `600 ${fs}px ${css.display}`; o.textAlign = "right"; o.textBaseline = "bottom"; o.globalAlpha = .8; o.lineWidth = fs / 3; o.strokeStyle = css.bg; o.fillStyle = css.ink;
+    o.strokeText(t, out.width - fs, out.height - fs * .8); o.fillText(t, out.width - fs, out.height - fs * .8); o.restore(); } }
+function capCanvas(){ const c = capCrop(), out = doc.createElement("canvas"), fixed = CAP.frame === "square" ? [1080, 1080] : CAP.frame === "vertical" ? [1080, 1920] : null;
+  out.width = fixed ? fixed[0] : Math.round(c.w); out.height = fixed ? fixed[1] : Math.round(c.h); return out; }
+// while the Capture menu is open with a square or vertical frame, the map dims outside it, so you can place what you want inside
+function capGuide(){ if (CAP.on || CAP.frame === "map") return; const pp = $("#cappop"); if (!pp || pp.hidden) return; const c = capCrop(), x = c.x / dpr, y = c.y / dpr, w = c.w / dpr, h = c.h / dpr;
+  ctx.save(); ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, 0, W, y); ctx.fillRect(0, y + h, W, H - y - h); ctx.fillRect(0, y, x, h); ctx.fillRect(x + w, y, W - x - w, h);
+  ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5; ctx.setLineDash([6, 5]); ctx.strokeRect(x + .5, y + .5, w - 1, h - 1); ctx.restore(); }
 function render(){
   raf = 0;
   if (!(W > 0 && H > 0) || !isFinite(k) || !isFinite(tx) || !isFinite(ty)) return;   // hidden (a background tab or a base still laying out): nothing to draw yet
@@ -3165,7 +3181,7 @@ function render(){
   if (BACON) drawBacon();
   axisLabels();
   if (GROWV() && senseT != null) drawGrowth();
-  if (CAP.on && CAP.credit) capCredit();
+  capGuide();
   if (swap) Object.assign(css, swap);
 }
 // level names, pinned to the left edge: drawn under the links and notes, so they never cover the note you're on
@@ -4800,9 +4816,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const CP = popBtn("cap", "Capture", "star"); CP.b.empty(); setIcon(CP.b, "camera"); { const sv = CP.b.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } CP.b.classList.add("tbi"); CP.b.setAttribute("aria-label", "Capture a picture or a clip to share"); CP.b.title = "Capture a picture or a clip to share";
     const recDot = CP.b.createSpan({ cls: "tbadge capdot" }); recDot.hidden = true;
     CP.p.classList.add("cappop"); CP.p.createDiv({ cls: "pt", text: "Capture" });
+    // one click: a 10-second clip of the Ideaverse globe turning, in the shape chosen below, then back to the map you were on
+    const shareB = CP.p.createEl("button", { cls: "chip on capshare", text: "Share my ideaverse", attr: { type: "button", title: "Records 10 seconds of the Ideaverse map turning, ready to post" } });
     const row = CP.p.createDiv({ cls: "caprow" }); const shotB = row.createEl("button", { cls: "chip on", text: "Picture", attr: { type: "button", title: "A PNG of the map as it is now" } }), clipB = row.createEl("button", { cls: "chip on", text: "Clip", attr: { type: "button", title: "A short video of the map moving" } });
     const segOf = (label, key, opts, cur, onSet) => { const w = CP.p.createDiv({ cls: "capopt" }); w.createSpan({ cls: "capl", text: label }); const sg = w.createDiv({ cls: "seg" });
       for (const [v, t] of opts) { const b = sg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(v === cur) } }); b.onclick = e => { e.stopPropagation(); sg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); onSet(v); save(key, v); }; } };
+    segOf("Shape", "iv-capframe", [["map", "As shown"], ["square", "Square"], ["vertical", "Vertical"]], CAP.frame, v => { CAP.frame = v; draw(); });
+    CP.p.createDiv({ cls: "pn capfn", text: "Square fits Instagram posts; Vertical (9:16) fits TikTok, Reels and Stories. The map dims outside the frame while this menu is open." });
     segOf("Clip length", "iv-caplen", [[5, "5 s"], [10, "10 s"], [20, "20 s"]], CAP.len, v => CAP.len = v);
     segOf("While it records", "iv-capstart", [["orbit", "Orbit"], ["timelapse", "Timelapse"], ["none", "Nothing"]], CAP.start, v => CAP.start = v);
     const sw = (label, key, val, onSet, tip) => { const l = CP.p.createEl("label", { cls: "pmaps capsw", attr: { title: tip } }); const c = l.createEl("input", { type: "checkbox" }); c.checked = val; l.createEl("i", { cls: "sw" }); l.createSpan({ text: label }); c.onchange = () => { onSet(c.checked); save(key, c.checked); }; l.onclick = e => e.stopPropagation(); };
@@ -4812,7 +4832,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     opener(CP);
     // the card that appears after a capture
     let card = null; const cardOut = () => { if (card) { card.remove(); card = null; } };
-    const caption = () => `My ideaverse as ${VN()}, made with Maps of the Ideaverse for Obsidian: https://github.com/nickmilo/ideaverse-maps #MapsOfTheIdeaverse`;
+    let capVN = ""; const caption = () => `My ideaverse as ${capVN || VN()}, made with Maps of the Ideaverse for Obsidian: https://github.com/nickmilo/ideaverse-maps`;
     const showCard = (path, blob, kind) => { cardOut(); card = cv.parentElement.createDiv({ cls: "capcard" }); const url = URL.createObjectURL(blob);
       if (kind === "image") card.createEl("img", { attr: { src: url, alt: "The capture" } }); else { const v = card.createEl("video", { attr: { src: url, autoplay: "", loop: "", muted: "", playsinline: "" } }); v.muted = true; }
       const tx = card.createDiv({ cls: "capt" }); tx.createEl("b", { text: kind === "image" ? "Picture saved" : "Clip saved" }); tx.createSpan({ cls: "capp", text: path });
@@ -4820,25 +4840,35 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       if (kind === "image") mk("Copy picture", async b => { try { await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); b.setText("Copied"); } catch (err) { b.setText("Couldn't copy"); } }, "Copy the picture, to paste into a post or a message");
       mk("Copy caption", async b => { try { await navigator.clipboard.writeText(caption()); b.setText("Copied"); } catch (err) { b.setText("Couldn't copy"); } }, caption());
       mk("Post on X", () => { win.open("https://x.com/intent/post?text=" + encodeURIComponent(caption())); }, "Opens a new post with the caption; attach the " + (kind === "image" ? "picture" : "clip") + " from your vault (or paste the copied picture)");
+      // Instagram and TikTok have no link that starts a post, so these copy the caption and open the upload page
+      const copyGo = (b, url) => { navigator.clipboard.writeText(caption()).then(() => b.setText("Caption copied"), () => {}); win.open(url); };
+      mk("Instagram", b => copyGo(b, "https://www.instagram.com/"), "Copies the caption and opens Instagram; press + to post the " + (kind === "image" ? "picture" : "clip") + " from your vault");
+      mk("TikTok", b => copyGo(b, "https://www.tiktok.com/upload"), "Copies the caption and opens TikTok's upload page; choose the " + (kind === "image" ? "picture" : "clip") + " from your vault");
       if (host.openFile) mk("Open", () => host.openFile(path), "Open it in Obsidian");
       const x = card.createEl("button", { cls: "capx", text: "×", attr: { type: "button", "aria-label": "Close" } }); x.onclick = e => { e.stopPropagation(); URL.revokeObjectURL(url); cardOut(); }; };
     const stamp = () => { const d = new Date(), z = n_ => String(n_).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}`; };
-    const saveIt = async (blob, ext, kind) => { if (!host.saveCapture) return; const name = `${stamp()} Maps of the Ideaverse ${VN()}.${ext}`.replace(/[\\/:*?"<>|]/g, "-");
+    const saveIt = async (blob, ext, kind, vn = VN()) => { if (!host.saveCapture) return; capVN = vn; const name = `${stamp()} Maps of the Ideaverse${vn === "Ideaverse" ? "" : " " + vn}.${ext}`.replace(/[\\/:*?"<>|]/g, "-");
       try { const path = await host.saveCapture(name, await blob.arrayBuffer()); showCard(path, blob, kind); } catch (err) { showCard("Couldn't save: " + (err && err.message || err), blob, kind); } };
-    shotB.onclick = e => { e.stopPropagation(); closePops(); CAP.on = true; render(); cv.toBlob(blob => { CAP.on = false; draw(); if (blob) void saveIt(blob, "png", "image"); }, "image/png"); };
+    shotB.onclick = e => { e.stopPropagation(); closePops(); CAP.on = true; render(); const out = capCanvas(); capCompose(out); CAP.on = false; draw(); out.toBlob(blob => { if (blob) void saveIt(blob, "png", "image"); }, "image/png"); };
     // a clip: the canvas as a video stream, redrawn every frame while it records; stops after the length chosen, or when the Timelapse ends
     let rec = null;
     const stopClip = () => { if (rec && rec.state !== "inactive") rec.stop(); };
-    clipB.onclick = e => { e.stopPropagation(); closePops(); if (rec) { stopClip(); return; }
+    let after = null;
+    clipB.onclick = e => { e.stopPropagation(); closePops(); if (rec) { stopClip(); return; } startClip({}); };
+    shareB.onclick = e => { e.stopPropagation(); closePops(); if (rec) return; const back = view;
+      CAPFIT = CAP.frame !== "map"; if (view !== "ideaverse") { setView("ideaverse"); syncTB(); } else if (CAPFIT) animateTo(fitTarget());
+      after = back !== "ideaverse" ? () => { setView(back); syncTB(); } : null;
+      win.setTimeout(() => startClip({ start: "orbit", len: 10, credit: true }), 1100); };
+    const startClip = o => { const keep = { start: CAP.start, len: CAP.len, credit: CAP.credit }; Object.assign(CAP, o); const undo = () => Object.assign(CAP, keep);
       const types = ["video/mp4;codecs=avc1.42E01E", "video/mp4", "video/webm;codecs=vp9", "video/webm"], type = types.find(t => win.MediaRecorder && win.MediaRecorder.isTypeSupported(t));
-      if (!type || !cv.captureStream) { showCard("This version of Obsidian can't record clips.", new Blob([]), "image"); return; }
-      const stream = cv.captureStream(30), chunks = []; rec = new win.MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 8e6 }); CAP.on = true;
+      if (!type || !cv.captureStream) { undo(); showCard("This version of Obsidian can't record clips.", new Blob([]), "image"); return; }
+      const out = capCanvas(), stream = out.captureStream(30), chunks = []; rec = new win.MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 8e6 }); CAP.on = true; render(); capCompose(out);
       rec.ondataavailable = ev => { if (ev.data && ev.data.size) chunks.push(ev.data); };
-      let raf_ = 0; const tick = () => { if (!rec) return; render(); raf_ = RAF(tick); }; raf_ = RAF(tick);
+      let raf_ = 0; const tick = () => { if (!rec) return; render(); capCompose(out); raf_ = RAF(tick); }; raf_ = RAF(tick);
       const t0 = performance.now(), maxMs = (CAP.start === "timelapse" ? 120 : CAP.len) * 1000;
       const timer = win.setInterval(() => { const sec = Math.round((performance.now() - t0) / 1000); recDot.setText(String(sec)); if (performance.now() - t0 > maxMs || (CAP.start === "timelapse" && performance.now() - t0 > 1500 && !sensePlaying)) stopClip(); }, 250);
-      rec.onstop = () => { win.clearInterval(timer); win.cancelAnimationFrame(raf_); CAP.on = false; recDot.hidden = true; CP.b.classList.remove("caprec"); if (CAP.start === "orbit") driftStop();
-        const blob = new Blob(chunks, { type: type.split(";")[0] }); rec = null; draw(); void saveIt(blob, type.startsWith("video/mp4") ? "mp4" : "webm", "video"); };
+      rec.onstop = () => { win.clearInterval(timer); win.cancelAnimationFrame(raf_); CAP.on = false; recDot.hidden = true; CP.b.classList.remove("caprec"); if (CAP.start === "orbit") driftStop(); undo(); const vn = VN(), wasFit = CAPFIT; CAPFIT = false; if (after) { after(); after = null; } else if (wasFit) animateTo(fitTarget());
+        const blob = new Blob(chunks, { type: type.split(";")[0] }); rec = null; draw(); void saveIt(blob, type.startsWith("video/mp4") ? "mp4" : "webm", "video", vn); };
       rec.start(250); recDot.hidden = false; recDot.setText("0"); CP.b.classList.add("caprec");
       if (CAP.start === "orbit") driftStart(); else if (CAP.start === "timelapse" && !sensePlaying) $("#tlplay").click(); };
     // while recording, the camera button stops the clip

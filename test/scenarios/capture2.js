@@ -1,0 +1,21 @@
+module.exports = async ({ page, sleep, shot }) => {
+  const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text().slice(0, 200)); });
+  await page.evaluate(() => app.commands.executeCommandById('ideaverse-maps:open')); await page.waitForSelector('.ivm canvas', { timeout: 120000 }); await sleep(2000);
+  await page.evaluate(() => document.querySelector('.ivm #vseg button[data-v="stars"]').click()); await sleep(3000);
+  await page.evaluate(() => document.querySelector('.ivm #capbtn').click()); await sleep(300);
+  await page.evaluate(() => [...document.querySelectorAll('.ivm #cappop .seg button')].find(x => x.textContent === 'Vertical').click()); await sleep(500);
+  await page.mouse.move(1599, 300); await shot('cap2-menu');
+  await page.evaluate(() => [...document.querySelectorAll('.ivm #cappop .caprow .chip')][0].click()); await sleep(2500);
+  console.log('picture:', await page.evaluate(() => { const i = document.querySelector('.ivm .capcard img'); return i ? i.naturalWidth + 'x' + i.naturalHeight : 'none'; }));
+  await shot('cap2-card');
+  await page.evaluate(() => document.querySelector('.ivm #capbtn').click()); await sleep(300);
+  await page.evaluate(() => document.querySelector('.ivm .capshare').click()); await sleep(2500);
+  console.log('during share:', await page.evaluate(() => document.querySelector('.ivm').dataset.view + ' ' + document.querySelector('.ivm #capbtn').className));
+  await shot('cap2-rec');
+  await sleep(10500);
+  console.log('after share:', await page.evaluate(() => { const c = document.querySelector('.ivm .capcard'), v = c && c.querySelector('video'); return document.querySelector('.ivm').dataset.view + ' | ' + (c ? c.textContent : 'no card') + ' | ' + (v ? v.videoWidth + 'x' + v.videoHeight + ' ' + v.duration : ''); }));
+  await shot('cap2-after');
+  const files = await page.evaluate(() => app.vault.getFiles().filter(f => /Maps of the Ideaverse/.test(f.name) && /png|mp4|webm/.test(f.extension)).map(f => f.path + ' ' + f.stat.size));
+  console.log('files:', files.join(' | '));
+  console.log('errors:', errs.join(' | ') || 'none');
+};
