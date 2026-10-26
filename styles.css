@@ -1078,3 +1078,12 @@ body:not(.is-mobile) .ivm .wm-lyt{bottom:38px}
 /* Show more maps in the header: shown whenever the row has room (the toolbar code drops it first) */
 .ivm.ivm.ivm[data-vgrid="1"]:not([data-vgoff="1"]) header.tb2 #vsegms > .vgrid{display:grid}
 .ivm.ivm.ivm[data-vgoff="1"] header.tb2 #vsegms > .vgrid{display:none}
+/* 0.7.23 · Group's choices under the gear, styled like Starfield's settings: a small label, then a compact switch, a thin line between rows */
+.ivm.ivm header.tb2 #mapopts > .pt:first-child{border:0;padding-bottom:0}
+.ivm.ivm header.tb2 #mapopts .gsec{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:6px;padding-top:8px;border-top:1px solid var(--line)}
+.ivm.ivm header.tb2 #mapopts .gsec[hidden],.ivm.ivm header.tb2 #mapopts .swrow[hidden]{display:none}
+.ivm.ivm header.tb2 #mapopts .gsec > .pt{margin:0;font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);border:0;padding:0}
+.ivm.ivm header.tb2 #mapopts .gsec > .swrow{margin:0;padding:0;border:0}
+.ivm.ivm.ivm header.tb2 #mapopts .swsrc{display:none}
+.ivm.ivm header.tb2 #mapopts #laygrp > .swrow{align-self:stretch}
+.ivm.ivm header.tb2 #mapopts #laygrp > .gsec{align-self:stretch}

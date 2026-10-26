@@ -5083,7 +5083,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     MB.setAttribute("aria-label", "Maps"); MB.title = "Maps";
     for (const [id, ic] of Object.entries(MICON)) { const el = id.startsWith("go") && MP.querySelector("#" + id); if (el) micon(el, ic); }
     const t0 = MP.querySelector(":scope > .pt"); if (t0) t0.after(Object.assign(doc.createElement("div"), { className: "vfold vfold0" }));
-    { const ex = MP.querySelector(":scope > details"); if (ex) { ex.before(Object.assign(doc.createElement("div"), { className: "vfold" })); const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
+    { const ex = MP.querySelector(":scope > details"); if (ex) { const exd = Object.assign(doc.createElement("div"), { className: "vfold" }); ex.before(exd);
+        // Nick's order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Chord, Corona, Tesla, Base Builder (the quick keys follow it)
+        for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gochord", "gocso", "gocsi", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
+        for (const v of ["gravity", "graph", "treemap", "mosaic", "shelf", "chord", "corona", "tesla"]) { const g_ = vgrid.querySelector(`[data-vg="${v}"]`); if (g_) vgrid.appendChild(g_); } const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
     const QK = [..."1234567890-=[]\\"];
     const KEYMAPS = () => [...MP.querySelectorAll(":scope > .chip")].filter(c_ => !c_.hidden);
     const chipFor = () => { const id = { gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", lincal: "golincal", spiral: "gospiral", lifeline: "golifeline",
@@ -5091,7 +5094,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };
     // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
     const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop"]) $(id).hidden = id !== v_; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
-      syncRange(); moT.setText(VN()); const l = hasLay(); moL.hidden = !l || !v_; moNone.hidden = true; return !!(l || v_); };
+      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); moL.hidden = !l || !v_; moNone.hidden = true; return !!(l || v_); };
     // no hover hints in the maps menu (Nick): a map's description stays for screen readers only
     const quiet = () => MP.querySelectorAll("[aria-label], [title]").forEach(el => { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("title"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); });
     const openMaps = () => { quiet(); closePops("#vmorepop"); if (typeof closeColl === "function") closeColl(); MP.hidden = false; MB.setAttribute("aria-expanded", "true");
@@ -5117,6 +5120,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       const ch = KEYMAPS()[j_]; if (!ch) return; e.preventDefault(); ch.click(); });
     // Group's choices (Bookshelf's Shelve by, Chord, Corona and Tesla's Arcs by, Treemap's Boxes by and Subfolders) live under the gear, first; the Group button is gone
     for (const j of [3, 2, 1, 0]) $("#laygrp").prepend(GS[j][0]);
+    // a lone on/off chip becomes a row like Starfield's (a small label, then Off | On); the chip stays as the source of truth, out of sight
+    const swRow = (chip, label) => { const r = doc.createElement("div"); r.className = "sglow swrow"; chip.before(r); r.createSpan({ cls: "sgl", text: label });
+      const sg = r.createDiv({ cls: "seg", attr: { role: "group", "aria-label": label } });
+      const bs = [["Off", false], ["On", true]].map(([t, v]) => { const b_ = sg.createEl("button", { text: t, attr: { type: "button" } }); b_.onclick = e => { e.stopPropagation(); if ((chip.getAttribute("aria-pressed") === "true") !== v) chip.click(); }; return [b_, v]; });
+      r.appendChild(chip); chip.classList.add("swsrc");
+      const sync = () => { const on = chip.getAttribute("aria-pressed") === "true"; for (const [b_, v] of bs) b_.setAttribute("aria-pressed", String(on === v)); r.hidden = chip.hidden; };
+      sync(); new MutationObserver(sync).observe(chip, { attributes: true, attributeFilter: ["aria-pressed", "hidden"] }); };
+    { const t_ = GS[3][0].querySelector(":scope > .pt"); if (t_) t_.remove(); swRow($("#tmsubs"), "Subfolders"); swRow($("#csbands"), "Bands"); }
     { const s1 = syncTB; syncTB = () => { s1(); GR.w.hidden = true; }; } }
   const mo2 = new MutationObserver(() => syncTB());
   for (const id of ["#foldx", "#collx"]) mo2.observe($(id), { attributes: true, attributeFilter: ["hidden"] });
