@@ -5089,9 +5089,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         // Nick's order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Tesla, Corona, Chord, Base Builder (the quick keys follow it)
         for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
         for (const v of ["gravity", "graph", "treemap", "mosaic", "shelf", "tesla", "corona", "chord"]) { const g_ = vgrid.querySelector(`[data-vg="${v}"]`); if (g_) vgrid.appendChild(g_); } const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
-    // the quick keys in list order; Base Builder is always \ (Nick), wherever it sits
-    const QK = [..."1234567890-=[]"];
-    const KEYED = () => { const m_ = new Map(), cs = KEYMAPS().filter(c_ => c_.id !== "gobuilder"); cs.slice(0, QK.length).forEach((c_, j) => m_.set(QK[j], c_)); const bb = MP.querySelector("#gobuilder"); if (bb) m_.set("\\", bb); return m_; };
+    // the quick keys in list order; two are pinned wherever their maps sit (Nick): Linear Calendar is always 0, Base Builder always \
+    const QK = [..."123456789-=[]"], QPIN = { golincal: "0", gobuilder: "\\" };
+    const KEYED = () => { const m_ = new Map(), cs = KEYMAPS().filter(c_ => !QPIN[c_.id]); cs.slice(0, QK.length).forEach((c_, j) => m_.set(QK[j], c_));
+      for (const [id, k_] of Object.entries(QPIN)) { const el = MP.querySelector("#" + id); if (el) m_.set(k_, el); } return m_; };
     const KEYMAPS = () => [...MP.querySelectorAll(":scope > .chip")].filter(c_ => !c_.hidden);
     const chipFor = () => { const id = { gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", lincal: "golincal", spiral: "gospiral", lifeline: "golifeline",
         tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" ? "gocso" : CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
