@@ -4691,7 +4691,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // every map, one click away: a ☰ before the tabs opens the full list (the four main maps first, then the rest)
   { const mo = $("#vmore"); mo.empty(); setIcon(mo, "menu"); const sv = mo.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } mo.setAttribute("aria-label", "All maps"); mo.title = "All maps"; mo.classList.add("vham"); }
   // since 0.7.15 the ☰ and the map's name are one button: it opens the maps menu, with this map's settings beside it
-  const mbName = $("#vmore").createSpan({ cls: "vmn" }); $("#vmore").createSpan({ cls: "vcar", text: "▾" });
+  const mbName = $("#vmore").createSpan({ cls: "vmn" }); { const ca = $("#vmore").createSpan({ cls: "vcar vchev", attr: { "aria-hidden": "true" } }); setIcon(ca, "chevron-down"); }
   $("#vsegms").insertBefore($("#vmore"), $("#vseg").nextSibling);   // More sits outside the tabs, so it never scrolls out of sight
   // More: Chord, Corona, Tesla, Treemap and Bookshelf straight away; Geometric, Linear, Planet and Unfinished under Experimental
   { const pop = $("#vmorepop"), ex = $("#mexp"), sk = ex.querySelector(":scope > details"); for (const b of [...ex.querySelectorAll(":scope > button")]) pop.insertBefore(b, ex);

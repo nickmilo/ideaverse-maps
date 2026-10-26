@@ -9,7 +9,7 @@ module.exports = async ({ page, sleep, shot }) => {
   await shot('mm-bar');
   await page.locator('.ivm #vmore').click(); await sleep(600); await shot('mm-emergence'); console.log('emergence', JSON.stringify(await info()));
   await page.keyboard.press('Escape'); await sleep(300);
-  await page.keyboard.press('3'); await sleep(1500); console.log('key3', await page.evaluate(() => document.querySelector('.ivm #vmore').textContent));
+  await page.screenshot({ path: process.env.SHOTS + '/mm-btn.png', clip: { x: 340, y: 80, width: 340, height: 45 } }); await page.keyboard.press('3'); await sleep(1500); console.log('key3', await page.evaluate(() => document.querySelector('.ivm #vmore').textContent));
   await page.locator('.ivm #vmore').click(); await sleep(600); await shot('mm-stars'); console.log('stars', JSON.stringify(await info()));
   await page.locator('.ivm #vmorepop #goshelf').click(); await sleep(1500);
   await page.locator('.ivm #vmore').click(); await sleep(600); await shot('mm-shelf'); console.log('shelf', JSON.stringify(await info()));

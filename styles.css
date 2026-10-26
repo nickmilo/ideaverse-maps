@@ -1066,3 +1066,5 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm #vmorepop .chip{justify-content:flex-start;text-align:left}
 .ivm.ivm header.tb2 #vsegms{flex:none}
 .ivm header.tb2 #vmore .vmn{max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.ivm header.tb2 #vmore .vchev{display:inline-flex;font-size:inherit;opacity:.85;margin-left:-1px}
+.ivm.ivm header.tb2 #vsegms > #vmore.vham .vchev svg{width:14px;height:14px;stroke-width:2.5;opacity:1}
