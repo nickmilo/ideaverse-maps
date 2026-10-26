@@ -4117,10 +4117,8 @@ function renderFocusBar(){
 }
 // the focus bar sits inline in the top row when it fits there; otherwise on its own line, so search and theme never move
 function fitFocus(){
-  const h = root.querySelector("header"), fb = $("#focusbar"); h.classList.remove("fbline");
-  if (fb.hidden || isPhone()) return;
-  const top = root.querySelector(".brand").offsetTop + 30;
-  if (fb.offsetTop > top || $(".search").offsetTop > top || $("#themeseg").offsetTop > top) h.classList.add("fbline");
+  // the focus bar floats on the map now (not in the toolbar), so the toolbar never re-flows around it; measuring it here made the toolbar bounce between one row and two (Oct 26)
+  const h = root.querySelector("header"); h.classList.remove("fbline");
 }
 on(win, "resize", () => fitFocus());
 
@@ -4295,13 +4293,15 @@ function legend(){
   if (domeOn()) $("#legend").createDiv({ text: view === "emergence" ? "Planetarium: you stand at the center. Level 5 is the North Pole, Level 1 the South Pole; " + (mode === "ace" ? "your folders" : "time") + " runs around you. Drag to look around, scroll to zoom, ⤢ to face forward." : view === "gravity" ? "Dome: you stand at the center. Home and the hubs are overhead; the levels drop toward the horizon. Drag to look around, scroll to zoom, ⤢ to face forward." : "Dome: you stand at the center. Time runs around you; folders run from the North Pole (+) to the South Pole (x), with the equator halfway through your notes. Drag to look around, scroll to zoom, ⤢ to face forward.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
 }
 $("#legend").addEventListener("click", () => setLegend(false));   // a click anywhere on the legend tucks it away
-const autoTheme = () => doc.body.classList.contains("theme-dark") ? "dark" : "paper";   // until a theme is picked, follow Obsidian's
-function setTheme(t, keep){ root.setAttribute("data-theme", t); if (keep) save("iv-theme", t); tip.setAttribute("data-theme", t);
+// Dark was retired (Oct 25–26): LYT Mode is the dark theme, so a dark Obsidian gets LYT Mode until a theme is picked
+{ const db_ = root.querySelector('#themeseg button[data-th="dark"]'); if (db_) db_.remove(); }
+const autoTheme = () => doc.body.classList.contains("theme-dark") ? "lyt" : "paper";   // until a theme is picked, follow Obsidian's
+function setTheme(t, keep){ if (t === "dark") t = "lyt"; root.setAttribute("data-theme", t); if (keep) save("iv-theme", t); tip.setAttribute("data-theme", t);
   root.querySelectorAll("#themeseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.th === t))); readCss(); legend(); draw(); }
 root.querySelectorAll("#themeseg button").forEach(b => b.onclick = () => setTheme(b.dataset.th, true));
 setLegend(legendOpen);
 updateCounts();
-{ const t = pref("iv-theme", null); if (t === "sepia") save("iv-theme", "softpaper"); if (t === "cybertron") save("iv-theme", "lyt"); }   // Sepia became Soft Paper (0.1.2); Cybertron was retired for LYT Mode (0.1.49)   // Sepia became Soft Paper (0.1.2)
+{ const t = pref("iv-theme", null); if (t === "sepia") save("iv-theme", "softpaper"); if (t === "cybertron" || t === "dark") save("iv-theme", "lyt"); }   // Dark was retired for LYT Mode (0.7.2)   // Sepia became Soft Paper (0.1.2); Cybertron was retired for LYT Mode (0.1.49)   // Sepia became Soft Paper (0.1.2)
 setTheme(pref("iv-theme", autoTheme()));
 
 
@@ -4882,7 +4882,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   for (const fc of fcols.querySelectorAll(":scope > .fcol")) { const pt = fc.querySelector(".fhd > .pt"); if (!pt) continue; const key = "iv-fshut-" + pt.textContent.trim().toLowerCase();
     pt.classList.add("fcolt"); pt.setAttribute("role", "button"); pt.tabIndex = 0; const set = shut => { fc.classList.toggle("shut", shut); pt.setAttribute("aria-expanded", String(!shut)); pt.title = shut ? "Show this list" : "Hide this list"; };
     set(pref(key, false) === true); const flip = e => { e.stopPropagation(); const shut = !fc.classList.contains("shut"); set(shut); save(key, shut); };
-    pt.onclick = flip; pt.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(e); } }; }
+    pt.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(e); } };
+    // the whole header row folds it (its own buttons, like Clear, still do their own thing)
+    const hd_ = fc.querySelector(".fhd"); hd_.classList.add("fhdt"); hd_.addEventListener("click", e => { if (e.target.closest("button, input, select, label")) return; flip(e); }); }
   $("#foldms").hidden = true; $("#collms").hidden = true; $("#foldms").classList.add("gone"); $("#collms").classList.add("gone"); $("#effbtn").setText("Light up areas and projects");
   opener(FI, () => { renderFoldList(); renderCollList(true); syncColl(); });
   // Display: links, theme, how scoring works
@@ -5007,7 +5009,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Theme: one orb in the toolbar, the theme you're on; it opens the list of themes, each with its name
   const thSlot = right.createDiv({ cls: "thslot" }); thSlot.hidden = true;
   { const TH = popBtn("theme", "Theme", "star"); TH.b.empty(); TH.b.classList.add("tbi", "thorb"); TH.b.setAttribute("aria-label", "Theme"); TH.b.createEl("i"); TH.p.classList.add("thpop"); TH.p.createDiv({ cls: "pt", text: "Theme" });
-    const seg = $("#themeseg"); TH.p.appendChild(seg); const THN = { paper: "Play", softpaper: "Soft Paper", lyt: "LYT Mode", dark: "Dark", obsidian: "Match Obsidian" };
+    const seg = $("#themeseg"); TH.p.appendChild(seg); const THN = { paper: "Play", softpaper: "Soft Paper", lyt: "LYT Mode", obsidian: "Match Obsidian" };
     for (const b of seg.querySelectorAll("button")) if (!b.querySelector(".thn")) b.createSpan({ cls: "thn", text: THN[b.dataset.th] || b.dataset.th });
     const sync = () => { const on = seg.querySelector('button[aria-pressed="true"]'); TH.b.dataset.th = on ? on.dataset.th : ""; const t = "Theme: " + (on ? THN[on.dataset.th] || on.dataset.th : ""); TH.b.setAttribute("aria-label", t); };
     sync(); new MutationObserver(sync).observe(seg, { attributes: true, subtree: true, attributeFilter: ["aria-pressed"] });
@@ -5032,7 +5034,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     for (const b of MAIN) { const c = $("#vmorepop").createEl("button", { cls: "chip", text: b.textContent.replace(/\s*▾\s*$/, ""), attr: { type: "button" } }); if (tabV(view) === b.dataset.v) c.classList.add("on");
       c.classList.add("vfoldb"); vfold.before(c);
       c.onclick = e => { e.stopPropagation(); closePops(); driftStop(); if (tabV(view) !== b.dataset.v) setView(b.dataset.v); syncTB(); }; } };
-  let fitRaf = 0; const fitSoon = () => { if (fitRaf) return; fitRaf = RAF(() => { fitRaf = 0; const was = [...FOLD_T].join(); fitTabs(); if ([...FOLD_T].join() !== was) syncTB(); }); };
+  // refit only when the toolbar's width or the map changes: refitting on every redraw let a borderline width flip back and forth
+  let fitRaf = 0, fitKey = ""; const fitSoon = () => { const k_ = root.querySelector("header").clientWidth + "|" + view + "|" + (sel >= 0 ? 1 : 0); if (k_ === fitKey || fitRaf) return; fitKey = k_; fitRaf = RAF(() => { fitRaf = 0; const was = [...FOLD_T].join(); fitTabs(); if ([...FOLD_T].join() !== was) syncTB(); }); };
   { const ro_ = new ResizeObserver(() => { if (!dead) fitSoon(); }); ro_.observe(root.querySelector("header")); }
   syncTB = () => { syncDrift(); fitSoon();
     const core = CORE.has(view) && !FOLD_T.has(tabV(view)); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });

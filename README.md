@@ -42,7 +42,7 @@ In Starfield, your biggest hubs become the cores of galaxies. Every note joins t
 Starfield's menu lets you switch to 3D, set how strongly the galaxies glow, add a rare twinkle, and make the galaxies turn slowly. During the Timelapse, each new note flares as it appears.
 
 ![Starfield in 3D: galaxies of notes around their hubs](docs/starfield.png)
-<sub>Starfield in 3D, Dark theme. Each galaxy is a hub plus the notes that reach it first.</sub>
+<sub>Starfield in 3D, LYT Mode. Each galaxy is a hub plus the notes that reach it first.</sub>
 
 ### Sensemakers
 
@@ -62,7 +62,7 @@ This is our take on Obsidian's graph view. Every note pushes the others away whi
 The map's menu has the same forces as Obsidian's graph settings. **Gravity** is the pull toward the middle, so lowering it lets a big graph spread out. **Repel** sets how hard notes push each other away, and **Link length** sets how far apart linked notes like to sit. The graph moves as you drag the sliders.
 
 ![Obsidian: a hub and its links](docs/graph.png)
-<sub>The Obsidian map in the Dark theme, zoomed in on a hub and its links.</sub>
+<sub>The Obsidian map in LYT Mode, zoomed in on a hub and its links.</sub>
 
 ### Chord, Corona and Tesla
 
@@ -72,7 +72,7 @@ Chord arranges every note around a ring, grouped into arcs by folder, by year, o
 <sub>Chord in LYT Mode. Each arc is a folder, and each band is the links between two folders.</sub>
 
 ![Corona: links arc over a globe](docs/corona.png)
-<sub>Corona in the Dark theme, with one hub's links arcing over the globe.</sub>
+<sub>Corona in LYT Mode, with one hub's links arcing over the globe.</sub>
 
 ### Treemap
 
@@ -123,7 +123,7 @@ Posters is for a smaller, focused set of notes, such as your movies, your books 
 Posters picks sensible starting choices from the properties your notes have in common. Inside a base, it follows the base's own Sort and Group settings.
 
 ![Posters: films by year, a row per genre](docs/posters.png)
-<sub>Posters in the Dark theme. Made-up films by release year, with a row for each genre, sized by rating.</sub>
+<sub>Posters in LYT Mode. Made-up films by release year, with a row for each genre, sized by rating.</sub>
 
 In **Scatter**, when both numbers measure the same kind of thing, like two ratings or two years, a line shows where they agree. The notes furthest from the line get a ring. Plot your own rating against the crowd's, and your hidden gems stand out above the line.
 
@@ -178,10 +178,10 @@ A note's score counts the links coming in, the links going out, links that go bo
 - **Inside a base** (Obsidian 1.10 or later), add a view and choose **Maps of the Ideaverse**. The map shows only the notes the base returns, such as one project, one book or everything tagged for a course, and it updates when you change the base's filters. Levels still come from your whole vault, so a hub stays a hub. Each base remembers its own map settings inside its `.base` file.
 - **Capture**, the camera button in the toolbar, saves a picture or a short clip of the map into your vault's attachments folder. A clip can record the map orbiting, or your whole Timelapse playing from start to finish. You can hide every note title first if you'd rather keep your notes private, and a small credit can go in the corner. You can keep the map's own shape, or frame it as a square for Instagram or a tall 9:16 for TikTok, Reels and Stories; while the menu is open, the map dims outside the frame so you can see what will be kept. Clips record at 30 frames a second, or 60 if you want the motion smoother. **Share my ideaverse** does it all in one click: ten seconds of your Ideaverse globe turning, in the shape you picked, with the credit on. Afterwards, a card lets you copy the picture, copy a ready-made caption, start a post on X, or open Instagram or TikTok with the caption already copied.
 - When notes change, the map offers to rescan. Only the notes that changed are read again.
-- There are five themes: Play, Soft Paper, Dark, LYT Mode, and one that matches your current Obsidian theme. The circle in the toolbar shows the one you are on; click it to switch.
+- There are four themes: Play, Soft Paper, LYT Mode, and one that matches your current Obsidian theme. The circle in the toolbar shows the one you are on; click it to switch.
 
 ![Focus mode: one note and everything it links to](docs/focus.png)
-<sub>Focus mode on Emergence in the Dark theme. One map is shown with the 36 notes it links to, and the links among them are drawn faintly.</sub>
+<sub>Focus mode on Emergence in LYT Mode. One map is shown with the 36 notes it links to, and the links among them are drawn faintly.</sub>
 
 ## Settings
 
