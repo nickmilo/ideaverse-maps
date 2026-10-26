@@ -980,3 +980,6 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm header.tb2 #vsegms > #vmore.vham{order:-1;border:none;background:none;padding:4px 6px;display:flex;align-items:center;color:var(--muted);border-radius:8px}
 .ivm.ivm header.tb2 #vsegms > #vmore.vham:hover,.ivm.ivm header.tb2 #vsegms > #vmore.vham[aria-expanded="true"]{color:var(--ink);background:var(--accent-soft)}
 .ivm.ivm header.tb2 #vmorepop{left:0;right:auto}
+.ivm.ivm header.tb2 #vsegms > #filtms{order:-1;flex:none}
+.ivm.ivm header.tb2 #filtpop{left:0;right:auto}
+.ivm header.tb2 .tbl > #focusmode,.ivm header.tb2 .tbl > #follownote{flex:none}

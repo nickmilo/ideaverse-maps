@@ -4837,6 +4837,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   opener(GR);
   // Filter: folders, collections, Efforts
   const FI = popBtn("filt", "Filter", "filter"); const badge = FI.b.createSpan({ cls: "tbadge" });
+  // Filter is just its icon (and its count), right after the ☰
+  { const t_ = FI.b.querySelector(".tbl2"); if (t_) t_.remove(); FI.b.classList.add("tbi"); FI.b.setAttribute("aria-label", "Filter"); $("#vsegms").insertBefore(FI.w, $("#vmore").nextSibling); }
   const fsec = (title, el) => { const w = FI.p.createDiv({ cls: "fsec" }); w.createDiv({ cls: "pt", text: title }); w.appendChild(el); };
   // Years shown: one setting for every map of the whole vault, so it lives here rather than in each map's menu
   const yrSec = FI.p.createDiv({ cls: "fsec yrsec" }); yrSec.appendChild($("#yrctl"));
@@ -4922,9 +4924,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Find, Follow note (an icon), Saved, and the ︿ that tucks the bar away
   right.appendChild(root.querySelector("header .search"));
   // Focus on active note (the note and its neighbors), then Sync active note with the Obsidian editor
-  const fo = $("#focusmode"); fo.empty(); fo.appendChild(icon(I.focus)); fo.classList.add("tbb", "tbi"); fo.setAttribute("aria-label", "Focus on active note"); fo.title = "Focus on active note"; right.appendChild(fo);
+  const fo = $("#focusmode"); fo.empty(); fo.appendChild(icon(I.focus)); fo.classList.add("tbb", "tbi"); fo.setAttribute("aria-label", "Focus on active note"); fo.title = "Focus on active note"; left.appendChild(fo);
   // Sync uses Obsidian's own link icon
-  const fb = $("#follownote"); fb.empty(); setIcon(fb, "link"); { const sv = fb.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } fb.classList.add("tbb", "tbi"); fb.setAttribute("aria-label", "Sync active note with Obsidian editor"); fb.title = "Sync active note with Obsidian editor"; right.appendChild(fb);
+  const fb = $("#follownote"); fb.empty(); setIcon(fb, "link"); { const sv = fb.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } fb.classList.add("tbb", "tbi"); fb.setAttribute("aria-label", "Sync active note with Obsidian editor"); fb.title = "Sync active note with Obsidian editor"; left.appendChild(fb);
   right.appendChild($("#viewms")); { const vb = $("#viewbtn"); const t = vb.textContent.replace(/^★\s*/, ""); vb.empty(); vb.appendChild(icon(I.star)); vb.createSpan({ text: t || "Saved" }); vb.classList.add("tbb"); }
   // Capture: a picture (PNG) or a short clip (MP4, or WebM where MP4 can't be recorded) of the map, saved to the vault's attachments,
   // then a small card to copy it, open it, or post it with a ready caption
