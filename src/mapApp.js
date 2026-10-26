@@ -68,9 +68,11 @@ const T1 = (Date.parse((D.generated||"").slice(0,10)) || Date.now()) + 45*DAY;
 const NOW_Y = new Date(T1).getUTCFullYear();
 const TV = new Float64Array(n);
 // a note's date: its Date property (Created by default), or, with Filter → Years → Organize by most recently modified, the day its file was last changed
-const mtDay = ms => { if (!ms) return NaN; const d = new Date(ms); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); };
 let BYMT = host.store.get("iv-mtime") === true;
-const fillTV = () => N.forEach((d,i) => TV[i] = BYMT ? mtDay(d.mt) : /^\d{4}-\d{2}-\d{2}$/.test(d.date||"") ? Date.parse(d.date) : NaN); fillTV();
+// with Organize by most recently modified on, a window back from right now: the last day, week, month or year (or all); Emergence and Space-Time stretch it across the timeline
+const MTW = { day: DAY, week: 7*DAY, month: 30.44*DAY, year: YEAR }; let MTWIN = host.store.get("iv-mtwin") || "all"; if (!MTW[MTWIN]) MTWIN = "all";
+let NOWMS = Date.now(); const winSpan = () => BYMT && MTW[MTWIN] ? MTW[MTWIN] : 0, winStart = () => NOWMS - winSpan();
+const fillTV = () => N.forEach((d,i) => TV[i] = BYMT ? (d.mt || NaN) : /^\d{4}-\d{2}-\d{2}$/.test(d.date||"") ? Date.parse(d.date) : NaN); fillTV();
 const ARCH = Uint8Array.from(N, d => d.archive ? 1 : 0), hasArch = ARCH.some(v => v);
 let minYear = NOW_Y; for (let i=0;i<n;i++) if (!isNaN(TV[i])) minYear = Math.min(minYear, new Date(TV[i]).getUTCFullYear());
 // the sliders start at the first year with a real body of notes (10+), so a stray 1984 note doesn't waste most of the track; older notes sit in "Before"
@@ -97,7 +99,7 @@ let YRALL = pref("iv-yrall", true) !== false;   // on by default (Nick, Oct 24)
 // (the first layout runs before the map's view is set up, so it reads the saved one)
 const curV = () => { try { return view; } catch (e) { return pref("iv-view", "emergence"); } };
 const yrEnd = () => YRV.has(curV()) ? YR1 : NOW_Y;
-const yrNarrow = () => YR0 > SLMIN || YR1 < NOW_Y, yrOn = () => YRV.has(curV()) && yrNarrow();
+const yrNarrow = () => !BYMT && (YR0 > SLMIN || YR1 < NOW_Y), yrOn = () => YRV.has(curV()) && yrNarrow();
 let subOff = new Set(Array.isArray(pref("iv-subsoff", null)) ? pref("iv-subsoff", null) : []);   // subfolders switched off inside a shown folder (the buried › in Folders)
 let folders = pref("iv-folders", null); if (!Array.isArray(folders)) folders = [...FOLD]; folders = folders.filter(f => FOLD.includes(f));
 // Bases (Filter → Bases): the base views picked, as "path::view name"; BQS marks the notes they hold (null: no base filter)
@@ -170,6 +172,7 @@ function computeVis(){ const fs = new Set(folders);
   // tags switched off (Treemap, Bookshelf and Chord by tags) leave the map
   if (tagHide.on()) for (let i=0;i<n;i++) if (vis[i] && tagHide.hid(i)) vis[i] = 0;
   if (YRV.has(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
+  if (winSpan() && YRV.has(curV()) && !YRALL) { const w0 = winStart(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0)) vis[i] = 0; }
   if (focus >= 0) vis[focus] = 1;
   if (BQCTX && BQS && sel >= 0) vis[sel] = 1;   // a base view that follows the picked note keeps that note on the map
   // a filter, a collection or a base that leaves few notes: draw them bigger, so a small set never looks empty
@@ -303,11 +306,13 @@ let TF = 0, TS = 0, UT = 1;
 const units = v => v < TS ? (v - TF)/YEAR*COMP : (TS - TF)/YEAR*COMP + (v - TS)/YEAR;
 const xTime = v => X0T + units(v)/UT * (WW - X0T - AFW);
 const dayFull = () => (WW - X0T - AFW)/UT/365.2425;   // world width of one day at full scale
-function layoutTime(){
-  TF = Date.UTC(fromY,0,1); TS = Date.UTC(fullY,0,1);
-  let tmin = Infinity; for (let i=0;i<n;i++) if (TV[i] < tmin && (vis[i] || !yrOn())) tmin = TV[i];
+// the timeline as the window (Emergence by time, Space-Time) when Organize by most recently modified has a window picked
+const winTL = () => winSpan() > 0 && (curV() === "spacetime" || (curV() === "emergence" && mode === "time"));
+function layoutTime(){ const WIN = winTL();
+  TF = WIN ? winStart() : Date.UTC(fromY,0,1); TS = WIN ? TF : Date.UTC(fullY,0,1);
+  let tmin = Infinity; for (let i=0;i<n;i++) if (TV[i] < tmin && (vis[i] || !(yrOn() || (WIN && !YRALL)))) tmin = TV[i];
   ER = tmin < TF ? [140, 300] : null; X0T = ER ? 340 : 170;
-  const TE = YRV.has(curV()) && YR1 < NOW_Y ? Date.UTC(YR1 + 1, 0, 1) : T1; UT = Math.max(units(TE), .5);
+  const TE = WIN ? NOWMS : YRV.has(curV()) && YR1 < NOW_Y ? Date.UTC(YR1 + 1, 0, 1) : T1; UT = WIN ? Math.max(units(TE), 1e-9) : Math.max(units(TE), .5);
   let tmax = -Infinity; if (TE < T1) for (let i=0;i<n;i++) if (vis[i] && TV[i] >= TE && TV[i] > tmax) tmax = TV[i];
   AR = isFinite(tmax) ? [WW - 160, WW] : null; AFW = AR ? 190 : 0;
   const d1 = dayFull();
@@ -316,7 +321,7 @@ function layoutTime(){
     else if (TV[i] < TF && !ER) XT[i] = X0T - 20;   // outside the years shown: off the map anyway
     else if (TV[i] >= TE) XT[i] = AR ? AR[0] + 8 + Math.sqrt((TV[i] - TE)/Math.max(tmax - TE, 1))*(AR[1]-AR[0]-16) + (j - .5)*6 : WW + 20;
     else if (TV[i] < TF) XT[i] = ER[0] + 8 + Math.sqrt((TV[i] - tmin)/Math.max(TF - tmin, 1))*(ER[1]-ER[0]-16) + (j - .5)*6;   // kept in date order, older to the left
-    else XT[i] = xTime(TV[i]) + (j - .5) * d1 * (TV[i] < TS ? COMP : 1) * 3; }   // ±1.5 days, so same-day notes stay a stripe
+    else XT[i] = xTime(TV[i]) + (WIN ? (j - .5) * (WW - X0T - AFW) * .004 : (j - .5) * d1 * (TV[i] < TS ? COMP : 1) * 3); }   // ±1.5 days, so same-day notes stay a stripe
 }
 
 // ---------- property axes: Rank (top-level) and the "More axes" set ----------
@@ -3371,9 +3376,18 @@ function propLabels(yTop){
     if (x + 3 < last + 8) continue; put(tk.label, x + 3, font, tk.major ? css.ink : css.muted); last = x + 3 + w; }
   put(PA.ax.name.toUpperCase() + (PA.ax.kind === "log" ? " · log scale" : "") + (PA.ax.kind === "year" && PA.ax.anchor != null && PA.umin < 0 ? ` · before ${PA.ax.anchor} compressed` : ""), Math.max(sx(ND[0]), 8), `500 10.5px ${css.mono}`, css.accent, Math.max(yTop - 24, 14));
 }
+// the window's marks, in your own time zone: every 3 hours (a day), each day (a week), each Monday (a month), each month (a year)
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+function winTicks(){ const t0 = winStart(), out_ = [], d = new Date(t0);
+  if (MTWIN === "day") { d.setMinutes(0, 0, 0); d.setHours(Math.ceil((d.getHours() + (t0 > d.getTime() ? 1 : 0))/3)*3);
+    for (; d.getTime() <= NOWMS; d.setHours(d.getHours() + 3)) { const h = d.getHours(); out_.push({ t: d.getTime(), major: h === 0, label: h === 0 ? `${DOW[d.getDay()]} ${d.getDate()}` : `${h % 12 || 12}${h < 12 ? "am" : "pm"}` }); } }
+  else if (MTWIN === "week") { d.setHours(24, 0, 0, 0); for (; d.getTime() <= NOWMS; d.setDate(d.getDate() + 1)) out_.push({ t: d.getTime(), major: true, label: `${DOW[d.getDay()]} ${d.getDate()}` }); }
+  else if (MTWIN === "month") { d.setHours(24, 0, 0, 0); while (d.getDay() !== 1) d.setDate(d.getDate() + 1); for (; d.getTime() <= NOWMS; d.setDate(d.getDate() + 7)) out_.push({ t: d.getTime(), major: true, label: `${MON[d.getMonth()]} ${d.getDate()}` }); }
+  else { d.setHours(0, 0, 0, 0); d.setDate(1); d.setMonth(d.getMonth() + 1); for (; d.getTime() <= NOWMS; d.setMonth(d.getMonth() + 1)) out_.push({ t: d.getTime(), major: d.getMonth() === 0, label: d.getMonth() === 0 ? String(d.getFullYear()) : MON[d.getMonth()] }); }
+  return out_; }
 function timeGuides(){
   const v = x => Math.round(sx(x))+.5, top = sy(0)-6, bot = sy(view === "spacetime" ? STH : WH);
-  if (fullY > fromY) { // shade the compressed years
+  if (fullY > fromY && !winTL()) { // shade the compressed years
     const a = sx(xTime(TF)), b = sx(xTime(TS));
     ctx.fillStyle = css["accent-soft"] || "rgba(0,0,0,.03)"; ctx.globalAlpha = .55; ctx.fillRect(a, top, b - a, bot - top); ctx.globalAlpha = 1;
   }
@@ -3382,6 +3396,7 @@ function timeGuides(){
   if (ER) { ctx.moveTo(v(ER[1]+20), top); ctx.lineTo(v(ER[1]+20), bot); }
   if (AR) { ctx.moveTo(v(AR[0]-15), top); ctx.lineTo(v(AR[0]-15), bot); }
   const cw = k * dayFull() * 365 * COMP;            // on-screen width of one compressed year
+  if (winTL()) { for (const tk of winTicks()) { const x = v(xTime(tk.t)); ctx.moveTo(x, top); ctx.lineTo(x, bot); } ctx.stroke(); ctx.setLineDash([]); return; }
   for (let yr = fromY; yr <= yrEnd(); yr++) {
     if (yr < fullY && cw < 14 && yr % 5 && yr !== fromY) continue;
     const x = v(xTime(Date.UTC(yr,0,1))); ctx.moveTo(x, top); ctx.lineTo(x, bot);
@@ -3484,10 +3499,11 @@ function axisLabels(){
     let compX = null;   // where "compressed" goes: under the first year label of the squeezed span, or else under "Before <year>"
     if (sx(ND[1]) > 40) strip("No date", sx(ND[0]) + 4);
     if (ER && sx(ER[1]) > 30) {   // "Before <start>": on the year row if it fits, otherwise just under it
-      const bx = sx(ER[0]) + 4, bt = `Before ${fromY}`;
+      const bx = sx(ER[0]) + 4, bt = winTL() ? "Earlier" : `Before ${fromY}`;
       if (strip(bt, bx)) compX = bx;
       else { ctx.font = small; ctx.lineWidth = 5; ctx.strokeStyle = css.bg; ctx.fillStyle = css.muted; ctx.strokeText(bt, bx, yTop + 16); ctx.fillText(bt, bx, yTop + 16); } }
     if (AR && sx(AR[0]) < W - 30) strip(`After ${YR1}`, sx(AR[0]) + 4);
+    if (winTL()) { const tks = winTicks(); let lx = lastX; for (const tk of tks) { const x = sx(xTime(tk.t)) + 3; if (x > W || x < -80) continue; const f_ = tk.major ? `${css.dw} 16px ${css.display}` : small; ctx.font = f_; const w_ = ctx.measureText(tk.label).width; if (x < lx + 10) continue; put(tk.label, x, f_, tk.major ? css.ink : css.muted); lx = x + w_; } } else {
     const fw = k * dayFull() * 365, cw = fw * COMP;   // on-screen widths of a full and a compressed year
     const yearLbl = (yr, w) => w > 50 ? [String(yr), big] : w > 24 ? ["'" + String(yr).slice(2), small] : null;
     for (let yr = fromY; yr <= yrEnd(); yr++) {
@@ -3507,7 +3523,7 @@ function axisLabels(){
     const wl = wx(0);
     if (wl > xTime(TS)) { const tl = TS + ((wl - X0T)/(WW - X0T)*UT - (TS - TF)/YEAR*COMP) * YEAR, yr = new Date(tl).getUTCFullYear();
       if (yr >= fullY && sx(xTime(Date.UTC(yr+1,0,1))) > 90) put(String(yr), 8, big, css.ink); }
-    if (k * dayFull() * 30 > 34) for (let yr = fullY; yr <= yrEnd(); yr++) for (let m = 1; m < 12; m++) { const x = sx(xTime(Date.UTC(yr,m,1))); if (x < 0 || x > W) continue; ctx.font = small; ctx.fillStyle = css.muted; ctx.fillText(MON[m], x + 3, yTop + 16); }
+    if (k * dayFull() * 30 > 34) for (let yr = fullY; yr <= yrEnd(); yr++) for (let m = 1; m < 12; m++) { const x = sx(xTime(Date.UTC(yr,m,1))); if (x < 0 || x > W) continue; ctx.font = small; ctx.fillStyle = css.muted; ctx.fillText(MON[m], x + 3, yTop + 16); } }
   } else
   // ACE column names, pinned to the top of the canvas
   for (const c of cols) {
@@ -3778,7 +3794,7 @@ function syncYr(){ const yc = $("#ycol") || $("#yrctl"); if (!yc) return; const 
     if (!h0.hidden && !h1.hidden && f(YR1) - f(YR0) < near) { h0.classList.add("lft"); h1.classList.add("rgt"); } else { h0.classList.remove("lft"); h1.classList.remove("rgt"); }
     e0.style.visibility = (!h0.hidden && f(YR0) < near) || (!h1.hidden && f(YR1) < near) ? "hidden" : "";
     e1.style.visibility = (!h1.hidden && f(YR1) > 1 - near) || (!h0.hidden && f(YR0) > 1 - near) ? "hidden" : ""; }
-  ($("#yrv0") || yc.querySelector(".yrv")).setText(!yrNarrow() ? `${SLMIN}–${NOW_Y} (All)` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
+  ($("#yrv0") || yc.querySelector(".yrv")).setText(BYMT ? (winSpan() ? "Last " + MTWIN : "All, by modified") : !yrNarrow() ? `${SLMIN}–${NOW_Y} (All)` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
 function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
@@ -4777,7 +4793,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     // date by when each file was last changed instead of the Date property (Nick: "Organize by most recently modified")
     const tm = yc.createEl("label", { cls: "pmaps yrall", attr: { "aria-label": "Date each note by when its file was last modified, instead of the Date property" } });
     const cm = tm.createEl("input", { type: "checkbox", attr: { id: "bymt" } }); cm.checked = BYMT; tm.createEl("i", { cls: "sw" }); tm.createSpan({ text: "Organize by most recently modified" });
-    cm.onchange = () => { BYMT = cm.checked; save("iv-mtime", BYMT); fillTV(); if (typeof syncTB === "function") syncTB(); relayout(true, false, () => fitTarget()); legend(); };
+    // the window back from right now, in place of the years slider while the switch is on
+    const wr = yc.createDiv({ cls: "mtwin" }); wr.createSpan({ cls: "mtl", text: "Last" }); const wsg = wr.createDiv({ cls: "seg", attr: { role: "group", "aria-label": "Show the notes modified in the last…" } });
+    const wbs = [["day", "Day"], ["week", "Week"], ["month", "Month"], ["year", "Year"], ["all", "All"]].map(([v, t]) => { const b_ = wsg.createEl("button", { text: t, attr: { type: "button" } });
+      b_.onclick = e => { e.stopPropagation(); MTWIN = v; save("iv-mtwin", v); NOWMS = Date.now(); syncMT(); relayout(true, false, () => fitTarget()); if (typeof syncTB === "function") syncTB(); }; return [b_, v]; });
+    const syncMT = () => { for (const [b_, v] of wbs) b_.setAttribute("aria-pressed", String(v === MTWIN)); wr.hidden = !BYMT; const ycol = $("#ycol") || yc; const rg = ycol.querySelector(".prng"); if (rg) rg.hidden = BYMT; syncYr(); };
+    win.setTimeout(syncMT, 0);
+    cm.onchange = () => { BYMT = cm.checked; save("iv-mtime", BYMT); NOWMS = Date.now(); fillTV(); syncMT(); if (typeof syncTB === "function") syncTB(); relayout(true, false, () => fitTarget()); legend(); };
     let t_ = 0; const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; SY0 = YR0; SY1 = YR1; syncYr();
       if (view === "sense" && typeof senseSteps === "function") { senseStop(); senseT = null; senseTrail = []; SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; $("#tldate").textContent = "All time"; }
       win.clearTimeout(t_); if (commit) { save("iv-yr0", YR0); save("iv-yr1", YR1); } t_ = win.setTimeout(() => { relayout(false); if (typeof syncTB === "function") syncTB(); }, commit ? 0 : 90); };
@@ -4981,7 +5003,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     // the whole header row folds it (its own buttons, like Clear, still do their own thing)
     const hd_ = fc.querySelector(".fhd"); hd_.classList.add("fhdt"); hd_.addEventListener("click", e => { if (e.target.closest("button, input, select, label")) return; flip(e); }); }
   // a dot before each list's name while it's narrowing the map (Nick): Years when not every year shows, Folders when some are off, and so on
-  { const live = { years: () => YRV.has(view) && yrNarrow(), folders: () => !$("#foldx").hidden, collections: () => colls.length > 0, mocs: () => !!MS, properties: () => !!PRS, bases: () => BQ.length > 0 };
+  { const live = { years: () => YRV.has(view) && (yrNarrow() || winSpan() > 0), folders: () => !$("#foldx").hidden, collections: () => colls.length > 0, mocs: () => !!MS, properties: () => !!PRS, bases: () => BQ.length > 0 };
     const dots = () => { for (const hb of fheads.querySelectorAll(".fhb")) { const f_ = live[hb.dataset.f]; const on_ = !!(f_ && f_()); hb.classList.toggle("live", on_); } };
     fDots = dots; dots(); }
   $("#foldms").hidden = true; $("#collms").hidden = true; $("#foldms").classList.add("gone"); $("#collms").classList.add("gone"); $("#effbtn").setText("Light up areas and projects");
@@ -5162,7 +5184,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }
     { const yc_ = $("#ycol"); if (yc_) yc_.hidden = !YRV.has(view); } $("#yrctl").hidden = !YRV.has(view); syncYr();
-    const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (BQ.length ? 1 : 0) + (MS ? 1 : 0) + (PRS ? 1 : 0) + (YRV.has(view) && yrNarrow() ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0); fDots();
+    const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (BQ.length ? 1 : 0) + (MS ? 1 : 0) + (PRS ? 1 : 0) + (YRV.has(view) && (yrNarrow() || winSpan() > 0) ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0); fDots();
   };
   // the maps menu: every map (an icon before each name), and this map's settings to its right (below it on a narrow pane or a phone)
   { const MP = $("#vmorepop"), MB = $("#vmore"), SM = $("#vsegms");

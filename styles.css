@@ -1120,3 +1120,8 @@ body:not(.is-mobile) .ivm .wm-lyt{bottom:38px}
 /* 0.7.33 · a dot before a Filter list's name while it narrows the map */
 .ivm .fhb .fdot{display:none;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:6px;flex:none;vertical-align:middle;position:relative;top:-1px}
 .ivm .fhb.live .fdot{display:inline-block}
+/* 0.7.34 · Organize by most recently modified: Last Day | Week | Month | Year | All, in place of the years slider */
+.ivm .mtwin{display:flex;align-items:center;gap:10px;margin:6px 0 2px}
+.ivm .mtwin[hidden]{display:none}
+.ivm .mtwin .mtl{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.ivm .prng[hidden]{display:none}
