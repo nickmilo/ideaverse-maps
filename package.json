@@ -1,7 +1,7 @@
 {
   "name": "ideaverse-maps",
-  "version": "0.7.2",
-  "description": "Maps of the Ideaverse: see your notes as Idea Emergence maps, a Gravity view and a Starfield, with a time-lapse of your vault growing.",
+  "version": "0.7.3",
+  "description": "Visualize your notes across a suite of insanely cool interactive maps—Emergence, Ideaverse, Starfield, and many more. There is even an improved Obsidian graph, which is WAY faster. The implications of this are up to your imagination. Oh, and also, it works in Bases, which will be extremely useful for anyone, especially researchers, who use targeted datasets. Data visualization has become reborn.",
   "main": "main.js",
   "type": "module",
   "scripts": {
