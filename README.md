@@ -112,6 +112,8 @@ Notes with a picture property show up as cards with their picture. Notes without
 
 Linear Calendar shows a year as twelve rows, one for each month, with every day as a box and the weeks lined up down the page. The notes you made on a day fill its box, and each one sits at its own spot so the names of neighboring days don't run into each other. Drag the **Years** slider in its menu to show one year or several, stacked one above the other, and use ‹ › to move a year at a time. It opens in **Half months**, where each month takes two rows, the 1st to the 15th and then the 16th to the end, so the calendar fits a narrow pane. Switch to **Whole months** for one row a month with the weeks lined up; the map remembers your choice.
 
+Turn on **Show emojis** under the gear and each note gets an emoji just left of its dot, read from a column of one of your bases: by default, the first column of a base called Recents (a formula that picks an emoji by folder works well). Choose another base or column in **Settings → Emoji labels**.
+
 ### Posters (under Experimental → Specialized)
 
 Posters is for a smaller, focused set of notes, such as your movies, your books or a learning pack. It can be a collection, a folder or a base. Each note becomes a card, and if the note has an image property, like a movie poster or a book cover, the card shows that picture. Click the Posters tab to open its menu:

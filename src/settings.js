@@ -51,6 +51,12 @@ export class MapsSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Markdown links").setDesc("Also count markdown-style links to notes, [text](folder/Note.md), the kind some tools write. Off by default: most vaults link with [[wikilinks]].")
       .addToggle(t => t.setValue(!!s.mdLinks).onChange(async v => { s.mdLinks = v; await save(); }));
 
+    new Setting(containerEl).setName("Emoji labels").setHeading();
+    new Setting(containerEl).setName("Base").setDesc("A base with a column of emojis per note (a formula that picks one by folder, say). Linear Calendar can show them beside the dots. Empty: a base called Recents, if there is one.")
+      .addText(t => t.setPlaceholder("Atlas/Bases/Recents.base").setValue(s.emojiBase || "").onChange(async v => { s.emojiBase = v.trim(); await p.saveSettings(); }));
+    new Setting(containerEl).setName("Column").setDesc("The column to read, like formula.✨ or a property name. Empty: the first column of the base's first view.")
+      .addText(t => t.setPlaceholder("formula.✨").setValue(s.emojiCol || "").onChange(async v => { s.emojiCol = v.trim(); await p.saveSettings(); }));
+
     new Setting(containerEl).setName("Property names").setHeading();
     // the names this vault uses for up, related, collections and rank (any capitalization; a note may use any name in a list)
     const names = (name, desc, key, def) => new Setting(containerEl).setName(name).setDesc(desc).addText(t => t

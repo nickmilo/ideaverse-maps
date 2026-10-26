@@ -3249,6 +3249,7 @@ function render(){
   }
   for (const i of [sel, hover]) if (i >= 0) { const x = sx(X[i]), y = sy(Y[i]); ctx.strokeStyle = css.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x,y,rad(i)+3,0,6.2832); ctx.stroke(); }
 
+  if (LCEMO && view === "lincal") drawEmojis();
   if (!(CAP.on && CAP.hide)) labels(lit);
   if (BACON) drawBacon();
   axisLabels();
@@ -3977,6 +3978,15 @@ function dualEl(parent, label, id){ const yc = parent.createDiv({ cls: "postctl 
   const box = yc.createDiv({ cls: "prng" }), d = box.createDiv({ cls: "dual" }); d.createSpan({ cls: "trk" }); d.createSpan({ cls: "fill" });
   d.createEl("input", { type: "range", attr: { "aria-label": "First year", step: "1" } }); d.createEl("input", { type: "range", attr: { "aria-label": "Last year", step: "1" } });
   const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yrh" }); lb.createSpan({ cls: "yrh" }); return { yc, hv }; }
+// emoji labels (Linear Calendar for now): path → emoji, read once from the base
+let LCEMO = pref("iv-lcemo", false) === true, EMO = null, emoBusy = null;
+const loadEmo = async () => { if (!host.emojis) return "Emoji labels need a newer Obsidian"; if (emoBusy) return emoBusy; emoBusy = (async () => { const r = await host.emojis(); emoBusy = null; if (r.err) { EMO = null; return `Couldn't read emojis: ${r.err}`; } EMO = new Map(Object.entries(r.map)); return ""; })(); return emoBusy; };
+if (LCEMO) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
+function drawEmojis(){ if (!EMO || view !== "lincal") return; const f = Math.min(16, LC.C * k * .42); if (f < 7) return;
+  ctx.font = `${f}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.globalAlpha = 1;
+  for (let i=0;i<n;i++) { if (!VV(i)) continue; const e_ = EMO.get(N[i].path); if (!e_) continue; const x = sx(X[i]), y = sy(Y[i]); if (x < -20 || x > W + 40 || y < -20 || y > H + 20) continue;
+    ctx.fillText(e_, x - rad(i) - 2, y); }
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 // Linear Calendar's menu: Years (the slider, with ‹ › to move a year at a time) and Whole or Half months
 const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) el.hidden = true; c.classList.add("lcctl2");
   const sh = c.createDiv({ cls: "seg lchalf", attr: { role: "group", "aria-label": "Months as" } });
@@ -3988,6 +3998,10 @@ const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) e
     t_ = win.setTimeout(() => { if (view === "lincal") morph(true, () => fitTarget()); }, commit ? 0 : 120); };
   a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true);
   for (const [el, d] of [[pv, -1], [nx, 1]]) el.onclick = e => { e.stopPropagation(); const [y0, y1] = lcClamp(); const sh_ = Math.max(y0 - LCR0, Math.min(y1 - LCR1, d)); LCR0 += sh_; LCR1 += sh_; save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); syncLC(); if (view === "lincal") morph(true, () => fitTarget()); };
+  // Show emojis: each note's emoji from a base (Settings → Emoji labels; by default your Recents base's ✨ column), just left of its dot
+  { const r = c.createEl("label", { cls: "mini lcemo", attr: { title: "Each note's emoji from a base column (Settings → Emoji labels), beside its dot" } }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = LCEMO; r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
+    const st = c.createDiv({ cls: "pn lcemost" });
+    cb.onchange = async () => { LCEMO = cb.checked; save("iv-lcemo", LCEMO); st.setText(""); if (LCEMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } draw(); }; }
   return { yc }; })(); LCUIOK = true;
 function syncLC(){ const [y0, y1] = lcClamp(); syncDual(LCUI.yc, LCR0, LCR1, y0, y1); $("#lcyear").textContent = LCR0 === LCR1 ? String(LCR0) : `${LCR0}–${LCR1}`; $("#lcprev").disabled = LCR0 <= y0; $("#lcnext").disabled = LCR1 >= y1; }
 syncLC();

@@ -136,6 +136,11 @@ export async function mountInto(owner, el, opts) {
     baseNotes: async (path, viewName, thisPath) => { const q = plugin.baseQ || (plugin.baseQ = new BaseQ(app)); q.back = null; const r = await q.readBase(path); if (!r) return { err: "the base is gone" };
       const v = r.views.find(x => x.name === viewName); if (!v) return { err: "the view is gone" }; if (v.err) return { err: v.err };
       try { return { paths: [...q.run(v, thisPath || null)] }; } catch (e) { if (e instanceof NeedThis) return { need: "this" }; if (e instanceof Unsupported) { v.err = e.what; return { err: e.what }; } console.warn("Maps of the Ideaverse: couldn't read the base", path, e); return { err: String(e && e.message || e) }; } },
+    // emoji labels: one column of a base (by default the ✨ column of a base called Recents), read for every note
+    emojis: async () => { const q = plugin.baseQ || (plugin.baseQ = new BaseQ(app)); const st = plugin.settings; let path = st.emojiBase || "";
+      if (!path) { const f = app.vault.getFiles().find(x => x.extension === "base" && x.basename.toLowerCase() === "recents"); path = f ? f.path : ""; }
+      if (!path) return { err: "Pick a base for emoji labels in Settings" };
+      try { const r = await q.column(path, st.emojiCol || ""); return r.err ? { err: r.err, path } : { map: r.map, path, col: r.col }; } catch (e) { return { err: String(e && e.message || e), path }; } },
     savedFolder: () => plugin.settings.viewsFolder || null,
     pickSavedFolder: async () => {
       const dir = await new Promise(res => new FolderPicker(app, res).open());

@@ -218,6 +218,15 @@ export class BaseQ {
         r.views.push({ i, name: v.name || `View ${i + 1}`, type: v.type || "table", err, ctx, run: err ? null : { baseF, vf, formulas, fparsed } }); } }
     else r.err = y.err;
     this.cache.set(key, r); return r; }
+  /** One column of a base for every note, as text: {map: {path: text}, col} or {err}. col: "formula.✨", "✨" or a property; empty means the first view's first column. */
+  async column(path, col){ const r = await this.readBase(path); if (!r) return { err: "the base isn't in this vault" }; if (r.err) return { err: r.err };
+    const y = r.yaml || {}, formulas = y.formulas || {}, fparsed = {}; let c = String(col || (((y.views || [])[0] || {}).order || [])[0] || ""); if (!c) return { err: "no column to read" };
+    const nm = c.startsWith("formula.") ? c.slice(8) : c, isF = formulas[nm] != null, out = {};
+    const txt = v => v == null ? "" : typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : Array.isArray(v) ? v.map(txt).filter(Boolean).join(" ") : v.kind === "file" && v.f ? v.f.basename : "";
+    for (const f of this.app.vault.getMarkdownFiles()) { const cx = { file: this.fileV(f), thisF: null, formulas, fparsed, memo: {} }; let v;
+      try { v = isF ? this.formula(nm, cx) : this.name(c, cx); } catch (e) { if (e instanceof Unsupported) return { err: e.what }; continue; }
+      const t = txt(v); if (t) out[f.path] = t; }
+    return { map: out, col: isF ? "formula." + nm : c }; }
   compile(fl){ // a filters block: a string, or { and | or | not: [...] }
     if (fl == null) return null;
     if (typeof fl === "string" || typeof fl === "number" || typeof fl === "boolean") return { k: "e", e: parse(String(fl)) };
