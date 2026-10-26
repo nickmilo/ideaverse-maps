@@ -1041,3 +1041,4 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .fcols .ycol .fhd.yhd > .pt{padding-top:6px}
 .ivm .fcols .ycol .fhd.yhd > .yfacts{padding-top:5px}
 .ivm.ivm .fcols .ycol .fhd.yhd > .prng{flex:1 1 auto;min-width:120px;margin:0}
+.ivm .fcols > .fcol.ycol:not(.shut){padding-bottom:8px;margin-bottom:4px;border-bottom:1px solid var(--line)}
