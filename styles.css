@@ -983,3 +983,22 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm header.tb2 #vsegms > #filtms{order:-1;flex:none}
 .ivm.ivm header.tb2 #filtpop{left:0;right:auto}
 .ivm header.tb2 .tbl > #focusmode,.ivm header.tb2 .tbl > #follownote{flex:none}
+@container ivm (max-width:760px){
+.ivm[data-tbone="1"] header.tb2{flex-wrap:nowrap}
+.ivm[data-tbone="1"] header.tb2 .tbl{flex:1 1 auto;min-width:0}
+.ivm[data-tbone="1"] header.tb2 .tbr{flex:0 0 auto;flex-wrap:nowrap;justify-content:flex-end}
+.ivm[data-tbone="1"] header.tb2 .search{flex:0 1 200px;max-width:220px}
+}
+.ivm .search > .findi,.ivm header.tb2 .search > .findi{display:none}
+.ivm[data-findmini="1"] header.tb2 .search{flex:none;min-width:0;max-width:none;margin:0}
+.ivm.ivm[data-findmini="1"] header.tb2 .search > .findi{display:flex}
+.ivm[data-findmini="1"] header.tb2 .search > input{display:none;position:absolute;right:0;top:0;width:220px;z-index:40}
+.ivm[data-findmini="1"][data-findopen="1"] header.tb2 .search > input{display:block}
+.ivm[data-tbone="1"] header.tb2 .tbr > #viewms{order:0}
+.ivm .fcols .fhd .pt.fcolt{cursor:pointer;display:flex;align-items:center;gap:4px;user-select:none}
+.ivm .fcols .fhd .pt.fcolt::before{content:"▾";font-size:15px;line-height:1;width:12px;color:var(--muted)}
+.ivm .fcols .fcol.shut .fhd .pt.fcolt::before{content:"▸"}
+.ivm .fcols .fhd .pt.fcolt:hover{color:var(--ink)}
+.ivm .fcols .fcol.shut > :not(.fhd){display:none}
+.ivm .fcols .fcol.shut .fhd .facts{display:none}
+.ivm .fcols .fcol.shut > #colllist,.ivm .fcols .fcol.shut > #foldlist,.ivm .fcols .fcol.shut > [id]{display:none}

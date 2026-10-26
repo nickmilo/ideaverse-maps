@@ -3701,7 +3701,7 @@ function select(i, fromTrail){
 }
 onKey(e => {
   if (e.key === "Escape") { if (!$("#results").hidden) { $("#results").hidden = true; return; } if (sel < 0 && focus >= 0) { setFocus(-1); return; } select(-1); }
-  if (e.key === "/" && doc.activeElement !== $("#q")) { e.preventDefault(); $("#q").focus(); }
+  if (e.key === "/" && doc.activeElement !== $("#q")) { e.preventDefault(); root.dataset.findopen = "1"; $("#q").focus(); }
 });
 
 // ---------- search ----------
@@ -4878,6 +4878,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       bst.setText([waits ? "Pick a note on the map: a view that follows its note shows the notes that go with it." : "", errs.length ? "Couldn't read: " + errs.join("; ") : ""].filter(Boolean).join(" "));
       relayout(true, false, () => fitTarget()); syncTB(); };
     if (BQ.length) win.setTimeout(() => { void applyBQ(); }, 0); }
+  // each column (Folders, Collections, Bases) folds away under its name, so more of the map shows behind the menu
+  for (const fc of fcols.querySelectorAll(":scope > .fcol")) { const pt = fc.querySelector(".fhd > .pt"); if (!pt) continue; const key = "iv-fshut-" + pt.textContent.trim().toLowerCase();
+    pt.classList.add("fcolt"); pt.setAttribute("role", "button"); pt.tabIndex = 0; const set = shut => { fc.classList.toggle("shut", shut); pt.setAttribute("aria-expanded", String(!shut)); pt.title = shut ? "Show this list" : "Hide this list"; };
+    set(pref(key, false) === true); const flip = e => { e.stopPropagation(); const shut = !fc.classList.contains("shut"); set(shut); save(key, shut); };
+    pt.onclick = flip; pt.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(e); } }; }
   $("#foldms").hidden = true; $("#collms").hidden = true; $("#foldms").classList.add("gone"); $("#collms").classList.add("gone"); $("#effbtn").setText("Light up areas and projects");
   opener(FI, () => { renderFoldList(); renderCollList(true); syncColl(); });
   // Display: links, theme, how scoring works
@@ -4923,11 +4928,15 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   opener(DI, () => { alCb.checked = showAll; syncBac(); }); syncBac();
   // Find, Follow note (an icon), Saved, and the ︿ that tucks the bar away
   right.appendChild(root.querySelector("header .search"));
+  // on a narrow pane Find is a magnifying glass that opens the search box
+  { const se = root.querySelector("header .search"), q = $("#q"); const b_ = doc.createElement("button"); b_.className = "tbb tbi findi"; b_.type = "button"; b_.setAttribute("aria-label", "Find a note ( / )"); b_.title = "Find a note ( / )"; setIcon(b_, "search"); se.prepend(b_);
+    b_.onclick = e => { e.stopPropagation(); root.dataset.findopen = "1"; q.focus(); };
+    q.addEventListener("blur", () => win.setTimeout(() => { if (doc.activeElement !== q) root.dataset.findopen = ""; }, 250)); }
   // Focus on active note (the note and its neighbors), then Sync active note with the Obsidian editor
   const fo = $("#focusmode"); fo.empty(); fo.appendChild(icon(I.focus)); fo.classList.add("tbb", "tbi"); fo.setAttribute("aria-label", "Focus on active note"); fo.title = "Focus on active note"; left.appendChild(fo);
   // Sync uses Obsidian's own link icon
   const fb = $("#follownote"); fb.empty(); setIcon(fb, "link"); { const sv = fb.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } fb.classList.add("tbb", "tbi"); fb.setAttribute("aria-label", "Sync active note with Obsidian editor"); fb.title = "Sync active note with Obsidian editor"; left.insertBefore(fb, fo);   // Sync (the link) sits left of Focus
-  right.appendChild($("#viewms")); { const vb = $("#viewbtn"); const t = vb.textContent.replace(/^★\s*/, ""); vb.empty(); vb.appendChild(icon(I.star)); vb.createSpan({ text: t || "Saved" }); vb.classList.add("tbb"); }
+  right.appendChild($("#viewms")); { const vb = $("#viewbtn"); vb.empty(); vb.appendChild(icon(I.star)); vb.classList.add("tbb", "tbi"); vb.setAttribute("aria-label", "Saved views and tours"); vb.title = "Saved views and tours"; }
   // Capture: a picture (PNG) or a short clip (MP4, or WebM where MP4 can't be recorded) of the map, saved to the vault's attachments,
   // then a small card to copy it, open it, or post it with a ready caption
   { const CP = popBtn("cap", "Capture", "star"); CP.b.empty(); setIcon(CP.b, "camera"); { const sv = CP.b.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } CP.b.classList.add("tbi"); CP.b.setAttribute("aria-label", "Capture a picture or a clip to share"); CP.b.title = "Capture a picture or a clip to share";
@@ -5008,7 +5017,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const fold = () => { for (const b of MAIN) b.hidden = false; FOLD_T.clear();
       for (let j = MAIN.length - 1; j >= 1 && over(); j--) { MAIN[j].hidden = true; FOLD_T.add(MAIN[j].dataset.v); } };
     // one row if it fits (folding tabs as needed); if even Emergence alone doesn't fit beside the tools, the tools drop to a second row and the tabs get the whole first row
-    root.dataset.tbwrap = ""; fold(); if (over() || FOLD_T.size >= MAIN.length - 1 && FOLD_T.size) { root.dataset.tbwrap = "1"; fold(); }
+    // keep one row as long as possible: first Find shrinks to its magnifying glass, then tabs fold into the ☰ list, and only if even one tab won't fit do the tools drop to a second row
+    root.dataset.tbone = Platform.isMobile ? "" : "1"; root.dataset.tbwrap = ""; root.dataset.findmini = ""; fold();
+    if (over()) { root.dataset.findmini = "1"; fold(); }
+    if (over()) { root.dataset.tbwrap = "1"; root.dataset.findmini = ""; fold(); }
     $("#vmorepop").querySelectorAll(":scope > .vfoldb").forEach(x => x.remove()); vfold.hidden = false;
     for (const b of MAIN) { const c = $("#vmorepop").createEl("button", { cls: "chip", text: b.textContent.replace(/\s*▾\s*$/, ""), attr: { type: "button" } }); if (tabV(view) === b.dataset.v) c.classList.add("on");
       c.classList.add("vfoldb"); vfold.before(c);
