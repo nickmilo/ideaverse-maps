@@ -138,6 +138,13 @@ export async function mountInto(owner, el, opts) {
       const f = app.vault.getAbstractFileByPath(path);
       if (f instanceof TFile) await app.vault.process(f, () => text); else await app.vault.create(path, text);
       return path; },
+    // Capture: a picture or clip saved where the vault keeps attachments (Settings → Files and links), then opened on request
+    saveCapture: async (name, buf) => {
+      const path = await app.fileManager.getAvailablePathForAttachment(name, (app.workspace.getActiveFile() || {}).path || "");
+      const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+      if (dir && !app.vault.getAbstractFileByPath(dir)) await app.vault.createFolder(dir);
+      await app.vault.createBinary(path, buf); return path; },
+    openFile: path => { const f = app.vault.getAbstractFileByPath(path); if (f instanceof TFile) void app.workspace.getLeaf("tab").openFile(f); },
     activePath: () => { const f = app.workspace.getActiveFile(); return f ? f.path : null; },
     debug: (owner.debug = {}),
   });

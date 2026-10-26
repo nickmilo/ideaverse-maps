@@ -3024,6 +3024,10 @@ function drawBacon(){ const hl = sel >= 0 ? sel : hover; if (hl < 0 || !vis[hl])
   const t = `${st} ${st === 1 ? "step" : "steps"} away`; ctx.strokeText(t, tx_, ty_); ctx.fillText(t, tx_, ty_);
   ctx.restore(); }
 
+// Capture (toolbar camera): while a snapshot or clip is being taken, titles can be hidden and a small credit drawn in the corner
+const CAP = { on: false, hide: pref("iv-caphide", false) === true, credit: pref("iv-capcredit", true) !== false, len: +pref("iv-caplen", 10) || 10, start: ["none", "orbit", "timelapse"].includes(pref("iv-capstart", "orbit")) ? pref("iv-capstart", "orbit") : "orbit" };
+function capCredit(){ const t = "Maps of the Ideaverse", fs = Math.max(11, Math.min(16, W / 90)); ctx.save(); ctx.font = `600 ${fs}px ${css.display}`; ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+  ctx.globalAlpha = .75; ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.fillStyle = css.ink; ctx.strokeText(t, W - 14, H - 12); ctx.fillText(t, W - 14, H - 12); ctx.restore(); }
 function render(){
   raf = 0;
   if (!(W > 0 && H > 0) || !isFinite(k) || !isFinite(tx) || !isFinite(ty)) return;   // hidden (a background tab or a base still laying out): nothing to draw yet
@@ -3157,10 +3161,11 @@ function render(){
   }
   for (const i of [sel, hover]) if (i >= 0) { const x = sx(X[i]), y = sy(Y[i]); ctx.strokeStyle = css.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x,y,rad(i)+3,0,6.2832); ctx.stroke(); }
 
-  labels(lit);
+  if (!(CAP.on && CAP.hide)) labels(lit);
   if (BACON) drawBacon();
   axisLabels();
   if (GROWV() && senseT != null) drawGrowth();
+  if (CAP.on && CAP.credit) capCredit();
   if (swap) Object.assign(css, swap);
 }
 // level names, pinned to the left edge: drawn under the links and notes, so they never cover the note you're on
@@ -4790,6 +4795,54 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Sync uses Obsidian's own link icon
   const fb = $("#follownote"); fb.empty(); setIcon(fb, "link"); { const sv = fb.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } fb.classList.add("tbb", "tbi"); fb.setAttribute("aria-label", "Sync active note with Obsidian editor"); fb.title = "Sync active note with Obsidian editor"; right.appendChild(fb);
   right.appendChild($("#viewms")); { const vb = $("#viewbtn"); const t = vb.textContent.replace(/^★\s*/, ""); vb.empty(); vb.appendChild(icon(I.star)); vb.createSpan({ text: t || "Saved" }); vb.classList.add("tbb"); }
+  // Capture: a picture (PNG) or a short clip (MP4, or WebM where MP4 can't be recorded) of the map, saved to the vault's attachments,
+  // then a small card to copy it, open it, or post it with a ready caption
+  { const CP = popBtn("cap", "Capture", "star"); CP.b.empty(); setIcon(CP.b, "camera"); { const sv = CP.b.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } CP.b.classList.add("tbi"); CP.b.setAttribute("aria-label", "Capture a picture or a clip to share"); CP.b.title = "Capture a picture or a clip to share";
+    const recDot = CP.b.createSpan({ cls: "tbadge capdot" }); recDot.hidden = true;
+    CP.p.classList.add("cappop"); CP.p.createDiv({ cls: "pt", text: "Capture" });
+    const row = CP.p.createDiv({ cls: "caprow" }); const shotB = row.createEl("button", { cls: "chip on", text: "Picture", attr: { type: "button", title: "A PNG of the map as it is now" } }), clipB = row.createEl("button", { cls: "chip on", text: "Clip", attr: { type: "button", title: "A short video of the map moving" } });
+    const segOf = (label, key, opts, cur, onSet) => { const w = CP.p.createDiv({ cls: "capopt" }); w.createSpan({ cls: "capl", text: label }); const sg = w.createDiv({ cls: "seg" });
+      for (const [v, t] of opts) { const b = sg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(v === cur) } }); b.onclick = e => { e.stopPropagation(); sg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); onSet(v); save(key, v); }; } };
+    segOf("Clip length", "iv-caplen", [[5, "5 s"], [10, "10 s"], [20, "20 s"]], CAP.len, v => CAP.len = v);
+    segOf("While it records", "iv-capstart", [["orbit", "Orbit"], ["timelapse", "Timelapse"], ["none", "Nothing"]], CAP.start, v => CAP.start = v);
+    const sw = (label, key, val, onSet, tip) => { const l = CP.p.createEl("label", { cls: "pmaps capsw", attr: { title: tip } }); const c = l.createEl("input", { type: "checkbox" }); c.checked = val; l.createEl("i", { cls: "sw" }); l.createSpan({ text: label }); c.onchange = () => { onSet(c.checked); save(key, c.checked); }; l.onclick = e => e.stopPropagation(); };
+    sw("Hide note titles", "iv-caphide", CAP.hide, v => CAP.hide = v, "Leave every title off the capture, for sharing a vault you'd rather keep private");
+    sw("Add a small credit", "iv-capcredit", CAP.credit, v => CAP.credit = v, "Writes Maps of the Ideaverse in the corner");
+    CP.p.createDiv({ cls: "pn", text: "Saved to your attachments folder. Then copy it, or post it with a ready caption." });
+    opener(CP);
+    // the card that appears after a capture
+    let card = null; const cardOut = () => { if (card) { card.remove(); card = null; } };
+    const caption = () => `My ideaverse as ${VN()}, made with Maps of the Ideaverse for Obsidian: https://github.com/nickmilo/ideaverse-maps #MapsOfTheIdeaverse`;
+    const showCard = (path, blob, kind) => { cardOut(); card = cv.parentElement.createDiv({ cls: "capcard" }); const url = URL.createObjectURL(blob);
+      if (kind === "image") card.createEl("img", { attr: { src: url, alt: "The capture" } }); else { const v = card.createEl("video", { attr: { src: url, autoplay: "", loop: "", muted: "", playsinline: "" } }); v.muted = true; }
+      const tx = card.createDiv({ cls: "capt" }); tx.createEl("b", { text: kind === "image" ? "Picture saved" : "Clip saved" }); tx.createSpan({ cls: "capp", text: path });
+      const bt = card.createDiv({ cls: "capbtns" }); const mk = (t, f, tip) => { const b = bt.createEl("button", { cls: "chip", text: t, attr: { type: "button", title: tip || t } }); b.onclick = e => { e.stopPropagation(); f(b); }; return b; };
+      if (kind === "image") mk("Copy picture", async b => { try { await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); b.setText("Copied"); } catch (err) { b.setText("Couldn't copy"); } }, "Copy the picture, to paste into a post or a message");
+      mk("Copy caption", async b => { try { await navigator.clipboard.writeText(caption()); b.setText("Copied"); } catch (err) { b.setText("Couldn't copy"); } }, caption());
+      mk("Post on X", () => { win.open("https://x.com/intent/post?text=" + encodeURIComponent(caption())); }, "Opens a new post with the caption; attach the " + (kind === "image" ? "picture" : "clip") + " from your vault (or paste the copied picture)");
+      if (host.openFile) mk("Open", () => host.openFile(path), "Open it in Obsidian");
+      const x = card.createEl("button", { cls: "capx", text: "×", attr: { type: "button", "aria-label": "Close" } }); x.onclick = e => { e.stopPropagation(); URL.revokeObjectURL(url); cardOut(); }; };
+    const stamp = () => { const d = new Date(), z = n_ => String(n_).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}`; };
+    const saveIt = async (blob, ext, kind) => { if (!host.saveCapture) return; const name = `${stamp()} Maps of the Ideaverse ${VN()}.${ext}`.replace(/[\\/:*?"<>|]/g, "-");
+      try { const path = await host.saveCapture(name, await blob.arrayBuffer()); showCard(path, blob, kind); } catch (err) { showCard("Couldn't save: " + (err && err.message || err), blob, kind); } };
+    shotB.onclick = e => { e.stopPropagation(); closePops(); CAP.on = true; render(); cv.toBlob(blob => { CAP.on = false; draw(); if (blob) void saveIt(blob, "png", "image"); }, "image/png"); };
+    // a clip: the canvas as a video stream, redrawn every frame while it records; stops after the length chosen, or when the Timelapse ends
+    let rec = null;
+    const stopClip = () => { if (rec && rec.state !== "inactive") rec.stop(); };
+    clipB.onclick = e => { e.stopPropagation(); closePops(); if (rec) { stopClip(); return; }
+      const types = ["video/mp4;codecs=avc1.42E01E", "video/mp4", "video/webm;codecs=vp9", "video/webm"], type = types.find(t => win.MediaRecorder && win.MediaRecorder.isTypeSupported(t));
+      if (!type || !cv.captureStream) { showCard("This version of Obsidian can't record clips.", new Blob([]), "image"); return; }
+      const stream = cv.captureStream(30), chunks = []; rec = new win.MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 8e6 }); CAP.on = true;
+      rec.ondataavailable = ev => { if (ev.data && ev.data.size) chunks.push(ev.data); };
+      let raf_ = 0; const tick = () => { if (!rec) return; render(); raf_ = RAF(tick); }; raf_ = RAF(tick);
+      const t0 = performance.now(), maxMs = (CAP.start === "timelapse" ? 120 : CAP.len) * 1000;
+      const timer = win.setInterval(() => { const sec = Math.round((performance.now() - t0) / 1000); recDot.setText(String(sec)); if (performance.now() - t0 > maxMs || (CAP.start === "timelapse" && performance.now() - t0 > 1500 && !sensePlaying)) stopClip(); }, 250);
+      rec.onstop = () => { win.clearInterval(timer); win.cancelAnimationFrame(raf_); CAP.on = false; recDot.hidden = true; CP.b.classList.remove("caprec"); if (CAP.start === "orbit") driftStop();
+        const blob = new Blob(chunks, { type: type.split(";")[0] }); rec = null; draw(); void saveIt(blob, type.startsWith("video/mp4") ? "mp4" : "webm", "video"); };
+      rec.start(250); recDot.hidden = false; recDot.setText("0"); CP.b.classList.add("caprec");
+      if (CAP.start === "orbit") driftStart(); else if (CAP.start === "timelapse" && !sensePlaying) $("#tlplay").click(); };
+    // while recording, the camera button stops the clip
+    CP.b.addEventListener("click", e => { if (rec) { e.stopImmediatePropagation(); e.preventDefault(); stopClip(); } }, true); }
   // the themes sit at the far right of the bar, one click away (on a phone they move into Display)
   // notes changed (5 or more): a rescan icon lights up, with how many
   { const st = root.querySelector(".ivm-stale"); if (st) { const c = +st.dataset.count || 0; st.empty(); st.className = "tbb tbi ivm-stale"; setIcon(st, "refresh-cw"); const sv = st.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); }

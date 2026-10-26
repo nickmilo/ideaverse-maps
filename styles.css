@@ -913,3 +913,28 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .tmtagctl .pmaps .sw::after{content:"";position:absolute;top:1px;left:1px;width:8px;height:8px;border-radius:50%;background:var(--muted);transition:left .15s}
 .ivm .tmtagctl .pmaps input:checked + .sw{background:var(--accent)}
 .ivm .tmtagctl .pmaps input:checked + .sw::after{left:13px;background:var(--bg)}
+/* Capture: the popover, the recording dot, and the card after a capture */
+.ivm .cappop{width:280px;gap:8px}
+.ivm .cappop .caprow{display:flex;gap:8px}
+.ivm .cappop .caprow .chip{flex:1;justify-content:center}
+.ivm .cappop .capopt{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ivm .cappop .capl{font-size:var(--font-ui-smaller);color:var(--muted)}
+.ivm .cappop .capsw{display:flex;align-items:center;gap:7px;font:500 11px var(--font-interface,inherit);color:var(--muted);cursor:pointer}
+.ivm .cappop .capsw input{position:absolute;opacity:0;width:1px;height:1px}
+.ivm .cappop .capsw .sw{width:22px;height:10px;border-radius:6px;background:var(--line);position:relative;flex:none}
+.ivm .cappop .capsw .sw::after{content:"";position:absolute;top:1px;left:1px;width:8px;height:8px;border-radius:50%;background:var(--muted);transition:left .15s}
+.ivm .cappop .capsw input:checked + .sw{background:var(--accent)}
+.ivm .cappop .capsw input:checked + .sw::after{left:13px;background:var(--bg)}
+.ivm .tbb.caprec{color:#e5484d}
+.ivm .tbb .capdot{background:#e5484d;color:#fff}
+.ivm .tbb .capdot[hidden]{display:none}
+.ivm .capcard{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:40;display:flex;align-items:center;gap:12px;padding:10px 36px 10px 10px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--bg) 92%,transparent);box-shadow:0 10px 28px rgba(0,0,0,.25);max-width:min(640px,calc(100% - 32px))}
+.ivm .capcard img,.ivm .capcard video{width:120px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--line);flex:none}
+.ivm .capcard .capt{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ivm .capcard .capt b{font-size:13px;color:var(--ink)}
+.ivm .capcard .capp{font:400 11px var(--mono);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ivm .capcard .capbtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.ivm.ivm .capcard .capx{position:absolute;top:6px;right:8px;border:none;background:none;box-shadow:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px;height:auto}
+.ivm .cappop .capopt{flex-direction:column;align-items:stretch;gap:4px}
+.ivm .cappop .capopt .seg{display:flex}
+.ivm .cappop .capopt .seg button{flex:1}
