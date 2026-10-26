@@ -5128,6 +5128,19 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     toggleMapOpts = () => { if (!mo.hidden) closePops(); else openSet(); };
     // quick keys, along the top row of the keyboard: 1–9, then 0 - = [ ] \ for maps 10–15 (Treemap, Mosaic, Bookshelf, Base Builder, Linear Calendar)
     onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey) return; const ch = KEYED().get(e.key); if (!ch) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return; e.preventDefault(); ch.click(); });
+    // letter keys (Nick): O orbit on/off, J K L its three speeds (Earth, Mercury, LYT Speed on a globe; Calm, Slow, Lively on a flat map), A the Animations dock,
+    // W Wander Mode, T Timelapse, S Sync with the editor, F Filter, N Focus
+    { const vis_ = el => el && !el.hidden && getComputedStyle(el).display !== "none";
+      const hit = sel_ => { const el = root.querySelector(sel_); if (el && !el.hidden) { el.click(); return true; } return false; };
+      const orbitOn = () => /❚❚|■/.test(($("#dplay") || {}).textContent || "");
+      const LK = {
+        o: () => hit("#dplay"),
+        a: () => { const d = $("#animdock"); if (!d || d.hidden) return hit("#anitab"); const c_ = d.querySelector('button[aria-label="Tuck animations away"]'); if (c_) { c_.click(); return true; } return false; },
+        w: () => hit("#pplay"), t: () => vis_($("#timebar")) || !$("#timebar").hidden ? hit("#tlplay") : false,
+        s: () => hit("#follownote"), f: () => hit("#filtbtn"), n: () => hit("#focusmode") };
+      ["j", "k", "l"].forEach((key, j) => LK[key] = () => { const bs = [...root.querySelectorAll("#driftseg button")].filter(vis_); const b_ = bs[j]; if (!b_) return false; b_.click(); if (!orbitOn()) hit("#dplay"); return true; });
+      onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey) return; const f_ = LK[e.key.length === 1 ? e.key.toLowerCase() : ""]; if (!f_) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+        if (f_()) e.preventDefault(); }); }
     // Group's choices (Bookshelf's Shelve by, Chord, Corona and Tesla's Arcs by, Treemap's Boxes by and Subfolders) live under the gear, first; the Group button is gone
     for (const j of [3, 2, 1, 0]) $("#laygrp").prepend(GS[j][0]);
     // a lone on/off chip becomes a row like Starfield's (a small label, then Off | On); the chip stays as the source of truth, out of sight
