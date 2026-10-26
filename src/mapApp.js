@@ -1797,7 +1797,7 @@ const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oc
 // Linear Calendar: a year as twelve rows, one per month, each day a box; a month's first day sits under its own weekday,
 // so the weeks line up down the page (the Year Map). The notes made that day fill its box.
 // Linear Calendar: the years shown (a range; both ends on one year shows one year) and the shape: Whole months (a row each, weeks lined up) or Half months (two rows each: the 1st to the 15th, then the 16th on, for a narrow pane)
-let LCUIOK = false, LCR0 = +pref("iv-lcr0", 0) || 0, LCR1 = +pref("iv-lcr1", 0) || 0, LCHALF = pref("iv-lchalf", false) === true, LC = {years: [], C: 44};
+let LCUIOK = false, LCR0 = +pref("iv-lcr0", 0) || 0, LCR1 = +pref("iv-lcr1", 0) || 0, LCHALF = pref("iv-lchalf", true) !== false, LC = {years: [], C: 44};
 { const y_ = +pref("iv-lcyear", 0) || 0; if (!LCR0 && y_) { LCR0 = LCR1 = y_; } if (pref("iv-lcall", false) === true && !+pref("iv-lcr0", 0)) { LCR0 = 1; LCR1 = 9999; } }
 const LC_GAP = 150;
 function layoutLincal(){

@@ -1,0 +1,27 @@
+name: Release notes
+
+# A file docs/releases/<version>.md is that version's release notes on GitHub.
+# Adding or changing one updates the release, so the notes can be written after it's out.
+on:
+  push:
+    branches: [main]
+    paths: ["docs/releases/*.md"]
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+      - name: Update the notes of each release whose file changed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for f in $(git diff --name-only HEAD~1 HEAD -- 'docs/releases/*.md'); do
+            [ -f "$f" ] || continue
+            v=$(basename "$f" .md)
+            if gh release view "$v" >/dev/null 2>&1; then gh release edit "$v" --notes-file "$f"; fi
+          done

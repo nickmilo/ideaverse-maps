@@ -51,7 +51,8 @@ jobs:
         run: |
           v="${{ steps.v.outputs.version }}"
           if [ "${{ github.event_name }}" = "push" ]; then
-            gh release create "$v" --target "$GITHUB_SHA" --title "$v" --notes "$(git log -1 --pretty=%B | sed '/^Co-Authored-By/d;/^Claude-Session/d')" main.js manifest.json styles.css
+            if [ -f "docs/releases/$v.md" ]; then notes=$(cat "docs/releases/$v.md"); else notes=$(git log -1 --pretty=%B | sed '/^Co-Authored-By/d;/^Claude-Session/d'); fi
+            gh release create "$v" --target "$GITHUB_SHA" --title "$v" --notes "$notes" main.js manifest.json styles.css
           else
             gh release upload "$v" main.js manifest.json styles.css --clobber
           fi

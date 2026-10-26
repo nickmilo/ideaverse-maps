@@ -110,7 +110,7 @@ Notes with a picture property show up as cards with their picture. Notes without
 
 ### Linear Calendar
 
-Linear Calendar shows a year as twelve rows, one for each month, with every day as a box and the weeks lined up down the page. The notes you made on a day fill its box, and each one sits at its own spot so the names of neighboring days don't run into each other. Drag the **Years** slider in its menu to show one year or several, stacked one above the other, and use ‹ › to move a year at a time. If the map is in a narrow pane, switch to **Half months**: each month takes two rows, the 1st to the 15th and then the 16th to the end, so the calendar is half as wide.
+Linear Calendar shows a year as twelve rows, one for each month, with every day as a box and the weeks lined up down the page. The notes you made on a day fill its box, and each one sits at its own spot so the names of neighboring days don't run into each other. Drag the **Years** slider in its menu to show one year or several, stacked one above the other, and use ‹ › to move a year at a time. It opens in **Half months**, where each month takes two rows, the 1st to the 15th and then the 16th to the end, so the calendar fits a narrow pane. Switch to **Whole months** for one row a month with the weeks lined up; the map remembers your choice.
 
 ### Posters (under Experimental → Specialized)
 
