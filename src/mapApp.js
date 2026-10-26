@@ -5004,7 +5004,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // notes changed (5 or more): a rescan icon lights up, with how many
   { const st = root.querySelector(".ivm-stale"); if (st) { const c = +st.dataset.count || 0; st.empty(); st.className = "tbb tbi ivm-stale"; setIcon(st, "refresh-cw"); const sv = st.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); }
     st.createSpan({ cls: "tbadge", text: c ? String(c) : "" }); const t = `${c || "Some"} notes changed · rescan`; st.setAttribute("aria-label", t); st.title = t; right.appendChild(st); } }
-  const thSlot = right.createDiv({ cls: "thslot" }); thSlot.appendChild($("#themeseg"));
+  // Theme: one orb in the toolbar, the theme you're on; it opens the list of themes, each with its name
+  const thSlot = right.createDiv({ cls: "thslot" }); thSlot.hidden = true;
+  { const TH = popBtn("theme", "Theme", "star"); TH.b.empty(); TH.b.classList.add("tbi", "thorb"); TH.b.setAttribute("aria-label", "Theme"); TH.b.createEl("i"); TH.p.classList.add("thpop"); TH.p.createDiv({ cls: "pt", text: "Theme" });
+    const seg = $("#themeseg"); TH.p.appendChild(seg); const THN = { paper: "Play", softpaper: "Soft Paper", lyt: "LYT Mode", dark: "Dark", obsidian: "Match Obsidian" };
+    for (const b of seg.querySelectorAll("button")) if (!b.querySelector(".thn")) b.createSpan({ cls: "thn", text: THN[b.dataset.th] || b.dataset.th });
+    const sync = () => { const on = seg.querySelector('button[aria-pressed="true"]'); TH.b.dataset.th = on ? on.dataset.th : ""; const t = "Theme: " + (on ? THN[on.dataset.th] || on.dataset.th : ""); TH.b.setAttribute("aria-label", t); };
+    sync(); new MutationObserver(sync).observe(seg, { attributes: true, subtree: true, attributeFilter: ["aria-pressed"] });
+    opener(TH); seg.addEventListener("click", e => { if (e.target.closest("button")) closePops(); }); }
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
   const ARR_OFF = new Set(["ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   // a narrow map: the main tabs that don't fit fold into More (from the right: Sensemakers, then Starfield, then Ideaverse), which becomes More maps, with them at the top
@@ -5036,7 +5043,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     GR.val.setText(view === "shelf" ? (shelfSort === "tag" && TAGNEST ? "Nested tags" : (($("#shelfsort button[aria-pressed=true]") || {}).textContent || "")) : view === "chord" ? (chOneFolder ? "Time · one folder" : chordBy === "tags" && TAGNEST ? "Nested tags" : (($("#chordby button[aria-pressed=true]") || {}).textContent || "")) : view === "treemap" ? (tmTagsOn() ? (TAGNEST ? "Nested tags" : "Tags") : $("#tmsubs").getAttribute("aria-pressed") === "true" ? "Subfolders" : "Folders") : "");
     turnSync(); twWake();
     // the theme buttons live in Display (since 0.6.49), keeping the toolbar short
-    { const inD = true, th = $("#themeseg"), want = inD ? thSec : thSlot; if (th.parentElement !== want) want.appendChild(th); thSec.hidden = !inD; thSlot.hidden = inD; }
+    thSec.hidden = true;
     root.dataset.vgrid = VGRID ? "1" : ""; vgrid.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.vg === (view === "chord" ? (CSPH === "out" ? "corona" : CSPH === "in" ? "tesla" : "chord") : view))));
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }

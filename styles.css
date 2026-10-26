@@ -108,11 +108,11 @@
 .ivm #themeseg{gap:5px;border:0;background:none;padding:0 2px;flex:none;overflow:visible}
 .ivm #themeseg button{width:20px;height:20px;padding:0;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center}
 .ivm #themeseg button i{width:14px;height:14px;border-radius:50%;display:block}
-.ivm #themeseg button[data-th="paper"] i{background:#ffffff;box-shadow:inset 0 0 0 1px #cfcfc8}
-.ivm #themeseg button[data-th="softpaper"] i{background:radial-gradient(circle at 50% 50%,#1a7da4 0 2px,transparent 2.5px),#eee6dd;box-shadow:inset 0 0 0 1px #cac1b9}
-.ivm #themeseg button[data-th="dark"] i{background:#111614;box-shadow:inset 0 0 0 1px #2a3530}
-.ivm #themeseg button[data-th="lyt"] i{background:radial-gradient(circle at 50% 50%,hsl(58,86%,66%) 0 2.5px,transparent 3px),hsl(225,12%,20%);box-shadow:inset 0 0 0 1px hsl(196,27%,41%)}
-.ivm #themeseg button[data-th="obsidian"] i{background:linear-gradient(135deg,var(--background-primary) 0 50%,var(--interactive-accent) 50%);box-shadow:inset 0 0 0 1px var(--background-modifier-border)}
+.ivm .thorb[data-th="paper"] i,.ivm #themeseg button[data-th="paper"] i{background:#ffffff;box-shadow:inset 0 0 0 1px #cfcfc8}
+.ivm .thorb[data-th="softpaper"] i,.ivm #themeseg button[data-th="softpaper"] i{background:radial-gradient(circle at 50% 50%,#1a7da4 0 2px,transparent 2.5px),#eee6dd;box-shadow:inset 0 0 0 1px #cac1b9}
+.ivm .thorb[data-th="dark"] i,.ivm #themeseg button[data-th="dark"] i{background:#111614;box-shadow:inset 0 0 0 1px #2a3530}
+.ivm .thorb[data-th="lyt"] i,.ivm #themeseg button[data-th="lyt"] i{background:radial-gradient(circle at 50% 50%,hsl(58,86%,66%) 0 2.5px,transparent 3px),hsl(225,12%,20%);box-shadow:inset 0 0 0 1px hsl(196,27%,41%)}
+.ivm .thorb[data-th="obsidian"] i,.ivm #themeseg button[data-th="obsidian"] i{background:linear-gradient(135deg,var(--background-primary) 0 50%,var(--interactive-accent) 50%);box-shadow:inset 0 0 0 1px var(--background-modifier-border)}
 .ivm #themeseg button[aria-pressed="true"]{background:none;border:2px solid var(--accent)}
 .ivm .glbl{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-right:-4px}
 .ivm .mspop .pt{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:2px 6px 0}
@@ -1002,3 +1002,14 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .fcols .fcol.shut > :not(.fhd){display:none}
 .ivm .fcols .fcol.shut .fhd .facts{display:none}
 .ivm .fcols .fcol.shut > #colllist,.ivm .fcols .fcol.shut > #foldlist,.ivm .fcols .fcol.shut > [id]{display:none}
+.ivm header.tb2 .thorb{padding:4px}
+.ivm header.tb2 .thorb i{width:16px;height:16px;border-radius:50%;display:block;box-shadow:inset 0 0 0 1px var(--line)}
+.ivm header.tb2 .thpop{width:auto;min-width:200px}
+.ivm header.tb2 .thpop #themeseg{display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:0}
+.ivm.ivm header.tb2 .thpop #themeseg button{width:auto;height:auto;border:0;border-radius:8px;display:flex;align-items:center;gap:10px;padding:6px 8px;background:none;color:var(--ink);font-size:13px;text-align:left}
+.ivm.ivm header.tb2 .thpop #themeseg button:hover{background:var(--accent-soft)}
+.ivm.ivm header.tb2 .thpop #themeseg button[aria-pressed="true"]{background:var(--accent-soft)}
+.ivm.ivm header.tb2 .thpop #themeseg button[aria-pressed="true"] i{outline:2px solid var(--accent);outline-offset:2px}
+.ivm header.tb2 .thpop #themeseg .thn{flex:1}
+.ivm #themeseg .thn{display:none}
+.ivm header.tb2 .thpop #themeseg .thn{display:block}
