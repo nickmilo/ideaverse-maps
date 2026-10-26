@@ -3738,7 +3738,7 @@ fromIn.min = SLMIN; fromIn.max = NOW_Y;
 $("#fromlo").textContent = SLMIN; $("#fromhi").textContent = NOW_Y;
 function syncYr(){ const yc = $("#yrctl"); if (!yc) return; const [a, b] = yc.querySelectorAll("input"); if (document.activeElement !== a && document.activeElement !== b) { a.value = YR0; b.value = YR1; }
   const f = y => (y - SLMIN) / Math.max(1, NOW_Y - SLMIN), fill = yc.querySelector(".fill"); fill.style.left = `calc(9px + (100% - 18px)*${f(YR0)})`; fill.style.width = `calc((100% - 18px)*${f(YR1) - f(YR0)})`;
-  { const [h0, h1] = yc.querySelectorAll(".yrh"), [e0, e1] = yc.querySelectorAll(".yre"), near = .08;
+  { const [h0, h1] = yc.querySelectorAll(".yrh"), [e0, e1] = yc.querySelectorAll(".yre"), near = Math.max(.08, 40 / Math.max(1, (yc.querySelector(".dual") || {}).clientWidth || 500));   // a year label is about 36px wide: closer than that to an end, the end's own year steps aside
     const put = (h, y) => { h.setText(String(y)); h.style.left = `calc(5px + (100% - 10px)*${f(y)})`; };
     put(h0, YR0); put(h1, YR1);
     // a handle at an end shows nothing extra; one close to an end hides that end's year; two handles on one year show it once
@@ -3746,7 +3746,7 @@ function syncYr(){ const yc = $("#yrctl"); if (!yc) return; const [a, b] = yc.qu
     if (!h0.hidden && !h1.hidden && f(YR1) - f(YR0) < near) { h0.classList.add("lft"); h1.classList.add("rgt"); } else { h0.classList.remove("lft"); h1.classList.remove("rgt"); }
     e0.style.visibility = (!h0.hidden && f(YR0) < near) || (!h1.hidden && f(YR1) < near) ? "hidden" : "";
     e1.style.visibility = (!h1.hidden && f(YR1) > 1 - near) || (!h0.hidden && f(YR0) > 1 - near) ? "hidden" : ""; }
-  yc.querySelector(".yrv").setText(!yrNarrow() ? `All (${SLMIN}–${NOW_Y})` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
+  yc.querySelector(".yrv").setText(!yrNarrow() ? `${SLMIN}–${NOW_Y} (All)` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
 function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
@@ -3904,7 +3904,7 @@ for (const id of ["#lr0", "#lr1"]) $(id).onchange = () => { let y0 = +$("#lr0").
 // a two-handle years slider (the Years shown look): the fill between the handles, each handle's year under it
 function syncDual(yc, lo, hi, mn, mx){ const [a, b] = yc.querySelectorAll(".dual input"); for (const x of [a, b]) { x.min = String(mn); x.max = String(mx); } if (document.activeElement !== a && document.activeElement !== b) { a.value = String(lo); b.value = String(hi); }
   const f = y => (y - mn) / Math.max(1, mx - mn), fill = yc.querySelector(".fill"); fill.style.left = `calc(9px + (100% - 18px)*${f(lo)})`; fill.style.width = `calc((100% - 18px)*${f(hi) - f(lo)})`;
-  const [h0, h1] = yc.querySelectorAll(".yrh"), [e0, e1] = yc.querySelectorAll(".yre"), near = .08; e0.setText(String(mn)); e1.setText(String(mx));
+  const [h0, h1] = yc.querySelectorAll(".yrh"), [e0, e1] = yc.querySelectorAll(".yre"), near = Math.max(.08, 40 / Math.max(1, (yc.querySelector(".dual") || {}).clientWidth || 500));   // a year label is about 36px wide: closer than that to an end, the end's own year steps aside e0.setText(String(mn)); e1.setText(String(mx));
   const put = (h, y) => { h.setText(String(y)); h.style.left = `calc(5px + (100% - 10px)*${f(y)})`; }; put(h0, lo); put(h1, hi);
   h0.hidden = lo === mn; h1.hidden = hi === mx || hi === lo && !h0.hidden;
   if (!h0.hidden && !h1.hidden && f(hi) - f(lo) < near) { h0.classList.add("lft"); h1.classList.add("rgt"); } else { h0.classList.remove("lft"); h1.classList.remove("rgt"); }
