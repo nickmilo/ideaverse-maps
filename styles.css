@@ -1060,8 +1060,6 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm #vmorepop .mexp summary{display:flex;align-items:center;gap:6px}
 .ivm #vmorepop .mexp summary .mic{width:14px;height:14px}
 .ivm #vmorepop .mexp summary .mic svg{width:14px;height:14px}
-.ivm.ivm header.tb2 #mapopts{top:0;width:280px}
-.ivm.ivm header.tb2 #mapopts > .pt:first-child{display:none}
 .ivm.ivm #vmorepop #mapopts.moin{position:static;width:auto;max-width:none;margin:2px 0 6px 20px;padding:4px 8px 6px 10px;border:0;border-left:2px solid var(--line);border-radius:0;box-shadow:none;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 .ivm.ivm #vmorepop .chip{justify-content:flex-start;text-align:left}
 .ivm.ivm header.tb2 #vsegms{flex:none}
@@ -1071,3 +1069,12 @@ body.is-phone .ivm .wm-name{display:none}
 /* 0.7.17 · on a computer, Obsidian's status bar floats over the bottom-right corner: the zoom buttons and the watermark sit above it */
 body:not(.is-mobile) .ivm .zoom{bottom:42px}
 body:not(.is-mobile) .ivm .wm-lyt{bottom:38px}
+/* 0.7.18 · this map's settings: a gear right after the maps button */
+.ivm.ivm header.tb2 #vsegms > .mapsetms{order:-1;flex:none}
+.ivm.ivm header.tb2 #vsegms > .mapsetms[hidden]{display:none}
+.ivm.ivm header.tb2 #mapopts{width:290px;left:0}
+/* the number key of each map, at the end of its row in the maps menu */
+.ivm #vmorepop .chip .mkey{margin-left:auto;padding-left:14px;font:500 10px var(--mono);color:var(--muted);opacity:.7}
+/* Show more maps in the header: shown whenever the row has room (the toolbar code drops it first) */
+.ivm.ivm.ivm[data-vgrid="1"]:not([data-vgoff="1"]) header.tb2 #vsegms > .vgrid{display:grid}
+.ivm.ivm.ivm[data-vgoff="1"] header.tb2 #vsegms > .vgrid{display:none}

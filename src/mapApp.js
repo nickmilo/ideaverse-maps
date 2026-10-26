@@ -4908,7 +4908,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Display: a short list, no headings: a switch for every link, then how scoring works
   DI.p.classList.add("dlist"); const hold = DI.p.createDiv({ cls: "dhold" }); hold.hidden = true; hold.appendChild($("#alllinks"));
   // Show more map names: the grid beside the tabs (wide windows), with the themes moved in here
-  const vgSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Show eight more map names in small type beside the tabs, on wide windows" } }); const vgCb = vgSw.createEl("input", { type: "checkbox" }); vgSw.createEl("i", { cls: "sw" }); vgSw.createSpan({ text: "Show more map names" });
+  const vgSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Show eight more maps by name, in small type, in the header (when there's room)" } }); const vgCb = vgSw.createEl("input", { type: "checkbox" }); vgSw.createEl("i", { cls: "sw" }); vgSw.createSpan({ text: "Show more maps in the header" });
   vgCb.checked = VGRID; vgCb.onchange = () => { VGRID = vgCb.checked; save("iv-vgrid", VGRID); syncTB(); };
   const alSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Draw every link on the map, faintly" } }); const alCb = alSw.createEl("input", { type: "checkbox" }); alSw.createEl("i", { cls: "sw" }); alSw.createSpan({ text: "Show all links" });
   alCb.onchange = () => { if (alCb.checked !== showAll) $("#alllinks").click(); };
@@ -5050,15 +5050,17 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const fold = () => { for (const b of MAIN) { b.hidden = true; FOLD_T.add(b.dataset.v); } };
     // one row if it fits (folding tabs as needed); if even Emergence alone doesn't fit beside the tools, the tools drop to a second row and the tabs get the whole first row
     // keep one row as long as possible: first Find shrinks to its magnifying glass, then tabs fold into the ☰ list, and only if even one tab won't fit do the tools drop to a second row
-    root.dataset.tbone = Platform.isMobile ? "" : "1"; root.dataset.tbwrap = ""; root.dataset.findmini = ""; fold();
+    root.dataset.tbone = Platform.isMobile ? "" : "1"; root.dataset.tbwrap = ""; root.dataset.findmini = ""; root.dataset.vgoff = ""; fold();
+    // Show more maps in the header: the small map names are the first thing to go when the row runs out of room
+    if (VGRID && over()) { root.dataset.vgoff = "1"; fold(); }
     if (over()) { root.dataset.findmini = "1"; fold(); }
-    if (over()) { root.dataset.tbwrap = "1"; root.dataset.findmini = ""; fold(); }
+    if (over()) { root.dataset.tbwrap = "1"; root.dataset.findmini = ""; root.dataset.vgoff = "1"; fold(); }
     $("#vmorepop").querySelectorAll(":scope > .vfoldb").forEach(x => x.remove()); vfold.hidden = false;
     for (const b of MAIN) { const c = $("#vmorepop").createEl("button", { cls: "chip", text: b.textContent.replace(/\s*▾\s*$/, ""), attr: { type: "button" } }); if (tabV(view) === b.dataset.v) c.classList.add("on");
       c.classList.add("vfoldb"); c.dataset.v = b.dataset.v; micon(c, MICON[b.dataset.v]); vfold.before(c);
       c.onclick = e => { e.stopPropagation(); closePops(); driftStop(); if (tabV(view) !== b.dataset.v) setView(b.dataset.v); syncTB(); }; } };
   // refit only when the toolbar's width or the map changes: refitting on every redraw let a borderline width flip back and forth
-  let fitRaf = 0, fitKey = ""; const fitSoon = () => { const k_ = root.querySelector("header").clientWidth + "|" + view + "|" + (sel >= 0 ? 1 : 0); if (k_ === fitKey || fitRaf) return; fitKey = k_; fitRaf = RAF(() => { fitRaf = 0; const was = [...FOLD_T].join(); fitTabs(); if ([...FOLD_T].join() !== was) syncTB(); }); };
+  let fitRaf = 0, fitKey = ""; const fitSoon = () => { const k_ = root.querySelector("header").clientWidth + "|" + view + "|" + (sel >= 0 ? 1 : 0) + "|" + VGRID; if (k_ === fitKey || fitRaf) return; fitKey = k_; fitRaf = RAF(() => { fitRaf = 0; const was = [...FOLD_T].join(); fitTabs(); if ([...FOLD_T].join() !== was) syncTB(); }); };
   { const ro_ = new ResizeObserver(() => { if (!dead) fitSoon(); }); ro_.observe(root.querySelector("header")); }
   syncTB = () => { syncDrift(); fitSoon();
     const core = CORE.has(view) && !FOLD_T.has(tabV(view)); vcur.hidden = true; vcurSeg.hidden = true; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" }); mbName.setText(VN());
@@ -5082,28 +5084,36 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     for (const [id, ic] of Object.entries(MICON)) { const el = id.startsWith("go") && MP.querySelector("#" + id); if (el) micon(el, ic); }
     const t0 = MP.querySelector(":scope > .pt"); if (t0) t0.after(Object.assign(doc.createElement("div"), { className: "vfold vfold0" }));
     { const ex = MP.querySelector(":scope > details"); if (ex) { ex.before(Object.assign(doc.createElement("div"), { className: "vfold" })); const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
+    const KEYMAPS = () => [...MP.querySelectorAll(":scope > .chip")].filter(c_ => !c_.hidden);
     const chipFor = () => { const id = { gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", lincal: "golincal", spiral: "gospiral", lifeline: "golifeline",
         tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" ? "gocso" : CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
       return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };
     // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
     const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop"]) $(id).hidden = id !== v_; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
       syncRange(); moT.setText(VN()); const l = hasLay(); moL.hidden = !l || !v_; moNone.hidden = true; return !!(l || v_); };
-    const placeMO = c => { mo.classList.remove("moin"); if (mo.parentElement !== SM) SM.appendChild(mo); mo.hidden = false;
-      const r0 = SM.getBoundingClientRect(), rp = MP.getBoundingClientRect(), rc = c.getBoundingClientRect(), hr = root.getBoundingClientRect(), w = mo.offsetWidth, h = mo.offsetHeight;
-      if (!Platform.isMobile && rp.right + 6 + w <= hr.right - 8) {
-        const top = Math.max(rp.top - r0.top, Math.min(rc.top - r0.top - 8, hr.bottom - r0.top - h - 8));
-        mo.setCssProps({ left: (rp.right - r0.left + 6) + "px", top: top + "px" }); }
-      else { mo.classList.add("moin"); mo.setCssProps({ left: "", top: "" }); c.after(mo); } };
     const openMaps = () => { closePops("#vmorepop"); if (typeof closeColl === "function") closeColl(); MP.hidden = false; MB.setAttribute("aria-expanded", "true");
       MP.querySelectorAll(".chip.on").forEach(x => x.classList.remove("on")); const c = chipFor();
       if (c) { c.classList.add("on"); for (let d = c.parentElement; d && d !== MP; d = d.parentElement) if (d.tagName === "DETAILS") d.open = true; }
-      if (c && fillMO()) { placeMO(c); mo.setAttribute("aria-label", VN() + " settings"); } else mo.hidden = true; };
+      // each map's number key, at the end of its row
+      KEYMAPS().forEach((ch, j) => { let kk = ch.querySelector(":scope > .mkey"); if (!kk) kk = ch.createSpan({ cls: "mkey", attr: { "aria-hidden": "true" } }); kk.setText(String(j + 1)); }); };
+    // this map's settings: their own button (a gear) right after the maps button, only on maps that have any
+    const STW = doc.createElement("div"); STW.className = "ms mapsetms"; const ST = STW.createEl("button", { cls: "tbb tbi mapset", attr: { id: "mapsetbtn", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
+    setIcon(ST, "settings"); SM.insertBefore(STW, MB.nextSibling); STW.appendChild(mo);
+    POPS.push(["#mapsetbtn", "#mapopts", ".mapsetms"]);
+    const openSet = () => { closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!fillMO()) return; mo.setAttribute("aria-label", VN() + " settings"); mo.hidden = false; ST.setAttribute("aria-expanded", "true"); };
+    ST.onclick = e => { e.stopPropagation(); if (!mo.hidden) closePops(); else openSet(); };
+    { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay()); }; }
     MB.onclick = e => { e.stopPropagation(); if (!MP.hidden) closePops(); else openMaps(); };
     // anything that used to open the map's own menu now opens the maps menu
-    toggleMapOpts = () => { if (!MP.hidden) closePops(); else openMaps(); };
-    // keys 1–4: Emergence, Ideaverse, Starfield, Sensemakers
-    onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey || !/^[1-4]$/.test(e.key)) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      const v = ["emergence", "ideaverse", "stars", "sense"][+e.key - 1]; e.preventDefault(); closePops(); driftStop(); if (tabV(view) !== v) setView(v); syncTB(); }); }
+    toggleMapOpts = () => { if (!mo.hidden) closePops(); else openSet(); };
+    // number keys: the maps in the list, in order (1–4 the main maps, 5 Gravity … 14 Linear Calendar); after a 1, a second digit within a moment makes 10–19
+    let kBuf = "", kT = 0; const goKey = n_ => { const ch = KEYMAPS()[n_ - 1]; if (ch) ch.click(); };
+    onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey || !/^[0-9]$/.test(e.key)) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      e.preventDefault(); win.clearTimeout(kT);
+      if (kBuf === "1") { kBuf = ""; const n2 = 10 + +e.key; goKey(KEYMAPS()[n2 - 1] ? n2 : 1); if (!KEYMAPS()[n2 - 1] && e.key !== "0") goKey(+e.key); return; }
+      if (e.key === "0") return;
+      if (e.key === "1" && KEYMAPS().length >= 10) { kBuf = "1"; kT = win.setTimeout(() => { kBuf = ""; goKey(1); }, 450); return; }
+      goKey(+e.key); }); }
   const mo2 = new MutationObserver(() => syncTB());
   for (const id of ["#foldx", "#collx"]) mo2.observe($(id), { attributes: true, attributeFilter: ["hidden"] });
   for (const id of ["#shelfsort", "#chordby"]) mo2.observe($(id), { attributes: true, subtree: true, attributeFilter: ["aria-pressed", "hidden"] });
