@@ -14,7 +14,7 @@ Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinkin
 
 ## The maps
 
-The toolbar starts with one button: **☰** and the name of the map you're on. Click it for the maps menu: every map with a small icon, the four main ones first (Emergence, Ideaverse, Starfield and Sensemakers). It stays open as you pick, so you can hop from map to map; click anywhere else to close it. The gear right after it opens the current map's own settings (its variants and options), on maps that have any. Quick keys along the top row of the keyboard jump to the maps in the list: **1–4** the main maps, **5** Gravity, **6** Obsidian, **7** Treemap, **8** Mosaic, **9** Bookshelf, **0** Linear Calendar, **-** Chord, **=** Corona, **[** Tesla and **]** Base Builder; each one's key shows at the end of its row. Turn on **Display → Show more maps in the header** to list eight more of them by name in small type next to the button, whenever the row has room.
+The toolbar starts with one button: **☰** and the name of the map you're on. Click it for the maps menu: every map with a small icon, the four main ones first (Emergence, Ideaverse, Starfield and Sensemakers). It stays open as you pick, so you can hop from map to map; click anywhere else to close it. The gear right after it opens the current map's own settings (its variants and options), on maps that have any. Quick keys along the top row of the keyboard jump to the maps in the list: **1–4** the main maps, **5** Gravity, **6** Obsidian, **7** Treemap, **8** Mosaic, **9** Bookshelf, **0** Linear Calendar, **-** Chord, **=** Corona, **[** Tesla and **]** Base Builder; each one's key shows at the end of its row. Turn on **Display → Show more maps in the header** to list eight more of them by name in small type next to the button, whenever the row has room (Find shrinks to its magnifying glass first).
 
 ### Emergence
 
@@ -95,7 +95,7 @@ Bookshelf turns every note into a book on a long double shelf. You can shelve th
 
 If you shelve by tag, each top-level tag gets its own bookcase. Turn on **Show nested tags** and each bookcase splits into labelled sections, one for each nested tag. This is meant for vaults that use tags instead of folders. A note with several tags is shelved under the first one. Treemap, Bookshelf and Chord handle tags the same way. You choose tags under the map's gear (⚙), which also holds the **Show nested tags** switch and the tag chips. Hiding a tag on one of these maps hides it on the others too.
 
-An Index panel lists every call number, and you can copy it as a Markdown list.
+Turn on **Show bookshelf auto-index system** (under the gear) for a panel that lists every call number, which you can copy as a Markdown list.
 
 ![Bookshelf: notes as books](docs/bookshelf.png)
 <sub>Bookshelf in the Play theme, shelved by call number.</sub>

@@ -1,16 +1,13 @@
-// Bookshelf → Index: call-number panel, filter, click to find, copy as Markdown
 module.exports = async ({ page, sleep, shot }) => {
-  await page.evaluate(() => app.commands.executeCommandById('ideaverse-maps:open'));
-  await page.waitForSelector('.ivm canvas', { timeout: 120000 }); await sleep(1500);
-  const q = s => page.locator('.ivm ' + s).first();
-  console.log('Index on Emergence:', await q('#callbtn').isVisible());
-  await q('#vmore').click(); await sleep(300); await q('#mexp > summary').click(); await sleep(200);
-  await q('#goshelf').click(); await sleep(2500);
-  await page.evaluate(s => __ivReveal(s), '#callbtn'); await sleep(250); await q('#callbtn').click(); await sleep(600); console.log('summary:', await q('#callsum').textContent()); await q('#callwhy > summary').click(); await sleep(300); await shot('index');
-  console.log('rows:', await page.locator('.ivm #calllist [data-cm]').count(), '| hubs:', await page.locator('.ivm #calllist h6').count());
-  await page.locator('.ivm #calllist [data-cm]').nth(3).click(); await sleep(1200); await shot('index-click');
-  const md = await page.evaluate(() => app.workspace.getLeavesOfType('ideaverse-maps')[0].view.debug.__ivCallMd()); console.log('md:\n' + md.split('\n').slice(0, 8).join('\n'));
-  await q('#callq').fill('2.'); await sleep(300); console.log('filtered "2.":', await page.locator('.ivm #calllist [data-cm]').count());
-  await q('#shelfsort button[data-ss="az"]').click(); await sleep(1500); console.log('A–Z panel:', (await q('#calllist').textContent()).slice(0, 80));
-  await q('#efbtn, #effbtn').click(); await sleep(300); console.log('index closed by Efforts:', await q('#callpanel').isHidden());
+  const errs = []; page.on('pageerror', e => errs.push(e.message));
+  if (process.env.DESK) { await page.evaluate(() => app.emulateMobile(false)); await sleep(3000); }
+  await page.evaluate(() => app.commands.executeCommandById('ideaverse-maps:open')); await page.waitForSelector('.ivm canvas', { timeout: 120000 }); await sleep(2500);
+  await page.keyboard.press('9'); await sleep(1500); await page.locator('.ivm #mapsetbtn').click(); await sleep(500);
+  await page.screenshot({ path: process.env.SHOTS + '/idx-off.png', clip: { x: 340, y: 80, width: 700, height: 260 } });
+  await page.locator('.ivm #mapopts .mini').click(); await sleep(700); console.log('panel open', await page.evaluate(() => !document.querySelector('.ivm #callpanel').hidden));
+  await page.locator('.ivm #mapsetbtn').click().catch(() => {}); await sleep(400); if (await page.evaluate(() => document.querySelector('.ivm #mapopts').hidden)) { await page.locator('.ivm #mapsetbtn').click(); await sleep(400); }
+  await shot('idx-on'); console.log('switch on', await page.evaluate(() => document.querySelector('.ivm #mapopts .mini input').checked));
+  await page.locator('.ivm #cpx').click(); await sleep(400); console.log('after close', await page.evaluate(() => document.querySelector('.ivm #mapopts .mini input').checked));
+  await page.keyboard.press('1'); await sleep(1200); console.log('emergence row hidden', await page.evaluate(() => document.querySelector('.ivm #mapopts .mini').hidden));
+  console.log('errors:', errs.join(' | ') || 'none');
 };

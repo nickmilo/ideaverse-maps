@@ -5051,16 +5051,18 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     // one row if it fits (folding tabs as needed); if even Emergence alone doesn't fit beside the tools, the tools drop to a second row and the tabs get the whole first row
     // keep one row as long as possible: first Find shrinks to its magnifying glass, then tabs fold into the ☰ list, and only if even one tab won't fit do the tools drop to a second row
     root.dataset.tbone = Platform.isMobile ? "" : "1"; root.dataset.tbwrap = ""; root.dataset.findmini = ""; root.dataset.vgoff = ""; fold();
-    // Show more maps in the header: the small map names are the first thing to go when the row runs out of room
-    if (VGRID && over()) { root.dataset.vgoff = "1"; fold(); }
+    // Show more maps in the header: Find shrinks to its magnifying glass first, then the small map names go
     if (over()) { root.dataset.findmini = "1"; fold(); }
+    if (VGRID && over()) { root.dataset.vgoff = "1"; fold(); }
     if (over()) { root.dataset.tbwrap = "1"; root.dataset.findmini = ""; root.dataset.vgoff = "1"; fold(); }
     $("#vmorepop").querySelectorAll(":scope > .vfoldb").forEach(x => x.remove()); vfold.hidden = false;
     for (const b of MAIN) { const c = $("#vmorepop").createEl("button", { cls: "chip", text: b.textContent.replace(/\s*▾\s*$/, ""), attr: { type: "button" } }); if (tabV(view) === b.dataset.v) c.classList.add("on");
       c.classList.add("vfoldb"); c.dataset.v = b.dataset.v; micon(c, MICON[b.dataset.v]); vfold.before(c);
       c.onclick = e => { e.stopPropagation(); closePops(); driftStop(); if (tabV(view) !== b.dataset.v) setView(b.dataset.v); syncTB(); }; } };
   // refit only when the toolbar's width or the map changes: refitting on every redraw let a borderline width flip back and forth
-  let fitRaf = 0, fitKey = ""; const fitSoon = () => { const k_ = root.querySelector("header").clientWidth + "|" + view + "|" + (sel >= 0 ? 1 : 0) + "|" + VGRID; if (k_ === fitKey || fitRaf) return; fitKey = k_; fitRaf = RAF(() => { fitRaf = 0; const was = [...FOLD_T].join(); fitTabs(); if ([...FOLD_T].join() !== was) syncTB(); }); };
+  let fitRaf = 0, fitKey = "", fitT2 = 0, fitRe = false; const fitSoon = () => { const k_ = root.querySelector("header").clientWidth + "|" + view + "|" + (sel >= 0 ? 1 : 0) + "|" + VGRID; if (k_ === fitKey || fitRaf) return; fitKey = k_; fitRaf = RAF(() => { fitRaf = 0; const was = [...FOLD_T].join(); fitTabs(); if ([...FOLD_T].join() !== was) syncTB();
+    // a fit made mid-change (a panel opening, a font loading) can drop the map names for good: check once more when things settle
+    if (fitRe) fitRe = false; else if (root.dataset.vgoff === "1" || root.dataset.findmini === "1") { win.clearTimeout(fitT2); fitT2 = win.setTimeout(() => { if (!dead) { fitKey = ""; fitRe = true; fitSoon(); } }, 700); } }); };
   { const ro_ = new ResizeObserver(() => { if (!dead) fitSoon(); }); ro_.observe(root.querySelector("header")); }
   syncTB = () => { syncDrift(); fitSoon();
     const core = CORE.has(view) && !FOLD_T.has(tabV(view)); vcur.hidden = true; vcurSeg.hidden = true; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" }); mbName.setText(VN());
@@ -5127,7 +5129,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       r.appendChild(chip); chip.classList.add("swsrc");
       const sync = () => { const on = chip.getAttribute("aria-pressed") === "true"; for (const [b_, v] of bs) b_.setAttribute("aria-pressed", String(on === v)); r.hidden = chip.hidden; };
       sync(); new MutationObserver(sync).observe(chip, { attributes: true, attributeFilter: ["aria-pressed", "hidden"] }); };
-    { const t_ = GS[3][0].querySelector(":scope > .pt"); if (t_) t_.remove(); swRow($("#tmsubs"), "Subfolders"); swRow($("#csbands"), "Bands"); }
+    { const t_ = GS[3][0].querySelector(":scope > .pt"); if (t_) t_.remove(); swRow($("#tmsubs"), "Subfolders"); swRow($("#csbands"), "Bands");
+      // Bookshelf's Index: a mini switch, in Nick's words
+      { const cb = $("#callbtn"), cp = $("#callpanel"), r = doc.createElement("label"); r.className = "mini swrow"; cb.before(r);
+        const inp = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show bookshelf auto-index system" }); r.appendChild(cb); cb.classList.add("swsrc");
+        inp.onchange = () => { if (inp.checked === cp.hidden) cb.click(); };
+        const sync = () => { inp.checked = !cp.hidden; r.hidden = cb.hidden; }; sync();
+        new MutationObserver(sync).observe(cp, { attributes: true, attributeFilter: ["hidden"] }); new MutationObserver(sync).observe(cb, { attributes: true, attributeFilter: ["hidden"] }); } }
     { const s1 = syncTB; syncTB = () => { s1(); GR.w.hidden = true; }; } }
   const mo2 = new MutationObserver(() => syncTB());
   for (const id of ["#foldx", "#collx"]) mo2.observe($(id), { attributes: true, attributeFilter: ["hidden"] });
