@@ -1,6 +1,7 @@
 // A base on Linear Calendar, zoomed in, Sync on: clicking a note keeps the zoom
 module.exports = async ({ page, sleep, shot }) => {
   const errs = []; page.on('pageerror', e => errs.push(e.message));
+  if (process.env.DESK) { await page.evaluate(() => app.emulateMobile(false)); await sleep(3000); }
   await sleep(2000);
   await page.evaluate(async () => { const f = app.vault.getAbstractFileByPath('Maps Probe.base'); await app.workspace.getLeaf('tab').openFile(f); });
   await sleep(6000);
@@ -14,7 +15,8 @@ module.exports = async ({ page, sleep, shot }) => {
   const before = await page.evaluate(p => [...app.plugins.plugins['ideaverse-maps'].basesViews][0].map._at(p).map(Math.round), target);
   await shot('blc-before');
 
-  await page.mouse.click(box[0] + before[0], box[1] + before[1]); await sleep(2500);
+  console.log('mobile?', await page.evaluate(() => [app.isMobile, document.body.classList.contains('is-mobile'), window.innerWidth]));
+  await page.mouse.click(box[0] + before[0], box[1] + before[1]); await sleep(2500); console.log('--- touch');
   // a note touched when it opens (a plugin writing a property)
   await page.evaluate(async p => { const f = app.vault.getAbstractFileByPath(p); await app.fileManager.processFrontMatter(f, fm => { fm.touched = 1; }); }, target); await sleep(2500);
   const after = await page.evaluate(p => [...app.plugins.plugins['ideaverse-maps'].basesViews][0].map._at(p).map(Math.round), target);

@@ -2915,7 +2915,10 @@ function syncCls(){ const m = root.querySelector("main"), hd = root.querySelecto
   if (m) { m.toggleClass("has-drawer", !!a && !a.hidden); m.toggleClass("legend-open", !!lg && !lg.classList.contains("collapsed")); }
   if (hd && fb) hd.toggleClass("has-fb", !fb.hidden); syncTB();
   root.querySelectorAll(".ms").forEach(ms => { const x = ms.querySelector(":scope > .qx"); ms.toggleClass("has-x", !!x && !x.hidden); }); }
-function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(doc.body.classList.contains("is-mobile") ? 1.5 : 2, win.devicePixelRatio||1);   /* phones and tablets draw a little lighter */ const firstSize = !(W > 0) && r.width > 0, cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null; W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { tx = W/2 - cx*k; ty = H/2 - cy*k; } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); if (firstSize || !isFinite(k) || !isFinite(tx)) { const f = fitTarget(); if (isFinite(f.k) && f.k > 0) { k = f.k; tx = f.tx; ty = f.ty; } } draw(); }   // opened while hidden (a base still laying out): fit once it has a size
+function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(doc.body.classList.contains("is-mobile") ? 1.5 : 2, win.devicePixelRatio||1);   /* phones and tablets draw a little lighter */ const firstSize = !(W > 0) && r.width > 0, cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null;
+  // the map keeps its middle in the middle as the pane changes size, unless a note is picked and on screen: then that note stays where it is (the note panel opening doesn't slide it away)
+  const anc = W && sel >= 0 && !domeOn() && !sphOn() && !globeOn() && !geo3On() && !csphOn() && !(view === "stars" && S3D) && X[sel] != null ? [sx(X[sel]), sy(Y[sel])] : null, ancOK = anc && anc[0] > 0 && anc[1] > 0 && anc[0] < W && anc[1] < H;
+  W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { if (ancOK && anc[0] < W - 40 && anc[1] < H - 40) { tx = anc[0] - X[sel]*k; ty = anc[1] - Y[sel]*k; } else { tx = W/2 - cx*k; ty = H/2 - cy*k; } } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); if (firstSize || !isFinite(k) || !isFinite(tx)) { const f = fitTarget(); if (isFinite(f.k) && f.k > 0) { k = f.k; tx = f.tx; ty = f.ty; } } draw(); }   // opened while hidden (a base still laying out): fit once it has a size
 // while "Share my ideaverse" records in a square or vertical frame, the map shrinks to fit inside the frame
 function fitTarget(){ const f = fitTarget0(); if (!CAPFIT) return f; const a = capArea(), c = capCrop(), s_ = 1.1 * Math.min(c.w, c.h) / dpr / Math.min(a.x1 - a.x0, H), cx = (a.x0 + a.x1) / 2, cy = H / 2;
   return { k: f.k * s_, tx: cx - (cx - f.tx) * s_, ty: cy - (cy - f.ty) * s_ }; }
@@ -3575,13 +3578,14 @@ cv.addEventListener("pointermove", e => {
     const tw = tip.offsetWidth; tip.style.left = Math.min(e.clientX + 14, win.innerWidth - tw - 8) + "px"; tip.style.top = (e.clientY + 14) + "px"; }
   else tip.hidden = true;
 });
+// a click on a note: on a phone it flies to the note; on a computer the map stays put (even in a narrow pane), sliding only if the note would be hidden
 const end = e => { pts.delete(e.pointerId);
   if (GPH.drag) { const g = GPH.drag; GPH.drag = null; if (moved) { GPH.F.free(g.j); GPH.F.heat(0); GPH.wake(); cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
   if (i >= 0 && host.openNote && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
-  if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (isPhone() || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
+  if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (Platform.isMobile || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hover = -1; shTape = -1; draw(); } tip.hidden = true; });
 function zoomAt(px, py, f){ if (domeOn() || sphOn()) { px = tx; py = ty; }   // a dome zooms about where you're looking
@@ -3678,7 +3682,7 @@ function select(i, fromTrail){
     ${down.length ? `<h5><i style="border-color:var(--down)"></i>Below · ${down.length}</h5>${noteList(down)}` : ""}
     ${!up.length && !down.length && !rel.length && !prop.length && !upl.length ? `<h5>No links on the map</h5>` : ""}`;
   const opening = drawer.hidden && !drawerCollapsed; drawer.hidden = drawerCollapsed; drawer.scrollTop = 0; syncDtab();
-  if (opening) { resize(); if (!morphing) keepInView(i); }
+  if (opening) { const px_ = sx(X[i]), py_ = sy(Y[i]); resize(); if (!morphing) { tx += px_ - sx(X[i]); ty += py_ - sy(Y[i]); draw(); keepInView(i); } }   // the panel opening leaves the note where you clicked it (slid only if the panel would cover it)
   $("#dx").onclick = () => select(-1);
   $("#dcol").onclick = () => setCollapsed(true);
   $("#dopen").onclick = e => host.openNote(d.path, e.metaKey || e.ctrlKey);
