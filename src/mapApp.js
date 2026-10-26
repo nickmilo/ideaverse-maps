@@ -2944,7 +2944,7 @@ function sphFace(i){   // a globe turns the note to face you instead of zooming 
     csYaw = y0 + dy*e; csPitch = p0 + (p1 - p0)*e; k = k + (f.k - k)*e*.25; tx = tx + (f.tx - tx)*e*.25; ty = ty + (f.ty - ty)*e*.25;
     csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); if (t < 1) RAF(step); else { sphTurning = false; buildGrid(); csKeep(); draw(); } };
   sphTurning = true; RAF(step); }
-function flyTo(i){
+function flyTo(i, noOut){   // noOut: from a click on the map, which never zooms out (it would lose where you were); it centers the note instead
   if (sphOn()) { sphFace(i); return; }
   if (view === "stars" && lastDown) {   // Starfield: a click on a galaxy's name glides into that galaxy and frames it
     const g = LH.find(q => q[5] != null && q[4] === i && lastDown[0] >= q[0] && lastDown[0] <= q[0] + q[2] && lastDown[1] >= q[1] && lastDown[1] <= q[1] + q[3]);
@@ -2956,6 +2956,7 @@ function flyTo(i){
   let x0 = X[i], x1 = X[i], y0 = Y[i], y1 = Y[i];
   for (const j of [...out[i], ...inn[i]]) { x0 = Math.min(x0, X[j]); x1 = Math.max(x1, X[j]); y0 = Math.min(y0, Y[j]); y1 = Math.max(y1, Y[j]); }
   const kk = Math.min(4, Math.max(phone ? .1 : .3, Math.min((vw - pad*2) / Math.max(x1-x0, 1), (vh - pad*2) / Math.max(y1-y0, 1))));
+  if (noOut && kk < k) { animateTo({k, tx: lc + vw/2 - X[i]*k, ty: vh/2 - Y[i]*k}); return; }
   animateTo({k:kk, tx:lc + vw/2 - (x0+x1)/2*kk, ty:vh/2 - (y0+y1)/2*kk}); }
 
 // note panel width: draggable on desktop, remembered per browser
@@ -3377,8 +3378,10 @@ function labels(lit){
     ctx.font = `${big ? 600 : 500} ${big ? 12.5 : 11.5}px ${css.body}`;
     const t = N[i].title.length > 46 ? N[i].title.slice(0,45)+"…" : N[i].title;
     const w = ctx.measureText(t).width, r = rad(i), h = 15, edge = W - sideW() - 6;
-    let lx = x + r + 4; if (lx + w > edge && x - r - 4 - w > 4) lx = x - r - 4 - w;   // near the right edge: put the name left of its dot
-    if (!fits(lx-2, y-h/2, w+4, h) && !(i === sel || i === hover)) continue;
+    // a name starts at its dot; if that's taken (or past the right edge), it ends at its dot instead; if both are taken it waits for more zoom (the note you're on and the one under the pointer always show)
+    const R_ = x + r + 4, L_ = x - r - 4 - w, rOK = R_ + w <= edge, lOK = L_ >= 4;
+    let lx = rOK || !lOK ? R_ : L_;
+    if (!fits(lx-2, y-h/2, w+4, h)) { const alt = lx === R_ ? L_ : R_; if ((alt === L_ ? lOK : rOK) && fits(alt-2, y-h/2, w+4, h)) lx = alt; else if (!(i === sel || i === hover)) continue; }
     taken.push([lx-2, y-h/2, w+4, h]); LH.push([lx-2, y-h/2, w+4, h, i]);
     ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.lineJoin = "round"; ctx.strokeText(t, lx, y);
     ctx.fillStyle = css.ink; ctx.fillText(t, lx, y);
@@ -3547,7 +3550,7 @@ const end = e => { pts.delete(e.pointerId);
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
   if (i >= 0 && host.openNote && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
-  if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (isPhone() || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
+  if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (isPhone() || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hover = -1; shTape = -1; draw(); } tip.hidden = true; });
 function zoomAt(px, py, f){ if (domeOn() || sphOn()) { px = tx; py = ty; }   // a dome zooms about where you're looking
@@ -4920,9 +4923,12 @@ return {
   follow(path){ followPath(path); },
   // a base re-sends its notes whenever anything in the vault changes; only a different set of notes refits the view,
   // so zooming in isn't undone a second later
-  setScope(paths){ const sig = paths == null ? "*" : paths.length + ":" + paths.join("\n"); if (dead) return;
+  // a base's notes: the order doesn't matter (a re-sort, or a note touched when it opens, keeps the view where it is); the camera refits only when the set of notes changes a lot
+  setScope(paths){ const sig = paths == null ? "*" : paths.length + ":" + [...paths].sort().join("\n"); if (dead) return;
     if (sig === scopeSig) { if (baseDirty) { baseDirty = false; relayout(!!W, false, () => ({ k, tx, ty })); } return; }
-    scopeSig = sig; baseDirty = false; if (paths == null) SCOPE = null; else { SCOPE = new Uint8Array(n); for (const p of paths) { const i = PIDX.get(p); if (i != null) SCOPE[i] = 1; } } relayout(!!W, false, () => fitTarget()); },
+    const was = SCOPE ? SCOPE.reduce((t, v) => t + v, 0) : n, first = !scopeSig; scopeSig = sig; baseDirty = false; if (paths == null) SCOPE = null; else { SCOPE = new Uint8Array(n); for (const p of paths) { const i = PIDX.get(p); if (i != null) SCOPE[i] = 1; } }
+    const now = SCOPE ? SCOPE.reduce((t, v) => t + v, 0) : n, big = first || Math.abs(now - was) > Math.max(3, was * .1);
+    relayout(!!W, false, big ? () => fitTarget() : () => ({ k, tx, ty })); },
   _posters(){ return { pimg: [...PIMG].filter(([, e]) => e.ok).length, cur: PSC().cur, across: PSC().opts && PSC().opts.across.map(a => a.id + ":" + a.kind), lanes: PSC().opts && PSC().opts.lanes.map(a => a.id), img: PSC().img, ticks: PSC().ticks.length, fm: (() => { for (let i=0;i<n;i++) if (vis[i]) return [N[i].path, JSON.stringify(fmOf(i))]; })() }; },
   _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
