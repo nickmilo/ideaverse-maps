@@ -3028,7 +3028,7 @@ function drawBacon(){ const hl = sel >= 0 ? sel : hover; if (hl < 0 || !vis[hl])
   ctx.restore(); }
 
 // Capture (toolbar camera): while a snapshot or clip is being taken, titles can be hidden and a small credit drawn in the corner
-const CAP = { on: false, frame: ["map", "square", "vertical"].includes(pref("iv-capframe", "map")) ? pref("iv-capframe", "map") : "map", hide: pref("iv-caphide", false) === true, credit: pref("iv-capcredit", true) !== false, len: +pref("iv-caplen", 10) || 10, start: ["none", "orbit", "timelapse"].includes(pref("iv-capstart", "orbit")) ? pref("iv-capstart", "orbit") : "orbit" };
+const CAP = { on: false, fps: +pref("iv-capfps", 30) === 60 ? 60 : 30, frame: ["map", "square", "vertical"].includes(pref("iv-capframe", "map")) ? pref("iv-capframe", "map") : "map", hide: pref("iv-caphide", false) === true, credit: pref("iv-capcredit", true) !== false, len: +pref("iv-caplen", 10) || 10, start: ["none", "orbit", "timelapse"].includes(pref("iv-capstart", "orbit")) ? pref("iv-capstart", "orbit") : "orbit" };
 // the part of the map a capture keeps, in canvas pixels: all of it, or a centered square (Instagram) or 9:16 (TikTok, Reels, Stories)
 // the stretch of the screen the map is drawn in: right of the left column (where a map has one) and left of the note panel
 function capArea(){ const ph = isPhone(), lc = !ph && (globeOn() || expOn() || view === "sense" || view === "stars") ? 400 : 0; return { x0: lc, x1: W - (ph || view === "chord" || view === "stars" ? 0 : sideW()) }; }
@@ -4824,6 +4824,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     segOf("Shape", "iv-capframe", [["map", "As shown"], ["square", "Square"], ["vertical", "Vertical"]], CAP.frame, v => { CAP.frame = v; draw(); });
     CP.p.createDiv({ cls: "pn capfn", text: "Square fits Instagram posts; Vertical (9:16) fits TikTok, Reels and Stories. The map dims outside the frame while this menu is open." });
     segOf("Clip length", "iv-caplen", [[5, "5 s"], [10, "10 s"], [20, "20 s"]], CAP.len, v => CAP.len = v);
+    segOf("Frame rate", "iv-capfps", [[30, "30 fps"], [60, "60 fps"]], CAP.fps, v => CAP.fps = v);
     segOf("While it records", "iv-capstart", [["orbit", "Orbit"], ["timelapse", "Timelapse"], ["none", "Nothing"]], CAP.start, v => CAP.start = v);
     const sw = (label, key, val, onSet, tip) => { const l = CP.p.createEl("label", { cls: "pmaps capsw", attr: { title: tip } }); const c = l.createEl("input", { type: "checkbox" }); c.checked = val; l.createEl("i", { cls: "sw" }); l.createSpan({ text: label }); c.onchange = () => { onSet(c.checked); save(key, c.checked); }; l.onclick = e => e.stopPropagation(); };
     sw("Hide note titles", "iv-caphide", CAP.hide, v => CAP.hide = v, "Leave every title off the capture, for sharing a vault you'd rather keep private");
@@ -4862,7 +4863,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const startClip = o => { const keep = { start: CAP.start, len: CAP.len, credit: CAP.credit }; Object.assign(CAP, o); const undo = () => Object.assign(CAP, keep);
       const types = ["video/mp4;codecs=avc1.42E01E", "video/mp4", "video/webm;codecs=vp9", "video/webm"], type = types.find(t => win.MediaRecorder && win.MediaRecorder.isTypeSupported(t));
       if (!type || !cv.captureStream) { undo(); showCard("This version of Obsidian can't record clips.", new Blob([]), "image"); return; }
-      const out = capCanvas(), stream = out.captureStream(30), chunks = []; rec = new win.MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 8e6 }); CAP.on = true; render(); capCompose(out);
+      const out = capCanvas(), stream = out.captureStream(CAP.fps), chunks = []; rec = new win.MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: CAP.fps === 60 ? 14e6 : 8e6 }); CAP.on = true; render(); capCompose(out);
       rec.ondataavailable = ev => { if (ev.data && ev.data.size) chunks.push(ev.data); };
       let raf_ = 0; const tick = () => { if (!rec) return; render(); capCompose(out); raf_ = RAF(tick); }; raf_ = RAF(tick);
       const t0 = performance.now(), maxMs = (CAP.start === "timelapse" ? 120 : CAP.len) * 1000;
