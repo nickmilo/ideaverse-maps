@@ -5086,10 +5086,12 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     for (const [id, ic] of Object.entries(MICON)) { const el = id.startsWith("go") && MP.querySelector("#" + id); if (el) micon(el, ic); }
     const t0 = MP.querySelector(":scope > .pt"); if (t0) t0.after(Object.assign(doc.createElement("div"), { className: "vfold vfold0" }));
     { const ex = MP.querySelector(":scope > details"); if (ex) { const exd = Object.assign(doc.createElement("div"), { className: "vfold" }); ex.before(exd);
-        // Nick's order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Chord, Corona, Tesla, Base Builder (the quick keys follow it)
-        for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gochord", "gocso", "gocsi", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
-        for (const v of ["gravity", "graph", "treemap", "mosaic", "shelf", "chord", "corona", "tesla"]) { const g_ = vgrid.querySelector(`[data-vg="${v}"]`); if (g_) vgrid.appendChild(g_); } const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
-    const QK = [..."1234567890-=[]\\"];
+        // Nick's order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Tesla, Corona, Chord, Base Builder (the quick keys follow it)
+        for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
+        for (const v of ["gravity", "graph", "treemap", "mosaic", "shelf", "tesla", "corona", "chord"]) { const g_ = vgrid.querySelector(`[data-vg="${v}"]`); if (g_) vgrid.appendChild(g_); } const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
+    // the quick keys in list order; Base Builder is always \ (Nick), wherever it sits
+    const QK = [..."1234567890-=[]"];
+    const KEYED = () => { const m_ = new Map(), cs = KEYMAPS().filter(c_ => c_.id !== "gobuilder"); cs.slice(0, QK.length).forEach((c_, j) => m_.set(QK[j], c_)); const bb = MP.querySelector("#gobuilder"); if (bb) m_.set("\\", bb); return m_; };
     const KEYMAPS = () => [...MP.querySelectorAll(":scope > .chip")].filter(c_ => !c_.hidden);
     const chipFor = () => { const id = { gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", lincal: "golincal", spiral: "gospiral", lifeline: "golifeline",
         tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" ? "gocso" : CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
@@ -5103,7 +5105,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       MP.querySelectorAll(".chip.on").forEach(x => x.classList.remove("on")); const c = chipFor();
       if (c) { c.classList.add("on"); for (let d = c.parentElement; d && d !== MP; d = d.parentElement) if (d.tagName === "DETAILS") d.open = true; }
       // each map's number key, at the end of its row
-      KEYMAPS().forEach((ch, j) => { let kk = ch.querySelector(":scope > .mkey"); if (j >= QK.length) { if (kk) kk.remove(); return; } if (!kk) kk = ch.createSpan({ cls: "mkey", attr: { "aria-hidden": "true" } }); kk.setText(QK[j]); }); };
+      MP.querySelectorAll(".mkey").forEach(x => x.remove()); for (const [k_, ch] of KEYED()) ch.createSpan({ cls: "mkey", text: k_, attr: { "aria-hidden": "true" } }); };
     // this map's settings: their own button (a gear) right after the maps button, only on maps that have any
     const STW = doc.createElement("div"); STW.className = "ms mapsetms"; const ST = STW.createEl("button", { cls: "tbb tbi mapset", attr: { id: "mapsetbtn", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
     setIcon(ST, "settings"); SM.insertBefore(STW, MB.nextSibling); STW.appendChild(mo);
@@ -5118,8 +5120,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     // anything that used to open the map's own menu now opens the maps menu
     toggleMapOpts = () => { if (!mo.hidden) closePops(); else openSet(); };
     // quick keys, along the top row of the keyboard: 1–9, then 0 - = [ ] \ for maps 10–15 (Treemap, Mosaic, Bookshelf, Base Builder, Linear Calendar)
-    onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey) return; const j_ = QK.indexOf(e.key); if (j_ < 0) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      const ch = KEYMAPS()[j_]; if (!ch) return; e.preventDefault(); ch.click(); });
+    onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey) return; const ch = KEYED().get(e.key); if (!ch) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return; e.preventDefault(); ch.click(); });
     // Group's choices (Bookshelf's Shelve by, Chord, Corona and Tesla's Arcs by, Treemap's Boxes by and Subfolders) live under the gear, first; the Group button is gone
     for (const j of [3, 2, 1, 0]) $("#laygrp").prepend(GS[j][0]);
     // a lone on/off chip becomes a row like Starfield's (a small label, then Off | On); the chip stays as the source of truth, out of sight
