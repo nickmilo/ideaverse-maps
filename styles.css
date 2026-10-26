@@ -914,7 +914,7 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .tmtagctl .pmaps input:checked + .sw{background:var(--accent)}
 .ivm .tmtagctl .pmaps input:checked + .sw::after{left:13px;background:var(--bg)}
 /* Capture: the popover, the recording dot, and the card after a capture */
-.ivm .cappop{width:280px;gap:8px}
+.ivm .cappop{width:280px;gap:8px;max-height:calc(100vh - 130px);overflow-y:auto}
 .ivm .cappop .caprow{display:flex;gap:8px}
 .ivm .cappop .caprow .chip{flex:1;justify-content:center}
 .ivm .cappop .capopt{display:flex;align-items:center;justify-content:space-between;gap:8px}
