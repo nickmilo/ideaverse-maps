@@ -1016,3 +1016,4 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .fcols .fhd.fhdt{cursor:pointer;min-height:24px}
 .ivm.ivm header.tb2 .tbl > #arrms{flex:none}
 .ivm.ivm header.tb2 .tbl > #arrms > #arrpop{left:0;right:auto}
+.ivm.ivm header.tb2 .thorb[data-th="lyt"] i{box-shadow:inset 0 0 0 1.5px #a9b1bc}
