@@ -4878,9 +4878,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       bst.setText([waits ? "Pick a note on the map: a view that follows its note shows the notes that go with it." : "", errs.length ? "Couldn't read: " + errs.join("; ") : ""].filter(Boolean).join(" "));
       relayout(true, false, () => fitTarget()); syncTB(); };
     if (BQ.length) win.setTimeout(() => { void applyBQ(); }, 0); }
+  // each column (Folders, Collections, Bases) folds away under its name, so more of the map shows behind the menu:
+  // folded names line up in a row at the top, and the menu narrows to the lists still open
+  const fbreak = fcols.createDiv({ cls: "fbreak" });
+  const fitCols = () => { const all = [...fcols.querySelectorAll(":scope > .fcol")], open = all.filter(c => !c.classList.contains("shut")).length; fbreak.hidden = !(open && open < all.length); FI.p.setCssProps({ "--fcn": String(Math.max(open, 1.25)) }); };
   // each column (Folders, Collections, Bases) folds away under its name, so more of the map shows behind the menu
   for (const fc of fcols.querySelectorAll(":scope > .fcol")) { const pt = fc.querySelector(".fhd > .pt"); if (!pt) continue; const key = "iv-fshut-" + pt.textContent.trim().toLowerCase();
-    pt.classList.add("fcolt"); pt.setAttribute("role", "button"); pt.tabIndex = 0; const set = shut => { fc.classList.toggle("shut", shut); pt.setAttribute("aria-expanded", String(!shut)); pt.title = shut ? "Show this list" : "Hide this list"; };
+    pt.classList.add("fcolt"); pt.setAttribute("role", "button"); pt.tabIndex = 0; const set = shut => { fc.classList.toggle("shut", shut); pt.setAttribute("aria-expanded", String(!shut)); pt.title = shut ? "Show this list" : "Hide this list"; fitCols(); };
     set(pref(key, false) === true); const flip = e => { e.stopPropagation(); const shut = !fc.classList.contains("shut"); set(shut); save(key, shut); };
     pt.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(e); } };
     // the whole header row folds it (its own buttons, like Clear, still do their own thing)
