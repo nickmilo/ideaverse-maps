@@ -5104,6 +5104,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     ST.onclick = e => { e.stopPropagation(); if (!mo.hidden) closePops(); else openSet(); };
     { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay()); }; }
     MB.onclick = e => { e.stopPropagation(); if (!MP.hidden) closePops(); else openMaps(); };
+    // the one menu that stays open after you pick: hop from map to map (a click anywhere else, or Escape, still closes it)
+    MP.addEventListener("click", e => { const c_ = e.target.closest(".chip"); if (!c_ || !MP.contains(c_) || MP.hidden) return; const st = MP.scrollTop;
+      win.setTimeout(() => { if (dead) return; openMaps(); MP.scrollTop = st; }, 0); }, true);
     // anything that used to open the map's own menu now opens the maps menu
     toggleMapOpts = () => { if (!mo.hidden) closePops(); else openSet(); };
     // number keys: the maps in the list, in order (1–4 the main maps, 5 Gravity … 14 Linear Calendar); after a 1, a second digit within a moment makes 10–19
