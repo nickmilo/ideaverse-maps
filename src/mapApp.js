@@ -2956,6 +2956,10 @@ function sphFace(i){   // a globe turns the note to face you instead of zooming 
     csYaw = y0 + dy*e; csPitch = p0 + (p1 - p0)*e; k = k + (f.k - k)*e*.25; tx = tx + (f.tx - tx)*e*.25; ty = ty + (f.ty - ty)*e*.25;
     csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); if (t < 1) RAF(step); else { sphTurning = false; buildGrid(); csKeep(); draw(); } };
   sphTurning = true; RAF(step); }
+// a click on a flat map: the note drifts a little of the way toward the middle (no zoom), once the note panel has made its room
+function nudgeTo(i){ if (domeOn() || sphOn() || globeOn() || geo3On() || csphOn() || view === "chord" || (view === "stars" && S3D)) return; const id_ = i;
+  win.setTimeout(() => { if (sel !== id_ || morphing) return; const phone = isPhone(), vw = W - (phone ? 0 : sideW()), px_ = sx(X[i]), py_ = sy(Y[i]); if (!isFinite(px_) || !isFinite(py_)) return;
+    const f = .3, dx = (vw/2 - px_)*f, dy = (H/2 - py_)*f; if (Math.hypot(dx, dy) < 8) return; animateTo({ k, tx: tx + dx, ty: ty + dy }); }, 80); }
 function flyTo(i, noOut){   // noOut: from a click on the map, which never zooms out (it would lose where you were); it centers the note instead
   if (sphOn()) { sphFace(i); return; }
   if (view === "stars" && lastDown) {   // Starfield: a click on a galaxy's name glides into that galaxy and frames it
@@ -3585,7 +3589,7 @@ const end = e => { pts.delete(e.pointerId);
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
   if (i >= 0 && host.openNote && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
-  if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (Platform.isMobile || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
+  if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (Platform.isMobile || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); else if (i >= 0) nudgeTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hover = -1; shTape = -1; draw(); } tip.hidden = true; });
 function zoomAt(px, py, f){ if (domeOn() || sphOn()) { px = tx; py = ty; }   // a dome zooms about where you're looking

@@ -1,6 +1,6 @@
 {
   "name": "ideaverse-maps",
-  "version": "0.6.36",
+  "version": "0.6.37",
   "description": "Maps of the Ideaverse: see your notes as Idea Emergence maps, a Gravity view and a Starfield, with a time-lapse of your vault growing.",
   "main": "main.js",
   "type": "module",
