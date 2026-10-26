@@ -4851,7 +4851,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Bases: every base in the vault, A–Z; open one to pick its views. The map keeps only the notes those views hold (any of them).
   if (host.baseList) { const bc = fcols.createDiv({ cls: "fcol bcol" }), hd = bc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Bases" }); const ac = hd.createSpan({ cls: "facts" });
     const bn = ac.createSpan({ cls: "bqn" }); const bclr = ac.createEl("button", { cls: "chip", text: "Clear", attr: { type: "button" } });
-    const bq = bc.createEl("input", { type: "search", attr: { placeholder: "Filter bases", "aria-label": "Filter bases", autocomplete: "off" } }); const bl = bc.createDiv({ cls: "mlist blist" }); const bst = bc.createDiv({ cls: "pn bqst" });
+    const bq = bc.createDiv({ cls: "msh" }).createEl("input", { type: "search", attr: { placeholder: "Filter bases", "aria-label": "Filter bases", autocomplete: "off" } }); const bl = bc.createDiv({ cls: "mlist blist" }); const bst = bc.createDiv({ cls: "pn bqst" });
     let BASES = null, loading = false; const open_ = new Set(BQ.map(k => k.split("::")[0]));
     const render = () => { bl.empty(); if (!BASES) { bl.createDiv({ cls: "pn", text: loading ? "Reading your bases…" : "" }); return; }
       const s_ = (bq.value || "").trim().toLowerCase(), rows = BASES.filter(b => !s_ || b.name.toLowerCase().includes(s_) || b.views.some(v => v.name.toLowerCase().includes(s_)));
