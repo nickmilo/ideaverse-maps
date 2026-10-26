@@ -28,7 +28,7 @@ Click any note to light up its links. You'll see the maps above it and the notes
 
 The Ideaverse map shows your whole vault as a ball of notes in 3D. Every note pushes the others away, and its links pull it toward its neighbors. Notes are drawn with the emergence symbols, so your hubs and maps stand out. Drag to turn the ball and scroll to fly into it. If you turn on Orbit in the Animations panel, it spins slowly on its own. The animation at the top of this page is the Ideaverse map.
 
-### Gravity (in More)
+### Gravity (in the ☰ menu)
 
 Gravity draws the same five levels as rings. Home notes and hubs sit at the center, and unlinked notes sit out on the rim. Time or folders run around the circle.
 
@@ -108,6 +108,10 @@ Base Builder has five layouts. **Rows** gives each category its own row. **Scatt
 
 Notes with a picture property show up as cards with their picture. Notes without one show up as dots, colored by their row. When you add a Maps of the Ideaverse view to a base, it opens on Base Builder, and the base remembers your settings.
 
+### Linear Calendar
+
+Linear Calendar shows a year as twelve rows, one for each month, with every day as a box and the weeks lined up down the page. The notes you made on a day fill its box, and each one sits at its own spot so the names of neighboring days don't run into each other. Drag the **Years** slider in its menu to show one year or several, stacked one above the other, and use ‹ › to move a year at a time. If the map is in a narrow pane, switch to **Half months**: each month takes two rows, the 1st to the 15th and then the 16th to the end, so the calendar is half as wide.
+
 ### Posters (under Experimental → Specialized)
 
 Posters is for a smaller, focused set of notes, such as your movies, your books or a learning pack. It can be a collection, a folder or a base. Each note becomes a card, and if the note has an image property, like a movie poster or a book cover, the card shows that picture. Click the Posters tab to open its menu:
@@ -137,7 +141,7 @@ A person doesn't need a note of their own to appear. If they do have one, it sit
 
 ### Experimental
 
-These maps are still taking shape. **Geometric** places your top 25 notes in patterns built from triangles. **Linear** includes a calendar, a spiral and a single long timeline. **Planet** puts your notes on the PKM Planet map. **Unfinished** holds Tree and Skyline.
+These maps are still taking shape. **Geometric** places your top 25 notes in patterns built from triangles. **Linear** includes a spiral and a single long timeline. **Planet** puts your notes on the PKM Planet map. **Unfinished** holds Tree and Skyline.
 
 ## The time-lapse
 
@@ -164,7 +168,9 @@ A note's score counts the links coming in, the links going out, links that go bo
 - Click a note to see its links. **Open note** opens it beside the map. Cmd-click a note (Ctrl-click on Windows and Linux), on the map or on Open note, and it opens in a new tab in the left sidebar, so the map stays where it is.
 - The toolbar runs along the top in one row. The maps are on the left. Click the current map's tab to see its options. The ☰ before the tabs lists every map: the four main ones first, then the rest. On a narrow pane, main tabs that don't fit leave the bar but stay in that list. Next come **Arrange**, which sets how notes are placed, and **Group**, on maps that group notes. Then **Filter** narrows the map by years, folders, collections or bases, and **Display** holds the drawing options. After those are **Find**, **Focus on active note**, **Sync active note with Obsidian editor** and **Saved**.
 - **Filter → Bases** lists every base in your vault, A to Z. Open one to see its views, and check a view to keep only the notes it holds; check several and you get the notes in any of them. The map reads each base's filters itself, so it works without opening the base. A view whose filter depends on the note it sits in (one that uses `this`) follows the note you pick on the map. If a filter uses something the map can't read yet, that view is marked "can't read" instead of showing the wrong notes.
+- **Show area and projects selector**, in Display, opens a panel of your areas and projects. Pick any of them to light up their notes.
 - **Show the way home** is in Display. When it's on, the note you're looking at lights up the shortest chain of links back to your home note, names every note along the way, and counts the steps, like six degrees of Kevin Bacon. To aim at a different note, click the destination's name and search for any note, or click a note on the map and choose **Use this note**. **Default** sends it back to your home note, and you can change which note that is in Settings. A small switch bends the straight lines into gentle curves if you prefer.
+- Clicking a note leaves your zoom alone and drifts the note a little toward the middle. Names that would collide make room for each other: maps and hubs are named first and can tilt slightly to fit, and only a handful of smaller notes are named until you zoom in.
 - Press `/` to search. Drag to move around, and scroll to zoom. **Focus** shows one note and its neighbors. You can turn it on with the target icon in the toolbar or with **Focus on its links** in a note's panel.
 - **Animations**, in the bottom left, holds the Timelapse, **Wander Mode** and **Orbit**. Wander Mode walks from note to linked note, or hops between maps. Orbit drifts slowly across flat maps and spins the globe maps.
 - **Sync active note with Obsidian editor** makes the map follow whichever note you're editing, like a local graph. It works both ways. If you pick a note on the map, it opens in your editor. Put the map in a split pane or the sidebar and it keeps up as you move through your notes.
