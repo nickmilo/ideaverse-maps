@@ -1068,3 +1068,6 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm header.tb2 #vmore .vmn{max-width:150px;overflow:hidden;text-overflow:ellipsis}
 .ivm header.tb2 #vmore .vchev{display:inline-flex;font-size:inherit;opacity:.85;margin-left:-1px}
 .ivm.ivm header.tb2 #vsegms > #vmore.vham .vchev svg{width:14px;height:14px;stroke-width:2.5;opacity:1}
+/* 0.7.17 · on a computer, Obsidian's status bar floats over the bottom-right corner: the zoom buttons and the watermark sit above it */
+body:not(.is-mobile) .ivm .zoom{bottom:42px}
+body:not(.is-mobile) .ivm .wm-lyt{bottom:38px}
