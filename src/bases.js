@@ -38,7 +38,8 @@ const makeView = BasesView => class MapBasesView extends BasesView {
     this.map = await mountInto(this, this.hostEl, {
       store: this.baseStore(),
       isActive: () => this.hostEl.isConnected && this.hostEl.contains(document.activeElement || null),
-      openNote: (p, t, b) => { this.noteLeaf = openBeside(this.app, null, this.noteLeaf, p, t, b); },
+      openNote: (p, t, b) => { let own = null; this.app.workspace.iterateAllLeaves(l => { if (!own && l.view && l.view.containerEl && l.view.containerEl.contains(this.hostEl)) own = l; });   // the tab the base is in (a .base file, or a note that embeds one)
+        this.noteLeaf = openBeside(this.app, own, this.noteLeaf, p, t, b); },
     });
     if (this.map) { this.map.setBaseInfo && this.map.setBaseInfo(this.baseInfo()); this.map.setScope(this.paths || this.currentPaths()); }
   }

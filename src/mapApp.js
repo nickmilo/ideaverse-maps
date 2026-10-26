@@ -1807,7 +1807,7 @@ function layoutLincal(){
   LC = {years, C, H1, col};
   const last = years.length - 1; expBox = {x0: -90, y0: last*H1 - 70, x1: 37*C + 20, y1: last*H1 + 12*C + 20}; }   // fit to the latest year; the wheel scrolls back through the rest
 EXP.lincal = {
-  layout: layoutLincal,
+  layout: layoutLincal, pick: (x, y) => dotPick(x, y), spinePick: true,   // like Bookshelf: the nearest dot wins and names never block, so you can glide along a row either way
   guides(){ const {years, C, H1, col} = LC, now = new Date();
     for (let yi = 0; yi < years.length; yi++) { const y = years[yi], top = yi*H1; if (sy(top + 12*C) < -40 || sy(top - 70) > H + 40) continue;
       ctx.fillStyle = css.panel; ctx.globalAlpha = .55; for (const wc of [5, 6, 12, 13, 19, 20, 26, 27, 33, 34]) ctx.fillRect(sx(wc*C), sy(top - 6), C*k, (12*C + 6)*k); ctx.globalAlpha = 1;   // weekend columns
@@ -3471,6 +3471,12 @@ function axisLabels(){
 // ---------- hit testing ----------
 let linkedOf = -1, linkedSet = null;
 dbg.__ivPickTest = () => { if (sel < 0) return null; let ok = 0, other = 0, tot = 0; for (const j of new Set([...out[sel], ...inn[sel]])) { if (!VV(j)) continue; const px = sx(X[j]) + 4, py = sy(Y[j]) + 3; if (px < 0 || px > W || py < 0 || py > H) continue; tot++; const p = pick(px, py); if (p === j) ok++; else if (p === sel || out[sel].includes(p) || inn[sel].includes(p)) other++; } return [ok, other, tot]; };   // the selected note and the notes it links with, cached per selection
+// the nearest visible dot to a world point, within a few pixels on screen; names are ignored
+function dotPick(x, y){ const rr = Math.max(12/k, 2); let best = -1, bd = Infinity;
+  const c0 = Math.floor((x-rr-30)/CELL), c1 = Math.floor((x+rr+30)/CELL), r0 = Math.floor((y-rr-30)/CELL), r1 = Math.floor((y+rr+30)/CELL);
+  for (let a=c0;a<=c1;a++) for (let b=r0;b<=r1;b++) { const g = grid.get(a+","+b); if (!g) continue;
+    for (const i of g) { if (!VV(i)) continue; const d = Math.hypot((X[i]-x)*k, (Y[i]-y)*k); if (d < Math.max(rad(i) + 8, 10) && d < bd) { bd = d; best = i; } } }
+  return best; }
 function pick(px, py){
   if (expOn() && EXP[view].pick && !(morphing && senseT == null)) { if (EXP[view].spinePick) return EXP[view].pick(wx(px), wy(py));   // Bookshelf: names never block the books, so a finger can glide along the shelf either way
     for (let q = LH.length - 1; q >= 0; q--) { const [lx, ly, lw, lh, i] = LH[q]; if (px >= lx && px <= lx + lw && py >= ly && py <= ly + lh && vis[i]) return i; } return EXP[view].pick(wx(px), wy(py)); }
@@ -3540,6 +3546,7 @@ const end = e => { pts.delete(e.pointerId);
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
+  if (i >= 0 && host.openNote && (e.metaKey || (e.ctrlKey && !/Mac/i.test(navigator.platform)))) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (isPhone() || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hover = -1; shTape = -1; draw(); } tip.hidden = true; });
@@ -3627,7 +3634,7 @@ function select(i, fromTrail){
     <h2>${esc(d.title)}</h2><div class="path">${esc(d.path)}${d.date ? " · " + esc(d.date) : ""}</div>
     <div class="lvl">Level ${d.level} · ${esc(LV[d.level].name)}</div>${axisValue(d) ? `<div class="lvl axv">${esc(axisValue(d))}</div>` : ""}${d.archive ? `<div class="lvl" style="margin-left:6px">Archive</div>` : ""}${view === "arc" ? `<div class="lvl axv" title="${esc(ARW[i])}">ARC · ${ARC_L[ARS[i]].name} · ${esc(ARW[i])}</div>` : ""}${view === "chord" ? `<div class="lvl axv">◯ ${esc(CHCAT[CHC[i]].short)}</div>` : ""}${view === "stars" && BOD[i] >= 0 ? `<div class="lvl axv">✦ ${esc(bodyLabel(i))}</div>` : ""}
     <div class="nums"><div><b>${d.body_in}</b><span>linked from</span></div><div><b>${d.body_out}</b><span>links to</span></div><div><b>${d.up_in}</b><span>link up to it</span></div><div><b>${d.score.toFixed(1)}</b><span>link score</span></div></div>
-    ${whyBox(i)}<button class="open" id="dopen" title="Open the note (Cmd/Ctrl-click: in a new tab)">Open note</button><button class="focusbtn" id="dfocus">${focus === i ? "Exit focus" : "Focus on its links"}</button>
+    ${whyBox(i)}<button class="open" id="dopen" title="Open the note (Cmd/Ctrl-click: in a new tab in the left sidebar)">Open note</button><button class="focusbtn" id="dfocus">${focus === i ? "Exit focus" : "Focus on its links"}</button>
     ${upl.length || rel.length || prop.length ? `<div class="lgrp" title="Links written in the frontmatter">Properties</div>` : ""}
     ${upl.length ? `<h5><i style="border-color:var(--upp)"></i>Uplinks · ${upl.length}</h5>${noteList(upl)}` : ""}
     ${rel.length ? `<h5><i style="border-color:var(--rel)"></i>Related · ${rel.length}</h5>${noteList(rel)}` : ""}
@@ -4918,6 +4925,7 @@ return {
     scopeSig = sig; baseDirty = false; if (paths == null) SCOPE = null; else { SCOPE = new Uint8Array(n); for (const p of paths) { const i = PIDX.get(p); if (i != null) SCOPE[i] = 1; } } relayout(!!W, false, () => fitTarget()); },
   _posters(){ return { pimg: [...PIMG].filter(([, e]) => e.ok).length, cur: PSC().cur, across: PSC().opts && PSC().opts.across.map(a => a.id + ":" + a.kind), lanes: PSC().opts && PSC().opts.lanes.map(a => a.id), img: PSC().img, ticks: PSC().ticks.length, fm: (() => { for (let i=0;i<n;i++) if (vis[i]) return [N[i].path, JSON.stringify(fmOf(i))]; })() }; },
   _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
+  _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
   _graph(){ return { mlive: morphing, rms: GPH.x ? Math.round(Math.sqrt([...GPH.x].reduce((t, v, i) => t + v * v + GPH.y[i] * GPH.y[i], 0) / GPH.x.length)) : 0, st: GPH.stepMs, dr: GPH.drawMs, mo: GPH.morph, it: GPH.it, its: GPH.its, key: GPH.key }; },
   setBaseInfo(info){ const sig = info ? JSON.stringify([info.sort, info.order, info.cols, info.groups ? [...info.groups].join() : ""]) : ""; if (sig === baseSig) return;
     baseSig = sig; BASEINFO = info || null; FMC.clear(); PSTP.key = PSTB.key = null; baseDirty = true; },

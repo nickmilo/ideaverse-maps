@@ -71,11 +71,15 @@ export function openBeside(app, ownLeaf, noteLeaf, path, newTab, background) {
   const file = app.vault.getAbstractFileByPath(path);
   if (!(file instanceof TFile)) return noteLeaf;
   const ws = app.workspace, notes = ws.getLeavesOfType("markdown");
-  let leaf = notes.includes(noteLeaf) ? noteLeaf : notes.find(l => !ownLeaf || l.parent !== ownLeaf.parent);   // a note pane beside the map
-  if (newTab) leaf = ws.getLeaf("tab");
+  // a note pane beside the map: one you can see (a note in a tab hidden behind another tab doesn't count), not in the map's own tab group
+  const shown = l => { const el = l.view && l.view.containerEl; return !!el && el.isConnected && el.offsetParent !== null; };
+  const beside = l => l !== ownLeaf && (!ownLeaf || l.parent !== ownLeaf.parent) && shown(l);
+  let leaf = notes.includes(noteLeaf) && beside(noteLeaf) ? noteLeaf : notes.find(beside);
+  if (newTab) leaf = ws.getLeftLeaf(false) || ws.getLeaf("tab");   // ⌘-click: a new tab in the left sidebar, so the map stays in view
   else if (!leaf) leaf = ws.getLeaf("split", "vertical");
   if (background && leaf.view && leaf.view.file === file) return newTab ? noteLeaf : leaf;   // already showing it
   void leaf.openFile(file, background ? { active: false } : undefined);   // in the background the map keeps focus
+  if (!background) void ws.revealLeaf(leaf);
   return newTab ? noteLeaf : leaf;
 }
 
