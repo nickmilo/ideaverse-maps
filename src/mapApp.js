@@ -66,7 +66,11 @@ const bandY = {}; { let y = TOP; for (const L of LEVELS) { const h = WH*FR[L.lv]
 const DAY = 864e5, YEAR = 365.2425*DAY;
 const T1 = (Date.parse((D.generated||"").slice(0,10)) || Date.now()) + 45*DAY;
 const NOW_Y = new Date(T1).getUTCFullYear();
-const TV = new Float64Array(n); N.forEach((d,i) => TV[i] = /^\d{4}-\d{2}-\d{2}$/.test(d.date||"") ? Date.parse(d.date) : NaN);
+const TV = new Float64Array(n);
+// a note's date: its Date property (Created by default), or, with Filter → Years → Organize by most recently modified, the day its file was last changed
+const mtDay = ms => { if (!ms) return NaN; const d = new Date(ms); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); };
+let BYMT = host.store.get("iv-mtime") === true;
+const fillTV = () => N.forEach((d,i) => TV[i] = BYMT ? mtDay(d.mt) : /^\d{4}-\d{2}-\d{2}$/.test(d.date||"") ? Date.parse(d.date) : NaN); fillTV();
 const ARCH = Uint8Array.from(N, d => d.archive ? 1 : 0), hasArch = ARCH.some(v => v);
 let minYear = NOW_Y; for (let i=0;i<n;i++) if (!isNaN(TV[i])) minYear = Math.min(minYear, new Date(TV[i]).getUTCFullYear());
 // the sliders start at the first year with a real body of notes (10+), so a stray 1984 note doesn't waste most of the track; older notes sit in "Before"
@@ -98,6 +102,10 @@ let subOff = new Set(Array.isArray(pref("iv-subsoff", null)) ? pref("iv-subsoff"
 let folders = pref("iv-folders", null); if (!Array.isArray(folders)) folders = [...FOLD]; folders = folders.filter(f => FOLD.includes(f));
 // Bases (Filter → Bases): the base views picked, as "path::view name"; BQS marks the notes they hold (null: no base filter)
 let BQ = pref("iv-bq", []); if (!Array.isArray(BQ)) BQ = []; let BQS = null, BQCTX = false, applyBQ = async () => {};
+// Filter → MOCs: maps picked by path; the map keeps them and the notes linked to them, 1 or 2 steps out (like Focus)
+let MOCSEL = pref("iv-mocs", []); if (!Array.isArray(MOCSEL)) MOCSEL = []; let MDEG = pref("iv-mocdeg", 1) === 2 ? 2 : 1, MS = null;
+// Filter → Properties: {property: [values]}; a note stays if, for every property with values picked, it has any of them
+let PSEL = pref("iv-props", {}); if (!PSEL || typeof PSEL !== "object" || Array.isArray(PSEL)) PSEL = {}; let PRS = null;
 let colls = pref("iv-coll", []); if (!Array.isArray(colls)) colls = colls ? [String(colls).toLowerCase()] : [];
 let collMode = pref("iv-collmode", "any") === "all" ? "all" : "any";
 N.forEach(d => d._cl = (d.collections || []).map(c => c.toLowerCase()));
@@ -157,6 +165,7 @@ function computeVis(){ const fs = new Set(folders);
       && !subHid[i]
       && collOK(d)
       && (!BQS || BQS[i])
+      && (!MS || MS[i]) && (!PRS || PRS[i])
       && (!fset || fset[i] || curV() === "people")) ? 1 : 0; }
   // tags switched off (Treemap, Bookshelf and Chord by tags) leave the map
   if (tagHide.on()) for (let i=0;i<n;i++) if (vis[i] && tagHide.hid(i)) vis[i] = 0;
@@ -165,7 +174,7 @@ function computeVis(){ const fs = new Set(folders);
   if (BQCTX && BQS && sel >= 0) vis[sel] = 1;   // a base view that follows the picked note keeps that note on the map
   // a filter, a collection or a base that leaves few notes: draw them bigger, so a small set never looks empty
   let nv = 0; for (let i=0;i<n;i++) nv += vis[i]; NVIS = nv;
-  NARROW = colls.length > 0 || !!SCOPE || !!BQS || FOLD.some(f => !fs.has(f));
+  NARROW = colls.length > 0 || !!SCOPE || !!BQS || !!MS || !!PRS || FOLD.some(f => !fs.has(f));
   BOOST = NARROW && nv ? Math.max(1, Math.min(2.2, Math.pow(n / nv, .25))) : 1; }
 
 const XA = new Float32Array(n), XT = new Float32Array(n), X = new Float32Array(n), Y = new Float32Array(n), R = new Float32Array(n);
@@ -1896,6 +1905,18 @@ const mkPST = c => ({ across: pref(`iv-${c}across`, null), lanes: pref(`iv-${c}l
 const PSTP = mkPST("p"), PSTB = mkPST("b"), PSC = () => view === "builder" ? PSTB : PSTP, PK = key => "iv-" + (PSC() === PSTB ? "b" : "p") + key;
 let BASEINFO = null;   // from a base: its sort property and each note's group
 // (a note whose properties Obsidian hasn't read yet, right after it starts, is asked again next time instead of remembered as empty)
+// a property's values as plain text: lists split, [[links]] and their aliases read as the note's name
+const pvals = v => v == null ? [] : Array.isArray(v) ? v.flatMap(pvals) : typeof v === "object" ? [] : [String(v).replace(/^\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]$/, "$1").trim()].filter(Boolean);
+function computeMS(){ if (!MOCSEL.length) { MS = null; return; } const set = new Uint8Array(n); let front = [];
+  for (const p_ of MOCSEL) { const i = PIDX.get(p_); if (i != null && !set[i]) { set[i] = 1; front.push(i); } }
+  if (!front.length) { MS = null; return; }
+  for (let s_ = 0; s_ < MDEG; s_++) { const next = []; for (const i of front) for (const j of out[i].concat(inn[i])) if (!set[j]) { set[j] = 1; next.push(j); } front = next; }
+  MS = set; }
+function computePS(){ const ks = Object.keys(PSEL).filter(k_ => (PSEL[k_] || []).length); if (!ks.length) { PRS = null; return; } const set = new Uint8Array(n);
+  const want = ks.map(k_ => [k_, new Set(PSEL[k_].map(v => String(v).toLowerCase()))]);
+  for (let i = 0; i < n; i++) { const f = fmOf(i); if (!f) continue; let ok = true;
+    for (const [k_, w] of want) { if (!pvals(f[k_]).some(v => w.has(v.toLowerCase()))) { ok = false; break; } } if (ok) set[i] = 1; }
+  PRS = set; }
 const FMC = new Map(); const fmOf = i => { let f = FMC.get(i); if (f === undefined) { f = (host.frontmatter && host.frontmatter(N[i].path)) || null; if (f) FMC.set(i, f); } return f; };
 const linkName = v => String(v).replace(/^!?\[\[|\]\]$/g, "").replace(/\|.*$/, "").trim();
 const isLink = v => typeof v === "string" && /^!?\[\[[^\]]+\]\]$/.test(v.trim());
@@ -3129,6 +3150,11 @@ function render(){
     for (const [a,b] of E) { if (!VV(a) || !VV(b)) continue; ctx.moveTo(sx(X[a]), sy(Y[a])); ctx.lineTo(sx(X[b]), sy(Y[b])); }
     ctx.stroke(); ctx.globalAlpha = 1;
   }
+  // Filter → MOCs: each picked map's own links, so you see what gathers around it
+  if (MS && focus < 0 && !showAll && !sphOn() && !domeOn()) { ctx.strokeStyle = css.accent; ctx.globalAlpha = .32; ctx.lineWidth = 1; ctx.beginPath();
+    for (const p_ of MOCSEL) { const i = PIDX.get(p_); if (i == null || !VV(i)) continue; const x0 = sx(X[i]), y0 = sy(Y[i]);
+      for (const j of out[i].concat(inn[i])) { if (!VV(j)) continue; ctx.moveTo(x0, y0); ctx.lineTo(sx(X[j]), sy(Y[j])); } }
+    ctx.stroke(); ctx.globalAlpha = 1; }
   if (showAll) {
     ctx.strokeStyle = css["edge-faint"]; ctx.lineWidth = 1; ctx.beginPath();
     if (sphOn()) { for (const [a,b] of E) { if (VV(a) && VV(b)) csStroke(csArc(DTH[a], DPH[a], DTH[b], DPH[b], 10)); } }
@@ -4748,6 +4774,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const tg = yc.createEl("label", { cls: "pmaps yrall", attr: { "aria-label": "Show notes with no date, and notes from before or after the years shown, in strips at the edges" } });
     const cb = tg.createEl("input", { type: "checkbox", attr: { id: "yrall" } }); cb.checked = YRALL; tg.createEl("i", { cls: "sw" }); tg.createSpan({ text: "Show notes outside the date range" });
     cb.onchange = () => { YRALL = cb.checked; save("iv-yrall", YRALL); relayout(true, false, () => fitTarget()); };
+    // date by when each file was last changed instead of the Date property (Nick: "Organize by most recently modified")
+    const tm = yc.createEl("label", { cls: "pmaps yrall", attr: { "aria-label": "Date each note by when its file was last modified, instead of the Date property" } });
+    const cm = tm.createEl("input", { type: "checkbox", attr: { id: "bymt" } }); cm.checked = BYMT; tm.createEl("i", { cls: "sw" }); tm.createSpan({ text: "Organize by most recently modified" });
+    cm.onchange = () => { BYMT = cm.checked; save("iv-mtime", BYMT); fillTV(); if (typeof syncTB === "function") syncTB(); relayout(true, false, () => fitTarget()); legend(); };
     let t_ = 0; const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; SY0 = YR0; SY1 = YR1; syncYr();
       if (view === "sense" && typeof senseSteps === "function") { senseStop(); senseT = null; senseTrail = []; SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; $("#tldate").textContent = "All time"; }
       win.clearTimeout(t_); if (commit) { save("iv-yr0", YR0); save("iv-yr1", YR1); } t_ = win.setTimeout(() => { relayout(false); if (typeof syncTB === "function") syncTB(); }, commit ? 0 : 90); };
@@ -4861,6 +4891,50 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     fc.appendChild($("#foldlist")); const sp = $("#specialt"); if (sp) { const sbox = sp.nextElementSibling; fc.appendChild(sp); if (sbox) fc.appendChild(sbox); } }
   { const cc = fcols.createDiv({ cls: "fcol" }), hd = cc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Collections" }); const ac = hd.createSpan({ cls: "facts" }); ac.appendChild($("#collcount")); ac.appendChild($("#collclear"));
     cc.appendChild($("#collq").parentElement); cc.appendChild($("#colllist")); if (!COLL.length) cc.createEl("p", { cls: "pn", text: "No collections yet (a collection shows here once 10 notes name it)." }); }
+  // MOCs: every map note (Level 3 and up); pick one or several and the map keeps them and what links to or from them, 1 or 2 steps out
+  { const mc = fcols.createDiv({ cls: "fcol mcol" }), hd = mc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "MOCs" }); const ac = hd.createSpan({ cls: "facts" });
+    const mn = ac.createSpan({ cls: "bqn" }); const mclr = ac.createEl("button", { cls: "chip", text: "Clear", attr: { type: "button" } });
+    const row = mc.createDiv({ cls: "msh" }); const mq = row.createEl("input", { type: "search", attr: { placeholder: "Filter MOCs", "aria-label": "Filter MOCs", autocomplete: "off" } });
+    const dg = row.createDiv({ cls: "seg mdeg", attr: { role: "group", "aria-label": "Steps out" } }); const dbs = [1, 2].map(v => { const b_ = dg.createEl("button", { text: v === 1 ? "1 step" : "2 steps", attr: { type: "button", title: v === 1 ? "The MOC and the notes linked to or from it" : "…and the notes linked to those" } }); b_.onclick = e => { e.stopPropagation(); MDEG = v; save("iv-mocdeg", v); syncD(); applyMS(); }; return [b_, v]; });
+    const syncD = () => { for (const [b_, v] of dbs) b_.setAttribute("aria-pressed", String(v === MDEG)); }; syncD();
+    const ml = mc.createDiv({ cls: "mlist blist mlistf" });
+    const MOCS = []; for (let i = 0; i < n; i++) if (N[i].level >= 3 && !ARCH[i]) MOCS.push(i);
+    MOCS.sort((a_, b_) => N[b_].level - N[a_].level || (out[b_].length + inn[b_].length) - (out[a_].length + inn[a_].length) || N[a_].title.localeCompare(N[b_].title));
+    const render = () => { ml.empty(); const q_ = (mq.value || "").trim().toLowerCase(); const on_ = new Set(MOCSEL);
+      const rows = MOCS.filter(i => on_.has(N[i].path) || !q_ || N[i].title.toLowerCase().includes(q_)); rows.sort((a_, b_) => on_.has(N[b_].path) - on_.has(N[a_].path));
+      if (!MOCS.length) { ml.createDiv({ cls: "pn", text: "No maps yet (notes at Level 3 and up)." }); return; } if (!rows.length) { ml.createDiv({ cls: "pn", text: "No match." }); return; }
+      for (const i of rows.slice(0, 250)) { const l = ml.createEl("label", { cls: "bqv" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = on_.has(N[i].path);
+        l.createSpan({ cls: "t", text: N[i].title }); l.createSpan({ cls: "m", text: "L" + N[i].level + " · " + (out[i].length + inn[i].length) });
+        cb.onchange = () => { MOCSEL = cb.checked ? [...MOCSEL, N[i].path] : MOCSEL.filter(x => x !== N[i].path); save("iv-mocs", MOCSEL); applyMS(); render(); }; }
+      if (rows.length > 250) ml.createDiv({ cls: "pn", text: `${(rows.length - 250).toLocaleString()} more: type to find one.` }); };
+    const applyMS = () => { computeMS(); let c_ = 0; if (MS) for (let i = 0; i < n; i++) c_ += MS[i]; mn.setText(MS ? `${c_.toLocaleString()} notes` : ""); relayout(true, false, () => fitTarget()); syncTB(); };
+    mq.addEventListener("input", render); mclr.onclick = e => { e.stopPropagation(); MOCSEL = []; save("iv-mocs", MOCSEL); applyMS(); render(); };
+    FI.b.addEventListener("click", render); render(); if (MOCSEL.length) win.setTimeout(applyMS, 0); }
+  // Properties: every property your notes use (with a value shared by two or more notes), each opening to its values; pick values to keep only those notes
+  { const pc = fcols.createDiv({ cls: "fcol pcol" }), hd = pc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Properties" }); const ac = hd.createSpan({ cls: "facts" });
+    const pn_ = ac.createSpan({ cls: "bqn" }); const pclr = ac.createEl("button", { cls: "chip", text: "Clear", attr: { type: "button" } });
+    const pq = pc.createDiv({ cls: "msh" }).createEl("input", { type: "search", attr: { placeholder: "Filter properties or values", "aria-label": "Filter properties or values", autocomplete: "off" } });
+    const pl = pc.createDiv({ cls: "mlist blist" }); let PX = null; const open_ = new Set(Object.keys(PSEL));
+    const index = () => { if (PX) return; const m = new Map();
+      for (let i = 0; i < n; i++) { const f = fmOf(i); if (!f) continue; for (const k_ of Object.keys(f)) { if (k_ === "position") continue; const vs = [...new Set(pvals(f[k_]))]; if (!vs.length) continue;
+        let e = m.get(k_); if (!e) { e = { notes: 0, vals: new Map() }; m.set(k_, e); } e.notes++;
+        for (const v of vs) { const lk = v.toLowerCase(); const ve = e.vals.get(lk); if (ve) ve.c++; else e.vals.set(lk, { label: v, c: 1 }); } } }
+      PX = [...m].map(([k_, e]) => ({ k: k_, notes: e.notes, vals: [...e.vals.values()].sort((a_, b_) => b_.c - a_.c || a_.label.localeCompare(b_.label)) })).filter(p_ => p_.vals.some(v => v.c >= 2)).sort((a_, b_) => a_.k.localeCompare(b_.k)); };
+    const render = () => { index(); pl.empty(); const q_ = (pq.value || "").trim().toLowerCase();
+      if (!PX.length) { pl.createDiv({ cls: "pn", text: "No properties with a value shared by two or more notes." }); return; }
+      let shown = 0;
+      for (const p_ of PX) { const on_ = new Set((PSEL[p_.k] || []).map(v => v.toLowerCase())); const kHit = !q_ || p_.k.toLowerCase().includes(q_);
+        const vals = p_.vals.filter(v => on_.has(v.label.toLowerCase()) || kHit || v.label.toLowerCase().includes(q_)); if (!vals.length) continue; shown++;
+        const det = pl.createEl("details", { cls: "bqb" }); det.open = open_.has(p_.k) || (!!q_ && !kHit); det.ontoggle = () => { if (det.open) open_.add(p_.k); else open_.delete(p_.k); };
+        const sm = det.createEl("summary"); sm.createSpan({ cls: "t", text: p_.k }); sm.createSpan({ cls: "m", text: on_.size ? `${on_.size} on` : p_.notes.toLocaleString() });
+        for (const v of vals.slice(0, 150)) { const l = det.createEl("label", { cls: "bqv" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = on_.has(v.label.toLowerCase());
+          l.createSpan({ cls: "t", text: v.label }); l.createSpan({ cls: "m", text: v.c.toLocaleString() });
+          cb.onchange = () => { const cur = (PSEL[p_.k] || []).filter(x => x.toLowerCase() !== v.label.toLowerCase()); if (cb.checked) cur.push(v.label); if (cur.length) PSEL[p_.k] = cur; else delete PSEL[p_.k]; PSEL = { ...PSEL }; save("iv-props", PSEL); applyPS(); render(); }; }
+        if (vals.length > 150) det.createDiv({ cls: "pn", text: `${(vals.length - 150).toLocaleString()} more: type to find one.` }); }
+      if (!shown) pl.createDiv({ cls: "pn", text: "No match." }); };
+    const applyPS = () => { computePS(); let c_ = 0; if (PRS) for (let i = 0; i < n; i++) c_ += PRS[i]; pn_.setText(PRS ? `${c_.toLocaleString()} notes` : ""); relayout(true, false, () => fitTarget()); syncTB(); };
+    pq.addEventListener("input", render); pclr.onclick = e => { e.stopPropagation(); PSEL = {}; save("iv-props", PSEL); applyPS(); render(); };
+    FI.b.addEventListener("click", () => { if (!FI.p.hidden || true) render(); }); if (Object.keys(PSEL).length) win.setTimeout(applyPS, 0); }
   // Bases: every base in the vault, A–Z; open one to pick its views. The map keeps only the notes those views hold (any of them).
   if (host.baseList) { const bc = fcols.createDiv({ cls: "fcol bcol" }), hd = bc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Bases" }); const ac = hd.createSpan({ cls: "facts" });
     const bn = ac.createSpan({ cls: "bqn" }); const bclr = ac.createEl("button", { cls: "chip", text: "Clear", attr: { type: "button" } });
@@ -5084,7 +5158,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }
     { const yc_ = $("#ycol"); if (yc_) yc_.hidden = !YRV.has(view); } $("#yrctl").hidden = !YRV.has(view); syncYr();
-    const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (BQ.length ? 1 : 0) + (YRV.has(view) && yrNarrow() ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0);
+    const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (BQ.length ? 1 : 0) + (MS ? 1 : 0) + (PRS ? 1 : 0) + (YRV.has(view) && yrNarrow() ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0);
   };
   // the maps menu: every map (an icon before each name), and this map's settings to its right (below it on a narrow pane or a phone)
   { const MP = $("#vmorepop"), MB = $("#vmore"), SM = $("#vsegms");

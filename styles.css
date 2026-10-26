@@ -1112,3 +1112,8 @@ body:not(.is-mobile) .ivm .wm-lyt{bottom:38px}
 .ivm.ivm .dlist button.kbrow{border-top:1px solid var(--line);border-radius:0;margin-top:4px;padding-top:9px}
 .ivm .keycard .kcs:first-child .kcks{min-width:26px}
 .ivm .keycard .kcs + .kcs .kcks{min-width:74px}
+/* 0.8 · Filter → MOCs and Properties */
+.ivm .blist.mlistf label.bqv{padding-left:6px}
+.ivm .fcols .mcol .msh{display:flex;gap:6px;align-items:center}
+.ivm .fcols .mcol .msh input{flex:1;min-width:0}
+.ivm .fcols .mdeg button{font-size:11px;padding:2px 8px;white-space:nowrap}
