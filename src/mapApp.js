@@ -5091,7 +5091,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
     const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop"]) $(id).hidden = id !== v_; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
       syncRange(); moT.setText(VN()); const l = hasLay(); moL.hidden = !l || !v_; moNone.hidden = true; return !!(l || v_); };
-    const openMaps = () => { closePops("#vmorepop"); if (typeof closeColl === "function") closeColl(); MP.hidden = false; MB.setAttribute("aria-expanded", "true");
+    // no hover hints in the maps menu (Nick): a map's description stays for screen readers only
+    const quiet = () => MP.querySelectorAll("[aria-label], [title]").forEach(el => { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("title"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); });
+    const openMaps = () => { quiet(); closePops("#vmorepop"); if (typeof closeColl === "function") closeColl(); MP.hidden = false; MB.setAttribute("aria-expanded", "true");
       MP.querySelectorAll(".chip.on").forEach(x => x.classList.remove("on")); const c = chipFor();
       if (c) { c.classList.add("on"); for (let d = c.parentElement; d && d !== MP; d = d.parentElement) if (d.tagName === "DETAILS") d.open = true; }
       // each map's number key, at the end of its row
