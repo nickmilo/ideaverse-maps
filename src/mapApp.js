@@ -173,6 +173,7 @@ function computeVis(){ const fs = new Set(folders);
   if (tagHide.on()) for (let i=0;i<n;i++) if (vis[i] && tagHide.hid(i)) vis[i] = 0;
   if (YRV.has(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
   if (winSpan() && YRV.has(curV()) && !YRALL) { const w0 = winStart(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0)) vis[i] = 0; }
+  if (BYMT) capDays();
   if (focus >= 0) vis[focus] = 1;
   if (BQCTX && BQS && sel >= 0) vis[sel] = 1;   // a base view that follows the picked note keeps that note on the map
   // a filter, a collection or a base that leaves few notes: draw them bigger, so a small set never looks empty
@@ -306,6 +307,19 @@ let TF = 0, TS = 0, UT = 1;
 const units = v => v < TS ? (v - TF)/YEAR*COMP : (TS - TF)/YEAR*COMP + (v - TS)/YEAR;
 const xTime = v => X0T + units(v)/UT * (WW - X0T - AFW);
 const dayFull = () => (WW - X0T - AFW)/UT/365.2425;   // world width of one day at full scale
+// Organize by most recently modified: at most 30 notes a day (Nick: one edit to a map can touch 50 or 1,000 linked notes, and that's one change, not 1,000).
+// Notes changed within two minutes of each other, eight or more in a row, are a burst (a ripple from one edit): a burst keeps only its biggest note (level, then links).
+// Then the day keeps its 30 most recent. CAPHID: per local day (its start), how many notes the cap let go, for the "+N more" marks.
+const CAP_DAY = 30, BURST_GAP = 120e3, BURST_MIN = 8; let CAPHID = new Map();
+function capDays(){ CAPHID = new Map(); const days = new Map();
+  for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) continue; const d0 = new Date(TV[i]); d0.setHours(0, 0, 0, 0); const k_ = d0.getTime(); let a = days.get(k_); if (!a) days.set(k_, a = []); a.push(i); }
+  const big = i => N[i].level * 1e6 + out[i].length + inn[i].length;
+  for (const [k_, ids] of days) { if (ids.length <= CAP_DAY) continue; ids.sort((a_, b_) => TV[a_] - TV[b_]);
+    const keep = []; let run = [ids[0]];
+    const flush = () => { if (run.length >= BURST_MIN) keep.push(run.reduce((m, i) => big(i) > big(m) ? i : m, run[0])); else keep.push(...run); };
+    for (let q = 1; q < ids.length; q++) { if (TV[ids[q]] - TV[ids[q-1]] <= BURST_GAP) run.push(ids[q]); else { flush(); run = [ids[q]]; } } flush();
+    keep.sort((a_, b_) => TV[b_] - TV[a_]); const kept = new Set(keep.slice(0, CAP_DAY));
+    let hid = 0; for (const i of ids) if (!kept.has(i)) { vis[i] = 0; hid++; } if (hid) CAPHID.set(k_, hid); } }
 // the timeline as the window (Emergence by time, Space-Time) when Organize by most recently modified has a window picked
 const winTL = () => winSpan() > 0 && (curV() === "spacetime" || (curV() === "emergence" && mode === "time"));
 function layoutTime(){ const WIN = winTL();
@@ -3503,6 +3517,7 @@ function axisLabels(){
       if (strip(bt, bx)) compX = bx;
       else { ctx.font = small; ctx.lineWidth = 5; ctx.strokeStyle = css.bg; ctx.fillStyle = css.muted; ctx.strokeText(bt, bx, yTop + 16); ctx.fillText(bt, bx, yTop + 16); } }
     if (AR && sx(AR[0]) < W - 30) strip(`After ${YR1}`, sx(AR[0]) + 4);
+    if (BYMT && CAPHID.size) { ctx.font = small; for (const [k_, h_] of CAPHID) { const x = sx(xTime(k_ + DAY/2)); if (x < 0 || x > W) continue; const t_ = `+${h_.toLocaleString()} more`; const w_ = ctx.measureText(t_).width; if (k * dayFull() < w_ + 6) continue; ctx.fillStyle = css.muted; ctx.globalAlpha = .75; ctx.fillText(t_, x - w_/2, yTop + 16); ctx.globalAlpha = 1; } }
     if (winTL()) { const tks = winTicks(); let lx = lastX; for (const tk of tks) { const x = sx(xTime(tk.t)) + 3; if (x > W || x < -80) continue; const f_ = tk.major ? `${css.dw} 16px ${css.display}` : small; ctx.font = f_; const w_ = ctx.measureText(tk.label).width; if (x < lx + 10) continue; put(tk.label, x, f_, tk.major ? css.ink : css.muted); lx = x + w_; } } else {
     const fw = k * dayFull() * 365, cw = fw * COMP;   // on-screen widths of a full and a compressed year
     const yearLbl = (yr, w) => w > 50 ? [String(yr), big] : w > 24 ? ["'" + String(yr).slice(2), small] : null;
