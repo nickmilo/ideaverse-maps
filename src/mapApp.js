@@ -3387,14 +3387,23 @@ function labels(lit){
     const w = ctx.measureText(t).width, r = rad(i), h = 15, edge = W - sideW() - 6;
     // a name starts at its dot; if that's taken (or past the right edge), it ends at its dot instead; if both are taken it waits for more zoom (the note you're on and the one under the pointer always show)
     const R_ = x + r + 4, L_ = x - r - 4 - w, rOK = R_ + w <= edge, lOK = L_ >= 4;
-    // still taken on both sides: the name moves a line up or down, with a hairline back to its dot
+    // still taken on both sides: first the name tilts a little (3°, then 5°) away from what it bumps into, pivoting at its dot; failing that it moves a line up or down
     const first = rOK || !lOK ? R_ : L_, other = first === R_ ? L_ : R_, otherOK = first === R_ ? lOK : rOK, dy = h + 2;
-    const tries = [[first, 0], ...(otherOK ? [[other, 0]] : []), [first, -dy], [first, dy], ...(otherOK ? [[other, -dy], [other, dy]] : [])];
-    let lx = first, ly = y; { const ok = tries.find(([tx_, oy]) => fits(tx_-2, y+oy-h/2, w+4, h) && y+oy > 8 && y+oy < H-8); if (ok) { lx = ok[0]; ly = y + ok[1]; } else if (!(i === sel || i === hover)) continue; }
-    taken.push([lx-2, ly-h/2, w+4, h]); LH.push([lx-2, ly-h/2, w+4, h, i]);
-    if (ly !== y) { const right = lx > x, ex = right ? lx - 2 : lx + w + 2; ctx.save(); ctx.strokeStyle = css.muted; ctx.globalAlpha = .9; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + (right ? r * .7 : -r * .7), y + (ly < y ? -r * .7 : r * .7)); ctx.lineTo(ex, ly); ctx.stroke(); ctx.restore(); }
-    ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.lineJoin = "round"; ctx.strokeText(t, lx, ly);
-    ctx.fillStyle = css.ink; ctx.fillText(t, lx, ly);
+    const segs = (px_, a, right) => { const out_ = [], n_ = 4, sw_ = w / n_, c_ = Math.cos(a), s_ = Math.sin(a);   // a tilted name as four small boxes along its line
+      for (let q = 0; q < n_; q++) { const u = (right ? 1 : -1) * (q + .5) * sw_, cx_ = px_ + u*c_, cy_ = y + u*s_; out_.push([cx_ - sw_/2 - 1, cy_ - h/2, sw_ + 2, h]); } return out_; };
+    const sides = [[first, first === R_], ...(otherOK ? [[other, other === R_]] : [])];
+    let place = null;
+    for (const [px0, right] of sides) if (!place && fits(px0-2, y-h/2, w+4, h)) place = { lx: px0, ly: y };
+    if (!place) for (const deg of [3, 5]) { for (const [px0, right] of sides) for (const up of [true, false]) { if (place) break;
+      const a = (right ? (up ? -1 : 1) : (up ? 1 : -1)) * deg * Math.PI / 180, piv = right ? px0 : px0 + w, bx = segs(piv, a, right);
+      if (bx.every(b_ => fits(...b_) && b_[1] > 4 && b_[1] + h < H - 4)) place = { piv, a, right, bx }; } if (place) break; }
+    if (!place) for (const [px0] of sides) for (const oy of [-dy, dy]) if (!place && fits(px0-2, y+oy-h/2, w+4, h) && y+oy > 8 && y+oy < H-8) place = { lx: px0, ly: y + oy };
+    if (!place) { if (!(i === sel || i === hover)) continue; place = { lx: first, ly: y }; }
+    ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.lineJoin = "round"; ctx.fillStyle = css.ink;
+    if (place.a != null) { const { piv, a, right, bx } = place; for (const b_ of bx) taken.push(b_);
+      const xs = bx.map(b_ => b_[0]), ys = bx.map(b_ => b_[1]); LH.push([Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs) + w/4 + 2, Math.max(...ys) - Math.min(...ys) + h, i]);
+      ctx.save(); ctx.translate(piv, y); ctx.rotate(a); const ox = right ? 0 : -w; ctx.strokeText(t, ox, 0); ctx.fillText(t, ox, 0); ctx.restore(); }
+    else { const { lx, ly } = place; taken.push([lx-2, ly-h/2, w+4, h]); LH.push([lx-2, ly-h/2, w+4, h, i]); ctx.strokeText(t, lx, ly); ctx.fillText(t, lx, ly); }
     if (++count > 260) break;
   }
 }
