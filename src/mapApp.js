@@ -1806,7 +1806,9 @@ function layoutLincal(){
   const rowY = half ? (m, day) => m*MH + (day > 15 ? C : 0) : m => m*C;
   for (const [key, ids] of cells) { const yi = Math.floor(key/400), m = Math.floor((key % 400)/32), day = key % 32, y = years[yi], cx = col(y, m, day)*C + C/2, cy = yi*H1 + rowY(m, day) + C/2;
     ids.sort(byRank); const g = Math.ceil(Math.sqrt(ids.length)), st = Math.min(C*.26, C*.8/g);
-    ids.forEach((i, j) => { const r = Math.floor(j/g), c = j % g; EX[i] = cx + (c - (g - 1)/2)*st; EY[i] = cy + (r - (g - 1)/2)*st; }); }
+    // each day's dots sit at their own spot in the box (the same spot every time), so the names of neighboring days don't all start on one line
+    const room = Math.max(0, (C*.72 - (g - 1)*st)/2 - C*.06), dk = String(y*10000 + m*100 + day), ox = (hash(dk, 7) - .5)*2*room*.6, oy = (hash(dk, 13) - .5)*2*room;
+    ids.forEach((i, j) => { const r = Math.floor(j/g), c = j % g; EX[i] = cx + ox + (c - (g - 1)/2)*st; EY[i] = cy + oy + (r - (g - 1)/2)*st; }); }
   LC = {years, C, H1, col, rowY, MH, half};
   const last = years.length - 1; expBox = {x0: -90, y0: last*H1 - 70, x1: (half ? 16 : 37)*C + 20, y1: last*H1 + 12*MH + 20}; if (LCUIOK) syncLC(); }   // fit to the latest year; the wheel scrolls back through the rest
 // keep the years inside the years that have notes (first time: this year, or the latest year with notes)
@@ -3391,6 +3393,8 @@ function labels(lit){
     const first = rOK || !lOK ? R_ : L_, other = first === R_ ? L_ : R_, otherOK = first === R_ ? lOK : rOK, dy = h + 2;
     const segs = (px_, a, right) => { const out_ = [], n_ = 4, sw_ = w / n_, c_ = Math.cos(a), s_ = Math.sin(a);   // a tilted name as four small boxes along its line
       for (let q = 0; q < n_; q++) { const u = (right ? 1 : -1) * (q + .5) * sw_, cx_ = px_ + u*c_, cy_ = y + u*s_; out_.push([cx_ - sw_/2 - 1, cy_ - h/2, sw_ + 2, h]); } return out_; };
+    // only the names that must show (the note you're on, the one under the pointer, its links) go looking for room; the rest keep their spot or wait for more zoom, so a crowded map stays calm
+    if (!isMust) { if (!fits(first-2, y-h/2, w+4, h)) continue; }
     const sides = [[first, first === R_], ...(otherOK ? [[other, other === R_]] : [])];
     let place = null;
     for (const [px0, right] of sides) if (!place && fits(px0-2, y-h/2, w+4, h)) place = { lx: px0, ly: y };
