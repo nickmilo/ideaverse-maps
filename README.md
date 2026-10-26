@@ -143,7 +143,7 @@ A person doesn't need a note of their own to appear. If they do have one, it sit
 
 ### Experimental
 
-These maps are still taking shape. **Geometric** places your top 25 notes in patterns built from triangles. **Linear** includes a spiral and a single long timeline. **Planet** puts your notes on the PKM Planet map. **Unfinished** holds Tree and Skyline.
+These maps are still taking shape. **Recent Breadcrumbs** is a trail of the notes you changed lately, newest at the top left: three to a column, each a little further in, a new column for each day, with your emojis (Settings → Emoji labels) before the names. It's meant for a short, wide pane split at the bottom of your workspace; the wheel scrolls back in time, and a day keeps at most 30 notes, with a burst of changes from one edit counted once. **Geometric** places your top 25 notes in patterns built from triangles. **Linear** includes a spiral and a single long timeline. **Planet** puts your notes on the PKM Planet map. **Unfinished** holds Tree and Skyline.
 
 ## The time-lapse
 
