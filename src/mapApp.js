@@ -4611,7 +4611,7 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
 { const hd = root.querySelector("header"), hb = hd.querySelector("h1").createEl("button", { cls: "hcol", text: "︿", attr: { "aria-label": "Hide the top bar", title: "Hide the top bar" } });
   const tab = $("#main").createEl("button", { cls: "htab", text: "﹀", attr: { "aria-label": "Show the top bar", title: "Show the top bar" } });
   const set = c => { hd.hidden = c; hd.parentElement.classList.toggle("hdrhid", !!c); tab.hidden = !c; save("iv-hcol", c); };
-  const flip = c => { set(c); win.setTimeout(() => { resize(); if (sel >= 0) flyTo(sel); else fit(true); }, 30); };   // reframe for the new height
+  const flip = c => { const t0 = cv.getBoundingClientRect().top, l0 = cv.getBoundingClientRect().left, tx0 = tx, ty0 = ty; set(c); win.setTimeout(() => { resize(); const r = cv.getBoundingClientRect(); tx = tx0 + (l0 - r.left); ty = ty0 + (t0 - r.top); draw(); }, 30); };   // tucking the bar away or bringing it back keeps your zoom and place (the map just gains or loses the bar's height)
   // centered chevrons (Obsidian's own icons) in place of the wide ︿ ﹀ characters
   for (const [b, ic] of [[hb, "chevron-up"], [tab, "chevron-down"]]) { b.empty(); setIcon(b, ic); const sv = b.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } }
   hb.onclick = () => flip(true); tab.onclick = () => flip(false);
