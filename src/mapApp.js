@@ -660,7 +660,7 @@ function starsBg(){
   const g = ctx.createRadialGradient(W*.5, H*.45, 0, W*.5, H*.45, Math.hypot(W, H)*.65);
   g.addColorStop(0, "#0c1126"); g.addColorStop(.6, "#060814"); g.addColorStop(1, "#020307");
   ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-  if (senseT != null) { const lc = isPhone() ? 0 : 400; drawWatermark(lc + (W - lc - sideW())/2, H*.46, Math.min(W, H)*.36, "#9fb0ff", .07); }
+  if (senseT != null) { const lc = leftCol(); drawWatermark(lc + (W - lc - sideW())/2, H*.46, Math.min(W, H)*.36, "#9fb0ff", .07); }
   for (const L of BGS) { const ox = ((tx*L.p) % L.T + L.T) % L.T, oy = ((ty*L.p) % L.T + L.T) % L.T;
     for (let gx0 = ox - L.T; gx0 < W; gx0 += L.T) for (let gy0 = oy - L.T; gy0 < H; gy0 += L.T)
       for (const [x, y, s, a, blue] of L.pts) { const px = gx0 + x, py = gy0 + y; if (px < 0 || px > W || py < 0 || py > H) continue;
@@ -2865,7 +2865,7 @@ function driftFrame(now){
   project3D(); X.set(P3X); Y.set(P3Y);
   const cyc = Math.floor(t/breath), ph = (t % breath)/breath, inA = Math.pow(Math.sin(ph*Math.PI), 2);   // 0 far out → 1 close in → 0
   if (cyc !== driftCyc) { driftCyc = cyc; driftGal = driftPick(); }
-  const lc = isPhone() ? 0 : 400, vx = lc + (W - lc - sideW())/2, vy = H/2;
+  const lc = leftCol(), vx = lc + (W - lc - sideW())/2, vy = H/2;
   let gx = UC.x, gy = UC.y; if (driftGal >= 0 && B3[driftGal]) { gx = UC.x + (B3[driftGal].px - UC.x)*inA; gy = UC.y + (B3[driftGal].py - UC.y)*inA; }
   const kk = driftK0*(1 + 2.6*inA);
   // ease the camera rather than jump, so stopping and starting never jolts
@@ -2937,10 +2937,10 @@ function fitTarget0(){ const pad = 56;
     return {k: kk, tx: lc + vw/2 - (b.x0 + bw/2)*kk, ty: H/2 - (b.y0 + bh/2)*kk}; }
   if (csphOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: .4*Math.min(vw, H)/(CS_R*1.08), tx: vw/2, ty: H/2}; }
   if (domeOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: Math.max(vw, H*1.2)/2/(DF_*Math.tan(52*Math.PI/180)), tx: vw/2, ty: H/2}; }   // about a 104° view
-  if (view === "sense") { const phone = isPhone(), lc = phone ? 0 : 400, tb = phone ? 58 : 16, pb = phone ? 70 : 16, vw = W - sideW() - lc;   // desktop: the bars live in a left column
+  if (view === "sense") { const phone = isPhone(), lc = leftCol(), tb = phone ? 58 : 16, pb = phone ? 70 : 16, vw = W - sideW() - lc;   // desktop: the bars live in a left column
     const kk = Math.min((vw - pad)/(2*SR0*1.08 + 300), (H - tb - pb - 150)/(2*SR0*1.08));   // 150 px for the archetype names above and below
     return {k:kk, tx: lc + vw/2 - SC_.x*kk, ty: (tb + H - pb)/2 - SC_.y*kk}; }
-  if (view === "stars") { const lc = isPhone() ? 0 : 400, vw = W - lc; let x0 = UB.x0, x1 = UB.x1, y0 = UB.y0, y1 = UB.y1;
+  if (view === "stars") { const lc = leftCol(), vw = W - lc; let x0 = UB.x0, x1 = UB.x1, y0 = UB.y0, y1 = UB.y1;
     if (S3D) { project3D(); x0 = y0 = Infinity; x1 = y1 = -Infinity; for (let i=0;i<n;i++) { if (!vis[i]) continue; x0 = Math.min(x0, P3X[i]); x1 = Math.max(x1, P3X[i]); y0 = Math.min(y0, P3Y[i]); y1 = Math.max(y1, P3Y[i]); } if (!isFinite(x0)) { x0 = UB.x0; x1 = UB.x1; y0 = UB.y0; y1 = UB.y1; } }
     const bw = x1 - x0, bh = y1 - y0, kk = Math.min((vw - pad)/bw, (H - pad)/bh);   // beside the timeline column
     return {k:kk, tx: lc + vw/2 - (x0 + bw/2)*kk, ty: H/2 - (y0 + bh/2)*kk}; }
@@ -2973,7 +2973,7 @@ function flyTo(i, noOut){   // noOut: from a click on the map, which never zooms
   if (sphOn()) { sphFace(i); return; }
   if (view === "stars" && lastDown) {   // Starfield: a click on a galaxy's name glides into that galaxy and frames it
     const g = LH.find(q => q[5] != null && q[4] === i && lastDown[0] >= q[0] && lastDown[0] <= q[0] + q[2] && lastDown[1] >= q[1] && lastDown[1] <= q[1] + q[3]);
-    if (g) { lastDown = null; const b = BODIES[g[5]], [bx_, by_] = bodyPos(b), phone = isPhone(), dw = phone ? 0 : sideW(), lc = phone ? 0 : 400, vw = W - dw - lc, vh = phone ? H*.48 : H;
+    if (g) { lastDown = null; const b = BODIES[g[5]], [bx_, by_] = bodyPos(b), phone = isPhone(), dw = phone ? 0 : sideW(), lc = leftCol(), vw = W - dw - lc, vh = phone ? H*.48 : H;
       const R = b.r*(S3D && B3[b.id] ? B3[b.id].s : 1), kk = Math.min(6, Math.max(.3, Math.min(vw, vh)*.42/Math.max(R, 20)));
       animateTo({k: kk, tx: lc + vw/2 - bx_*kk, ty: vh/2 - by_*kk}); return; } }
   if (domeOn()) { domeYaw = DTH[i]; domePitch = Math.max(domeSphere() ? -1.45 : -.2, Math.min(1.45, DPH[i] - .08)); domeKeep(); const kk = k; morph(true, () => ({k: kk, tx: (W - (isPhone() ? 0 : sideW()))/2, ty: H/2})); return; }   // in a dome: turn to face it
