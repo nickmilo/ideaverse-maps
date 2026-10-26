@@ -85,12 +85,20 @@ export default class IdeaverseMapsPlugin extends Plugin {
     for (const leaf of leaves) if (leaf.view instanceof MapView) await leaf.view.reload();
   }
 
-  /** What the scan learned from each note's text, kept between sessions in the plugin's folder, so only changed notes are read again.
-      It holds links, counts and a few property values, never note text, and stays on this device. */
-  get cachePath() { return normalizePath(`${this.manifest.dir}/scan-cache.json`); }
+  /** What the scan learned from each note's text, kept between sessions so only changed notes are read again.
+      It holds links, counts and a few property values, never note text. It lives in this device's own storage (IndexedDB), not in the vault:
+      a file in the plugin's folder grows past 5 MB on a big vault, which sync services skip, and that broke updating the plugin on phones. */
+  get cachePath() { return normalizePath(`${this.manifest.dir}/scan-cache.json`); }   // the old place (before 0.6.48); moved on first load, then removed
+  idb() { if (this._idb) return this._idb;
+    this._idb = new Promise((res) => { try { const r = window.indexedDB.open(`ideaverse-maps-${this.app.appId || this.app.vault.getName()}`, 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch { res(null); } });
+    return this._idb; }
+  async idbGet(key) { const db = await this.idb(); if (!db) return undefined; return new Promise(res => { try { const q = db.transaction("kv").objectStore("kv").get(key); q.onsuccess = () => res(q.result); q.onerror = () => res(undefined); } catch { res(undefined); } }); }
+  async idbSet(key, val) { const db = await this.idb(); if (!db) return false; return new Promise(res => { try { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(val, key); t.oncomplete = () => res(true); t.onerror = () => res(false); } catch { res(false); } }); }
   async scanCache() {
     if (!this.cacheData) { let d = null;
-      try { if (await this.app.vault.adapter.exists(this.cachePath)) d = JSON.parse(await this.app.vault.adapter.read(this.cachePath)); } catch { d = null; }
+      try { const s = await this.idbGet("scan-cache"); if (typeof s === "string") d = JSON.parse(s); } catch { d = null; }
+      // an older version kept it in the plugin's folder: move it over once and remove the file
+      try { const ad = this.app.vault.adapter; if (await ad.exists(this.cachePath)) { if (!d) { try { d = JSON.parse(await ad.read(this.cachePath)); } catch { d = null; } } if (d && await this.idbSet("scan-cache", JSON.stringify(d))) await ad.remove(this.cachePath); } } catch { /* the file stays; next time */ }
       this.cacheData = d && d.v === EXTRACT_VERSION && d.files ? d : { v: EXTRACT_VERSION, files: {} }; }
     const F = this.cacheData.files, c = { changed: false,
       get: (p, m, z) => { const r = F[p]; return r && r[0] === m && r[1] === z ? r[2] : undefined; },
@@ -98,7 +106,9 @@ export default class IdeaverseMapsPlugin extends Plugin {
       prune: keep => { for (const p of Object.keys(F)) if (!keep.has(p)) { delete F[p]; c.changed = true; } } };
     return c;
   }
-  async saveScanCache() { try { await this.app.vault.adapter.write(this.cachePath, JSON.stringify(this.cacheData)); } catch (e) { console.warn("Maps of the Ideaverse: couldn't save the scan cache", e); } }
+  async saveScanCache() { const txt = JSON.stringify(this.cacheData); if (await this.idbSet("scan-cache", txt)) return;
+    // no IndexedDB here: fall back to the file
+    try { await this.app.vault.adapter.write(this.cachePath, txt); } catch (e) { console.warn("Maps of the Ideaverse: couldn't save the scan cache", e); } }
 
   /** Read the whole vault into the map's data (see scan.js). */
   async getGraph(onProgress) {

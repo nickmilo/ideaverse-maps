@@ -195,7 +195,7 @@ The map reads `[[wikilinks]]`. If your vault also has markdown links to notes, l
 
 ## Privacy
 
-Everything runs on your computer. The plugin reads your notes to draw the map and never changes them. It writes two files. One is your saved-views file, in the folder you choose. The other is a scan cache in the plugin's own folder, which stores each note's links and counts (never its text) so later scans only read what changed. It sends nothing anywhere, with one exception. In the Posters map, if a note's image property is a web address, such as a movie poster URL, the map loads that picture from the web, the same way Obsidian does when it shows the picture in a note. Pictures stored in your vault load locally.
+Everything runs on your computer. The plugin reads your notes to draw the map and never changes them. The only file it writes is your saved-views file, in the folder you choose. It also keeps a scan cache in your device's own app storage, not in the vault, which stores each note's links and counts (never its text) so later scans only read what changed. Because it isn't a file in the vault, sync services never have to carry it. It sends nothing anywhere, with one exception. In the Posters map, if a note's image property is a web address, such as a movie poster URL, the map loads that picture from the web, the same way Obsidian does when it shows the picture in a note. Pictures stored in your vault load locally.
 
 ## Notes
 
