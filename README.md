@@ -14,7 +14,7 @@ Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinkin
 
 ## The maps
 
-The toolbar starts with one button: **☰** and the name of the map you're on. Click it for the maps menu: every map with a small icon, the four main ones first (Emergence, Ideaverse, Starfield and Sensemakers). It stays open as you pick, so you can hop from map to map; click anywhere else to close it. The gear right after it opens the current map's own settings (its variants and options), on maps that have any. Number keys jump to the maps in the list, in order: **1–4** the main maps, **5** Gravity, and so on, with two digits for 10 and up (Linear Calendar is 14); each map's number shows at the end of its row. Turn on **Display → Show more maps in the header** to list eight more of them by name in small type next to the button, whenever the row has room.
+The toolbar starts with one button: **☰** and the name of the map you're on. Click it for the maps menu: every map with a small icon, the four main ones first (Emergence, Ideaverse, Starfield and Sensemakers). It stays open as you pick, so you can hop from map to map; click anywhere else to close it. The gear right after it opens the current map's own settings (its variants and options), on maps that have any. Number keys **1–9** jump to the first nine maps in the list: **1–4** the main maps, then **5** Gravity through **9** Tesla; each one's number shows at the end of its row. Turn on **Display → Show more maps in the header** to list eight more of them by name in small type next to the button, whenever the row has room.
 
 ### Emergence
 

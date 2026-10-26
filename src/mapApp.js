@@ -5095,7 +5095,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       MP.querySelectorAll(".chip.on").forEach(x => x.classList.remove("on")); const c = chipFor();
       if (c) { c.classList.add("on"); for (let d = c.parentElement; d && d !== MP; d = d.parentElement) if (d.tagName === "DETAILS") d.open = true; }
       // each map's number key, at the end of its row
-      KEYMAPS().forEach((ch, j) => { let kk = ch.querySelector(":scope > .mkey"); if (!kk) kk = ch.createSpan({ cls: "mkey", attr: { "aria-hidden": "true" } }); kk.setText(String(j + 1)); }); };
+      KEYMAPS().forEach((ch, j) => { let kk = ch.querySelector(":scope > .mkey"); if (j > 8) { if (kk) kk.remove(); return; } if (!kk) kk = ch.createSpan({ cls: "mkey", attr: { "aria-hidden": "true" } }); kk.setText(String(j + 1)); }); };
     // this map's settings: their own button (a gear) right after the maps button, only on maps that have any
     const STW = doc.createElement("div"); STW.className = "ms mapsetms"; const ST = STW.createEl("button", { cls: "tbb tbi mapset", attr: { id: "mapsetbtn", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
     setIcon(ST, "settings"); SM.insertBefore(STW, MB.nextSibling); STW.appendChild(mo);
@@ -5109,14 +5109,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       win.setTimeout(() => { if (dead) return; openMaps(); MP.scrollTop = st; }, 0); }, true);
     // anything that used to open the map's own menu now opens the maps menu
     toggleMapOpts = () => { if (!mo.hidden) closePops(); else openSet(); };
-    // number keys: the maps in the list, in order (1–4 the main maps, 5 Gravity … 14 Linear Calendar); after a 1, a second digit within a moment makes 10–19
-    let kBuf = "", kT = 0; const goKey = n_ => { const ch = KEYMAPS()[n_ - 1]; if (ch) ch.click(); };
-    onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey || !/^[0-9]$/.test(e.key)) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      e.preventDefault(); win.clearTimeout(kT);
-      if (kBuf === "1") { kBuf = ""; const n2 = 10 + +e.key; goKey(KEYMAPS()[n2 - 1] ? n2 : 1); if (!KEYMAPS()[n2 - 1] && e.key !== "0") goKey(+e.key); return; }
-      if (e.key === "0") return;
-      if (e.key === "1" && KEYMAPS().length >= 10) { kBuf = "1"; kT = win.setTimeout(() => { kBuf = ""; goKey(1); }, 450); return; }
-      goKey(+e.key); }); }
+    // number keys 1–9: the first nine maps in the list (1–4 the main maps, 5 Gravity … 9 Tesla), instantly
+    onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey || !/^[1-9]$/.test(e.key)) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const ch = KEYMAPS()[+e.key - 1]; if (!ch) return; e.preventDefault(); ch.click(); }); }
   const mo2 = new MutationObserver(() => syncTB());
   for (const id of ["#foldx", "#collx"]) mo2.observe($(id), { attributes: true, attributeFilter: ["hidden"] });
   for (const id of ["#shelfsort", "#chordby"]) mo2.observe($(id), { attributes: true, subtree: true, attributeFilter: ["aria-pressed", "hidden"] });
