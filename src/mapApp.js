@@ -1715,7 +1715,7 @@ EXP.treemap = {
       else { ctx.font = f; ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.fillStyle = css.ink; ctx.strokeText(t, x + 5, y + 3); ctx.fillText(t, x + 5, y + 3); } }
     ctx.textBaseline = "alphabetic"; },
   ownLabels: true,
-  legend: "Treemap: every top folder, subfolder and note as a rectangle, its area set by its link score, after GrandPerspective. Maps and hubs wear their level colors; unlinked notes are the dull slivers. Layout → Subfolders outlines and names each subfolder.",
+  legend: "Treemap: every top folder, subfolder and note as a rectangle, its area set by its link score, after GrandPerspective. Maps and hubs wear their level colors; unlinked notes are the dull slivers. ⚙ → Subfolders outlines and names each subfolder.",
 };
 
 // ---------- Skyline: your vault as a city. Each top folder is a district, each map a tower ----------
@@ -4289,7 +4289,7 @@ function legend(){
   if (expOn() && EXP[view].about) { const det = $("#legend").createEl("details", { cls: "lgabout" }); det.createEl("summary", { text: "How this map works" });   // the long explanation, folded away
     for (const para of EXP[view].about) det.createEl("p", { text: para }); det.addEventListener("click", e => e.stopPropagation()); }
   if (csphOn()) $("#legend").createDiv({ text: CSPH === "out" ? "Corona: every kind is a wedge of the globe (Level 5 toward the North Pole); the links between kinds arc out over the surface. Drag to turn it, scroll to zoom." : "Tesla: every kind is a wedge of a glass globe (Level 5 toward the North Pole); the links between kinds cross through the inside. Drag to turn it, scroll to zoom.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
-  if (view === "chord") $("#legend").createDiv({ text: chordBy === "time" ? "Arcs by year, clockwise from 12 o'clock (Layout → Folders for one arc per folder)." : "Arcs by folder (Layout → Time for one arc per year).", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
+  if (view === "chord") $("#legend").createDiv({ text: chordBy === "time" ? "Arcs by year, clockwise from 12 o'clock (⚙ → Arcs by Folders for one arc per folder)." : "Arcs by folder (⚙ → Arcs by Time for one arc per year).", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
   if (domeOn()) $("#legend").createDiv({ text: view === "emergence" ? "Planetarium: you stand at the center. Level 5 is the North Pole, Level 1 the South Pole; " + (mode === "ace" ? "your folders" : "time") + " runs around you. Drag to look around, scroll to zoom, ⤢ to face forward." : view === "gravity" ? "Dome: you stand at the center. Home and the hubs are overhead; the levels drop toward the horizon. Drag to look around, scroll to zoom, ⤢ to face forward." : "Dome: you stand at the center. Time runs around you; folders run from the North Pole (+) to the South Pole (x), with the equator halfway through your notes. Drag to look around, scroll to zoom, ⤢ to face forward.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
 }
 $("#legend").addEventListener("click", () => setLegend(false));   // a click anywhere on the legend tucks it away
@@ -5084,6 +5084,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     for (const [id, ic] of Object.entries(MICON)) { const el = id.startsWith("go") && MP.querySelector("#" + id); if (el) micon(el, ic); }
     const t0 = MP.querySelector(":scope > .pt"); if (t0) t0.after(Object.assign(doc.createElement("div"), { className: "vfold vfold0" }));
     { const ex = MP.querySelector(":scope > details"); if (ex) { ex.before(Object.assign(doc.createElement("div"), { className: "vfold" })); const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
+    const QK = [..."1234567890-=[]\\"];
     const KEYMAPS = () => [...MP.querySelectorAll(":scope > .chip")].filter(c_ => !c_.hidden);
     const chipFor = () => { const id = { gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", lincal: "golincal", spiral: "gospiral", lifeline: "golifeline",
         tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" ? "gocso" : CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
@@ -5097,7 +5098,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       MP.querySelectorAll(".chip.on").forEach(x => x.classList.remove("on")); const c = chipFor();
       if (c) { c.classList.add("on"); for (let d = c.parentElement; d && d !== MP; d = d.parentElement) if (d.tagName === "DETAILS") d.open = true; }
       // each map's number key, at the end of its row
-      KEYMAPS().forEach((ch, j) => { let kk = ch.querySelector(":scope > .mkey"); if (j > 8) { if (kk) kk.remove(); return; } if (!kk) kk = ch.createSpan({ cls: "mkey", attr: { "aria-hidden": "true" } }); kk.setText(String(j + 1)); }); };
+      KEYMAPS().forEach((ch, j) => { let kk = ch.querySelector(":scope > .mkey"); if (j >= QK.length) { if (kk) kk.remove(); return; } if (!kk) kk = ch.createSpan({ cls: "mkey", attr: { "aria-hidden": "true" } }); kk.setText(QK[j]); }); };
     // this map's settings: their own button (a gear) right after the maps button, only on maps that have any
     const STW = doc.createElement("div"); STW.className = "ms mapsetms"; const ST = STW.createEl("button", { cls: "tbb tbi mapset", attr: { id: "mapsetbtn", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
     setIcon(ST, "settings"); SM.insertBefore(STW, MB.nextSibling); STW.appendChild(mo);
@@ -5111,9 +5112,12 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       win.setTimeout(() => { if (dead) return; openMaps(); MP.scrollTop = st; }, 0); }, true);
     // anything that used to open the map's own menu now opens the maps menu
     toggleMapOpts = () => { if (!mo.hidden) closePops(); else openSet(); };
-    // number keys 1–9: the first nine maps in the list (1–4 the main maps, 5 Gravity … 9 Tesla), instantly
-    onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey || !/^[1-9]$/.test(e.key)) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      const ch = KEYMAPS()[+e.key - 1]; if (!ch) return; e.preventDefault(); ch.click(); }); }
+    // quick keys, along the top row of the keyboard: 1–9, then 0 - = [ ] \ for maps 10–15 (Treemap, Mosaic, Bookshelf, Base Builder, Linear Calendar)
+    onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey) return; const j_ = QK.indexOf(e.key); if (j_ < 0) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const ch = KEYMAPS()[j_]; if (!ch) return; e.preventDefault(); ch.click(); });
+    // Group's choices (Bookshelf's Shelve by, Chord, Corona and Tesla's Arcs by, Treemap's Boxes by and Subfolders) live under the gear, first; the Group button is gone
+    for (const j of [3, 2, 1, 0]) $("#laygrp").prepend(GS[j][0]);
+    { const s1 = syncTB; syncTB = () => { s1(); GR.w.hidden = true; }; } }
   const mo2 = new MutationObserver(() => syncTB());
   for (const id of ["#foldx", "#collx"]) mo2.observe($(id), { attributes: true, attributeFilter: ["hidden"] });
   for (const id of ["#shelfsort", "#chordby"]) mo2.observe($(id), { attributes: true, subtree: true, attributeFilter: ["aria-pressed", "hidden"] });

@@ -1072,7 +1072,7 @@ body:not(.is-mobile) .ivm .wm-lyt{bottom:38px}
 /* 0.7.18 · this map's settings: a gear right after the maps button */
 .ivm.ivm header.tb2 #vsegms > .mapsetms{order:-1;flex:none}
 .ivm.ivm header.tb2 #vsegms > .mapsetms[hidden]{display:none}
-.ivm.ivm header.tb2 #mapopts{width:290px;left:0}
+.ivm.ivm header.tb2 #mapopts{width:max-content;min-width:250px;left:0}
 /* the number key of each map, at the end of its row in the maps menu */
 .ivm #vmorepop .chip .mkey{margin-left:auto;padding-left:14px;font:500 10px var(--mono);color:var(--muted);opacity:.7}
 /* Show more maps in the header: shown whenever the row has room (the toolbar code drops it first) */
