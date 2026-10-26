@@ -3746,7 +3746,7 @@ function syncYr(){ const yc = $("#yrctl"); if (!yc) return; const [a, b] = yc.qu
     if (!h0.hidden && !h1.hidden && f(YR1) - f(YR0) < near) { h0.classList.add("lft"); h1.classList.add("rgt"); } else { h0.classList.remove("lft"); h1.classList.remove("rgt"); }
     e0.style.visibility = (!h0.hidden && f(YR0) < near) || (!h1.hidden && f(YR1) < near) ? "hidden" : "";
     e1.style.visibility = (!h1.hidden && f(YR1) > 1 - near) || (!h0.hidden && f(YR0) > 1 - near) ? "hidden" : ""; }
-  yc.querySelector(".yrv").setText(!yrNarrow() ? `${SLMIN}–${NOW_Y} (All)` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
+  ($("#yrv0") || yc.querySelector(".yrv")).setText(!yrNarrow() ? `${SLMIN}–${NOW_Y} (All)` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
 function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
@@ -4729,7 +4729,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       b.onclick = e => { e.stopPropagation(); MOS = v; save("iv-mos", v); ms_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.ms === v))); morph(true, () => fitTarget()); legend(); }; } }
   // Years shown: two handles from the first note's year to this year
   { const yc = $("#laygrp").createDiv({ cls: "postctl yrctl", attr: { id: "yrctl" } }); yc.hidden = true;
-    const hd = yc.createDiv({ cls: "prow" }); hd.createSpan({ text: "Years shown" }); hd.createEl("b", { cls: "yrv" });
+    const hd = yc.createDiv({ cls: "prow" }); hd.createSpan({ text: "Years shown" }); hd.createEl("b", { cls: "yrv", attr: { id: "yrv0" } });
     const box = yc.createDiv({ cls: "prng" }), d = box.createDiv({ cls: "dual" }); d.createSpan({ cls: "trk" }); d.createSpan({ cls: "fill" });
     const a = d.createEl("input", { type: "range", attr: { "aria-label": "First year shown" } }), b = d.createEl("input", { type: "range", attr: { "aria-label": "Last year shown" } });
     for (const x of [a, b]) { x.min = SLMIN; x.max = NOW_Y; x.step = 1; } const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ cls: "yre", text: String(SLMIN) }); lb.createSpan({ cls: "yre", text: String(NOW_Y) });
@@ -4841,9 +4841,12 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const t_ = FI.b.querySelector(".tbl2"); if (t_) t_.remove(); FI.b.classList.add("tbi"); FI.b.setAttribute("aria-label", "Filter"); $("#vsegms").insertBefore(FI.w, $("#vmore").nextSibling); }
   const fsec = (title, el) => { const w = FI.p.createDiv({ cls: "fsec" }); w.createDiv({ cls: "pt", text: title }); w.appendChild(el); };
   // Years shown: one setting for every map of the whole vault, so it lives here rather than in each map's menu
-  const yrSec = FI.p.createDiv({ cls: "fsec yrsec" }); yrSec.appendChild($("#yrctl"));
+
   // Folders and Collections, open side by side: every choice in view, no pill to open first
   const fcols = FI.p.createDiv({ cls: "fcols" });
+  // Years: folds away like the other lists; its header shows the years kept, folded or not
+  { const yc_ = fcols.createDiv({ cls: "fcol ycol", attr: { id: "ycol" } }), hd = yc_.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Years" }); const ac = hd.createSpan({ cls: "facts yfacts" });
+    const ctl = $("#yrctl"); const v_ = $("#yrv0"); if (v_) ac.appendChild(v_); const pr = ctl.querySelector(":scope > .prow"); if (pr) pr.remove(); yc_.appendChild(ctl); }
   { const fc = fcols.createDiv({ cls: "fcol" }), hd = fc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Folders" }); const ac = hd.createSpan({ cls: "facts" }); ac.appendChild($("#foldall")); ac.appendChild($("#foldnone"));
     fc.appendChild($("#foldlist")); const sp = $("#specialt"); if (sp) { const sbox = sp.nextElementSibling; fc.appendChild(sp); if (sbox) fc.appendChild(sbox); } }
   { const cc = fcols.createDiv({ cls: "fcol" }), hd = cc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Collections" }); const ac = hd.createSpan({ cls: "facts" }); ac.appendChild($("#collcount")); ac.appendChild($("#collclear"));
@@ -4880,12 +4883,16 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     if (BQ.length) win.setTimeout(() => { void applyBQ(); }, 0); }
   // each column (Folders, Collections, Bases) folds away under its name, so more of the map shows behind the menu:
   // folded names line up in a row at the top, and the menu narrows to the lists still open
-  const fbreak = fcols.createDiv({ cls: "fbreak" });
-  const fitCols = () => { const all = [...fcols.querySelectorAll(":scope > .fcol")], open = all.filter(c => !c.classList.contains("shut")).length; fbreak.hidden = !(open && open < all.length); FI.p.setCssProps({ "--fcn": String(Math.max(open, 1.25)) }); };
+  // a fixed row of switches (Years, Folders, Collections, Bases), always in the same place, opens and folds each list; folded lists simply leave
+  const fheads = doc.createElement("div"); fheads.className = "fheads"; FI.p.insertBefore(fheads, fcols); const fbreak = fcols.createDiv({ cls: "fbreak" });
+  const fitCols = () => { const all = [...fcols.querySelectorAll(":scope > .fcol")], open = all.filter(c => !c.classList.contains("shut")).length, openL = all.filter(c => !c.classList.contains("shut") && !c.classList.contains("ycol")).length; fbreak.hidden = !(open && open < all.length); FI.p.setCssProps({ "--fcn": String(Math.max(openL, 1.6)) }); };
   // each column (Folders, Collections, Bases) folds away under its name, so more of the map shows behind the menu
   for (const fc of fcols.querySelectorAll(":scope > .fcol")) { const pt = fc.querySelector(".fhd > .pt"); if (!pt) continue; const key = "iv-fshut-" + pt.textContent.trim().toLowerCase();
-    pt.classList.add("fcolt"); pt.setAttribute("role", "button"); pt.tabIndex = 0; const set = shut => { fc.classList.toggle("shut", shut); pt.setAttribute("aria-expanded", String(!shut)); pt.title = shut ? "Show this list" : "Hide this list"; fitCols(); };
+    pt.classList.add("fcolt"); pt.setAttribute("role", "button"); pt.tabIndex = 0;
+    const hb = fheads.createEl("button", { cls: "fhb", text: pt.textContent.trim(), attr: { type: "button" } });
+    const set = shut => { fc.classList.toggle("shut", shut); pt.setAttribute("aria-expanded", String(!shut)); pt.title = shut ? "Show this list" : "Hide this list"; hb.setAttribute("aria-pressed", String(!shut)); hb.title = shut ? "Show " + hb.textContent : "Hide " + hb.textContent; fitCols(); };
     set(pref(key, false) === true); const flip = e => { e.stopPropagation(); const shut = !fc.classList.contains("shut"); set(shut); save(key, shut); };
+    hb.onclick = flip; const syncH = () => { hb.hidden = fc.hidden; }; syncH(); new MutationObserver(syncH).observe(fc, { attributes: true, attributeFilter: ["hidden"] });
     pt.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(e); } };
     // the whole header row folds it (its own buttons, like Clear, still do their own thing)
     const hd_ = fc.querySelector(".fhd"); hd_.classList.add("fhdt"); hd_.addEventListener("click", e => { if (e.target.closest("button, input, select, label")) return; flip(e); }); }
@@ -5056,7 +5063,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     root.dataset.vgrid = VGRID ? "1" : ""; vgrid.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.vg === (view === "chord" ? (CSPH === "out" ? "corona" : CSPH === "in" ? "tesla" : "chord") : view))));
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }
-    yrSec.hidden = !YRV.has(view); $("#yrctl").hidden = !YRV.has(view); syncYr();
+    { const yc_ = $("#ycol"); if (yc_) yc_.hidden = !YRV.has(view); } $("#yrctl").hidden = !YRV.has(view); syncYr();
     const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (BQ.length ? 1 : 0) + (YRV.has(view) && yrNarrow() ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0);
   };
   const mo2 = new MutationObserver(() => syncTB());
