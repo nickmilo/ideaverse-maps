@@ -1805,10 +1805,10 @@ function layoutLincal(){
   const col = half ? (y, m, day) => day <= 15 ? day - 1 : day - 16 : (y, m, day) => (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7 + day - 1;   // whole months: weeks start on Monday
   const rowY = half ? (m, day) => m*MH + (day > 15 ? C : 0) : m => m*C;
   for (const [key, ids] of cells) { const yi = Math.floor(key/400), m = Math.floor((key % 400)/32), day = key % 32, y = years[yi], cx = col(y, m, day)*C + C/2, cy = yi*H1 + rowY(m, day) + C/2;
-    ids.sort(byRank); const g = Math.ceil(Math.sqrt(ids.length)), st = Math.min(C*.26, C*.8/g);
-    // each day's dots sit at their own spot in the box (the same spot every time), so the names of neighboring days don't all start on one line
-    const room = Math.max(0, (C*.72 - (g - 1)*st)/2 - C*.06), dk = String(y*10000 + m*100 + day), ox = (hash(dk, 7) - .5)*2*room*.6, oy = (hash(dk, 13) - .5)*2*room;
-    ids.forEach((i, j) => { const r = Math.floor(j/g), c = j % g; EX[i] = cx + ox + (c - (g - 1)/2)*st; EY[i] = cy + oy + (r - (g - 1)/2)*st; }); }
+    ids.sort(byRank);
+    // a day's dots scatter inside its box, each at a height of its own (the box is split into as many bands as the day has notes, one dot per band, in a shuffled order), so no two share a line and the names of neighboring days start at different heights; the same spots every time
+    const nI = ids.length, half_ = C*.36, band = 2*half_/nI, dk = String(y*10000 + m*100 + day), slots = ids.map((_, j) => j).sort((a_, b_) => hash(dk + a_, 5) - hash(dk + b_, 5));
+    ids.forEach((i, j) => { const u = hash(N[i].path, 11), v = hash(N[i].path, 17); EX[i] = cx + (u - .5)*2*half_*.9; EY[i] = cy - half_ + (slots[j] + .25 + .5*v)*band; }); }
   LC = {years, C, H1, col, rowY, MH, half};
   const last = years.length - 1; expBox = {x0: -90, y0: last*H1 - 70, x1: (half ? 16 : 37)*C + 20, y1: last*H1 + 12*MH + 20}; if (LCUIOK) syncLC(); }   // fit to the latest year; the wheel scrolls back through the rest
 // keep the years inside the years that have notes (first time: this year, or the latest year with notes)
@@ -3374,7 +3374,7 @@ function labels(lit){
   const hl = sel >= 0 ? sel : hover;
   if (lit) [...lit].filter(j => j !== hl).sort((a,b) => (N[b].level-N[a].level) || (N[b].score-N[a].score)).forEach(j => must.push(j));
   const seen = new Set(), list = [...must, ...order];
-  let count = 0;
+  let count = 0, lowN = 0;
   for (const i of list) {
     if (seen.has(i) || !VV(i)) continue; seen.add(i);
     const isMust = must.includes(i);
@@ -3394,13 +3394,16 @@ function labels(lit){
     const segs = (px_, a, right) => { const out_ = [], n_ = 4, sw_ = w / n_, c_ = Math.cos(a), s_ = Math.sin(a);   // a tilted name as four small boxes along its line
       for (let q = 0; q < n_; q++) { const u = (right ? 1 : -1) * (q + .5) * sw_, cx_ = px_ + u*c_, cy_ = y + u*s_; out_.push([cx_ - sw_/2 - 1, cy_ - h/2, sw_ + 2, h]); } return out_; };
     // only the names that must show (the note you're on, the one under the pointer, its links) go looking for room; the rest keep their spot or wait for more zoom, so a crowded map stays calm
-    if (!isMust) { if (!fits(first-2, y-h/2, w+4, h)) continue; }
+    // maps and hubs (Level 3 and up) may flip or tilt to find room; Level 1 and 2 names only take their usual spot, and only a handful of them (a little serendipity), unless you're zoomed well in
+    const lowLv = N[i].level < 3;
+    if (!isMust && lowLv && (!fits(first-2, y-h/2, w+4, h) || (k < 5 && lowN >= 12))) continue;
     const sides = [[first, first === R_], ...(otherOK ? [[other, other === R_]] : [])];
     let place = null;
     for (const [px0, right] of sides) if (!place && fits(px0-2, y-h/2, w+4, h)) place = { lx: px0, ly: y };
     if (!place) for (const deg of [3, 5]) { for (const [px0, right] of sides) for (const up of [true, false]) { if (place) break;
       const a = (right ? (up ? -1 : 1) : (up ? 1 : -1)) * deg * Math.PI / 180, piv = right ? px0 : px0 + w, bx = segs(piv, a, right);
       if (bx.every(b_ => fits(...b_) && b_[1] > 4 && b_[1] + h < H - 4)) place = { piv, a, right, bx }; } if (place) break; }
+    if (!place && !isMust) continue;
     if (!place) for (const [px0] of sides) for (const oy of [-dy, dy]) if (!place && fits(px0-2, y+oy-h/2, w+4, h) && y+oy > 8 && y+oy < H-8) place = { lx: px0, ly: y + oy };
     if (!place) { if (!(i === sel || i === hover)) continue; place = { lx: first, ly: y }; }
     ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.lineJoin = "round"; ctx.fillStyle = css.ink;
@@ -3408,6 +3411,7 @@ function labels(lit){
       const xs = bx.map(b_ => b_[0]), ys = bx.map(b_ => b_[1]); LH.push([Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs) + w/4 + 2, Math.max(...ys) - Math.min(...ys) + h, i]);
       ctx.save(); ctx.translate(piv, y); ctx.rotate(a); const ox = right ? 0 : -w; ctx.strokeText(t, ox, 0); ctx.fillText(t, ox, 0); ctx.restore(); }
     else { const { lx, ly } = place; taken.push([lx-2, ly-h/2, w+4, h]); LH.push([lx-2, ly-h/2, w+4, h, i]); ctx.strokeText(t, lx, ly); ctx.fillText(t, lx, ly); }
+    if (!isMust && lowLv) lowN++;
     if (++count > 260) break;
   }
 }
