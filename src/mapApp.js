@@ -3736,7 +3736,7 @@ q.addEventListener("blur", () => win.setTimeout(() => res.hidden = true, 120));
 const fromIn = $("#from");
 fromIn.min = SLMIN; fromIn.max = NOW_Y;
 $("#fromlo").textContent = SLMIN; $("#fromhi").textContent = NOW_Y;
-function syncYr(){ const yc = $("#yrctl"); if (!yc) return; const [a, b] = yc.querySelectorAll("input"); if (document.activeElement !== a && document.activeElement !== b) { a.value = YR0; b.value = YR1; }
+function syncYr(){ const yc = $("#ycol") || $("#yrctl"); if (!yc) return; const [a, b] = yc.querySelectorAll("input"); if (document.activeElement !== a && document.activeElement !== b) { a.value = YR0; b.value = YR1; }
   const f = y => (y - SLMIN) / Math.max(1, NOW_Y - SLMIN), fill = yc.querySelector(".fill"); fill.style.left = `calc(9px + (100% - 18px)*${f(YR0)})`; fill.style.width = `calc((100% - 18px)*${f(YR1) - f(YR0)})`;
   { const [h0, h1] = yc.querySelectorAll(".yrh"), [e0, e1] = yc.querySelectorAll(".yre"), near = Math.max(.08, 40 / Math.max(1, (yc.querySelector(".dual") || {}).clientWidth || 500));   // a year label is about 36px wide: closer than that to an end, the end's own year steps aside
     const put = (h, y) => { h.setText(String(y)); h.style.left = `calc(5px + (100% - 10px)*${f(y)})`; };
@@ -4846,7 +4846,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const fcols = FI.p.createDiv({ cls: "fcols" });
   // Years: folds away like the other lists; its header shows the years kept, folded or not
   { const yc_ = fcols.createDiv({ cls: "fcol ycol", attr: { id: "ycol" } }), hd = yc_.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Years" }); const ac = hd.createSpan({ cls: "facts yfacts" });
-    const ctl = $("#yrctl"); const v_ = $("#yrv0"); if (v_) ac.appendChild(v_); const pr = ctl.querySelector(":scope > .prow"); if (pr) pr.remove(); yc_.appendChild(ctl); }
+    const ctl = $("#yrctl"); const v_ = $("#yrv0"); if (v_) ac.appendChild(v_); const pr = ctl.querySelector(":scope > .prow"); if (pr) pr.remove(); yc_.appendChild(ctl);
+    // on a computer the slider sits in the header row, between "Years" and the years kept, so the section takes less room
+    if (!Platform.isMobile) { const rg = ctl.querySelector(".prng"); if (rg) { hd.insertBefore(rg, ac); hd.classList.add("yhd"); } } }
   { const fc = fcols.createDiv({ cls: "fcol" }), hd = fc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Folders" }); const ac = hd.createSpan({ cls: "facts" }); ac.appendChild($("#foldall")); ac.appendChild($("#foldnone"));
     fc.appendChild($("#foldlist")); const sp = $("#specialt"); if (sp) { const sbox = sp.nextElementSibling; fc.appendChild(sp); if (sbox) fc.appendChild(sbox); } }
   { const cc = fcols.createDiv({ cls: "fcol" }), hd = cc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Collections" }); const ac = hd.createSpan({ cls: "facts" }); ac.appendChild($("#collcount")); ac.appendChild($("#collclear"));

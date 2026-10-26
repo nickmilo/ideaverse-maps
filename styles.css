@@ -1037,3 +1037,7 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .fheads .fhb[aria-pressed="true"]::after{content:" ▾"}
 .ivm .fheads .fhb[hidden]{display:none}
 .ivm .fcols .fhd .pt.fcolt::after{content:none}
+.ivm .fcols .ycol .fhd.yhd{align-items:flex-start;gap:12px}
+.ivm .fcols .ycol .fhd.yhd > .pt{padding-top:6px}
+.ivm .fcols .ycol .fhd.yhd > .yfacts{padding-top:5px}
+.ivm.ivm .fcols .ycol .fhd.yhd > .prng{flex:1 1 auto;min-width:120px;margin:0}
