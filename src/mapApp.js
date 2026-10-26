@@ -5139,7 +5139,21 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         w: () => hit("#pplay"), t: () => vis_($("#timebar")) || !$("#timebar").hidden ? hit("#tlplay") : false,
         s: () => hit("#follownote"), f: () => hit("#filtbtn"), n: () => hit("#focusmode") };
       ["j", "k", "l"].forEach((key, j) => LK[key] = () => { const bs = [...root.querySelectorAll("#driftseg button")].filter(vis_); const b_ = bs[j]; if (!b_) return false; b_.click(); if (!orbitOn()) hit("#dplay"); return true; });
-      onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey) return; const f_ = LK[e.key.length === 1 ? e.key.toLowerCase() : ""]; if (!f_) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      // ? opens a card of every key; Display ends with a row that opens it too
+      const card = cv.parentElement.createDiv({ cls: "keycard", attr: { role: "dialog", "aria-label": "Keyboard shortcuts" } }); card.hidden = true;
+      const fillCard = () => { card.empty(); const hd = card.createDiv({ cls: "kch" }); hd.createSpan({ text: "Keyboard shortcuts" }); const x_ = hd.createEl("button", { cls: "kcx", text: "×", attr: { type: "button", "aria-label": "Close" } }); x_.onclick = () => { card.hidden = true; };
+        const cols = card.createDiv({ cls: "kcc" }), sec = (t, rows) => { const c_ = cols.createDiv({ cls: "kcs" }); c_.createDiv({ cls: "pt", text: t }); for (const [k_, d_] of rows) { const r_ = c_.createDiv({ cls: "kcr" }); const kk = r_.createSpan({ cls: "kcks" }); for (const one of k_.split(" ")) kk.createEl("kbd", { text: one }); r_.createSpan({ text: d_ }); } };
+        sec("Maps", [...KEYED()].map(([k_, ch]) => [k_, [...ch.childNodes].filter(x => !(x.classList && x.classList.contains("mkey"))).map(x => x.textContent).join("").trim()]).sort((a_, b_) => "1234567890-=[]\\".indexOf(a_[0]) - "1234567890-=[]\\".indexOf(b_[0])));
+        sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]); };
+      const toggleCard = () => { if (card.hidden) { closePops(); fillCard(); } card.hidden = !card.hidden; return true; };
+      LK["?"] = toggleCard; on(doc, "pointerdown", e => { if (!card.hidden && !card.contains(e.target)) card.hidden = true; });
+      onKey(e => { if (e.key === "Escape" && !card.hidden) card.hidden = true; });
+      { const kr = DI.p.createEl("button", { cls: "drow kbrow", attr: { type: "button" } }); kr.createSpan({ text: "Keyboard shortcuts" }); kr.createEl("kbd", { text: "?" }); kr.onclick = e => { e.stopPropagation(); closePops(); fillCard(); card.hidden = false; }; }
+      // each button's hover hint ends with its key, and keeps it when the hint changes (Play becomes Pause, say)
+      const hint = (el, k_) => { if (!el) return; const add = () => { const l_ = el.getAttribute("aria-label") || el.getAttribute("title") || ""; if (!l_ || l_.endsWith(` (${k_})`)) return; el.setAttribute("aria-label", `${l_.replace(/ \([A-Z/?]\)$/, "")} (${k_})`); };
+        add(); new MutationObserver(add).observe(el, { attributes: true, attributeFilter: ["aria-label", "title"] }); };
+      for (const [id, k_] of [["#dplay", "O"], ["#pplay", "W"], ["#tlplay", "T"], ["#follownote", "S"], ["#filtbtn", "F"], ["#focusmode", "N"], ["#anitab", "A"]]) hint($(id), k_);
+      onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey) return; const f_ = LK[e.key === "?" ? "?" : e.key.length === 1 ? e.key.toLowerCase() : ""]; if (!f_) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
         if (f_()) e.preventDefault(); }); }
     // Group's choices (Bookshelf's Shelve by, Chord, Corona and Tesla's Arcs by, Treemap's Boxes by and Subfolders) live under the gear, first; the Group button is gone
     for (const j of [3, 2, 1, 0]) $("#laygrp").prepend(GS[j][0]);
