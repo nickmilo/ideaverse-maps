@@ -20,7 +20,7 @@ const html = el => ({ set v(h) { el.empty(); el.append(sanitizeHTMLToDom(h)); } 
 const PACKS0 = (D.settings && D.settings.packs) || "";
 const cv = $("#cv"), ctx = cv.getContext("2d");
 let placeAnitab = () => {};   // set by the Animations dock (below)
-let ANCHOR_T = 0, CAPFIT = false, syncTB = () => {}, toggleMapOpts = () => {}, lastDown = null;   // lastDown: where the last press landed on the map   // set by the toolbar (below): labels, counts and which buttons show
+let fDots = () => {}; let ANCHOR_T = 0, CAPFIT = false, syncTB = () => {}, toggleMapOpts = () => {}, lastDown = null;   // lastDown: where the last press landed on the map   // set by the toolbar (below): labels, counts and which buttons show
 
 const N = D.nodes, E = D.edges, n = N.length;
 const LEVELS = [
@@ -4973,13 +4973,17 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // each column (Folders, Collections, Bases) folds away under its name, so more of the map shows behind the menu
   for (const fc of fcols.querySelectorAll(":scope > .fcol")) { const pt = fc.querySelector(".fhd > .pt"); if (!pt) continue; const key = "iv-fshut-" + pt.textContent.trim().toLowerCase();
     pt.classList.add("fcolt"); pt.setAttribute("role", "button"); pt.tabIndex = 0;
-    const hb = fheads.createEl("button", { cls: "fhb", text: pt.textContent.trim(), attr: { type: "button" } });
+    const hb = fheads.createEl("button", { cls: "fhb", attr: { type: "button", "data-f": pt.textContent.trim().toLowerCase() } }); hb.createSpan({ cls: "fdot", attr: { "aria-hidden": "true" } }); hb.appendText(pt.textContent.trim());
     const set = shut => { fc.classList.toggle("shut", shut); pt.setAttribute("aria-expanded", String(!shut)); pt.title = shut ? "Show this list" : "Hide this list"; hb.setAttribute("aria-pressed", String(!shut)); hb.title = shut ? "Show " + hb.textContent : "Hide " + hb.textContent; fitCols(); };
     set(pref(key, false) === true); const flip = e => { e.stopPropagation(); const shut = !fc.classList.contains("shut"); set(shut); save(key, shut); };
     hb.onclick = flip; const syncH = () => { hb.hidden = fc.hidden; }; syncH(); new MutationObserver(syncH).observe(fc, { attributes: true, attributeFilter: ["hidden"] });
     pt.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(e); } };
     // the whole header row folds it (its own buttons, like Clear, still do their own thing)
     const hd_ = fc.querySelector(".fhd"); hd_.classList.add("fhdt"); hd_.addEventListener("click", e => { if (e.target.closest("button, input, select, label")) return; flip(e); }); }
+  // a dot before each list's name while it's narrowing the map (Nick): Years when not every year shows, Folders when some are off, and so on
+  { const live = { years: () => YRV.has(view) && yrNarrow(), folders: () => !$("#foldx").hidden, collections: () => colls.length > 0, mocs: () => !!MS, properties: () => !!PRS, bases: () => BQ.length > 0 };
+    const dots = () => { for (const hb of fheads.querySelectorAll(".fhb")) { const f_ = live[hb.dataset.f]; const on_ = !!(f_ && f_()); hb.classList.toggle("live", on_); } };
+    fDots = dots; dots(); }
   $("#foldms").hidden = true; $("#collms").hidden = true; $("#foldms").classList.add("gone"); $("#collms").classList.add("gone"); $("#effbtn").setText("Light up areas and projects");
   opener(FI, () => { renderFoldList(); renderCollList(true); syncColl(); });
   // Display: links, theme, how scoring works
@@ -5158,7 +5162,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }
     { const yc_ = $("#ycol"); if (yc_) yc_.hidden = !YRV.has(view); } $("#yrctl").hidden = !YRV.has(view); syncYr();
-    const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (BQ.length ? 1 : 0) + (MS ? 1 : 0) + (PRS ? 1 : 0) + (YRV.has(view) && yrNarrow() ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0);
+    const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (BQ.length ? 1 : 0) + (MS ? 1 : 0) + (PRS ? 1 : 0) + (YRV.has(view) && yrNarrow() ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0); fDots();
   };
   // the maps menu: every map (an icon before each name), and this map's settings to its right (below it on a narrow pane or a phone)
   { const MP = $("#vmorepop"), MB = $("#vmore"), SM = $("#vsegms");

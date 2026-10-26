@@ -1117,3 +1117,6 @@ body:not(.is-mobile) .ivm .wm-lyt{bottom:38px}
 .ivm .fcols .mcol .msh{display:flex;gap:6px;align-items:center}
 .ivm .fcols .mcol .msh input{flex:1;min-width:0}
 .ivm .fcols .mdeg button{font-size:11px;padding:2px 8px;white-space:nowrap}
+/* 0.7.33 · a dot before a Filter list's name while it narrows the map */
+.ivm .fhb .fdot{display:none;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:6px;flex:none;vertical-align:middle;position:relative;top:-1px}
+.ivm .fhb.live .fdot{display:inline-block}
