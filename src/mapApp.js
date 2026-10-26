@@ -1792,35 +1792,42 @@ const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oc
 
 // Linear Calendar: a year as twelve rows, one per month, each day a box; a month's first day sits under its own weekday,
 // so the weeks line up down the page (the Year Map). The notes made that day fill its box.
-let LCALL = pref("iv-lcall", false) === true, LCY = +pref("iv-lcyear", 0) || 0, LC = {years: [], C: 44};
+// Linear Calendar: the years shown (a range; both ends on one year shows one year) and the shape: Whole months (a row each, weeks lined up) or Half months (two rows each: the 1st to the 15th, then the 16th on, for a narrow pane)
+let LCUIOK = false, LCR0 = +pref("iv-lcr0", 0) || 0, LCR1 = +pref("iv-lcr1", 0) || 0, LCHALF = pref("iv-lchalf", false) === true, LC = {years: [], C: 44};
+{ const y_ = +pref("iv-lcyear", 0) || 0; if (!LCR0 && y_) { LCR0 = LCR1 = y_; } if (pref("iv-lcall", false) === true && !+pref("iv-lcr0", 0)) { LCR0 = 1; LCR1 = 9999; } }
 const LC_GAP = 150;
 function layoutLincal(){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
-  const [y0, y1] = datedYears(); if (!LCY || LCY < y0 || LCY > y1) LCY = Math.min(y1, NOW_Y);
-  const years = LCALL ? Array.from({length: y1 - y0 + 1}, (_, j) => y0 + j) : [LCY], C = LC.C, H1 = 12*C + LC_GAP, cells = new Map();
+  lcClamp(); const years = Array.from({length: LCR1 - LCR0 + 1}, (_, j) => LCR0 + j), C = LC.C, half = LCHALF, MH = half ? 2*C + Math.round(C*.4) : C, H1 = 12*MH + LC_GAP, cells = new Map();
   for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) { EHID[i] = 1; continue; } const d = new Date(TV[i]), y = d.getUTCFullYear(), yi = years.indexOf(y); if (yi < 0) { EHID[i] = 1; continue; }
     const key = yi*400 + d.getUTCMonth()*32 + d.getUTCDate(); if (!cells.has(key)) cells.set(key, []); cells.get(key).push(i); }
-  const col = (y, m, day) => (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7 + day - 1;   // weeks start on Monday
-  for (const [key, ids] of cells) { const yi = Math.floor(key/400), m = Math.floor((key % 400)/32), day = key % 32, y = years[yi], cx = col(y, m, day)*C + C/2, cy = yi*H1 + m*C + C/2;
+  // where a day's box sits: its column, and its row's top within the year
+  const col = half ? (y, m, day) => day <= 15 ? day - 1 : day - 16 : (y, m, day) => (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7 + day - 1;   // whole months: weeks start on Monday
+  const rowY = half ? (m, day) => m*MH + (day > 15 ? C : 0) : m => m*C;
+  for (const [key, ids] of cells) { const yi = Math.floor(key/400), m = Math.floor((key % 400)/32), day = key % 32, y = years[yi], cx = col(y, m, day)*C + C/2, cy = yi*H1 + rowY(m, day) + C/2;
     ids.sort(byRank); const g = Math.ceil(Math.sqrt(ids.length)), st = Math.min(C*.26, C*.8/g);
     ids.forEach((i, j) => { const r = Math.floor(j/g), c = j % g; EX[i] = cx + (c - (g - 1)/2)*st; EY[i] = cy + (r - (g - 1)/2)*st; }); }
-  LC = {years, C, H1, col};
-  const last = years.length - 1; expBox = {x0: -90, y0: last*H1 - 70, x1: 37*C + 20, y1: last*H1 + 12*C + 20}; }   // fit to the latest year; the wheel scrolls back through the rest
+  LC = {years, C, H1, col, rowY, MH, half};
+  const last = years.length - 1; expBox = {x0: -90, y0: last*H1 - 70, x1: (half ? 16 : 37)*C + 20, y1: last*H1 + 12*MH + 20}; if (LCUIOK) syncLC(); }   // fit to the latest year; the wheel scrolls back through the rest
+// keep the years inside the years that have notes (first time: this year, or the latest year with notes)
+function lcClamp(){ const [y0, y1] = datedYears(); if (!LCR0 || !LCR1) { LCR0 = LCR1 = Math.min(y1, NOW_Y); } LCR0 = Math.max(y0, Math.min(y1, LCR0)); LCR1 = Math.max(y0, Math.min(y1, LCR1)); if (LCR0 > LCR1) [LCR0, LCR1] = [LCR1, LCR0]; return [y0, y1]; }   // fit to the latest year; the wheel scrolls back through the rest
 EXP.lincal = {
   layout: layoutLincal, pick: (x, y) => dotPick(x, y), spinePick: true,   // like Bookshelf: the nearest dot wins and names never block, so you can glide along a row either way
-  guides(){ const {years, C, H1, col} = LC, now = new Date();
-    for (let yi = 0; yi < years.length; yi++) { const y = years[yi], top = yi*H1; if (sy(top + 12*C) < -40 || sy(top - 70) > H + 40) continue;
-      ctx.fillStyle = css.panel; ctx.globalAlpha = .55; for (const wc of [5, 6, 12, 13, 19, 20, 26, 27, 33, 34]) ctx.fillRect(sx(wc*C), sy(top - 6), C*k, (12*C + 6)*k); ctx.globalAlpha = 1;   // weekend columns
-      ctx.strokeStyle = css.line; ctx.lineWidth = 1;
+  guides(){ const {years, C, H1, col, rowY, MH, half} = LC, now = new Date();
+    for (let yi = 0; yi < years.length; yi++) { const y = years[yi], top = yi*H1; if (sy(top + 12*MH) < -40 || sy(top - 70) > H + 40) continue;
+      ctx.fillStyle = css.panel; ctx.globalAlpha = .55;
+      if (!half) for (const wc of [5, 6, 12, 13, 19, 20, 26, 27, 33, 34]) ctx.fillRect(sx(wc*C), sy(top - 6), C*k, (12*C + 6)*k);   // weekend columns
+      else for (let m = 0; m < 12; m++) { const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate(); for (let d = 1; d <= days; d++) { const wd = new Date(Date.UTC(y, m, d)).getUTCDay(); if (wd === 0 || wd === 6) ctx.fillRect(sx(col(y, m, d)*C), sy(top + rowY(m, d)), C*k, C*k); } }   // half months: each weekend day shaded
+      ctx.globalAlpha = 1; ctx.strokeStyle = css.line; ctx.lineWidth = 1;
       for (let m = 0; m < 12; m++) { const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-        for (let d = 1; d <= days; d++) { const x = sx(col(y, m, d)*C) + 1.5, yy = sy(top + m*C) + 1.5, w = C*k - 3; ctx.globalAlpha = .7; ctx.strokeRect(x, yy, w, w);
+        for (let d = 1; d <= days; d++) { const x = sx(col(y, m, d)*C) + 1.5, yy = sy(top + rowY(m, d)) + 1.5, w = C*k - 3; ctx.globalAlpha = .7; ctx.strokeRect(x, yy, w, w);
           if (k*C > 30) { ctx.globalAlpha = .55; ctx.fillStyle = css.muted; ctx.font = `500 ${Math.min(10, C*k*.22)}px ${css.mono}`; ctx.textBaseline = "top"; ctx.fillText(String(d), x + 3, yy + 2); }
           if (y === now.getFullYear() && m === now.getMonth() && d === now.getDate()) { ctx.globalAlpha = 1; ctx.strokeStyle = css.accent; ctx.lineWidth = 2; ctx.strokeRect(x, yy, w, w); ctx.strokeStyle = css.line; ctx.lineWidth = 1; } } }
       ctx.globalAlpha = 1; ctx.textBaseline = "middle"; ctx.fillStyle = css.muted; ctx.font = `600 ${Math.max(9, Math.min(13, C*k*.32))}px ${css.mono}`; ctx.textAlign = "right";
-      for (let m = 0; m < 12; m++) ctx.fillText(MON3[m].toUpperCase(), sx(-10), sy(top + m*C + C/2));
-      ctx.textAlign = "center"; for (let c = 0; c < 37; c++) ctx.fillText("MTWTFSS"[c % 7], sx(c*C + C/2), sy(top - 16));
+      for (let m = 0; m < 12; m++) ctx.fillText(MON3[m].toUpperCase(), sx(-10), sy(top + m*MH + (half ? C : C/2)));
+      ctx.textAlign = "center"; if (!half) for (let c = 0; c < 37; c++) ctx.fillText("MTWTFSS"[c % 7], sx(c*C + C/2), sy(top - 16));
       ctx.textAlign = "left"; ctx.fillStyle = css.accent; ctx.font = `600 ${Math.max(14, Math.min(30, C*k*.7))}px ${css.mono}`; ctx.fillText(String(y), sx(0), sy(top - 46)); ctx.textBaseline = "alphabetic"; } },
-  legend: "Linear Calendar: a year as twelve rows, one per month, each day a box, with the weeks lined up down the page. The notes you made that day fill its box: maps and hubs first, in their level colors. Layout → One year (‹ › to change it) or All years (the wheel scrolls through them; ⌘ + wheel zooms).",
+  legend: "Linear Calendar: a year as twelve rows, one per month, each day a box, with the weeks lined up down the page. The notes you made that day fill its box: maps and hubs first, in their level colors. Its menu: Years (drag the two handles; both on one year shows that year, ‹ › moves a year at a time; with several, the wheel scrolls through them and ⌘ + wheel zooms) and Whole or Half months (Half: each month on two rows, the 1st to the 15th and the 16th on, for a narrow pane).",
 };
 
 // Spiral: time as one line winding outward, a turn a year, starting at 12 o'clock and running clockwise, so the same date
@@ -3560,7 +3567,7 @@ function zoomAt(px, py, f){ if (domeOn() || sphOn()) { px = tx; py = ty; }   // 
   // big maps (a long Spiral or Lifeline) can always zoom out past their whole picture
   const lo = view === "stars" ? .04 : domeOn() ? .3 : .15, nk = Math.min(40, Math.max(expOn() ? Math.min(lo, fitTarget().k*.6) : lo, k*f)); f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
 cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
-  if (view === "lincal" && LCALL && !e.ctrlKey && !e.metaKey && !e.shiftKey && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) { ty -= e.deltaY*(e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }   // all years: the wheel scrolls through them (⌘ or ctrl + wheel, or a pinch, zooms)
+  if (view === "lincal" && LCR1 > LCR0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) { ty -= e.deltaY*(e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }   // all years: the wheel scrolls through them (⌘ or ctrl + wheel, or a pinch, zooms)
   if (!e.ctrlKey && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {   // shift + wheel (or a sideways swipe) pans left and right
     const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
     if (domeOn()) { domeYaw += dx*(e.deltaMode === 1 ? 16 : 1)/(k*DF_); domeProject(); X.set(DX); Y.set(DY); buildGrid(); domeKeep(); tip.hidden = true; draw(); return; }   // in a dome a sideways swipe turns you
@@ -3860,9 +3867,32 @@ function syncLR(){ const [a, b] = datedYears(), [y0, y1] = yearRange(), opts = s
   html($("#lr0")).v = opts(y0); html($("#lr1")).v = opts(y1); }
 for (const id of ["#lr0", "#lr1"]) $(id).onchange = () => { let y0 = +$("#lr0").value, y1 = +$("#lr1").value; if (id === "#lr0" && y1 < y0) y1 = y0; if (id === "#lr1" && y0 > y1) y0 = y1;
   const [a, b] = datedYears(); if (view === "spiral") { LRS = [y0, y1]; save("iv-srange", LRS); } else { LR = [y0, y1]; save("iv-llrange", LR); } syncLR(); if (view === "spiral" || view === "lifeline") morph(true, () => fitTarget()); };
-function syncLC(){ root.querySelectorAll("#lcseg button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.ly === "all") === LCALL))); $("#lcyear").textContent = LCALL ? "All years" : String(LCY || NOW_Y); $("#lcprev").disabled = $("#lcnext").disabled = LCALL; }
-root.querySelectorAll("#lcseg button").forEach(b => b.onclick = () => { LCALL = b.dataset.ly === "all"; save("iv-lcall", LCALL); syncLC(); if (view === "lincal") morph(true, () => fitTarget()); });
-for (const [id, d] of [["#lcprev", -1], ["#lcnext", 1]]) $(id).onclick = () => { const [a, b] = datedYears(); LCY = Math.max(a, Math.min(b, (LCY || NOW_Y) + d)); save("iv-lcyear", LCY); syncLC(); if (view === "lincal") morph(true, () => fitTarget()); };
+// a two-handle years slider (the Years shown look): the fill between the handles, each handle's year under it
+function syncDual(yc, lo, hi, mn, mx){ const [a, b] = yc.querySelectorAll(".dual input"); for (const x of [a, b]) { x.min = String(mn); x.max = String(mx); } if (document.activeElement !== a && document.activeElement !== b) { a.value = String(lo); b.value = String(hi); }
+  const f = y => (y - mn) / Math.max(1, mx - mn), fill = yc.querySelector(".fill"); fill.style.left = `calc(9px + (100% - 18px)*${f(lo)})`; fill.style.width = `calc((100% - 18px)*${f(hi) - f(lo)})`;
+  const [h0, h1] = yc.querySelectorAll(".yrh"), [e0, e1] = yc.querySelectorAll(".yre"), near = .08; e0.setText(String(mn)); e1.setText(String(mx));
+  const put = (h, y) => { h.setText(String(y)); h.style.left = `calc(5px + (100% - 10px)*${f(y)})`; }; put(h0, lo); put(h1, hi);
+  h0.hidden = lo === mn; h1.hidden = hi === mx || hi === lo && !h0.hidden;
+  if (!h0.hidden && !h1.hidden && f(hi) - f(lo) < near) { h0.classList.add("lft"); h1.classList.add("rgt"); } else { h0.classList.remove("lft"); h1.classList.remove("rgt"); }
+  e0.style.visibility = (!h0.hidden && f(lo) < near) || (!h1.hidden && f(hi) < near) ? "hidden" : "";
+  e1.style.visibility = (!h1.hidden && f(hi) > 1 - near) || (!h0.hidden && f(lo) > 1 - near) ? "hidden" : ""; }
+function dualEl(parent, label, id){ const yc = parent.createDiv({ cls: "postctl yrctl", attr: { id } }); const hd = yc.createDiv({ cls: "prow" }); hd.createSpan({ text: label }); const hv = hd.createDiv({ cls: "lcyv" });
+  const box = yc.createDiv({ cls: "prng" }), d = box.createDiv({ cls: "dual" }); d.createSpan({ cls: "trk" }); d.createSpan({ cls: "fill" });
+  d.createEl("input", { type: "range", attr: { "aria-label": "First year", step: "1" } }); d.createEl("input", { type: "range", attr: { "aria-label": "Last year", step: "1" } });
+  const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yrh" }); lb.createSpan({ cls: "yrh" }); return { yc, hv }; }
+// Linear Calendar's menu: Years (the slider, with ‹ › to move a year at a time) and Whole or Half months
+const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) el.hidden = true; c.classList.add("lcctl2");
+  const sh = c.createDiv({ cls: "seg lchalf", attr: { role: "group", "aria-label": "Months as" } });
+  for (const [v, t, tip] of [[false, "Whole months", "A row a month, the weeks lined up"], [true, "Half months", "Two rows a month (the 1st to the 15th, the 16th on): half as wide, for a narrow pane"]]) {
+    const b = sh.createEl("button", { text: t, attr: { type: "button", title: tip, "aria-pressed": String(v === LCHALF) } }); b.onclick = e => { e.stopPropagation(); LCHALF = v; save("iv-lchalf", v); sh.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (view === "lincal") morph(true, () => fitTarget()); }; }
+  const { yc, hv } = dualEl(c, "Years", "lcyr"); const pv = $("#lcprev"), yv = $("#lcyear"), nx = $("#lcnext"); for (const el of [pv, yv, nx]) { el.hidden = false; hv.appendChild(el); }
+  const [a, b] = yc.querySelectorAll(".dual input"); let t_ = 0;
+  const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; LCR0 = p; LCR1 = q; syncLC(); win.clearTimeout(t_); if (commit) { save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); }
+    t_ = win.setTimeout(() => { if (view === "lincal") morph(true, () => fitTarget()); }, commit ? 0 : 120); };
+  a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true);
+  for (const [el, d] of [[pv, -1], [nx, 1]]) el.onclick = e => { e.stopPropagation(); const [y0, y1] = lcClamp(); const sh_ = Math.max(y0 - LCR0, Math.min(y1 - LCR1, d)); LCR0 += sh_; LCR1 += sh_; save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); syncLC(); if (view === "lincal") morph(true, () => fitTarget()); };
+  return { yc }; })(); LCUIOK = true;
+function syncLC(){ const [y0, y1] = lcClamp(); syncDual(LCUI.yc, LCR0, LCR1, y0, y1); $("#lcyear").textContent = LCR0 === LCR1 ? String(LCR0) : `${LCR0}–${LCR1}`; $("#lcprev").disabled = LCR0 <= y0; $("#lcnext").disabled = LCR1 >= y1; }
 syncLC();
 function syncPG(){ root.querySelectorAll("#planetseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pg === PMODE))); }
 function setPMode(m){ if (!["flat", "table", "globe"].includes(m)) return; driftStop(); PMODE = m; PGLOBE = m === "globe"; save("iv-planetmode", m); syncPG();

@@ -941,3 +941,11 @@ body.is-phone .ivm .wm-name{display:none}
 
 .ivm .cappop .capshare { flex: none; width: 100%; min-height: 30px; justify-content: center; font-weight: 600; }
 .ivm .capfn { margin: -2px 0 6px; }
+
+.ivm .lcctl.lcctl2{flex-direction:column;align-items:stretch;gap:8px;min-width:250px}
+.ivm .lcctl2 .lchalf{display:flex}
+.ivm .lcctl2 .lchalf button{flex:1}
+.ivm .lcctl2 .yrctl{padding:0}
+.ivm .lcctl2 .prow{display:flex;align-items:center;justify-content:space-between;gap:8px;grid-column:1/-1}
+.ivm .lcctl2 .lcyv{display:flex;align-items:center;gap:6px}
+.ivm .lcctl2 .lcyv b{min-width:40px;text-align:center}
