@@ -959,7 +959,7 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .fcols .blist{max-height:min(300px,45vh);overflow-y:auto;display:flex;flex-direction:column;gap:1px}
 .ivm .blist details>summary{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer;font-size:13px;list-style:none}
 .ivm .blist details>summary::-webkit-details-marker{display:none}
-.ivm .blist details>summary::before{content:"▸";font-size:10px;color:var(--muted);width:10px;flex:none}
+.ivm .blist details>summary::before{content:"▸";font-size:15px;line-height:1;color:var(--muted);width:12px;flex:none}
 .ivm .blist details[open]>summary::before{content:"▾"}
 .ivm .blist details>summary:hover{background:var(--accent-soft)}
 .ivm .blist .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -969,3 +969,11 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .blist label.bqv.off{opacity:.5;cursor:default}
 .ivm .bqst:empty{display:none}
 .ivm .fcols .bqn{font-size:11px;color:var(--muted)}
+
+.ivm header.tb2 #vseg{overflow-x:hidden}
+.ivm .vfold{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:8px;margin-bottom:4px;border-bottom:1px solid var(--line)}
+.ivm .vfold[hidden]{display:none}
+.ivm header.tb2 #vsegms > #vseg{flex:none}
+.ivm.ivm[data-tbwrap="1"] header.tb2{flex-wrap:wrap}
+.ivm.ivm[data-tbwrap="1"] header.tb2 .tbl{flex:1 1 100%}
+.ivm.ivm[data-tbwrap="1"] header.tb2 .tbr{flex:1 1 100%;justify-content:flex-start;flex-wrap:wrap}

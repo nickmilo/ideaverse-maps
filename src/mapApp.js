@@ -20,7 +20,7 @@ const html = el => ({ set v(h) { el.empty(); el.append(sanitizeHTMLToDom(h)); } 
 const PACKS0 = (D.settings && D.settings.packs) || "";
 const cv = $("#cv"), ctx = cv.getContext("2d");
 let placeAnitab = () => {};   // set by the Animations dock (below)
-let CAPFIT = false, syncTB = () => {}, toggleMapOpts = () => {}, lastDown = null;   // lastDown: where the last press landed on the map   // set by the toolbar (below): labels, counts and which buttons show
+let ANCHOR_T = 0, CAPFIT = false, syncTB = () => {}, toggleMapOpts = () => {}, lastDown = null;   // lastDown: where the last press landed on the map   // set by the toolbar (below): labels, counts and which buttons show
 
 const N = D.nodes, E = D.edges, n = N.length;
 const LEVELS = [
@@ -2920,8 +2920,8 @@ function syncCls(){ const m = root.querySelector("main"), hd = root.querySelecto
   if (hd && fb) hd.toggleClass("has-fb", !fb.hidden); syncTB();
   root.querySelectorAll(".ms").forEach(ms => { const x = ms.querySelector(":scope > .qx"); ms.toggleClass("has-x", !!x && !x.hidden); }); }
 function resize(){ syncCls(); const r = cv.getBoundingClientRect(); dpr = Math.min(doc.body.classList.contains("is-mobile") ? 1.5 : 2, win.devicePixelRatio||1);   /* phones and tablets draw a little lighter */ const firstSize = !(W > 0) && r.width > 0, cx = W ? (W/2 - tx)/k : null, cy = H ? (H/2 - ty)/k : null;
-  // the map keeps its middle in the middle as the pane changes size, unless a note is picked and on screen: then that note stays where it is (the note panel opening doesn't slide it away)
-  const anc = W && sel >= 0 && !domeOn() && !sphOn() && !globeOn() && !geo3On() && !csphOn() && !(view === "stars" && S3D) && X[sel] != null ? [sx(X[sel]), sy(Y[sel])] : null, ancOK = anc && anc[0] > 0 && anc[1] > 0 && anc[0] < W && anc[1] < H;
+  // the map keeps its middle in the middle as the pane changes size (you drag the tab wider: the map stays centered); only when the note panel has just opened or closed does the picked note stay where it is
+  const anc = W && sel >= 0 && performance.now() < ANCHOR_T && !domeOn() && !sphOn() && !globeOn() && !geo3On() && !csphOn() && !(view === "stars" && S3D) && X[sel] != null ? [sx(X[sel]), sy(Y[sel])] : null, ancOK = anc && anc[0] > 0 && anc[1] > 0 && anc[0] < W && anc[1] < H;
   W = r.width; H = r.height; if (cx !== null && !morphing && r.width) { if (ancOK && anc[0] < W - 40 && anc[1] < H - 40) { tx = anc[0] - X[sel]*k; ty = anc[1] - Y[sel]*k; } else { tx = W/2 - cx*k; ty = H/2 - cy*k; } } cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); if (firstSize || !isFinite(k) || !isFinite(tx)) { const f = fitTarget(); if (isFinite(f.k) && f.k > 0) { k = f.k; tx = f.tx; ty = f.ty; } } draw(); }   // opened while hidden (a base still laying out): fit once it has a size
 // while "Share my ideaverse" records in a square or vertical frame, the map shrinks to fit inside the frame
 function fitTarget(){ const f = fitTarget0(); if (!CAPFIT) return f; const a = capArea(), c = capCrop(), s_ = 1.1 * Math.min(c.w, c.h) / dpr / Math.min(a.x1 - a.x0, H), cx = (a.x0 + a.x1) / 2, cy = H / 2;
@@ -3623,7 +3623,7 @@ const drawer = $("#drawer");
 let drawerCollapsed = pref("iv-dcol", false) === true;
 const dtab = $("#main").createEl("button", { cls: "dtab", attr: { "aria-label": "Show the note panel", title: "Show the note panel" } }); dtab.hidden = true;
 function syncDtab(){ const on = sel >= 0 && drawerCollapsed; dtab.hidden = !on; if (on) dtab.setText("‹  " + (N[sel].title.length > 40 ? N[sel].title.slice(0, 39) + "…" : N[sel].title)); }
-function setCollapsed(c){ drawerCollapsed = c; save("iv-dcol", c); if (sel >= 0) { drawer.hidden = c; if (!c) drawer.scrollTop = 0; } syncDtab(); resize(); }
+function setCollapsed(c){ ANCHOR_T = performance.now() + 700; drawerCollapsed = c; save("iv-dcol", c); if (sel >= 0) { drawer.hidden = c; if (!c) drawer.scrollTop = 0; } syncDtab(); resize(); }
 dtab.onclick = () => setCollapsed(false);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function noteList(ids, tag){
@@ -3691,7 +3691,7 @@ function select(i, fromTrail){
     ${down.length ? `<h5><i style="border-color:var(--down)"></i>Below · ${down.length}</h5>${noteList(down)}` : ""}
     ${!up.length && !down.length && !rel.length && !prop.length && !upl.length ? `<h5>No links on the map</h5>` : ""}`;
   const opening = drawer.hidden && !drawerCollapsed; drawer.hidden = drawerCollapsed; drawer.scrollTop = 0; syncDtab();
-  if (opening) { const px_ = sx(X[i]), py_ = sy(Y[i]); resize(); if (!morphing) { tx += px_ - sx(X[i]); ty += py_ - sy(Y[i]); draw(); keepInView(i); } }   // the panel opening leaves the note where you clicked it (slid only if the panel would cover it)
+  if (opening) { const px_ = sx(X[i]), py_ = sy(Y[i]); ANCHOR_T = performance.now() + 700; resize(); if (!morphing) { tx += px_ - sx(X[i]); ty += py_ - sy(Y[i]); draw(); keepInView(i); } }   // the panel opening leaves the note where you clicked it (slid only if the panel would cover it)
   $("#dx").onclick = () => select(-1);
   $("#dcol").onclick = () => setCollapsed(true);
   $("#dopen").onclick = e => host.openNote(d.path, e.metaKey || e.ctrlKey);
@@ -4089,7 +4089,7 @@ function navTo(j, fromTrail){
 function setFocus(i, fromTrail){
   focus = i; computeFocus();
   const fb = $("#focusbar"); if (fb.hidden !== (i < 0)) { fb.hidden = i < 0; if (i >= 0 && !fb.hasChildNodes()) html(fb).v = "&nbsp;"; resize(); }
-  const prev = sel; if (i >= 0) { sel = i; if (drawer.hidden && !isPhone() && !drawerCollapsed) { drawer.hidden = false; resize(); } }   // open the panel first so the camera plans for the narrower map
+  const prev = sel; if (i >= 0) { sel = i; if (drawer.hidden && !isPhone() && !drawerCollapsed) { ANCHOR_T = performance.now() + 700; drawer.hidden = false; resize(); } }   // open the panel first so the camera plans for the narrower map
   relayout(true, false, i >= 0 ? (xs, ys) => visTarget(xs, ys) : () => fitTarget());
   sel = prev;
   if (i >= 0) select(i, fromTrail || prev === i);   // refresh the drawer with the focused set
@@ -4908,7 +4908,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     if (!hits.length) bcHits.createDiv({ cls: "bcnone", text: "No note by that name" }); };
   bcIn.onkeydown = e => { e.stopPropagation(); if (e.key === "Escape") bcClose(); if (e.key === "Enter") { const f = bcHits.querySelector(".bchit"); if (f) f.click(); } };
   // Efforts: light up areas and projects (it changes what stands out, not what is shown, so it lives in Display)
-  { const w = DI.p.createDiv({ cls: "deff" }); w.appendChild($("#effbtn")); $("#effbtn").addEventListener("click", () => closePops()); }
+  { const eb = $("#effbtn"), pnl = $("#effpanel"); eb.hidden = true; hold.appendChild(eb);
+    const sw_ = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "A panel to pick areas and projects; each one picked lights up its notes" } }); const cb = sw_.createEl("input", { type: "checkbox" }); sw_.createEl("i", { cls: "sw" }); sw_.createSpan({ text: "Show area and projects selector" });
+    sw_.hidden = !EFF.length; cb.checked = !pnl.hidden; cb.onchange = () => { if (cb.checked === pnl.hidden) eb.click(); if (cb.checked) closePops(); };
+    new MutationObserver(() => { cb.checked = !pnl.hidden; }).observe(pnl, { attributes: true, attributeFilter: ["hidden"] }); }
   const thSec = DI.p.createDiv({ cls: "fsec thsec" }); thSec.createDiv({ cls: "pt", text: "Theme" });
   DI.p.appendChild($("#scorebtn")); $("#scorebtn").className = "drow dlink"; $("#scorebtn").setText("How notes are scored ›");
   $("#scorebtn").addEventListener("click", () => closePops());
@@ -4990,8 +4993,23 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const thSlot = right.createDiv({ cls: "thslot" }); thSlot.appendChild($("#themeseg"));
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
   const ARR_OFF = new Set(["ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
-  syncTB = () => { syncDrift();
-    const core = CORE.has(view); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
+  // a narrow map: the main tabs that don't fit fold into More (from the right: Sensemakers, then Starfield, then Ideaverse), which becomes More maps, with them at the top
+  const MAIN = [...$("#vseg").querySelectorAll(":scope > button[data-v]")].filter(b => !b.hidden && !b.classList.contains("vburied"));
+  const FOLD_T = new Set(), vfold = doc.createElement("div"); vfold.className = "vfold"; { const pop = $("#vmorepop"), t0 = pop.querySelector(".pt"); if (t0) t0.after(vfold); else pop.prepend(vfold); }
+  const tabV = v => v === "spacetime" ? "emergence" : v;
+  const fitTabs = () => { const vs = $("#vseg"), mo = $("#vmore"), sm = $("#vsegms"), tl = sm.parentElement; if (!vs || !vs.isConnected || !vs.clientWidth) return;
+    const over = () => sm.scrollWidth > sm.clientWidth + 1 || tl.scrollWidth > tl.clientWidth + 1;
+    const fold = () => { for (const b of MAIN) b.hidden = false; FOLD_T.clear(); mo.setText("More ▾");
+      for (let j = MAIN.length - 1; j >= 1 && over(); j--) { MAIN[j].hidden = true; FOLD_T.add(MAIN[j].dataset.v); if (FOLD_T.size === 1) mo.setText("More maps ▾"); } };
+    // one row if it fits (folding tabs as needed); if even Emergence alone doesn't fit beside the tools, the tools drop to a second row and the tabs get the whole first row
+    root.dataset.tbwrap = ""; fold(); if (over() || FOLD_T.size >= MAIN.length - 1 && FOLD_T.size) { root.dataset.tbwrap = "1"; fold(); }
+    vfold.empty(); vfold.hidden = !FOLD_T.size;
+    for (const b of MAIN) if (FOLD_T.has(b.dataset.v)) { const c = vfold.createEl("button", { cls: "chip", text: b.textContent.replace(/\s*▾\s*$/, ""), attr: { type: "button" } }); if (tabV(view) === b.dataset.v) c.classList.add("on");
+      c.onclick = e => { e.stopPropagation(); closePops(); driftStop(); if (tabV(view) !== b.dataset.v) setView(b.dataset.v); syncTB(); }; } };
+  let fitRaf = 0; const fitSoon = () => { if (fitRaf) return; fitRaf = RAF(() => { fitRaf = 0; const was = [...FOLD_T].join(); fitTabs(); if ([...FOLD_T].join() !== was) syncTB(); }); };
+  { const ro_ = new ResizeObserver(() => { if (!dead) fitSoon(); }); ro_.observe(root.querySelector("header")); }
+  syncTB = () => { syncDrift(); fitSoon();
+    const core = CORE.has(view) && !FOLD_T.has(tabV(view)); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
     $("#vmore").classList.toggle("on", false);
     root.dataset.mo = variants() || hasLay() ? "1" : "";
     AR.w.hidden = ARR_OFF.has(view); AR.val.setText(axisName(mode));
