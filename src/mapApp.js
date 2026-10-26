@@ -4838,7 +4838,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     fc.appendChild($("#foldlist")); const sp = $("#specialt"); if (sp) { const sbox = sp.nextElementSibling; fc.appendChild(sp); if (sbox) fc.appendChild(sbox); } }
   { const cc = fcols.createDiv({ cls: "fcol" }), hd = cc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Collections" }); const ac = hd.createSpan({ cls: "facts" }); ac.appendChild($("#collcount")); ac.appendChild($("#collclear"));
     cc.appendChild($("#collq").parentElement); cc.appendChild($("#colllist")); if (!COLL.length) cc.createEl("p", { cls: "pn", text: "No collections yet (a collection shows here once 10 notes name it)." }); }
-  $("#foldms").hidden = true; $("#collms").hidden = true; $("#foldms").classList.add("gone"); $("#collms").classList.add("gone"); fsec("Efforts", $("#effbtn")); $("#effbtn").setText("Light up areas and projects");
+  $("#foldms").hidden = true; $("#collms").hidden = true; $("#foldms").classList.add("gone"); $("#collms").classList.add("gone"); $("#effbtn").setText("Light up areas and projects");
   opener(FI, () => { renderFoldList(); renderCollList(true); syncColl(); });
   // Display: links, theme, how scoring works
   const DI = popBtn("disp", "Display", "display");
@@ -4872,6 +4872,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     for (const i of hits) { const h = bcHits.createEl("button", { cls: "bchit", attr: { type: "button" } }); h.createSpan({ text: N[i].title }); h.createSpan({ cls: "bclv", text: "L" + N[i].level }); h.onclick = e => { e.stopPropagation(); bcSet(i); }; }
     if (!hits.length) bcHits.createDiv({ cls: "bcnone", text: "No note by that name" }); };
   bcIn.onkeydown = e => { e.stopPropagation(); if (e.key === "Escape") bcClose(); if (e.key === "Enter") { const f = bcHits.querySelector(".bchit"); if (f) f.click(); } };
+  // Efforts: light up areas and projects (it changes what stands out, not what is shown, so it lives in Display)
+  { const w = DI.p.createDiv({ cls: "deff" }); w.appendChild($("#effbtn")); $("#effbtn").addEventListener("click", () => closePops()); }
   const thSec = DI.p.createDiv({ cls: "fsec thsec" }); thSec.createDiv({ cls: "pt", text: "Theme" });
   DI.p.appendChild($("#scorebtn")); $("#scorebtn").className = "drow dlink"; $("#scorebtn").setText("How notes are scored ›");
   $("#scorebtn").addEventListener("click", () => closePops());

@@ -949,3 +949,6 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .lcctl2 .prow{display:flex;align-items:center;justify-content:space-between;gap:8px;grid-column:1/-1}
 .ivm .lcctl2 .lcyv{display:flex;align-items:center;gap:6px}
 .ivm .lcctl2 .lcyv b{min-width:40px;text-align:center}
+
+.ivm .deff{padding:6px 0 2px;border-top:1px solid var(--line);margin-top:4px}
+.ivm .deff .chip{width:100%;justify-content:center}
