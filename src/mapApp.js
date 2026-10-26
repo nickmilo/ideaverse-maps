@@ -4934,7 +4934,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       if (!shown) pl.createDiv({ cls: "pn", text: "No match." }); };
     const applyPS = () => { computePS(); let c_ = 0; if (PRS) for (let i = 0; i < n; i++) c_ += PRS[i]; pn_.setText(PRS ? `${c_.toLocaleString()} notes` : ""); relayout(true, false, () => fitTarget()); syncTB(); };
     pq.addEventListener("input", render); pclr.onclick = e => { e.stopPropagation(); PSEL = {}; save("iv-props", PSEL); applyPS(); render(); };
-    FI.b.addEventListener("click", () => { if (!FI.p.hidden || true) render(); }); if (Object.keys(PSEL).length) win.setTimeout(applyPS, 0); }
+    FI.b.addEventListener("click", render); if (Object.keys(PSEL).length) win.setTimeout(applyPS, 0); }
   // Bases: every base in the vault, A–Z; open one to pick its views. The map keeps only the notes those views hold (any of them).
   if (host.baseList) { const bc = fcols.createDiv({ cls: "fcol bcol" }), hd = bc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Bases" }); const ac = hd.createSpan({ cls: "facts" });
     const bn = ac.createSpan({ cls: "bqn" }); const bclr = ac.createEl("button", { cls: "chip", text: "Clear", attr: { type: "button" } });
