@@ -1,7 +1,7 @@
 {
   "id": "ideaverse-maps",
   "name": "Maps of the Ideaverse",
-  "version": "0.7.14",
+  "version": "0.7.15",
   "minAppVersion": "1.5.0",
   "description": "Visualize your notes across a suite of insanely cool interactive maps—Emergence, Ideaverse, Starfield, and many more. There is even an improved Obsidian graph, which is WAY faster. The implications of this are up to your imagination. Oh, and also, it works in Bases, which will be extremely useful for anyone, especially researchers, who use targeted datasets. Data visualization has become reborn.",
   "author": "Nick Milo",

@@ -4690,6 +4690,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const vcurSeg = $("#vsegms").createDiv({ cls: "seg vcurseg" }), vcur = vcurSeg.createEl("button", { cls: "vcur", attr: { id: "vcur", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
   // every map, one click away: a ☰ before the tabs opens the full list (the four main maps first, then the rest)
   { const mo = $("#vmore"); mo.empty(); setIcon(mo, "menu"); const sv = mo.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } mo.setAttribute("aria-label", "All maps"); mo.title = "All maps"; mo.classList.add("vham"); }
+  // since 0.7.15 the ☰ and the map's name are one button: it opens the maps menu, with this map's settings beside it
+  const mbName = $("#vmore").createSpan({ cls: "vmn" }); $("#vmore").createSpan({ cls: "vcar", text: "▾" });
   $("#vsegms").insertBefore($("#vmore"), $("#vseg").nextSibling);   // More sits outside the tabs, so it never scrolls out of sight
   // More: Chord, Corona, Tesla, Treemap and Bookshelf straight away; Geometric, Linear, Planet and Unfinished under Experimental
   { const pop = $("#vmorepop"), ex = $("#mexp"), sk = ex.querySelector(":scope > details"); for (const b of [...ex.querySelectorAll(":scope > button")]) pop.insertBefore(b, ex);
@@ -5032,14 +5034,20 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
   const ARR_OFF = new Set(["ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   // a narrow map: the main tabs that don't fit fold into More (from the right: Sensemakers, then Starfield, then Ideaverse), which becomes More maps, with them at the top
+  // a small Lucide icon before each map's name in the maps menu
+  const MICON = { emergence: "layers", ideaverse: "orbit", stars: "sparkles", sense: "compass", gogravity: "circle-dot", gograph: "gem", gochord: "aperture", gocso: "sun", gocsi: "zap",
+    gotreemap: "layout-dashboard", gomosaic: "layout-grid", goshelf: "library", gobuilder: "table-2", golincal: "calendar-range", goposters: "image", gopeople: "users",
+    gogeosquare: "square", gogeohex: "hexagon", gogeomandala: "flower", gogeoocta: "diamond", gogeoshells: "globe", gospiral: "rotate-cw", golifeline: "activity",
+    goplflat: "map", gopltable: "table", goplglobe: "earth", gotree: "tree-deciduous", goskyline: "building-2" };
+  const micon = (el, name) => { if (!name || el.querySelector(":scope > .mic")) return; const s_ = doc.createElement("span"); s_.className = "mic"; s_.setAttribute("aria-hidden", "true"); setIcon(s_, name); el.prepend(s_); };
   const MAIN = [...$("#vseg").querySelectorAll(":scope > button[data-v]")].filter(b => !b.hidden && !b.classList.contains("vburied"));
   // the list: "Maps of the Ideaverse", the four main maps, a thin line, then the rest
   const FOLD_T = new Set(), vfold = doc.createElement("div"); vfold.className = "vfold"; { const pop = $("#vmorepop"), t0 = pop.querySelector(":scope > .pt"); if (t0) { t0.setText("Maps of the Ideaverse"); t0.after(vfold); } else pop.prepend(vfold); }
   const tabV = v => v === "spacetime" ? "emergence" : v;
-  const fitTabs = () => { const vs = $("#vseg"), mo = $("#vmore"), sm = $("#vsegms"), tl = sm.parentElement; if (!vs || !vs.isConnected || !vs.clientWidth) return;
+  const fitTabs = () => { const vs = $("#vseg"), mo = $("#vmore"), sm = $("#vsegms"), tl = sm.parentElement; if (!vs || !sm.isConnected || !sm.clientWidth) return;
     const over = () => sm.scrollWidth > sm.clientWidth + 1 || tl.scrollWidth > tl.clientWidth + 1;
-    const fold = () => { for (const b of MAIN) b.hidden = false; FOLD_T.clear();
-      for (let j = MAIN.length - 1; j >= 1 && over(); j--) { MAIN[j].hidden = true; FOLD_T.add(MAIN[j].dataset.v); } };
+    // since 0.7.15 the four main maps live in the one maps menu (☰ + the map's name), so the tabs stay folded
+    const fold = () => { for (const b of MAIN) { b.hidden = true; FOLD_T.add(b.dataset.v); } };
     // one row if it fits (folding tabs as needed); if even Emergence alone doesn't fit beside the tools, the tools drop to a second row and the tabs get the whole first row
     // keep one row as long as possible: first Find shrinks to its magnifying glass, then tabs fold into the ☰ list, and only if even one tab won't fit do the tools drop to a second row
     root.dataset.tbone = Platform.isMobile ? "" : "1"; root.dataset.tbwrap = ""; root.dataset.findmini = ""; fold();
@@ -5047,13 +5055,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     if (over()) { root.dataset.tbwrap = "1"; root.dataset.findmini = ""; fold(); }
     $("#vmorepop").querySelectorAll(":scope > .vfoldb").forEach(x => x.remove()); vfold.hidden = false;
     for (const b of MAIN) { const c = $("#vmorepop").createEl("button", { cls: "chip", text: b.textContent.replace(/\s*▾\s*$/, ""), attr: { type: "button" } }); if (tabV(view) === b.dataset.v) c.classList.add("on");
-      c.classList.add("vfoldb"); vfold.before(c);
+      c.classList.add("vfoldb"); c.dataset.v = b.dataset.v; micon(c, MICON[b.dataset.v]); vfold.before(c);
       c.onclick = e => { e.stopPropagation(); closePops(); driftStop(); if (tabV(view) !== b.dataset.v) setView(b.dataset.v); syncTB(); }; } };
   // refit only when the toolbar's width or the map changes: refitting on every redraw let a borderline width flip back and forth
   let fitRaf = 0, fitKey = ""; const fitSoon = () => { const k_ = root.querySelector("header").clientWidth + "|" + view + "|" + (sel >= 0 ? 1 : 0); if (k_ === fitKey || fitRaf) return; fitKey = k_; fitRaf = RAF(() => { fitRaf = 0; const was = [...FOLD_T].join(); fitTabs(); if ([...FOLD_T].join() !== was) syncTB(); }); };
   { const ro_ = new ResizeObserver(() => { if (!dead) fitSoon(); }); ro_.observe(root.querySelector("header")); }
   syncTB = () => { syncDrift(); fitSoon();
-    const core = CORE.has(view) && !FOLD_T.has(tabV(view)); vcur.hidden = core; vcurSeg.hidden = core; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" });
+    const core = CORE.has(view) && !FOLD_T.has(tabV(view)); vcur.hidden = true; vcurSeg.hidden = true; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" }); mbName.setText(VN());
     $("#vmore").classList.toggle("on", false);
     root.dataset.mo = variants() || hasLay() ? "1" : "";
     AR.w.hidden = ARR_OFF.has(view); AR.val.setText(axisName(mode));
@@ -5068,6 +5076,34 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const yc_ = $("#ycol"); if (yc_) yc_.hidden = !YRV.has(view); } $("#yrctl").hidden = !YRV.has(view); syncYr();
     const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (BQ.length ? 1 : 0) + (YRV.has(view) && yrNarrow() ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0);
   };
+  // the maps menu: every map (an icon before each name), and this map's settings to its right (below it on a narrow pane or a phone)
+  { const MP = $("#vmorepop"), MB = $("#vmore"), SM = $("#vsegms");
+    MB.setAttribute("aria-label", "Maps"); MB.title = "Maps";
+    for (const [id, ic] of Object.entries(MICON)) { const el = id.startsWith("go") && MP.querySelector("#" + id); if (el) micon(el, ic); }
+    const t0 = MP.querySelector(":scope > .pt"); if (t0) t0.after(Object.assign(doc.createElement("div"), { className: "vfold vfold0" }));
+    { const ex = MP.querySelector(":scope > details"); if (ex) { ex.before(Object.assign(doc.createElement("div"), { className: "vfold" })); const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
+    const chipFor = () => { const id = { gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", lincal: "golincal", spiral: "gospiral", lifeline: "golifeline",
+        tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" ? "gocso" : CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
+      return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };
+    // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
+    const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop"]) $(id).hidden = id !== v_; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
+      syncRange(); moT.setText(VN()); const l = hasLay(); moL.hidden = !l || !v_; moNone.hidden = true; return !!(l || v_); };
+    const placeMO = c => { mo.classList.remove("moin"); if (mo.parentElement !== SM) SM.appendChild(mo); mo.hidden = false;
+      const r0 = SM.getBoundingClientRect(), rp = MP.getBoundingClientRect(), rc = c.getBoundingClientRect(), hr = root.getBoundingClientRect(), w = mo.offsetWidth, h = mo.offsetHeight;
+      if (!Platform.isMobile && rp.right + 6 + w <= hr.right - 8) {
+        const top = Math.max(rp.top - r0.top, Math.min(rc.top - r0.top - 8, hr.bottom - r0.top - h - 8));
+        mo.setCssProps({ left: (rp.right - r0.left + 6) + "px", top: top + "px" }); }
+      else { mo.classList.add("moin"); mo.setCssProps({ left: "", top: "" }); c.after(mo); } };
+    const openMaps = () => { closePops("#vmorepop"); if (typeof closeColl === "function") closeColl(); MP.hidden = false; MB.setAttribute("aria-expanded", "true");
+      MP.querySelectorAll(".chip.on").forEach(x => x.classList.remove("on")); const c = chipFor();
+      if (c) { c.classList.add("on"); for (let d = c.parentElement; d && d !== MP; d = d.parentElement) if (d.tagName === "DETAILS") d.open = true; }
+      if (c && fillMO()) { placeMO(c); mo.setAttribute("aria-label", VN() + " settings"); } else mo.hidden = true; };
+    MB.onclick = e => { e.stopPropagation(); if (!MP.hidden) closePops(); else openMaps(); };
+    // anything that used to open the map's own menu now opens the maps menu
+    toggleMapOpts = () => { if (!MP.hidden) closePops(); else openMaps(); };
+    // keys 1–4: Emergence, Ideaverse, Starfield, Sensemakers
+    onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey || !/^[1-4]$/.test(e.key)) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const v = ["emergence", "ideaverse", "stars", "sense"][+e.key - 1]; e.preventDefault(); closePops(); driftStop(); if (tabV(view) !== v) setView(v); syncTB(); }); }
   const mo2 = new MutationObserver(() => syncTB());
   for (const id of ["#foldx", "#collx"]) mo2.observe($(id), { attributes: true, attributeFilter: ["hidden"] });
   for (const id of ["#shelfsort", "#chordby"]) mo2.observe($(id), { attributes: true, subtree: true, attributeFilter: ["aria-pressed", "hidden"] });

@@ -1042,3 +1042,27 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .fcols .ycol .fhd.yhd > .yfacts{padding-top:5px}
 .ivm.ivm .fcols .ycol .fhd.yhd > .prng{flex:1 1 auto;min-width:120px;margin:0}
 .ivm .fcols > .fcol.ycol:not(.shut){padding-bottom:8px;margin-bottom:4px;border-bottom:1px solid var(--line)}
+
+/* 0.7.15 · one maps button (☰ + this map's name) and one maps menu, this map's settings beside it */
+.ivm.ivm header.tb2 #vsegms > #vmore.vham{gap:6px;padding:5px 11px 5px 9px;border-radius:999px;background:var(--ink);color:var(--bg);font:inherit;font-weight:500;white-space:nowrap}
+.ivm.ivm header.tb2 #vsegms > #vmore.vham:hover,.ivm.ivm header.tb2 #vsegms > #vmore.vham[aria-expanded="true"]{background:color-mix(in srgb,var(--ink) 86%,var(--bg));color:var(--bg)}
+.ivm.ivm header.tb2 #vsegms > #vmore.vham svg{width:15px;height:15px;opacity:.85}
+.ivm header.tb2 #vmore .vcar{font-size:10px;opacity:.8}
+.ivm header.tb2 #vsegms > #vseg{display:none}
+.ivm.ivm header.tb2 #vmorepop{min-width:0;width:max-content;max-width:min(320px,calc(100vw - 24px))}
+.ivm #vmorepop > .pt{margin:4px 10px 0}
+.ivm .vfold.vfold0{margin:6px 0 4px}
+.ivm #vmorepop > .vfold{margin:5px 0}
+.ivm.ivm #vmorepop .chip{display:flex;align-items:center;gap:9px;padding:4px 12px 4px 9px}
+.ivm #vmorepop .mic{display:inline-flex;flex:none;width:15px;height:15px;color:var(--muted)}
+.ivm #vmorepop .mic svg{width:15px;height:15px}
+.ivm #vmorepop .chip.on .mic,.ivm #vmorepop .chip:hover .mic{color:var(--ink)}
+.ivm #vmorepop .mexp summary{display:flex;align-items:center;gap:6px}
+.ivm #vmorepop .mexp summary .mic{width:14px;height:14px}
+.ivm #vmorepop .mexp summary .mic svg{width:14px;height:14px}
+.ivm.ivm header.tb2 #mapopts{top:0;width:280px}
+.ivm.ivm header.tb2 #mapopts > .pt:first-child{display:none}
+.ivm.ivm #vmorepop #mapopts.moin{position:static;width:auto;max-width:none;margin:2px 0 6px 20px;padding:4px 8px 6px 10px;border:0;border-left:2px solid var(--line);border-radius:0;box-shadow:none;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.ivm.ivm #vmorepop .chip{justify-content:flex-start;text-align:left}
+.ivm.ivm header.tb2 #vsegms{flex:none}
+.ivm header.tb2 #vmore .vmn{max-width:150px;overflow:hidden;text-overflow:ellipsis}
