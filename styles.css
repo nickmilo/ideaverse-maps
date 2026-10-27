@@ -1193,3 +1193,19 @@ body:not(.is-mobile) .ivm #vlist.vlist2 details.vgrp > summary:not(:hover):not(:
 .ivm.ivm header.tb2 .tbr > #viewms,.ivm.ivm header.tb2 .tbr > #dispms{margin:0;padding:0;gap:0;order:0}
 .ivm.ivm header.tb2 .tbr > #follownote,.ivm.ivm header.tb2 .tbr > #focusmode{width:32px;min-width:32px;height:30px;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center}
 .ivm.ivm.ivm header.tb2 .tbl > #viewms,.ivm.ivm.ivm header.tb2 .tbl > #dispms{order:0}
+/* 0.7.50 · Saved: views sit further in under a group; drag and drop; "Saved in" with a small folder pill */
+.ivm.ivm #vlist.vlist2 details.vgrp > .vr{margin-left:30px}
+.ivm.ivm #vlist.vlist2 details.vgrp > .vgempty{margin-left:36px}
+body:not(.is-mobile) .ivm.ivm #vlist.vlist2 .vr > .vup,body:not(.is-mobile) .ivm.ivm #vlist.vlist2 .vr > .vdn,body:not(.is-mobile) .ivm.ivm #vlist.vlist2 .vr > .vgsel,
+body:not(.is-mobile) .ivm.ivm #vlist.vlist2 details.vgrp > summary > .vup,body:not(.is-mobile) .ivm.ivm #vlist.vlist2 details.vgrp > summary > .vdn{display:none}
+.ivm.ivm #vlist.vlist2 .vr .vgo .m{transition:opacity .1s}
+body:not(.is-mobile) .ivm.ivm #vlist.vlist2 .vr:hover .vgo .m{display:none}
+.ivm #vlist.vlist2 .vr[draggable="true"]{cursor:grab}
+.ivm #vlist.vlist2 .vr.dragging{opacity:.4}
+.ivm #vlist.vlist2 .dropb{box-shadow:inset 0 2px 0 var(--accent)}
+.ivm #vlist.vlist2 .dropa{box-shadow:inset 0 -2px 0 var(--accent)}
+.ivm #vlist.vlist2 .dropin{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent);border-radius:6px}
+.ivm #viewpop .msf .vsavedin{font:500 10px var(--mono);letter-spacing:.06em;color:var(--muted);margin-right:6px}
+.ivm.ivm #viewpop .msf .vfpill{font-size:11px;padding:1px 9px;height:auto;min-height:0;border-radius:999px}
+.ivm #viewpop .msf{justify-content:flex-start;align-items:center}
+.ivm.ivm #viewpop .msf #vdone{margin-left:auto}

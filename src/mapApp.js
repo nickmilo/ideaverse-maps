@@ -4403,9 +4403,11 @@ let writeT = 0;
 const savedJSON = () => JSON.stringify({ about: "Saved views and recorded tours from Maps of the Ideaverse", saved: new Date().toISOString().slice(0, 10), groups: vgroups, views, tours: typeof tours !== "undefined" ? tours : [] }, null, 1);
 function writeSaved(){ if (!host.writeSaved || !host.savedFolder()) return; win.clearTimeout(writeT); writeT = win.setTimeout(() => { void host.writeSaved(savedJSON()); }, 300); }
 async function ensureFolder(){ if (!host.savedFolder || host.savedFolder()) return true; const d = await host.pickSavedFolder(); syncFolderBtn(); return !!d; }
+// the footer: "Saved in" and a small pill with the folder (click to move it); before you pick one, the pill says Choose folder
 function syncFolderBtn(){ const b = $("#vexport"), d = host.savedFolder ? host.savedFolder() : null;
-  b.textContent = d ? `📁 ${d === "/" ? "Vault root" : d.split("/").pop()}` : "Choose folder";
-  b.title = d ? `Saved in ${d === "/" ? "the vault root" : d} (click to move)` : "Pick where saved views and tours are kept"; }
+  if (!b.previousElementSibling || !b.previousElementSibling.classList.contains("vsavedin")) { const l = doc.createElement("span"); l.className = "vsavedin"; l.textContent = "Saved in"; b.before(l); }
+  b.textContent = d ? (d === "/" ? "Vault root" : d.split("/").pop()) : "Choose folder"; b.removeAttribute("title"); b.removeAttribute("aria-label");
+  b.setAttribute("aria-description", d ? `Saved in ${d === "/" ? "the vault root" : d}; click to move` : "Pick where saved views and tours are kept"); b.classList.add("vfpill"); }
 const saveViews = () => { save("iv-views", views); writeSaved(); };
 const modeName = m => m === "time" ? "Time" : m === "ace" ? "ACE" : AXES[m] ? AXES[m].name.replace(/ \(.*\)$/, "") : m;
 function viewSummary(v){
@@ -4475,20 +4477,30 @@ function applySaved(v){
   renderViewList();
 }
 // Saved: like Filter's lists. Your groups fold open and shut; each view moves up or down within its group, or to another group; views in no group come last.
-let vNewGroup = false;
+let vNewGroup = false, VDRAG = null;
 function renderViewList(){
   const s_ = ($("#vq").value || "").trim().toLowerCase(), box = $("#vlist"); box.empty(); box.classList.add("blist", "vlist2");
   $("#vq").hidden = views.length < 8;
   const hit = v => !s_ || v.name.toLowerCase().includes(s_) || viewSummary(v).toLowerCase().includes(s_);
   const names = new Set(vgroups.map(g => g.name)); for (const v of views) if (v.group && !names.has(v.group)) delete v.group;
-  const btn = (el, cls, txt, title, fn) => { const b = el.createEl("button", { cls: "va " + cls, text: txt, attr: { type: "button", title, "aria-label": title } }); b.onclick = e => { e.stopPropagation(); e.preventDefault(); fn(b); }; return b; };
+  // no hover hints here (Nick: they cover the list); screen readers still get a description
+  const btn = (el, cls, txt, title, fn) => { const b = el.createEl("button", { cls: "va " + cls, text: txt, attr: { type: "button", "aria-description": title } }); b.onclick = e => { e.stopPropagation(); e.preventDefault(); fn(b); }; return b; };
+  // drag and drop: a view onto a view (before or after it, joining its group), onto a group's name (into it, at the end) or onto No group; a group onto a group
+  const clearDrop = () => box.querySelectorAll(".dropb,.dropa,.dropin").forEach(x => x.classList.remove("dropb", "dropa", "dropin"));
+  const dragOK = e => { if (!VDRAG) return false; e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = "move"; return true; };
   const sure = (b, word, fn) => { if (b.dataset.ok) fn(); else { b.dataset.ok = 1; b.textContent = word; b.classList.add("warn"); } };
   const row = (el, v) => { const i = views.indexOf(v), mates = views.filter(x => (x.group || "") === (v.group || "")), k_ = mates.indexOf(v);
     const r = el.createDiv({ cls: "vr" + (v.name === curView ? " cur" : "") });
-    const go = r.createEl("button", { cls: "vgo", attr: { type: "button", title: viewSummary(v) } }); go.createEl("b", { text: v.name }); go.createSpan({ cls: "m", text: VIEW_NAME[v.view] || v.view || "" }); go.onclick = () => applySaved(views[views.indexOf(v)]);
+    r.draggable = true; r.ondragstart = e => { VDRAG = { kind: "view", v }; if (e.dataTransfer) { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", v.name); } r.classList.add("dragging"); };
+    r.ondragend = () => { VDRAG = null; r.classList.remove("dragging"); clearDrop(); };
+    r.ondragover = e => { if (!dragOK(e) || VDRAG.kind !== "view" || VDRAG.v === v) return; clearDrop(); const b_ = r.getBoundingClientRect(); r.classList.add(e.clientY < b_.top + b_.height/2 ? "dropb" : "dropa"); };
+    r.ondragleave = () => r.classList.remove("dropb", "dropa");
+    r.ondrop = e => { if (!dragOK(e) || VDRAG.kind !== "view" || VDRAG.v === v) { clearDrop(); return; } const m = VDRAG.v, after = r.classList.contains("dropa"); clearDrop();
+      views.splice(views.indexOf(m), 1); let t_ = views.indexOf(v) + (after ? 1 : 0); views.splice(t_, 0, m); if (v.group) m.group = v.group; else delete m.group; VDRAG = null; saveViews(); renderViewList(); };
+    const go = r.createEl("button", { cls: "vgo", attr: { type: "button", "aria-description": viewSummary(v) } }); go.createEl("b", { text: v.name }); go.createSpan({ cls: "m", text: VIEW_NAME[v.view] || v.view || "" }); go.onclick = () => applySaved(views[views.indexOf(v)]);
     const swap = d => { const o = mates[k_ + d]; if (!o) return; const a = views.indexOf(v), b_ = views.indexOf(o); [views[a], views[b_]] = [views[b_], views[a]]; saveViews(); renderViewList(); };
     const up = btn(r, "vup", "↑", "Move up", () => swap(-1)); up.disabled = k_ === 0; const dn = btn(r, "vdn", "↓", "Move down", () => swap(1)); dn.disabled = k_ === mates.length - 1;
-    if (vgroups.length) { const sel_ = r.createEl("select", { cls: "vgsel", attr: { title: "Move to a group", "aria-label": "Group" } }); sel_.createEl("option", { text: "No group", value: "" });
+    if (vgroups.length) { const sel_ = r.createEl("select", { cls: "vgsel", attr: { "aria-description": "Move to a group" } }); sel_.createEl("option", { text: "No group", value: "" });
       for (const g of vgroups) sel_.createEl("option", { text: g.name, value: g.name }); sel_.value = v.group || "";
       sel_.onclick = e => e.stopPropagation(); sel_.onchange = () => { if (sel_.value) v.group = sel_.value; else delete v.group; const a = views.indexOf(v); views.splice(a, 1); views.push(v); saveViews(); renderViewList(); }; }
     btn(r, "vre", "Update", "Replace with what's on screen now", b => sure(b, "Sure?", () => { const g = v.group; views[i] = snapView(v.name); if (g) views[i].group = g; curView = v.name; saveViews(); renderViewList(); }));
@@ -4500,7 +4512,15 @@ function renderViewList(){
   let shown = 0;
   vgroups.forEach((g, gi) => { const vs = views.filter(v => v.group === g.name && hit(v)); if (s_ && !vs.length) return;
     const det = box.createEl("details", { cls: "bqb vgrp" }); det.open = !!s_ || g.open !== false; det.ontoggle = () => { if (s_) return; g.open = det.open; saveGroups(); };
-    const sm = det.createEl("summary"); const t = sm.createSpan({ cls: "t", text: g.name }); t.title = "Double-click to rename";
+    const sm = det.createEl("summary"); const t = sm.createSpan({ cls: "t", text: g.name }); t.setAttribute("aria-description", "Double-click to rename");
+    sm.draggable = true; sm.ondragstart = e => { VDRAG = { kind: "group", g }; if (e.dataTransfer) { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", g.name); } };
+    sm.ondragend = () => { VDRAG = null; clearDrop(); };
+    sm.ondragover = e => { if (!dragOK(e)) return; clearDrop(); if (VDRAG.kind === "view") sm.classList.add("dropin"); else if (VDRAG.g !== g) { const b_ = sm.getBoundingClientRect(); sm.classList.add(e.clientY < b_.top + b_.height/2 ? "dropb" : "dropa"); } };
+    sm.ondragleave = () => sm.classList.remove("dropb", "dropa", "dropin");
+    sm.ondrop = e => { if (!dragOK(e)) return; const after = sm.classList.contains("dropa"); clearDrop();
+      if (VDRAG.kind === "view") { const m = VDRAG.v; m.group = g.name; views.splice(views.indexOf(m), 1); views.push(m); g.open = true; saveGroups(); saveViews(); }
+      else if (VDRAG.g !== g) { const m = VDRAG.g; vgroups.splice(vgroups.indexOf(m), 1); vgroups.splice(vgroups.indexOf(g) + (after ? 1 : 0), 0, m); saveGroups(); }
+      VDRAG = null; renderViewList(); };
     t.ondblclick = e => { e.preventDefault(); const inp = doc.createElement("input"); inp.value = g.name; inp.className = "vgren"; t.replaceWith(inp); inp.focus(); inp.select();
       let fired = false; const fin = ok => { if (fired) return; fired = true; const nm = (inp.value || "").trim(); if (ok && nm && nm !== g.name && !vgroups.some(x => x.name === nm)) { for (const v of views) if (v.group === g.name) v.group = nm; g.name = nm; saveGroups(); saveViews(); } renderViewList(); };
       inp.onkeydown = ev => { ev.stopPropagation(); if (ev.key === "Enter") fin(true); if (ev.key === "Escape") fin(false); }; inp.onblur = () => win.setTimeout(() => fin(true), 0); inp.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); }; };
@@ -4511,7 +4531,9 @@ function renderViewList(){
     for (const v of vs) { row(det, v); shown++; }
     if (!vs.length) det.createDiv({ cls: "pn vgempty", text: "No views here yet: pick this group on a view to move it in." }); });
   const loose = views.filter(v => !v.group && hit(v));
-  if (loose.length) { let el = box; if (vgroups.length) { const det = box.createEl("details", { cls: "bqb vgrp vgloose" }); det.open = !!s_ || pref("iv-vloose", true) !== false; det.ontoggle = () => { if (!s_) save("iv-vloose", det.open); }; const sm = det.createEl("summary"); sm.createSpan({ cls: "t", text: "No group" }); sm.createSpan({ cls: "m", text: String(views.filter(v => !v.group).length) }); el = det; }
+  if (loose.length) { let el = box; if (vgroups.length) { const det = box.createEl("details", { cls: "bqb vgrp vgloose" }); det.open = !!s_ || pref("iv-vloose", true) !== false; det.ontoggle = () => { if (!s_) save("iv-vloose", det.open); }; const sm = det.createEl("summary"); sm.createSpan({ cls: "t", text: "No group" }); sm.createSpan({ cls: "m", text: String(views.filter(v => !v.group).length) }); el = det;
+    sm.ondragover = e => { if (!dragOK(e) || VDRAG.kind !== "view") return; clearDrop(); sm.classList.add("dropin"); }; sm.ondragleave = () => sm.classList.remove("dropin");
+    sm.ondrop = e => { if (!dragOK(e) || VDRAG.kind !== "view") return; clearDrop(); const m = VDRAG.v; delete m.group; views.splice(views.indexOf(m), 1); views.push(m); VDRAG = null; saveViews(); renderViewList(); }; }
     for (const v of loose) { row(el, v); shown++; } }
   if (!shown && !vgroups.length) box.createEl("p", { cls: "pn", text: views.length ? "No match." : "No saved views yet. Set up the map, name it above, and Save." });
   else if (!shown && s_) box.createEl("p", { cls: "pn", text: "No match." });
@@ -4537,6 +4559,8 @@ POPS.push(["#viewbtn", "#viewpop", "#viewms", () => { renderViewList(); }]);
     hd.classList.add("fhd"); const fa = hd.createSpan({ cls: "facts" }); const vc = $("#vcount"); if (vc) fa.appendChild(vc);
     const ng = fa.createEl("button", { cls: "chip vgadd", text: "+ Group", attr: { type: "button", title: "Make a group for your views (Annual Review, Daily Drivers…)" } });
     ng.onclick = e => { e.stopPropagation(); vNewGroup = true; renderViewList(); }; } }
+// Saved shows no hover hints (Nick, 0.7.50): each button keeps its words as a description for screen readers
+{ const vp = $("#viewpop"); for (const el of vp.querySelectorAll("[title], [aria-label]")) { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); } syncFolderBtn(); }
 $("#viewbtn").onclick = e => { e.stopPropagation(); const el = $("#viewpop"), open = el.hidden; closePops("#viewpop"); closeColl(); el.hidden = !open; $("#viewbtn").setAttribute("aria-expanded", String(open)); if (open) { renderViewList(); if (typeof renderTourList === "function") renderTourList(); } };
 $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
 $("#tlrange").addEventListener("input", e => { senseStop(); if (+e.target.value >= SSTEPS.length - 1) senseClear(); else senseSet(+e.target.value, true); });   // all the way right is All time: every note
