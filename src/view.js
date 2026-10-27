@@ -141,7 +141,15 @@ export async function mountInto(owner, el, opts) {
       if (!path) { const f = app.vault.getFiles().find(x => x.extension === "base" && x.basename.toLowerCase() === "recents"); path = f ? f.path : ""; }
       if (!path) return { err: "Pick a base for emoji labels in Settings" };
       try { const r = await q.column(path, st.emojiCol || ""); return r.err ? { err: r.err, path } : { map: r.map, path, col: r.col }; } catch (e) { return { err: String(e && e.message || e), path }; } },
-    savedFolder: () => plugin.settings.viewsFolder || null,
+    // the views file's folder is a plugin setting, which another device may not have (plugin settings sync separately from files, Nick's phone 0.8.1):
+    // with no folder set, adopt the folder of a views file already in the vault (the newest, if there are several)
+    savedFolder: () => { const st = plugin.settings; if (!st.viewsFolder) { const fs = app.vault.getFiles().filter(f => f.name === SAVED_NAME).sort((a, b) => b.stat.mtime - a.stat.mtime);
+        if (fs.length) { st.viewsFolder = fs[0].parent && fs[0].parent.path !== "/" ? fs[0].parent.path : "/"; void plugin.saveSettings(); } }
+      return st.viewsFolder || null; },
+    // the file changing under us (a sync from another device, or an edit): hand its text over, skipping our own writes
+    onSavedChange: cb => { const h = async f => { if (!(f instanceof TFile) || f.name !== SAVED_NAME) return; if (!plugin.settings.viewsFolder) { plugin.settings.viewsFolder = f.parent && f.parent.path !== "/" ? f.parent.path : "/"; await plugin.saveSettings(); }
+        if (f.path !== savedPath()) return; const t = await app.vault.read(f); if (t === plugin.lastSavedText) return; cb(t); };
+      events.registerEvent(app.vault.on("modify", h)); events.registerEvent(app.vault.on("create", h)); },
     pickSavedFolder: async () => {
       const dir = await new Promise(res => new FolderPicker(app, res).open());
       if (!dir) return null;
@@ -152,7 +160,7 @@ export async function mountInto(owner, el, opts) {
       const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
       if (dir && !app.vault.getAbstractFileByPath(dir)) await app.vault.createFolder(dir);
       const f = app.vault.getAbstractFileByPath(path);
-      if (f instanceof TFile) await app.vault.process(f, () => text); else await app.vault.create(path, text);
+      plugin.lastSavedText = text; if (f instanceof TFile) await app.vault.process(f, () => text); else await app.vault.create(path, text);
       return path; },
     // Capture: a picture or clip saved where the vault keeps attachments (Settings → Files and links), then opened on request
     saveCapture: async (name, buf) => {

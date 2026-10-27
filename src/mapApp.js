@@ -4758,16 +4758,22 @@ onKey(e => { if (!tourRun || /input|textarea|select/i.test(doc.activeElement.tag
   if (e.key === "ArrowRight") { e.preventDefault(); $("#tnext").click(); } else if (e.key === "ArrowLeft") { e.preventDefault(); $("#tprev").click(); } });
 syncRec(); syncFolderBtn();
 // load the saved-views file if there is one (it wins over the copy in the plugin's data); write it if there isn't yet
-if (host.readSaved && host.savedFolder()) void host.readSaved().then(txt => { if (dead) return;
+// fromSync: the file changed under us (another device synced it in): take it as it is, so views deleted there go here too
+const loadSavedText = (txt, fromSync) => { if (dead) return;
   if (txt == null) { if (views.length || tours.length) writeSaved(); return; }
-  try { const o = JSON.parse(txt), merge = (fromFile, local) => { const names = new Set(fromFile.map(x => x.name)); const extra = local.filter(x => !names.has(x.name)); return [fromFile.concat(extra), extra.length]; };
+  try { const o = JSON.parse(txt), merge = (fromFile, local) => { if (fromSync) return [fromFile, 0]; const names = new Set(fromFile.map(x => x.name)); const extra = local.filter(x => !names.has(x.name)); return [fromFile.concat(extra), extra.length]; };
+    // the starter views a new device made for itself (group Base) never get pushed into a file that already has views
+    if (Array.isArray(o.views) && o.views.length && pref("iv-vseeded", false) === true && views.length === 2 && views.every(v => v.group === "Base" && (v.name === "Emergence" || v.name === "Emergence · Space-Time")) && !o.views.some(v => v.group === "Base")) {
+      views = []; vgroups = vgroups.filter(g => g.name !== "Base"); }
     let nv = 0, nt = 0;   // anything saved here but missing from the file (made before the file existed) is kept and written back
     if (Array.isArray(o.views)) [views, nv] = merge(o.views, views);
     if (Array.isArray(o.tours)) [tours, nt] = merge(o.tours, tours);
     if (o.emojis && typeof o.emojis === "object" && !Array.isArray(o.emojis)) { EMOF = o.emojis; save("iv-emofold", EMOF); emoBuild(); draw(); if (FUI.emo) FUI.emo(); }
-    else if (Object.keys(EMOF).length) nv++;   // assigned before the file had them: write them back
-    if (Array.isArray(o.groups)) { const have = new Set(o.groups.map(g => g.name)); vgroups = o.groups.concat(vgroups.filter(g => !have.has(g.name))); save("iv-vgroups", vgroups); }
-    save("iv-views", views); save("iv-tours", tours); renderViewList(); renderTourList(); if (nv || nt) writeSaved(); } catch { /* not valid JSON: leave both as they are */ } });
+    else if (Object.keys(EMOF).length && !fromSync) nv++;   // assigned before the file had them: write them back
+    if (Array.isArray(o.groups)) { const have = new Set(o.groups.map(g => g.name)); vgroups = fromSync ? o.groups : o.groups.concat(vgroups.filter(g => !have.has(g.name))); save("iv-vgroups", vgroups); }
+    save("iv-views", views); save("iv-tours", tours); renderViewList(); renderTourList(); syncFolderBtn(); if (nv || nt) writeSaved(); } catch { /* not valid JSON (or half-synced): leave both as they are */ } };
+if (host.readSaved && host.savedFolder()) void host.readSaved().then(txt => loadSavedText(txt, false));
+if (host.onSavedChange) host.onSavedChange(txt => loadSavedText(txt, true));
 // every popover stays inside the map: when one opens, nudge it sideways if it would spill past either edge
 function placePop(el){ el.setCssProps({ "--popx": "0px" }); const R = root.getBoundingClientRect(), r = el.getBoundingClientRect();
   let dx = 0; if (r.right > R.right - 8) dx = R.right - 8 - r.right; if (r.left + dx < R.left + 8) dx = R.left + 8 - r.left;
