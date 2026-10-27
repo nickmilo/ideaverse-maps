@@ -4395,9 +4395,12 @@ const VIEW_NAME = {planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tre
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
+// your own groups of views (Nick: "Annual Review", "Daily Drivers"…), in your order; a view names its group in v.group, and one with none sits under the groups
+let vgroups = (() => { const g = pref("iv-vgroups", []); return Array.isArray(g) ? g.filter(x => x && typeof x.name === "string") : []; })();
+const saveGroups = () => { save("iv-vgroups", vgroups); writeSaved(); };
 // views and tours are kept in the plugin's data and, once a folder is picked, in a plain JSON file in the vault (the file wins on load)
 let writeT = 0;
-const savedJSON = () => JSON.stringify({ about: "Saved views and recorded tours from Maps of the Ideaverse", saved: new Date().toISOString().slice(0, 10), views, tours: typeof tours !== "undefined" ? tours : [] }, null, 1);
+const savedJSON = () => JSON.stringify({ about: "Saved views and recorded tours from Maps of the Ideaverse", saved: new Date().toISOString().slice(0, 10), groups: vgroups, views, tours: typeof tours !== "undefined" ? tours : [] }, null, 1);
 function writeSaved(){ if (!host.writeSaved || !host.savedFolder()) return; win.clearTimeout(writeT); writeT = win.setTimeout(() => { void host.writeSaved(savedJSON()); }, 300); }
 async function ensureFolder(){ if (!host.savedFolder || host.savedFolder()) return true; const d = await host.pickSavedFolder(); syncFolderBtn(); return !!d; }
 function syncFolderBtn(){ const b = $("#vexport"), d = host.savedFolder ? host.savedFolder() : null;
@@ -4471,23 +4474,48 @@ function applySaved(v){
   $("#focusmode").setAttribute("aria-pressed", String(focus >= 0)); renderFocusBar();
   renderViewList();
 }
+// Saved: like Filter's lists. Your groups fold open and shut; each view moves up or down within its group, or to another group; views in no group come last.
+let vNewGroup = false;
 function renderViewList(){
-  const s = ($("#vq").value || "").trim().toLowerCase();
+  const s_ = ($("#vq").value || "").trim().toLowerCase(), box = $("#vlist"); box.empty(); box.classList.add("blist", "vlist2");
   $("#vq").hidden = views.length < 8;
-  const list = views.map((v, i) => [v, i]).filter(([v]) => !s || v.name.toLowerCase().includes(s) || viewSummary(v).toLowerCase().includes(s));
-  html($("#vlist")).v = list.map(([v, i]) => `<div class="vr${v.name === curView ? " cur" : ""}" data-i="${i}">
-      <button class="vgo" title="Go to this view"><b>${esc(v.name)}</b><span>${esc(viewSummary(v))}</span></button>
-      <button class="va vup" title="Move up" aria-label="Move up"${i === 0 ? " disabled" : ""}>↑</button>
-      <button class="va vre" title="Replace with what's on screen now">Update</button>
-      <button class="va vdel" title="Delete" aria-label="Delete">×</button></div>`).join("")
-    || `<p class="pn">${views.length ? "No match." : "No saved views yet. Set up the map, name it above, and Save."}</p>`;
+  const hit = v => !s_ || v.name.toLowerCase().includes(s_) || viewSummary(v).toLowerCase().includes(s_);
+  const names = new Set(vgroups.map(g => g.name)); for (const v of views) if (v.group && !names.has(v.group)) delete v.group;
+  const btn = (el, cls, txt, title, fn) => { const b = el.createEl("button", { cls: "va " + cls, text: txt, attr: { type: "button", title, "aria-label": title } }); b.onclick = e => { e.stopPropagation(); e.preventDefault(); fn(b); }; return b; };
+  const sure = (b, word, fn) => { if (b.dataset.ok) fn(); else { b.dataset.ok = 1; b.textContent = word; b.classList.add("warn"); } };
+  const row = (el, v) => { const i = views.indexOf(v), mates = views.filter(x => (x.group || "") === (v.group || "")), k_ = mates.indexOf(v);
+    const r = el.createDiv({ cls: "vr" + (v.name === curView ? " cur" : "") });
+    const go = r.createEl("button", { cls: "vgo", attr: { type: "button", title: "Go to this view" } }); go.createEl("b", { text: v.name }); go.createSpan({ text: viewSummary(v) }); go.onclick = () => applySaved(views[views.indexOf(v)]);
+    const swap = d => { const o = mates[k_ + d]; if (!o) return; const a = views.indexOf(v), b_ = views.indexOf(o); [views[a], views[b_]] = [views[b_], views[a]]; saveViews(); renderViewList(); };
+    const up = btn(r, "vup", "↑", "Move up", () => swap(-1)); up.disabled = k_ === 0; const dn = btn(r, "vdn", "↓", "Move down", () => swap(1)); dn.disabled = k_ === mates.length - 1;
+    if (vgroups.length) { const sel_ = r.createEl("select", { cls: "vgsel", attr: { title: "Move to a group", "aria-label": "Group" } }); sel_.createEl("option", { text: "No group", value: "" });
+      for (const g of vgroups) sel_.createEl("option", { text: g.name, value: g.name }); sel_.value = v.group || "";
+      sel_.onclick = e => e.stopPropagation(); sel_.onchange = () => { if (sel_.value) v.group = sel_.value; else delete v.group; const a = views.indexOf(v); views.splice(a, 1); views.push(v); saveViews(); renderViewList(); }; }
+    btn(r, "vre", "Update", "Replace with what's on screen now", b => sure(b, "Sure?", () => { const g = v.group; views[i] = snapView(v.name); if (g) views[i].group = g; curView = v.name; saveViews(); renderViewList(); }));
+    btn(r, "vdel", "×", "Delete", b => sure(b, "Delete?", () => { views.splice(views.indexOf(v), 1); saveViews(); renderViewList(); })); };
+  // a new group: a name box at the top
+  if (vNewGroup) { const nr = box.createDiv({ cls: "vgnew" }); const inp = nr.createEl("input", { type: "text", attr: { placeholder: "Name the group (Daily Drivers, say)", "aria-label": "Group name" } });
+    let fired = false; const done = ok => { if (fired) return; fired = true; const nm = (inp.value || "").trim(); vNewGroup = false; if (ok && nm && !vgroups.some(g => g.name === nm)) { vgroups.push({ name: nm, open: true }); saveGroups(); } renderViewList(); };
+    inp.onkeydown = e => { e.stopPropagation(); if (e.key === "Enter") done(true); if (e.key === "Escape") done(false); }; inp.onblur = () => win.setTimeout(() => done(true), 0); win.setTimeout(() => inp.focus(), 0); }
+  let shown = 0;
+  vgroups.forEach((g, gi) => { const vs = views.filter(v => v.group === g.name && hit(v)); if (s_ && !vs.length) return;
+    const det = box.createEl("details", { cls: "bqb vgrp" }); det.open = !!s_ || g.open !== false; det.ontoggle = () => { if (s_) return; g.open = det.open; saveGroups(); };
+    const sm = det.createEl("summary"); const t = sm.createSpan({ cls: "t", text: g.name }); t.title = "Double-click to rename";
+    t.ondblclick = e => { e.preventDefault(); const inp = doc.createElement("input"); inp.value = g.name; inp.className = "vgren"; t.replaceWith(inp); inp.focus(); inp.select();
+      let fired = false; const fin = ok => { if (fired) return; fired = true; const nm = (inp.value || "").trim(); if (ok && nm && nm !== g.name && !vgroups.some(x => x.name === nm)) { for (const v of views) if (v.group === g.name) v.group = nm; g.name = nm; saveGroups(); saveViews(); } renderViewList(); };
+      inp.onkeydown = ev => { ev.stopPropagation(); if (ev.key === "Enter") fin(true); if (ev.key === "Escape") fin(false); }; inp.onblur = () => win.setTimeout(() => fin(true), 0); inp.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); }; };
+    sm.createSpan({ cls: "m", text: String(views.filter(v => v.group === g.name).length) });
+    const gu = btn(sm, "vup", "↑", "Move this group up", () => { [vgroups[gi-1], vgroups[gi]] = [vgroups[gi], vgroups[gi-1]]; saveGroups(); renderViewList(); }); gu.disabled = gi === 0;
+    const gd = btn(sm, "vdn", "↓", "Move this group down", () => { [vgroups[gi+1], vgroups[gi]] = [vgroups[gi], vgroups[gi+1]]; saveGroups(); renderViewList(); }); gd.disabled = gi === vgroups.length - 1;
+    btn(sm, "vdel", "×", "Delete this group (its views stay, with no group)", b => sure(b, "Delete?", () => { for (const v of views) if (v.group === g.name) delete v.group; vgroups.splice(gi, 1); saveGroups(); saveViews(); renderViewList(); }));
+    for (const v of vs) { row(det, v); shown++; }
+    if (!vs.length) det.createDiv({ cls: "pn vgempty", text: "No views here yet: pick this group on a view to move it in." }); });
+  const loose = views.filter(v => !v.group && hit(v));
+  if (loose.length) { let el = box; if (vgroups.length) { const det = box.createEl("details", { cls: "bqb vgrp vgloose" }); det.open = !!s_ || pref("iv-vloose", true) !== false; det.ontoggle = () => { if (!s_) save("iv-vloose", det.open); }; const sm = det.createEl("summary"); sm.createSpan({ cls: "t", text: "No group" }); sm.createSpan({ cls: "m", text: String(views.filter(v => !v.group).length) }); el = det; }
+    for (const v of loose) { row(el, v); shown++; } }
+  if (!shown && !vgroups.length) box.createEl("p", { cls: "pn", text: views.length ? "No match." : "No saved views yet. Set up the map, name it above, and Save." });
+  else if (!shown && s_) box.createEl("p", { cls: "pn", text: "No match." });
   $("#vcount").textContent = views.length ? `${views.length} saved` : "";
-  $("#vlist").querySelectorAll(".vr").forEach(r => { const i = +r.dataset.i;
-    r.querySelector(".vgo").onclick = () => applySaved(views[i]);
-    r.querySelector(".vup").onclick = () => { if (!i) return; [views[i-1], views[i]] = [views[i], views[i-1]]; saveViews(); renderViewList(); };
-    r.querySelector(".vre").onclick = e => { const b = e.currentTarget; if (b.dataset.ok) { views[i] = snapView(views[i].name); curView = views[i].name; saveViews(); renderViewList(); } else { b.dataset.ok = 1; b.textContent = "Sure?"; b.classList.add("warn"); } };
-    r.querySelector(".vdel").onclick = e => { const b = e.currentTarget; if (b.dataset.ok) { views.splice(i, 1); saveViews(); renderViewList(); } else { b.dataset.ok = 1; b.textContent = "Delete?"; b.classList.add("warn"); } };
-  });
   const nm = ($("#vname").value || "").trim(); $("#vsave").textContent = nm && views.some(v => v.name === nm) ? "Replace" : "Save";
 }
 async function saveCurrent(){
@@ -4505,6 +4533,9 @@ $("#vdone").onclick = () => closePops();
 $("#vexport").onclick = async e => { e.stopPropagation();   // pick (or move to) the folder that keeps the saved-views file
   const d = await host.pickSavedFolder(); syncFolderBtn(); if (d) writeSaved(); };
 POPS.push(["#viewbtn", "#viewpop", "#viewms", () => { renderViewList(); $("#vname").focus(); }]);
+{ const t0 = $("#viewpop").querySelector(":scope > .pt"); if (t0) { const hd = doc.createElement("div"); hd.className = "vhd"; t0.before(hd); hd.appendChild(t0);
+    const ng = hd.createEl("button", { cls: "chip vgadd", text: "+ Group", attr: { type: "button", title: "Make a group for your views (Annual Review, Daily Drivers…)" } });
+    ng.onclick = e => { e.stopPropagation(); vNewGroup = true; renderViewList(); }; } }
 $("#viewbtn").onclick = e => { e.stopPropagation(); const el = $("#viewpop"), open = el.hidden; closePops("#viewpop"); closeColl(); el.hidden = !open; $("#viewbtn").setAttribute("aria-expanded", String(open)); if (open) { renderViewList(); if (typeof renderTourList === "function") renderTourList(); $("#vname").focus(); } };
 $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
 $("#tlrange").addEventListener("input", e => { senseStop(); if (+e.target.value >= SSTEPS.length - 1) senseClear(); else senseSet(+e.target.value, true); });   // all the way right is All time: every note
@@ -4639,6 +4670,7 @@ if (host.readSaved && host.savedFolder()) void host.readSaved().then(txt => { if
     let nv = 0, nt = 0;   // anything saved here but missing from the file (made before the file existed) is kept and written back
     if (Array.isArray(o.views)) [views, nv] = merge(o.views, views);
     if (Array.isArray(o.tours)) [tours, nt] = merge(o.tours, tours);
+    if (Array.isArray(o.groups)) { const have = new Set(o.groups.map(g => g.name)); vgroups = o.groups.concat(vgroups.filter(g => !have.has(g.name))); save("iv-vgroups", vgroups); }
     save("iv-views", views); save("iv-tours", tours); renderViewList(); renderTourList(); if (nv || nt) writeSaved(); } catch { /* not valid JSON: leave both as they are */ } });
 // every popover stays inside the map: when one opens, nudge it sideways if it would spill past either edge
 function placePop(el){ el.setCssProps({ "--popx": "0px" }); const R = root.getBoundingClientRect(), r = el.getBoundingClientRect();
@@ -5099,7 +5131,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Arrange (how the notes are placed, with its current choice) sits just before Sync, by the map tabs
   { const aw = $("#arrms"); if (aw) left.insertBefore(aw, fb); }
   // Saved (★): on the left, right after Display (Nick, 0.7.44)
-  left.appendChild($("#viewms")); { const vb = $("#viewbtn"); vb.empty(); vb.appendChild(icon(I.star)); vb.classList.add("tbb", "tbi"); vb.setAttribute("aria-label", "Saved views and tours"); vb.title = "Saved views and tours"; }
+  left.appendChild($("#viewms")); { const vb = $("#viewbtn"); vb.empty(); setIcon(vb, "telescope"); { const sv = vb.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } } vb.classList.add("tbb", "tbi"); vb.setAttribute("aria-label", "Saved views and tours"); vb.title = "Saved views and tours"; }
   // Capture: a picture (PNG) or a short clip (MP4, or WebM where MP4 can't be recorded) of the map, saved to the vault's attachments,
   // then a small card to copy it, open it, or post it with a ready caption
   { const CP = popBtn("cap", "Capture", "star"); CP.b.empty(); setIcon(CP.b, "camera"); { const sv = CP.b.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } CP.b.classList.add("tbi"); CP.b.setAttribute("aria-label", "Capture a picture or a clip to share"); CP.b.title = "Capture a picture or a clip to share";

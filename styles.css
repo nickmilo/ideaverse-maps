@@ -1137,3 +1137,23 @@ body:not(.is-mobile) .ivm .wm-lyt{bottom:38px}
 /* 0.7.44 · Saved (★) sits on the left, after Display: its menu opens to the right */
 .ivm.ivm header.tb2 .tbl > #viewms > .mspop{left:0;right:auto}
 .ivm header.tb2 .tbl > #viewms{flex:none}
+/* 0.7.45 · Saved views: your own groups, folding like Filter's lists */
+.ivm #viewpop .vhd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ivm #viewpop .vhd > .pt{margin:0}
+.ivm.ivm #viewpop .vgadd{font-size:11px;padding:2px 9px;height:auto}
+.ivm #vlist.vlist2{display:flex;flex-direction:column;gap:1px}
+.ivm #vlist.vlist2 details.vgrp > summary{gap:6px}
+.ivm #vlist.vlist2 details.vgrp > summary .t{font-weight:600}
+.ivm #vlist.vlist2 details.vgrp > summary .va{padding:1px 6px}
+.ivm #vlist.vlist2 details.vgrp > .vr{margin-left:18px}
+.ivm #vlist.vlist2 .va:disabled{opacity:.3;cursor:default}
+.ivm #vlist.vlist2 .vgsel{flex:none;max-width:84px;font-size:11px;padding:1px 4px;height:auto;color:var(--muted);background:none;border:1px solid transparent;border-radius:6px}
+.ivm #vlist.vlist2 .vgsel:hover{border-color:var(--line);color:var(--ink)}
+.ivm #vlist.vlist2 .vgnew input,.ivm #vlist.vlist2 .vgren{width:100%;font-size:13px}
+.ivm #vlist.vlist2 .vgempty{margin:2px 0 6px 26px}
+.ivm #vlist.vlist2 .vgloose > summary .t{font-weight:500;color:var(--muted)}
+/* a view's and a group's buttons show when you point at it (always on phones), so the names get the room */
+body:not(.is-mobile) .ivm #vlist.vlist2 .vr:not(:hover):not(:focus-within) > :not(.vgo),
+body:not(.is-mobile) .ivm #vlist.vlist2 details.vgrp > summary:not(:hover):not(:focus-within) > .va{visibility:hidden}
+.ivm.ivm #viewpop{width:min(420px,calc(100cqw - 24px))}
+.ivm #vlist.vlist2{max-height:min(460px,55vh)}
