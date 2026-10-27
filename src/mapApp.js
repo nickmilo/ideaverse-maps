@@ -4485,7 +4485,7 @@ function renderViewList(){
   const sure = (b, word, fn) => { if (b.dataset.ok) fn(); else { b.dataset.ok = 1; b.textContent = word; b.classList.add("warn"); } };
   const row = (el, v) => { const i = views.indexOf(v), mates = views.filter(x => (x.group || "") === (v.group || "")), k_ = mates.indexOf(v);
     const r = el.createDiv({ cls: "vr" + (v.name === curView ? " cur" : "") });
-    const go = r.createEl("button", { cls: "vgo", attr: { type: "button", title: "Go to this view" } }); go.createEl("b", { text: v.name }); go.createSpan({ text: viewSummary(v) }); go.onclick = () => applySaved(views[views.indexOf(v)]);
+    const go = r.createEl("button", { cls: "vgo", attr: { type: "button", title: viewSummary(v) } }); go.createEl("b", { text: v.name }); go.createSpan({ cls: "m", text: VIEW_NAME[v.view] || v.view || "" }); go.onclick = () => applySaved(views[views.indexOf(v)]);
     const swap = d => { const o = mates[k_ + d]; if (!o) return; const a = views.indexOf(v), b_ = views.indexOf(o); [views[a], views[b_]] = [views[b_], views[a]]; saveViews(); renderViewList(); };
     const up = btn(r, "vup", "↑", "Move up", () => swap(-1)); up.disabled = k_ === 0; const dn = btn(r, "vdn", "↓", "Move down", () => swap(1)); dn.disabled = k_ === mates.length - 1;
     if (vgroups.length) { const sel_ = r.createEl("select", { cls: "vgsel", attr: { title: "Move to a group", "aria-label": "Group" } }); sel_.createEl("option", { text: "No group", value: "" });
@@ -4532,11 +4532,12 @@ $("#vq").addEventListener("input", renderViewList);
 $("#vdone").onclick = () => closePops();
 $("#vexport").onclick = async e => { e.stopPropagation();   // pick (or move to) the folder that keeps the saved-views file
   const d = await host.pickSavedFolder(); syncFolderBtn(); if (d) writeSaved(); };
-POPS.push(["#viewbtn", "#viewpop", "#viewms", () => { renderViewList(); $("#vname").focus(); }]);
+POPS.push(["#viewbtn", "#viewpop", "#viewms", () => { renderViewList(); }]);
 { const t0 = $("#viewpop").querySelector(":scope > .pt"); if (t0) { const hd = doc.createElement("div"); hd.className = "vhd"; t0.before(hd); hd.appendChild(t0);
-    const ng = hd.createEl("button", { cls: "chip vgadd", text: "+ Group", attr: { type: "button", title: "Make a group for your views (Annual Review, Daily Drivers…)" } });
+    hd.classList.add("fhd"); const fa = hd.createSpan({ cls: "facts" }); const vc = $("#vcount"); if (vc) fa.appendChild(vc);
+    const ng = fa.createEl("button", { cls: "chip vgadd", text: "+ Group", attr: { type: "button", title: "Make a group for your views (Annual Review, Daily Drivers…)" } });
     ng.onclick = e => { e.stopPropagation(); vNewGroup = true; renderViewList(); }; } }
-$("#viewbtn").onclick = e => { e.stopPropagation(); const el = $("#viewpop"), open = el.hidden; closePops("#viewpop"); closeColl(); el.hidden = !open; $("#viewbtn").setAttribute("aria-expanded", String(open)); if (open) { renderViewList(); if (typeof renderTourList === "function") renderTourList(); $("#vname").focus(); } };
+$("#viewbtn").onclick = e => { e.stopPropagation(); const el = $("#viewpop"), open = el.hidden; closePops("#viewpop"); closeColl(); el.hidden = !open; $("#viewbtn").setAttribute("aria-expanded", String(open)); if (open) { renderViewList(); if (typeof renderTourList === "function") renderTourList(); } };
 $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
 $("#tlrange").addEventListener("input", e => { senseStop(); if (+e.target.value >= SSTEPS.length - 1) senseClear(); else senseSet(+e.target.value, true); });   // all the way right is All time: every note
 $("#tlplay").onclick = sensePlay;

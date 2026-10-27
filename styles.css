@@ -1168,3 +1168,21 @@ body:not(.is-mobile) .ivm #vlist.vlist2 details.vgrp > summary:not(:hover):not(:
 .ivm #tourbtn.recording{color:#fff;background:#c0392b;border-color:#c0392b}
 .ivm.ivm header.tb2 #tourbtn{width:32px;min-width:32px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center}
 .ivm.ivm header.tb2 #tourbtn > b{display:none}
+/* 0.7.48 · Saved looks like a Filter list: a header with its count and + Group, the same search box, one line a view */
+.ivm #viewpop .vhd.fhd .pt{margin:0}
+.ivm #viewpop .vhd .facts{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.ivm.ivm #viewpop .vhd .facts .chip{padding:2px 8px;font-size:11px;height:auto;min-height:0}
+.ivm.ivm #viewpop #vsave{border:1px solid var(--line);background:none;color:var(--muted);box-shadow:none;padding:4px 12px;font-size:12px}
+.ivm.ivm #viewpop #vsave:hover{color:var(--ink);border-color:var(--ink)}
+.ivm #viewpop > .msf{border-top:1px solid var(--line);padding-top:8px;margin-top:2px}
+.ivm #vlist.vlist2 .vr{padding:0;border-radius:6px}
+.ivm.ivm #vlist.vlist2 .vgo{display:flex;align-items:center;gap:8px;padding:4px 6px;min-width:0}
+.ivm.ivm #vlist.vlist2 .vgo b{display:block;flex:1;min-width:0;font-weight:400;font-size:13px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ivm.ivm #vlist.vlist2 .vgo .m{display:block;flex:none;font:500 11px var(--font-interface,inherit);color:var(--muted)}
+.ivm.ivm #vlist.vlist2 .vr.cur .vgo b{font-weight:600}
+.ivm.ivm #vlist.vlist2 .vr:hover,.ivm.ivm #vlist.vlist2 .vr.cur{background:var(--accent-soft)}
+.ivm.ivm #vlist.vlist2 details.vgrp > .vr{margin-left:20px}
+.ivm.ivm #vlist.vlist2 details.vgrp > summary .t{font-weight:400}
+.ivm.ivm #vlist.vlist2 .vgloose > summary .t{color:var(--ink)}
+body:not(.is-mobile) .ivm #vlist.vlist2 .vr:not(:hover):not(:focus-within) > :not(.vgo),
+body:not(.is-mobile) .ivm #vlist.vlist2 details.vgrp > summary:not(:hover):not(:focus-within) > .va{display:none}

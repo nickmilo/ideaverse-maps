@@ -10,7 +10,7 @@ module.exports = async ({ page, sleep, shot }) => {
   const sel = async (name, g) => { const r = page.locator('.ivm #vlist .vr', { hasText: name }); await r.hover(); await r.locator('select').selectOption(g); await sleep(300); };
   await sel('Recent week', 'Daily Drivers'); await sel('Calendar 2026', 'Daily Drivers'); await sel('Gravity view', 'Annual Review');
   { const r = page.locator('.ivm #vlist .vr', { hasText: 'Recent week' }); await r.hover(); await r.locator('.vdn').click(); } await sleep(300);
-  await page.mouse.move(10, 900); await sleep(300); await shot('vg'); await page.locator('.ivm #vlist .vr', { hasText: 'Gravity view' }).hover(); await sleep(400); await shot('vg-hover');
+  await page.mouse.move(10, 900); await page.locator('.ivm #vname').blur(); await sleep(300); await shot('vg'); await page.locator('.ivm #vlist .vr', { hasText: 'Gravity view' }).hover(); await sleep(400); await shot('vg-hover');
   console.log(await page.evaluate(() => [...document.querySelectorAll('.ivm #vlist > *')].map(e => e.tagName === 'DETAILS' ? '[' + e.querySelector('summary .t').textContent + '] ' + [...e.querySelectorAll('.vr b')].map(b => b.textContent).join(', ') : e.textContent).join(' | ')));
   console.log('icon', await page.evaluate(() => !!document.querySelector('.ivm #viewbtn svg.lucide-telescope, .ivm #viewbtn svg')));
   console.log('errors:', errs.join(' | ') || 'none');
