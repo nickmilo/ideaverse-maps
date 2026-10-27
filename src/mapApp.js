@@ -4398,6 +4398,11 @@ let curView = "";
 // your own groups of views (Nick: "Annual Review", "Daily Drivers"…), in your order; a view names its group in v.group, and one with none sits under the groups
 let vgroups = (() => { const g = pref("iv-vgroups", []); return Array.isArray(g) ? g.filter(x => x && typeof x.name === "string") : []; })();
 const saveGroups = () => { save("iv-vgroups", vgroups); writeSaved(); };
+// a first look at Saved (Nick, 0.7.52): someone new gets one group, Base, with two views (Emergence and its Space-Time version), so the shape is clear.
+// They live in the plugin's own data only, never written to your views file until you change something; delete them and they stay gone.
+if (!views.length && !vgroups.length && !(host.savedFolder && host.savedFolder()) && pref("iv-vseeded", false) !== true) {
+  vgroups = [{ name: "Base", open: true }]; views = [{ name: "Emergence", view: "emergence", mode: "time", group: "Base" }, { name: "Emergence · Space-Time", view: "spacetime", mode: "time", group: "Base" }];
+  save("iv-vgroups", vgroups); save("iv-views", views); save("iv-vseeded", true); }
 // views and tours are kept in the plugin's data and, once a folder is picked, in a plain JSON file in the vault (the file wins on load)
 let writeT = 0;
 const savedJSON = () => JSON.stringify({ about: "Saved views and recorded tours from Maps of the Ideaverse", saved: new Date().toISOString().slice(0, 10), groups: vgroups, views, tours: typeof tours !== "undefined" ? tours : [] }, null, 1);
@@ -4405,7 +4410,7 @@ function writeSaved(){ if (!host.writeSaved || !host.savedFolder()) return; win.
 async function ensureFolder(){ if (!host.savedFolder || host.savedFolder()) return true; const d = await host.pickSavedFolder(); syncFolderBtn(); return !!d; }
 // the footer: "Saved in" and a small pill with the folder (click to move it); before you pick one, the pill says Choose folder
 function syncFolderBtn(){ const b = $("#vexport"), d = host.savedFolder ? host.savedFolder() : null;
-  if (!b.previousElementSibling || !b.previousElementSibling.classList.contains("vsavedin")) { const l = doc.createElement("span"); l.className = "vsavedin"; l.textContent = "Saved in"; b.before(l); }
+  if (!b.previousElementSibling || !b.previousElementSibling.classList.contains("vsavedin")) { const l = doc.createElement("span"); l.className = "vsavedin"; l.textContent = "Save the views file (.json) in"; b.before(l); }
   b.textContent = d ? (d === "/" ? "Vault root" : d.split("/").pop()) : "Choose folder"; b.removeAttribute("title"); b.removeAttribute("aria-label");
   b.setAttribute("aria-description", d ? `Saved in ${d === "/" ? "the vault root" : d}; click to move` : "Pick where saved views and tours are kept"); b.classList.add("vfpill"); }
 const saveViews = () => { save("iv-views", views); writeSaved(); };
