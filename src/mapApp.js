@@ -86,7 +86,7 @@ const loadEmo = async () => { if (!host.emojis) return "Emoji labels need a newe
 // Linear Calendar with Show emojis: a note's emoji takes the place of its dot, bigger the higher its level (Nick); notes with no emoji keep their dot
 const emoAt = i => LCEMO && EMO && view === "lincal" ? EMO.get(N[i].path) : undefined;
 const EMOSZ = [0, .85, 1, 1.3, 1.65, 2];
-const emoSize = i => Math.max(9, Math.min(18, LC.C * k * .36)) * EMOSZ[N[i].level];
+const emoSize = i => Math.max(8.1, Math.min(16.2, LC.C * k * .324)) * EMOSZ[N[i].level];   // 10% smaller than 0.7.39 (Nick)
 let showArch = !!pref("iv-arch", true), fromY = +pref("iv-from", 2016);
 { // Full scale from was retired (Oct 11). If one was set, start the timeline there instead: same recent years, older ones in "Before".
   if (!pref("iv-mig-full", false)) { const oldFull = +pref("iv-full", 2016);   // 2016 was the old default
