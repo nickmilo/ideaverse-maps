@@ -81,12 +81,15 @@ const SLMIN = (() => { const c = {}; for (let i=0;i<n;i++) if (!isNaN(TV[i])) { 
 const pref = (key, v) => { const s = host.store.get(key); return s === undefined ? v : s; };
 const save = (key, v) => host.store.set(key, v);
 // emoji labels (Linear Calendar): path → emoji, read once from a base
-let LCEMO = pref("iv-lcemo", false) === true, EMO = null, emoBusy = null;
+let LCEMO = pref("iv-lcemo", false) === true, EMEMO = pref("iv-ememo", false) === true, EMO = null, emoBusy = null;
 const loadEmo = async () => { if (!host.emojis) return "Emoji labels need a newer Obsidian"; if (emoBusy) return emoBusy; emoBusy = (async () => { const r = await host.emojis(); emoBusy = null; if (r.err) { EMO = null; return `Couldn't read emojis: ${r.err}`; } EMO = new Map(Object.entries(r.map)); return ""; })(); return emoBusy; };
 // Linear Calendar with Show emojis: a note's emoji takes the place of its dot, bigger the higher its level (Nick); notes with no emoji keep their dot
-const emoAt = i => LCEMO && EMO && view === "lincal" ? EMO.get(N[i].path) : undefined;
+// where emojis replace dots: Linear Calendar (its own switch) and Emergence with Space-Time (theirs, 0.7.56)
+const emoView = () => !!EMO && ((view === "lincal" && LCEMO) || ((view === "emergence" || view === "spacetime") && EMEMO && !DOME[view]));   // not in Planetarium
+const emoAt = i => emoView() ? EMO.get(N[i].path) : undefined;
 const EMOSZ = [0, .85, 1, 1.3, 1.65, 2];
-const emoSize = i => Math.max(8.1, Math.min(16.2, LC.C * k * .324)) * EMOSZ[N[i].level];   // 10% smaller than 0.7.39 (Nick)
+const emoSize = i => view === "lincal" ? Math.max(8.1, Math.min(16.2, LC.C * k * .324)) * EMOSZ[N[i].level]   // 10% smaller than 0.7.39 (Nick)
+  : Math.max(8.1, Math.min(16.2, 7 * Math.pow(k, .45))) * EMOSZ[N[i].level];   // Emergence: grows gently with the zoom, bigger by level
 let showArch = !!pref("iv-arch", true), fromY = +pref("iv-from", 2016);
 { // Full scale from was retired (Oct 11). If one was set, start the timeline there instead: same recent years, older ones in "Before".
   if (!pref("iv-mig-full", false)) { const oldFull = +pref("iv-full", 2016);   // 2016 was the old default
@@ -3065,7 +3068,7 @@ function visTarget(xs, ys){   // camera that frames every visible note, given wh
   const kk = Math.min(4, Math.max(.1, Math.min((vw - pad*2) / Math.max(x1-x0, 40), (vh - pad*2 - 40) / Math.max(y1-y0, 40))));
   return {k:kk, tx: vw/2 - (x0+x1)/2*kk, ty: (vh + 40)/2 - (y0+y1)/2*kk};
 }
-function rad(i){ if (view === "lincal" && emoAt(i)) return emoSize(i) * .45; if (view === "lincal") return Math.max(1.8*BOOST, Math.min(R[i]*Math.pow(k, .55)*1.5*BOOST, 30, LC.C*k*(N[i].level >= 3 ? .17 : .12)));   // Linear Calendar: a dot stays small for its day box (maps and hubs a little bigger), so it never covers its neighbors
+function rad(i){ if (emoAt(i)) return emoSize(i) * .45; if (view === "lincal") return Math.max(1.8*BOOST, Math.min(R[i]*Math.pow(k, .55)*1.5*BOOST, 30, LC.C*k*(N[i].level >= 3 ? .17 : .12)));   // Linear Calendar: a dot stays small for its day box (maps and hubs a little bigger), so it never covers its neighbors
   if (view === "stars") return Math.max(.7*BOOST, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1)*BOOST, 16)); return Math.max((view === "lincal" ? 1.8 : 1.1)*BOOST, Math.min(R[i]*Math.pow(k, .55)*(geo3On() ? DS3[i] : view === "lincal" ? 1.5 : 1)*BOOST, 30)); }   // 3D Geometric: nearer notes are bigger
 
 // ---------- Way home (Kevin Bacon): from the note you're on, the fewest links back to one note (Home by default) ----------
@@ -3228,7 +3231,7 @@ function render(){
   const vx0 = -30, vx1 = W+30, vy0 = -30, vy1 = H+30;
   // hovering fades the rest gently; a click (selection) fades it fully, like the link lines
   // the rest fades to a quarter when a note is picked; on the Obsidian map half as much (to about 60%), so the graph stays visible around it
-  const EMOD = LCEMO && EMO && view === "lincal";
+  const EMOD = emoView();
   const dim = lit && !(focus >= 0 && (sel === focus || sel < 0) && hover < 0) ? (sel >= 0 ? (GRV() ? .62 : .25) : (GRV() ? .85 : .7)) : 1;
   if (view === "stars") starsNotes(lit, dim); else if (expOn() && EXP[view].notes) EXP[view].notes(lit, dim); else {
   for (const lv of [1,2]) for (const ar of [1,0]) {   // archive notes as rings, vault notes as dots
@@ -3257,7 +3260,7 @@ function render(){
   }
   for (const i of [sel, hover]) if (i >= 0) { const x = sx(X[i]), y = sy(Y[i]); ctx.strokeStyle = css.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x,y,rad(i)+3,0,6.2832); ctx.stroke(); }
 
-  if (LCEMO && view === "lincal") drawEmojis(lit, dim);
+  if (emoView()) drawEmojis(lit, dim);
   if (!(CAP.on && CAP.hide)) labels(lit);
   if (BACON) drawBacon();
   axisLabels();
@@ -3960,6 +3963,10 @@ function goEmDome(m){ closePops(); DOME.emergence = true; save("iv-dome", DOME);
 // Emergence ▾: Main, Space-Time or Planetarium (stand inside, Level 5 overhead)
 POPS.push(['#vseg button[data-v="emergence"]', "#emerpop", "#vsegms"]);
 const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.checked = view === "spacetime" ? r.value === "spacetime" : r.value === (DOME.emergence ? "dome" : "flat"));
+// Emergence's gear: Show emojis, like Linear Calendar's (each note's emoji in place of its dot, bigger by level; Settings → Emoji labels says where they come from)
+{ const r = $("#emerpop").createEl("label", { cls: "mini lcemo ememo" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = EMEMO; r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
+  const st = $("#emerpop").createDiv({ cls: "pn lcemost" });
+  cb.onchange = async () => { EMEMO = cb.checked; save("iv-ememo", EMEMO); st.setText(""); if (EMEMO && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
 root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if (!r.checked) return; if (r.value === "spacetime") { goMap("spacetime", false); syncEmd(); return; } if (view === "spacetime") { closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); setView("emergence"); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); morph(true, () => fitTarget()); syncEmd(); });
 syncEmd();
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
@@ -3987,8 +3994,8 @@ function dualEl(parent, label, id){ const yc = parent.createDiv({ cls: "postctl 
   d.createEl("input", { type: "range", attr: { "aria-label": "First year", step: "1" } }); d.createEl("input", { type: "range", attr: { "aria-label": "Last year", step: "1" } });
   const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yrh" }); lb.createSpan({ cls: "yrh" }); return { yc, hv }; }
 // emoji labels (Linear Calendar for now): path → emoji, read once from the base
-if (LCEMO) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
-function drawEmojis(lit, dim){ if (!EMO || view !== "lincal") return; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+if (LCEMO || EMEMO) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
+function drawEmojis(lit, dim){ if (!emoView()) return; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   for (const lv of [1, 2, 3, 4, 5]) for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i)) continue; const e_ = EMO.get(N[i].path); if (!e_) continue;
     const x = sx(X[i]), y = sy(Y[i]); if (x < -30 || x > W + 30 || y < -30 || y > H + 30) continue; const f = emoSize(i);
     ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .3 : .75) : 1; ctx.font = `${f}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.fillText(e_, x, y + f*.04); }

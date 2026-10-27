@@ -22,7 +22,7 @@ Emergence stacks your notes in five bands, one for each Idea Emergence level. Fr
 
 You can narrow the map to certain years in **Filter → Years shown**. Drag either end of the slider to keep, say, only 2022 to 2024. The setting applies to every map of your whole vault. Notes from other years, and notes with no date, wait in strips at the edges of the map. If you'd rather not see them at all, turn off **Show notes outside the date range**.
 
-Click any note to light up its links. You'll see the maps above it and the notes it gathers below it. The Emergence menu also has two variants. **Space-Time** gives each of your top folders its own row, and **Planetarium** puts you inside the map, with Level 5 overhead.
+Click any note to light up its links. You'll see the maps above it and the notes it gathers below it. The Emergence menu also has two variants. **Space-Time** gives each of your top folders its own row, and **Planetarium** puts you inside the map, with Level 5 overhead. Turn on **Show emojis** in the same menu to put each note's emoji in place of its dot on Main and Space-Time, the same way Linear Calendar does (see below).
 
 ### Ideaverse
 
