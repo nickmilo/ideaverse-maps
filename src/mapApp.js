@@ -5130,8 +5130,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const t_ = DI.b.querySelector(".tbl2"); if (t_) t_.remove(); DI.b.classList.add("tbi"); DI.b.setAttribute("aria-label", "Display"); DI.b.title = "Display"; left.appendChild(DI.w); }
   // Arrange (how the notes are placed, with its current choice) sits just before Sync, by the map tabs
   { const aw = $("#arrms"); if (aw) left.insertBefore(aw, fb); }
-  // Saved (★): on the left, right after Display (Nick, 0.7.44)
-  left.appendChild($("#viewms")); { const vb = $("#viewbtn"); vb.empty(); setIcon(vb, "telescope"); { const sv = vb.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } } vb.classList.add("tbb", "tbi"); vb.setAttribute("aria-label", "Saved views and tours"); vb.title = "Saved views and tours"; }
+  // Saved (the telescope): on the left, just before Display (Nick, 0.7.46)
+  left.insertBefore($("#viewms"), DI.w); { const vb = $("#viewbtn"); vb.empty(); setIcon(vb, "telescope"); { const sv = vb.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } } vb.classList.add("tbb", "tbi"); vb.setAttribute("aria-label", "Saved views and tours"); vb.title = "Saved views and tours"; }
   // Capture: a picture (PNG) or a short clip (MP4, or WebM where MP4 can't be recorded) of the map, saved to the vault's attachments,
   // then a small card to copy it, open it, or post it with a ready caption
   { const CP = popBtn("cap", "Capture", "star"); CP.b.empty(); setIcon(CP.b, "camera"); { const sv = CP.b.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } CP.b.classList.add("tbi"); CP.b.setAttribute("aria-label", "Capture a picture or a clip to share"); CP.b.title = "Capture a picture or a clip to share";
