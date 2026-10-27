@@ -5161,7 +5161,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Arrange (how the notes are placed, with its current choice) sits just before Sync, by the map tabs
   { const aw = $("#arrms"); if (aw) left.insertBefore(aw, fb); }
   // Saved (the telescope): on the left, just before Display (Nick, 0.7.46)
-  left.insertBefore($("#viewms"), DI.w); { const vb = $("#viewbtn"); vb.empty(); setIcon(vb, "telescope"); { const sv = vb.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } } vb.classList.add("tbb", "tbi"); vb.setAttribute("aria-label", "Saved views and tours"); vb.title = "Saved views and tours"; }
+  left.insertBefore($("#viewms"), DI.w); { const vb = $("#viewbtn"); vb.empty(); setIcon(vb, "telescope"); { const sv = vb.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } } vb.classList.add("tbb", "tbi"); vb.setAttribute("aria-label", "Saved views"); vb.title = "Saved views"; }
   // Capture: a picture (PNG) or a short clip (MP4, or WebM where MP4 can't be recorded) of the map, saved to the vault's attachments,
   // then a small card to copy it, open it, or post it with a ready caption
   { const CP = popBtn("cap", "Capture", "star"); CP.b.empty(); setIcon(CP.b, "camera"); { const sv = CP.b.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } CP.b.classList.add("tbi"); CP.b.setAttribute("aria-label", "Capture a picture or a clip to share"); CP.b.title = "Capture a picture or a clip to share";
@@ -5341,7 +5341,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     // quick keys, along the top row of the keyboard: 1–9, then 0 - = [ ] \ for maps 10–15 (Treemap, Mosaic, Bookshelf, Base Builder, Linear Calendar)
     onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey) return; const ch = KEYED().get(e.key); if (!ch) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return; e.preventDefault(); ch.click(); });
     // letter keys (Nick): O orbit on/off, J K L its three speeds (Earth, Mercury, LYT Speed on a globe; Calm, Slow, Lively on a flat map), A the Animations dock,
-    // W Wander Mode, T Timelapse, S Sync with the editor, F Filter, N Focus
+    // W Wander Mode, T Timelapse, S Sync with the editor, F Filter, N Focus, V Saved views
     { const vis_ = el => el && !el.hidden && getComputedStyle(el).display !== "none";
       const hit = sel_ => { const el = root.querySelector(sel_); if (el && !el.hidden) { el.click(); return true; } return false; };
       const orbitOn = () => /❚❚|■/.test(($("#dplay") || {}).textContent || "");
@@ -5349,14 +5349,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         o: () => hit("#dplay"),
         a: () => { const d = $("#animdock"); if (!d || d.hidden) return hit("#anitab"); const c_ = d.querySelector('button[aria-label="Tuck animations away"]'); if (c_) { c_.click(); return true; } return false; },
         w: () => hit("#pplay"), t: () => vis_($("#timebar")) || !$("#timebar").hidden ? hit("#tlplay") : false,
-        s: () => hit("#follownote"), f: () => hit("#filtbtn"), n: () => hit("#focusmode") };
+        s: () => hit("#follownote"), f: () => hit("#filtbtn"), n: () => hit("#focusmode"), v: () => hit("#viewbtn") };
       ["j", "k", "l"].forEach((key, j) => LK[key] = () => { const bs = [...root.querySelectorAll("#driftseg button")].filter(vis_); const b_ = bs[j]; if (!b_) return false; b_.click(); if (!orbitOn()) hit("#dplay"); return true; });
       // ? opens a card of every key; Display ends with a row that opens it too
       const card = cv.parentElement.createDiv({ cls: "keycard", attr: { role: "dialog", "aria-label": "Keyboard shortcuts" } }); card.hidden = true;
       const fillCard = () => { card.empty(); const hd = card.createDiv({ cls: "kch" }); hd.createSpan({ text: "Keyboard shortcuts" }); const x_ = hd.createEl("button", { cls: "kcx", text: "×", attr: { type: "button", "aria-label": "Close" } }); x_.onclick = () => { card.hidden = true; };
         const cols = card.createDiv({ cls: "kcc" }), sec = (t, rows) => { const c_ = cols.createDiv({ cls: "kcs" }); c_.createDiv({ cls: "pt", text: t }); for (const [k_, d_] of rows) { const r_ = c_.createDiv({ cls: "kcr" }); const kk = r_.createSpan({ cls: "kcks" }); for (const one of k_.split(" ")) kk.createEl("kbd", { text: one }); r_.createSpan({ text: d_ }); } };
         sec("Maps", [...KEYED()].map(([k_, ch]) => [k_, [...ch.childNodes].filter(x => !(x.classList && x.classList.contains("mkey"))).map(x => x.textContent).join("").trim()]).sort((a_, b_) => "1234567890-=[]\\".indexOf(a_[0]) - "1234567890-=[]\\".indexOf(b_[0])));
-        sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]); };
+        sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["V", "Saved views"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]); };
       const toggleCard = () => { if (card.hidden) { closePops(); fillCard(); } card.hidden = !card.hidden; return true; };
       LK["?"] = toggleCard; on(doc, "pointerdown", e => { if (!card.hidden && !card.contains(e.target)) card.hidden = true; });
       onKey(e => { if (e.key === "Escape" && !card.hidden) card.hidden = true; });
@@ -5364,7 +5364,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       // each button's hover hint ends with its key, and keeps it when the hint changes (Play becomes Pause, say)
       const hint = (el, k_) => { if (!el) return; const add = () => { const l_ = el.getAttribute("aria-label") || el.getAttribute("title") || ""; if (!l_ || l_.endsWith(` (${k_})`)) return; el.setAttribute("aria-label", `${l_.replace(/ \([A-Z/?]\)$/, "")} (${k_})`); };
         add(); new MutationObserver(add).observe(el, { attributes: true, attributeFilter: ["aria-label", "title"] }); };
-      for (const [id, k_] of [["#dplay", "O"], ["#pplay", "W"], ["#tlplay", "T"], ["#follownote", "S"], ["#filtbtn", "F"], ["#focusmode", "N"], ["#anitab", "A"]]) hint($(id), k_);
+      for (const [id, k_] of [["#dplay", "O"], ["#pplay", "W"], ["#tlplay", "T"], ["#follownote", "S"], ["#filtbtn", "F"], ["#focusmode", "N"], ["#anitab", "A"], ["#viewbtn", "V"]]) hint($(id), k_);
       onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey) return; const f_ = LK[e.key === "?" ? "?" : e.key.length === 1 ? e.key.toLowerCase() : ""]; if (!f_) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
         if (f_()) e.preventDefault(); }); }
     // Group's choices (Bookshelf's Shelve by, Chord, Corona and Tesla's Arcs by, Treemap's Boxes by and Subfolders) live under the gear, first; the Group button is gone
