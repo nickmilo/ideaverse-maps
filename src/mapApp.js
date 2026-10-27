@@ -84,7 +84,14 @@ const SLMIN = (() => { const c = {}; for (let i=0;i<n;i++) if (!isNaN(TVD[i])) {
 const pref = (key, v) => { const s = host.store.get(key); return s === undefined ? v : s; };
 const save = (key, v) => host.store.set(key, v);
 // emoji labels (Linear Calendar): path → emoji, read once from a base
-let LCEMO = pref("iv-lcemo", false) === true, EMEMO = pref("iv-ememo", false) === true, SMEMO = pref("iv-smemo", false) === true, EMO = null, emoBusy = null;
+// Show emojis, map by map (0.7.60): one switch in each map's gear; Emergence and Space-Time share one. The older per-map prefs carry over.
+let EMON = (() => { const o = pref("iv-emon", null); if (o && typeof o === "object" && !Array.isArray(o)) return o;
+  return { lincal: pref("iv-lcemo", false) === true, emergence: pref("iv-ememo", false) === true, sense: pref("iv-smemo", false) === true }; })(), EMO = null, emoBusy = null;
+const ekey = v => v === "spacetime" ? "emergence" : v, emoOn = v => EMON[ekey(v)] === true;
+const setEmoOn = (v, on) => { EMON = { ...EMON, [ekey(v)]: !!on }; save("iv-emon", EMON); };
+// the maps where an emoji reads well in place of a dot (0.7.60); not where notes are boxes, tiles or books (Treemap, Mosaic, Bookshelf, Skyline), cards (Base Builder, Posters) or Corona's sphere (Chord, Corona and Tesla are one map, "chord", in three shapes)
+const EMOK = new Set(["lincal", "emergence", "spacetime", "sense", "gravity", "stars", "graph", "ideaverse", "chord", "spiral", "lifeline", "tree"]);
+const emoAny = () => Object.keys(EMON).some(k_ => EMON[k_] === true);
 // Display → Assign emojis (0.7.57): folder → emoji, kept with your saved views; a note takes the emoji of its deepest folder that has one,
 // and only a note with none falls back to the base column (Settings → Emoji labels)
 let EMOF = (() => { const o = pref("iv-emofold", null); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; })();
@@ -96,7 +103,8 @@ const loadEmo = async () => { if (!host.emojis) return Object.keys(EMOF).length 
   if (r.err) { EMO = null; emoBuild(); return Object.keys(EMOF).length ? "" : `Couldn't read emojis: ${r.err}`; } EMO = new Map(Object.entries(r.map)); emoBuild(); return ""; })(); return emoBusy; };
 // Linear Calendar with Show emojis: a note's emoji takes the place of its dot, bigger the higher its level (Nick); notes with no emoji keep their dot
 // where emojis replace dots: Linear Calendar (its own switch) and Emergence with Space-Time (theirs, 0.7.56)
-const emoView = () => !!EMOI && ((view === "lincal" && LCEMO) || ((view === "emergence" || view === "spacetime") && EMEMO && !DOME[view]) || (view === "sense" && SMEMO));   // not in Planetarium
+const emoOK = () => EMOK.has(view) && !(view === "chord" && CSPH === "out") && !DOME[view];
+const emoView = () => !!EMOI && emoOK() && emoOn(view);   // not in Planetarium
 const emoAt = i => emoView() ? EMOI[i] : undefined;
 const EMOSZ = [0, .85, 1, 1.3, 1.65, 2];
 const emoSize = i => view === "lincal" ? Math.max(8.1, Math.min(16.2, LC.C * k * .324)) * EMOSZ[N[i].level]   // 10% smaller than 0.7.39 (Nick)
@@ -3978,14 +3986,14 @@ function goEmDome(m){ closePops(); DOME.emergence = true; save("iv-dome", DOME);
 POPS.push(['#vseg button[data-v="emergence"]', "#emerpop", "#vsegms"]);
 const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.checked = view === "spacetime" ? r.value === "spacetime" : r.value === (DOME.emergence ? "dome" : "flat"));
 // Emergence's gear: Show emojis, like Linear Calendar's (each note's emoji in place of its dot, bigger by level; Settings → Emoji labels says where they come from)
-{ const r = $("#emerpop").createEl("label", { cls: "mini lcemo ememo" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = EMEMO; { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = EMEMO; }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
+{ const r = $("#emerpop").createEl("label", { cls: "mini lcemo ememo" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = emoOn("emergence"); { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = emoOn("emergence"); }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
   const st = $("#emerpop").createDiv({ cls: "pn lcemost" });
-  cb.onchange = async () => { EMEMO = cb.checked; save("iv-ememo", EMEMO); st.setText(""); if (EMEMO && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
+  cb.onchange = async () => { setEmoOn("emergence", cb.checked); st.setText(""); if (cb.checked && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
 // Sensemakers' gear: Show emojis too (Nick, 0.7.58)
 { const se = doc.createElement("div"); se.id = "senseemo"; se.className = "mspop"; se.hidden = true; $("#sensepop").after(se);   // its own section, since Sensemakers' Placed by only shows with AI placement
-  const r = se.createEl("label", { cls: "mini lcemo smemo" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = SMEMO; { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = SMEMO; }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
+  const r = se.createEl("label", { cls: "mini lcemo smemo" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = emoOn("sense"); { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = emoOn("sense"); }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
   const st = se.createDiv({ cls: "pn lcemost" });
-  cb.onchange = async () => { SMEMO = cb.checked; save("iv-smemo", SMEMO); st.setText(""); if (SMEMO && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
+  cb.onchange = async () => { setEmoOn("sense", cb.checked); st.setText(""); if (cb.checked && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
 root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if (!r.checked) return; if (r.value === "spacetime") { goMap("spacetime", false); syncEmd(); return; } if (view === "spacetime") { closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); setView("emergence"); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); morph(true, () => fitTarget()); syncEmd(); });
 syncEmd();
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
@@ -4013,7 +4021,7 @@ function dualEl(parent, label, id){ const yc = parent.createDiv({ cls: "postctl 
   d.createEl("input", { type: "range", attr: { "aria-label": "First year", step: "1" } }); d.createEl("input", { type: "range", attr: { "aria-label": "Last year", step: "1" } });
   const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yrh" }); lb.createSpan({ cls: "yrh" }); return { yc, hv }; }
 // emoji labels (Linear Calendar for now): path → emoji, read once from the base
-if (LCEMO || EMEMO || SMEMO) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
+if (emoAny()) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
 function drawEmojis(lit, dim){ if (!emoView()) return; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   for (const lv of [1, 2, 3, 4, 5]) for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i)) continue; const e_ = EMOI[i]; if (!e_) continue;
     const x = sx(X[i]), y = sy(Y[i]); if (x < -30 || x > W + 30 || y < -30 || y > H + 30) continue; const f = emoSize(i);
@@ -4031,9 +4039,9 @@ const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) e
   a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true);
   for (const [el, d] of [[pv, -1], [nx, 1]]) el.onclick = e => { e.stopPropagation(); const [y0, y1] = lcClamp(); const sh_ = Math.max(y0 - LCR0, Math.min(y1 - LCR1, d)); LCR0 += sh_; LCR1 += sh_; save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); syncLC(); if (view === "lincal") morph(true, () => fitTarget()); };
   // Show emojis: each note's emoji from a base (Settings → Emoji labels; by default your Recents base's ✨ column), just left of its dot
-  { const r = c.createEl("label", { cls: "mini lcemo", attr: { title: "Each note's emoji from a base column (Settings → Emoji labels), beside its dot" } }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = LCEMO; { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = LCEMO; }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
+  { const r = c.createEl("label", { cls: "mini lcemo", attr: { title: "Each note's emoji from a base column (Settings → Emoji labels), beside its dot" } }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = emoOn("lincal"); { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = emoOn("lincal"); }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
     const st = c.createDiv({ cls: "pn lcemost" });
-    cb.onchange = async () => { LCEMO = cb.checked; save("iv-lcemo", LCEMO); st.setText(""); if (LCEMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } draw(); }; }
+    cb.onchange = async () => { setEmoOn("lincal", cb.checked); st.setText(""); if (cb.checked) { const e_ = await loadEmo(); if (e_) st.setText(e_); } draw(); }; }
   return { yc }; })(); LCUIOK = true;
 function syncLC(){ const [y0, y1] = lcClamp(); syncDual(LCUI.yc, LCR0, LCR1, y0, y1); $("#lcyear").textContent = LCR0 === LCR1 ? String(LCR0) : `${LCR0}–${LCR1}`; $("#lcprev").disabled = LCR0 <= y0; $("#lcnext").disabled = LCR1 >= y1; }
 syncLC();
@@ -4464,7 +4472,7 @@ function snapView(name){
     // every filter (0.7.54): the years' edge strips, dating by modified time and its window, MOCs, properties and bases; and Linear Calendar's years and halves
     yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
     lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF} : null,
-    emo: {lc: LCEMO, em: EMEMO, sm: SMEMO},   // Show emojis on Linear Calendar and Emergence (0.7.58, Nick)
+    emo: { ...EMON },   // Show emojis, map by map (0.7.58, Nick)
     // Base Builder and Posters (0.7.58): the layout (Rows, Scatter, Mosaic, Constellation, Timeline) and what each axis, row and size reads (Nick's movies Mosaic came back as Rows)
     pst: view === "builder" || view === "posters" ? (P_ => ({ across: P_.across, lanes: P_.lanes, size: P_.size, height: P_.height, mosaic: !!P_.mosaic, con: !!P_.con, tl: !!P_.tl, conSel: P_.conSel, conMax: P_.conMax, rng: JSON.parse(JSON.stringify(P_.rng || {})), lhide: JSON.parse(JSON.stringify(P_.lhide || {})) }))(view === "builder" ? PSTB : PSTP) : null,
     cam: {cx: +((W/2 - tx)/k).toFixed(1), cy: +((H/2 - ty)/k).toFixed(1), k: +k.toFixed(4)}, saved: new Date().toISOString().slice(0,10)};
@@ -4473,8 +4481,8 @@ function applySaved(v){
   if (typeof playing !== "undefined" && playing) setPlaying(false);
   closePops(); curView = v.name;
   if (["square", "hex", "mandala", "octa", "shells"].includes(v.geo)) { GEO = v.geo; save("iv-geo", GEO); }
-  if (v.emo && typeof v.emo === "object") { LCEMO = v.emo.lc === true; EMEMO = v.emo.em === true; SMEMO = v.emo.sm === true; save("iv-lcemo", LCEMO); save("iv-ememo", EMEMO); save("iv-smemo", SMEMO); if (FUI.emosw) FUI.emosw();
-    if ((LCEMO || EMEMO || SMEMO) && !EMO) void loadEmo().then(() => draw()); }
+  if (v.emo && typeof v.emo === "object") { const o = v.emo; EMON = "lc" in o || "em" in o || "sm" in o ? { lincal: o.lc === true, emergence: o.em === true, sense: o.sm === true } : { ...o }; save("iv-emon", EMON); if (FUI.emosw) FUI.emosw();
+    if (emoAny() && !EMO) void loadEmo().then(() => draw()); }
   if (v.pst && (v.view === "builder" || v.view === "posters")) { const P_ = v.view === "builder" ? PSTB : PSTP, c = v.view === "builder" ? "b" : "p", q = v.pst;
     for (const key of ["across", "lanes", "size", "height"]) { P_[key] = q[key] ?? null; save(`iv-${c}${key}`, P_[key]); }
     P_.mosaic = !!q.mosaic; save(`iv-${c}mosaic`, P_.mosaic); P_.rng = q.rng || {}; save(`iv-${c}rng`, P_.rng); P_.lhide = q.lhide || {}; save(`iv-${c}lhide`, P_.lhide);
@@ -5018,6 +5026,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     tog("Twinkle", () => twOn, v => { twOn = v; save("iv-twinkle", v); twWake(); });
     tog("Turning galaxies", () => sTurn, v => { sTurn = v; save("iv-sturn", v); turnSync(); if (!v && view === "stars") { glowKey = ""; morph(true); } }); }
   const moL = mo.createDiv({ cls: "pt mol", text: "This map" }); mo.appendChild($("#laygrp")); const moNone = mo.createDiv({ cls: "pn", text: "Nothing to set on this map." });
+  // Show emojis for every other map that can show them (0.7.60): Linear Calendar, Emergence and Sensemakers keep theirs where they are
+  const emoGen = () => emoOK() && !["lincal", "emergence", "spacetime", "sense"].includes(view);
+  { const ea = mo.createDiv({ cls: "mosec emoany", attr: { id: "emoany" } }); ea.hidden = true; const r = ea.createEl("label", { cls: "mini lcemo emosw" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
+    const st = ea.createDiv({ cls: "pn lcemost" }); const sync_ = () => { cb.checked = emoOn(view); }; { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); sync_(); }; } FUI.emoany = () => { sync_(); st.setText(""); ea.hidden = !emoGen(); };
+    cb.onchange = async () => { setEmoOn(view, cb.checked); st.setText(""); if (cb.checked && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
   const hasLay = () => [...$("#laygrp").children].some(el => !el.hidden && !el.classList.contains("glbl"));
   const variants = () => view === "emergence" || view === "spacetime" ? "#emerpop" : view === "stars" ? "#starpop" : view === "sense" ? (SAI ? "#sensepop" : "#senseemo") : null;
   toggleMapOpts = b => { const open = mo.hidden; closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!open) { mo.hidden = true; b.setAttribute("aria-expanded", "false"); return; }
@@ -5211,7 +5224,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     pg.createDiv({ cls: "emohelp", text: "Pick an emoji for a folder and every note in it gets one. A subfolder's emoji wins over its folder's." });
     const list = pg.createDiv({ cls: "emolist" }), ft = pg.createDiv({ cls: "emoft" });
     const imp = ft.createEl("button", { cls: "pchip emoimp", text: "Copy emojis from a base column", attr: { type: "button" } }), st = ft.createDiv({ cls: "pn emost" });
-    ft.createDiv({ cls: "emowhere", text: "They show on Linear Calendar, Emergence and Sensemakers: turn on Show emojis in each map's gear." });
+    ft.createDiv({ cls: "emowhere", text: "Turn on Show emojis in a map's gear to see them there (most maps with dots have it)." });
     const open = new Set(); let pick = null;   // folders showing their subfolders; the folder whose picker is open
     const first = v => { const g = [...new Intl.Segmenter().segment(v.trim())]; return g.length ? g[0].segment : ""; };
     const setEmo = (f, e_) => { if (e_) EMOF[f] = e_; else delete EMOF[f]; EMOF = { ...EMOF }; save("iv-emofold", EMOF); writeSaved(); emoBuild(); draw(); };
@@ -5426,7 +5439,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };
     // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
     const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop", "#senseemo"]) $(id).hidden = id !== v_; if (view === "sense") $("#senseemo").hidden = false; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
-      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); moL.hidden = !l || !v_; moNone.hidden = true; return !!(l || v_); };
+      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); FUI.emoany(); moL.hidden = !l || !(v_ || emoGen()); moNone.hidden = true; return !!(l || v_ || emoGen()); };
     // no hover hints in the maps menu (Nick): a map's description stays for screen readers only
     const quiet = () => MP.querySelectorAll("[aria-label], [title]").forEach(el => { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("title"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); });
     const openMaps = () => { quiet(); closePops("#vmorepop"); if (typeof closeColl === "function") closeColl(); MP.hidden = false; MB.setAttribute("aria-expanded", "true");
@@ -5440,7 +5453,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     POPS.push(["#mapsetbtn", "#mapopts", ".mapsetms"]);
     const openSet = () => { closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!fillMO()) return; mo.setAttribute("aria-description", VN() + " settings"); mo.hidden = false; ST.setAttribute("aria-expanded", "true"); };
     ST.onclick = e => { e.stopPropagation(); if (!mo.hidden) closePops(); else openSet(); };
-    { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay()); }; }
+    { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay() || emoGen()); }; }
     MB.onclick = e => { e.stopPropagation(); if (!MP.hidden) closePops(); else openMaps(); };
     // the one menu that stays open after you pick: hop from map to map (a click anywhere else, or Escape, still closes it)
     MP.addEventListener("click", e => { const c_ = e.target.closest(".chip"); if (!c_ || !MP.contains(c_) || MP.hidden) return; const st = MP.scrollTop;
