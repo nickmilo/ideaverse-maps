@@ -83,6 +83,10 @@ const save = (key, v) => host.store.set(key, v);
 // emoji labels (Linear Calendar, Recent Breadcrumbs): path → emoji, read once from a base
 let LCEMO = pref("iv-lcemo", false) === true, EMO = null, emoBusy = null;
 const loadEmo = async () => { if (!host.emojis) return "Emoji labels need a newer Obsidian"; if (emoBusy) return emoBusy; emoBusy = (async () => { const r = await host.emojis(); emoBusy = null; if (r.err) { EMO = null; return `Couldn't read emojis: ${r.err}`; } EMO = new Map(Object.entries(r.map)); return ""; })(); return emoBusy; };
+// Linear Calendar with Show emojis: a note's emoji takes the place of its dot, bigger the higher its level (Nick); notes with no emoji keep their dot
+const emoAt = i => LCEMO && EMO && view === "lincal" ? EMO.get(N[i].path) : undefined;
+const EMOSZ = [0, .85, 1, 1.3, 1.65, 2];
+const emoSize = i => Math.max(9, Math.min(18, LC.C * k * .36)) * EMOSZ[N[i].level];
 let showArch = !!pref("iv-arch", true), fromY = +pref("iv-from", 2016);
 { // Full scale from was retired (Oct 11). If one was set, start the timeline there instead: same recent years, older ones in "Before".
   if (!pref("iv-mig-full", false)) { const oldFull = +pref("iv-full", 2016);   // 2016 was the old default
@@ -3108,7 +3112,7 @@ function visTarget(xs, ys){   // camera that frames every visible note, given wh
   const kk = Math.min(4, Math.max(.1, Math.min((vw - pad*2) / Math.max(x1-x0, 40), (vh - pad*2 - 40) / Math.max(y1-y0, 40))));
   return {k:kk, tx: vw/2 - (x0+x1)/2*kk, ty: (vh + 40)/2 - (y0+y1)/2*kk};
 }
-function rad(i){ if (view === "crumbs") return Math.max(2, CR.F * .2 * k); if (view === "lincal") return Math.max(1.8*BOOST, Math.min(R[i]*Math.pow(k, .55)*1.5*BOOST, 30, LC.C*k*(N[i].level >= 3 ? .17 : .12)));   // Linear Calendar: a dot stays small for its day box (maps and hubs a little bigger), so it never covers its neighbors
+function rad(i){ if (view === "crumbs") return Math.max(2, CR.F * .2 * k); if (view === "lincal" && emoAt(i)) return emoSize(i) * .45; if (view === "lincal") return Math.max(1.8*BOOST, Math.min(R[i]*Math.pow(k, .55)*1.5*BOOST, 30, LC.C*k*(N[i].level >= 3 ? .17 : .12)));   // Linear Calendar: a dot stays small for its day box (maps and hubs a little bigger), so it never covers its neighbors
   if (view === "stars") return Math.max(.7*BOOST, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1)*BOOST, 16)); return Math.max((view === "lincal" ? 1.8 : 1.1)*BOOST, Math.min(R[i]*Math.pow(k, .55)*(geo3On() ? DS3[i] : view === "lincal" ? 1.5 : 1)*BOOST, 30)); }   // 3D Geometric: nearer notes are bigger
 
 // ---------- Way home (Kevin Bacon): from the note you're on, the fewest links back to one note (Home by default) ----------
@@ -3271,17 +3275,18 @@ function render(){
   const vx0 = -30, vx1 = W+30, vy0 = -30, vy1 = H+30;
   // hovering fades the rest gently; a click (selection) fades it fully, like the link lines
   // the rest fades to a quarter when a note is picked; on the Obsidian map half as much (to about 60%), so the graph stays visible around it
+  const EMOD = LCEMO && EMO && view === "lincal";
   const dim = lit && !(focus >= 0 && (sel === focus || sel < 0) && hover < 0) ? (sel >= 0 ? (GRV() ? .62 : .25) : (GRV() ? .85 : .7)) : 1;
   if (view === "stars") starsNotes(lit, dim); else if (expOn() && EXP[view].notes) EXP[view].notes(lit, dim); else {
   for (const lv of [1,2]) for (const ar of [1,0]) {   // archive notes as rings, vault notes as dots
     ctx.globalAlpha = dim; ctx.beginPath();
-    for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i) || ARCH[i] !== ar) continue; const x = sx(X[i]), y = sy(Y[i]); if (x<vx0||x>vx1||y<vy0||y>vy1) continue; const r = rad(i); ctx.moveTo(x+r,y); ctx.arc(x,y,r,0,6.2832); }
+    for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i) || ARCH[i] !== ar || (EMOD && emoAt(i))) continue; const x = sx(X[i]), y = sy(Y[i]); if (x<vx0||x>vx1||y<vy0||y>vy1) continue; const r = rad(i); ctx.moveTo(x+r,y); ctx.arc(x,y,r,0,6.2832); }
     if (ar) { ctx.strokeStyle = lv === 2 ? css.l2 : css.l1; ctx.lineWidth = 1; ctx.stroke(); } else { ctx.fillStyle = view === "sense" ? (lv === 2 ? css.sl2 : css.sl1) : lv === 2 ? css.l2 : css.l1; ctx.fill(); }
   }
   ctx.globalAlpha = 1;
   for (const lv of [3,4,5]) {
     for (let i=0;i<n;i++) {
-      if (N[i].level !== lv || !VV(i)) continue;
+      if (N[i].level !== lv || !VV(i) || (EMOD && emoAt(i))) continue;
       const x = sx(X[i]), y = sy(Y[i]); if (x<vx0||x>vx1||y<vy0||y>vy1) continue;
       const r = rad(i), g = ctx.createLinearGradient(x-r,y-r,x+r,y+r);
       g.addColorStop(0, GRAD[lv][0]); g.addColorStop(1, GRAD[lv][1]);
@@ -3293,13 +3298,13 @@ function render(){
   }
   ctx.globalAlpha = 1;
   if (lit) for (const i of lit) { // re-draw lit low-level notes on top, full strength
-    if (N[i].level >= 3) continue; const x = sx(X[i]), y = sy(Y[i]), r = Math.max(rad(i), 2.4);
+    if (N[i].level >= 3 || (EMOD && emoAt(i))) continue; const x = sx(X[i]), y = sy(Y[i]), r = Math.max(rad(i), 2.4);
     ctx.fillStyle = N[i].level === 2 ? css.down : css.muted; ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill();
   }
   }
   for (const i of [sel, hover]) if (i >= 0) { const x = sx(X[i]), y = sy(Y[i]); ctx.strokeStyle = css.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x,y,rad(i)+3,0,6.2832); ctx.stroke(); }
 
-  if (LCEMO && view === "lincal") drawEmojis();
+  if (LCEMO && view === "lincal") drawEmojis(lit, dim);
   if (!(CAP.on && CAP.hide)) labels(lit);
   if (BACON) drawBacon();
   axisLabels();
@@ -4031,11 +4036,11 @@ function dualEl(parent, label, id){ const yc = parent.createDiv({ cls: "postctl 
   const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yrh" }); lb.createSpan({ cls: "yrh" }); return { yc, hv }; }
 // emoji labels (Linear Calendar for now): path → emoji, read once from the base
 if (LCEMO) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
-function drawEmojis(){ if (!EMO || view !== "lincal") return; const f = Math.min(16, LC.C * k * .42); if (f < 7) return;
-  ctx.font = `${f}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.globalAlpha = 1;
-  for (let i=0;i<n;i++) { if (!VV(i)) continue; const e_ = EMO.get(N[i].path); if (!e_) continue; const x = sx(X[i]), y = sy(Y[i]); if (x < -20 || x > W + 40 || y < -20 || y > H + 20) continue;
-    ctx.fillText(e_, x - rad(i) - 2, y); }
-  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
+function drawEmojis(lit, dim){ if (!EMO || view !== "lincal") return; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (const lv of [1, 2, 3, 4, 5]) for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i)) continue; const e_ = EMO.get(N[i].path); if (!e_) continue;
+    const x = sx(X[i]), y = sy(Y[i]); if (x < -30 || x > W + 30 || y < -30 || y > H + 30) continue; const f = emoSize(i);
+    ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .3 : .75) : 1; ctx.font = `${f}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.fillText(e_, x, y + f*.04); }
+  ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 // Linear Calendar's menu: Years (the slider, with ‹ › to move a year at a time) and Whole or Half months
 const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) el.hidden = true; c.classList.add("lcctl2");
   const sh = c.createDiv({ cls: "seg lchalf", attr: { role: "group", "aria-label": "Months as" } });

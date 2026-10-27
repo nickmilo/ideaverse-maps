@@ -7,6 +7,6 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.locator('.ivm .lcemo').click(); await sleep(2500); console.log('status', await page.evaluate(() => document.querySelector('.ivm .lcemost').textContent || 'ok'));
   await page.keyboard.press('Escape'); await sleep(300);
   for (let z = 0; z < 3; z++) { await page.locator('.ivm #zin').click(); await sleep(400); }
-  await sleep(800); await shot('lce-on');
+  await sleep(800); await shot('lce-on'); for (let z = 0; z < 3; z++) { await page.locator('.ivm #zout').click(); await sleep(300); } await sleep(800); await shot('lce-far'); await page.mouse.click(1200, 450); await sleep(800); await shot('lce-sel');
   console.log('errors:', errs.join(' | ') || 'none');
 };
