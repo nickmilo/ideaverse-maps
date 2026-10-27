@@ -1125,3 +1125,9 @@ body:not(.is-mobile) .ivm .wm-lyt{bottom:38px}
 .ivm .mtwin[hidden]{display:none}
 .ivm .mtwin .mtl{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .ivm .prng[hidden]{display:none}
+/* 0.7.40 · the years slider's handle years, also when the slider sits in Filter's Years header (it left .yrctl there, so these rules stopped applying) */
+.ivm #ycol .prng .srange{position:relative}
+.ivm #ycol .srange .yrh{position:absolute;top:0;transform:translateX(-50%);color:var(--ink);font-weight:600}
+.ivm #ycol .srange .yrh[hidden]{display:none}
+.ivm #ycol .srange .yrh.lft{transform:translateX(-100%)}
+.ivm #ycol .srange .yrh.rgt{transform:none}
