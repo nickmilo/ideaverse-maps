@@ -1217,3 +1217,34 @@ body.is-mobile .ivm.ivm #vlist.vlist2:not(.editing) details.vgrp > summary > .va
 body.is-mobile .ivm.ivm #vlist.vlist2.editing .vr{flex-wrap:wrap;justify-content:flex-end;row-gap:2px;padding-bottom:4px}
 body.is-mobile .ivm.ivm #vlist.vlist2.editing .vr > .vgo{flex:1 1 100%}
 body.is-mobile .ivm.ivm #vlist.vlist2 .vr{cursor:default}
+
+/* 0.7.57 Display → Assign emojis: a page inside Display, a folder tree like Filter → Folders */
+.ivm .dlist .emopage{display:none}
+.ivm .dlist.emomode > :not(.emopage){display:none}
+.ivm .dlist.emomode > .emopage{display:flex;flex-direction:column;gap:6px;width:300px;max-width:calc(100vw - 40px);min-height:0;flex:1}
+.ivm header.tb2 .tbpop.dlist.emomode{max-height:min(560px,calc(100vh - 140px));overflow:hidden}
+.ivm .emohd{display:flex;align-items:center;gap:4px}
+.ivm .emohd .pt{margin:0}
+.ivm.ivm .emoback{border:none;background:none;box-shadow:none;width:24px;height:24px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;border-radius:5px}
+.ivm.ivm .emoback:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.ivm .emoback svg{width:16px;height:16px}
+.ivm .emohelp,.ivm .emowhere{font:400 11.5px var(--font-interface,inherit);color:var(--muted);line-height:1.4;white-space:normal}
+.ivm .emolist{flex:1 1 auto;min-height:80px;overflow-y:auto;display:flex;flex-direction:column}
+.ivm .emorow{gap:6px;padding:2px 2px 2px calc(var(--d,0) * 14px + 2px);border-radius:6px;font:500 12.5px var(--font-interface,inherit);color:var(--ink)}
+.ivm .emorow:hover,.ivm .emorow.picking{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.ivm .emorow .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ivm .emorow .m{color:var(--muted);font:400 11px var(--mono);margin-right:2px}
+.ivm.ivm .emob{border:none;background:none;box-shadow:none;width:24px;height:24px;padding:0;flex:none;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;cursor:pointer;border-radius:5px;color:var(--muted);opacity:.45}
+.ivm.ivm .emob.on{opacity:1}
+.ivm.ivm .emob:hover{opacity:1;background:color-mix(in srgb,var(--ink) 10%,transparent)}
+.ivm .emob svg{width:15px;height:15px}
+.ivm .emopick{margin:2px 0 6px calc(var(--d,0) * 14px + 4px);padding:6px;border-radius:8px;background:color-mix(in srgb,var(--ink) 5%,transparent)}
+.ivm .emogrid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px}
+.ivm.ivm .emog{border:none;background:none;box-shadow:none;height:28px;padding:0;font-size:16px;line-height:1;cursor:pointer;border-radius:5px}
+.ivm.ivm .emog:hover,.ivm.ivm .emog.on{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.ivm .emoln{display:flex;gap:6px;align-items:center;margin-top:6px}
+.ivm .emoln input{flex:1;min-width:0;height:26px;font-size:12px}
+.ivm .emoft{display:flex;flex-direction:column;gap:6px;padding-top:6px;border-top:1px solid var(--line)}
+.ivm .emoft .emoimp{align-self:flex-start;font-size:12.5px}
+.ivm .emohd,.ivm .emohelp,.ivm .emoft{flex:none}
+.ivm .emost:empty{display:none}

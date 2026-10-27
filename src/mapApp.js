@@ -82,11 +82,19 @@ const pref = (key, v) => { const s = host.store.get(key); return s === undefined
 const save = (key, v) => host.store.set(key, v);
 // emoji labels (Linear Calendar): path → emoji, read once from a base
 let LCEMO = pref("iv-lcemo", false) === true, EMEMO = pref("iv-ememo", false) === true, EMO = null, emoBusy = null;
-const loadEmo = async () => { if (!host.emojis) return "Emoji labels need a newer Obsidian"; if (emoBusy) return emoBusy; emoBusy = (async () => { const r = await host.emojis(); emoBusy = null; if (r.err) { EMO = null; return `Couldn't read emojis: ${r.err}`; } EMO = new Map(Object.entries(r.map)); return ""; })(); return emoBusy; };
+// Display → Assign emojis (0.7.57): folder → emoji, kept with your saved views; a note takes the emoji of its deepest folder that has one,
+// and only a note with none falls back to the base column (Settings → Emoji labels)
+let EMOF = (() => { const o = pref("iv-emofold", null); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; })();
+let EMOI = null;   // note index → its emoji
+const emoBuild = () => { const has = Object.keys(EMOF).length > 0; if (!has && !EMO) { EMOI = null; return; }
+  EMOI = N.map(d => { if (has) { let q = d.path; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (EMOF[q]) return EMOF[q]; } } return EMO ? EMO.get(d.path) : undefined; }); };
+emoBuild();
+const loadEmo = async () => { if (!host.emojis) return Object.keys(EMOF).length ? "" : "Emoji labels need a newer Obsidian"; if (emoBusy) return emoBusy; emoBusy = (async () => { const r = await host.emojis(); emoBusy = null;
+  if (r.err) { EMO = null; emoBuild(); return Object.keys(EMOF).length ? "" : `Couldn't read emojis: ${r.err}`; } EMO = new Map(Object.entries(r.map)); emoBuild(); return ""; })(); return emoBusy; };
 // Linear Calendar with Show emojis: a note's emoji takes the place of its dot, bigger the higher its level (Nick); notes with no emoji keep their dot
 // where emojis replace dots: Linear Calendar (its own switch) and Emergence with Space-Time (theirs, 0.7.56)
-const emoView = () => !!EMO && ((view === "lincal" && LCEMO) || ((view === "emergence" || view === "spacetime") && EMEMO && !DOME[view]));   // not in Planetarium
-const emoAt = i => emoView() ? EMO.get(N[i].path) : undefined;
+const emoView = () => !!EMOI && ((view === "lincal" && LCEMO) || ((view === "emergence" || view === "spacetime") && EMEMO && !DOME[view]));   // not in Planetarium
+const emoAt = i => emoView() ? EMOI[i] : undefined;
 const EMOSZ = [0, .85, 1, 1.3, 1.65, 2];
 const emoSize = i => view === "lincal" ? Math.max(8.1, Math.min(16.2, LC.C * k * .324)) * EMOSZ[N[i].level]   // 10% smaller than 0.7.39 (Nick)
   : Math.max(8.1, Math.min(16.2, 7 * Math.pow(k, .45))) * EMOSZ[N[i].level];   // Emergence: grows gently with the zoom, bigger by level
@@ -3996,7 +4004,7 @@ function dualEl(parent, label, id){ const yc = parent.createDiv({ cls: "postctl 
 // emoji labels (Linear Calendar for now): path → emoji, read once from the base
 if (LCEMO || EMEMO) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
 function drawEmojis(lit, dim){ if (!emoView()) return; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  for (const lv of [1, 2, 3, 4, 5]) for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i)) continue; const e_ = EMO.get(N[i].path); if (!e_) continue;
+  for (const lv of [1, 2, 3, 4, 5]) for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i)) continue; const e_ = EMOI[i]; if (!e_) continue;
     const x = sx(X[i]), y = sy(Y[i]); if (x < -30 || x > W + 30 || y < -30 || y > H + 30) continue; const f = emoSize(i);
     ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .3 : .75) : 1; ctx.font = `${f}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.fillText(e_, x, y + f*.04); }
   ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
@@ -4412,7 +4420,7 @@ if (!views.length && !vgroups.length && !(host.savedFolder && host.savedFolder()
   save("iv-vgroups", vgroups); save("iv-views", views); save("iv-vseeded", true); }
 // views and tours are kept in the plugin's data and, once a folder is picked, in a plain JSON file in the vault (the file wins on load)
 let writeT = 0;
-const savedJSON = () => JSON.stringify({ about: "Saved views and recorded tours from Maps of the Ideaverse", saved: new Date().toISOString().slice(0, 10), groups: vgroups, views, tours: typeof tours !== "undefined" ? tours : [] }, null, 1);
+const savedJSON = () => JSON.stringify({ about: "Saved views and recorded tours from Maps of the Ideaverse", saved: new Date().toISOString().slice(0, 10), groups: vgroups, views, tours: typeof tours !== "undefined" ? tours : [], emojis: EMOF }, null, 1);
 function writeSaved(){ if (!host.writeSaved || !host.savedFolder()) return; win.clearTimeout(writeT); writeT = win.setTimeout(() => { void host.writeSaved(savedJSON()); }, 300); }
 async function ensureFolder(){ if (!host.savedFolder || host.savedFolder()) return true; const d = await host.pickSavedFolder(); syncFolderBtn(); return !!d; }
 // the footer: "Saved in" and a small pill with the folder (click to move it); before you pick one, the pill says Choose folder
@@ -4721,6 +4729,8 @@ if (host.readSaved && host.savedFolder()) void host.readSaved().then(txt => { if
     let nv = 0, nt = 0;   // anything saved here but missing from the file (made before the file existed) is kept and written back
     if (Array.isArray(o.views)) [views, nv] = merge(o.views, views);
     if (Array.isArray(o.tours)) [tours, nt] = merge(o.tours, tours);
+    if (o.emojis && typeof o.emojis === "object" && !Array.isArray(o.emojis)) { EMOF = o.emojis; save("iv-emofold", EMOF); emoBuild(); draw(); if (FUI.emo) FUI.emo(); }
+    else if (Object.keys(EMOF).length) nv++;   // assigned before the file had them: write them back
     if (Array.isArray(o.groups)) { const have = new Set(o.groups.map(g => g.name)); vgroups = o.groups.concat(vgroups.filter(g => !have.has(g.name))); save("iv-vgroups", vgroups); }
     save("iv-views", views); save("iv-tours", tours); renderViewList(); renderTourList(); if (nv || nt) writeSaved(); } catch { /* not valid JSON: leave both as they are */ } });
 // every popover stays inside the map: when one opens, nudge it sideways if it would spill past either edge
@@ -5166,9 +5176,55 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     sw_.hidden = !EFF.length; cb.checked = !pnl.hidden; cb.onchange = () => { if (cb.checked === pnl.hidden) eb.click(); };   // Display stays open as the panel comes and goes
     new MutationObserver(() => { cb.checked = !pnl.hidden; }).observe(pnl, { attributes: true, attributeFilter: ["hidden"] }); }
   const thSec = DI.p.createDiv({ cls: "fsec thsec" }); thSec.createDiv({ cls: "pt", text: "Theme" });
+  // Assign emojis: a folder tree like Filter → Folders; pick an emoji for a folder and every note in it gets it (the deepest folder wins)
+  { const EG = ["📅","🗓️","🗺️","🧭","💡","✨","🧠","🌱","🌳","🔥","⭐","🌍","📚","📖","✍️","📝","🎬","🍿","🎵","🎙️","🎨","📷","🎮","🏛️","👤","👥","💼","💰","🎯","🚀","🛠️","⚙️","🧪","🔭","🎓","📦","🗂️","🏠","❤️","🏃","🧘","🍎","☕","🌊","⛰️","🌙","☀️","🌀"];
+    const link = DI.p.createEl("button", { cls: "drow dlink emolink", text: "Assign emojis ›", attr: { type: "button" } });
+    const pg = DI.p.createDiv({ cls: "emopage" }), hd = pg.createDiv({ cls: "emohd" });
+    const back = hd.createEl("button", { cls: "emoback", attr: { type: "button", "aria-description": "Back to Display" } }); setIcon(back, "chevron-left"); hd.createSpan({ cls: "pt", text: "Assign emojis" });
+    pg.createDiv({ cls: "emohelp", text: "Pick an emoji for a folder and every note in it gets one. A subfolder's emoji wins over its folder's." });
+    const list = pg.createDiv({ cls: "emolist" }), ft = pg.createDiv({ cls: "emoft" });
+    const imp = ft.createEl("button", { cls: "pchip emoimp", text: "Copy emojis from a base column", attr: { type: "button" } }), st = ft.createDiv({ cls: "pn emost" });
+    ft.createDiv({ cls: "emowhere", text: "They show on Linear Calendar and Emergence: turn on Show emojis in each map's gear." });
+    const open = new Set(); let pick = null;   // folders showing their subfolders; the folder whose picker is open
+    const first = v => { const g = [...new Intl.Segmenter().segment(v.trim())]; return g.length ? g[0].segment : ""; };
+    const setEmo = (f, e_) => { if (e_) EMOF[f] = e_; else delete EMOF[f]; EMOF = { ...EMOF }; save("iv-emofold", EMOF); writeSaved(); emoBuild(); draw(); };
+    const render = () => { list.empty();
+      const row = (f, depth) => { const t = FT.get(f); if (!t) return; const own = EMOF[f], kids = t.kids.length > 0;
+        const r = list.createDiv({ cls: "frow emorow" + (pick === f ? " picking" : "") }); r.setCssProps({ "--d": String(depth) });
+        const b = r.createEl("button", { cls: "emob" + (own ? " on" : ""), attr: { type: "button", "aria-description": own ? `Change the emoji for ${t.name}` : `Pick an emoji for ${t.name}` } });
+        if (own) b.setText(own); else setIcon(b, "smile-plus");
+        b.onclick = e => { e.stopPropagation(); pick = pick === f ? null : f; render(); };
+        r.createSpan({ cls: "t", text: depth ? t.name : foldName(f) }); r.createSpan({ cls: "m", text: t.total.toLocaleString() });
+        if (kids) { const x = r.createEl("button", { cls: "fsub" + (open.has(f) ? " on" : ""), text: "›", attr: { type: "button", "aria-expanded": String(open.has(f)), "aria-description": "Subfolders" } });
+          x.onclick = e => { e.stopPropagation(); if (open.has(f)) { for (const o of [...open]) if (o === f || o.startsWith(f + "/")) open.delete(o); } else open.add(f); render(); }; }
+        else r.createSpan({ cls: "fsubsp" });
+        if (pick === f) { const pk = list.createDiv({ cls: "emopick" }); pk.setCssProps({ "--d": String(depth) }); const gr = pk.createDiv({ cls: "emogrid" });
+          for (const e_ of EG) { const g = gr.createEl("button", { cls: "emog" + (own === e_ ? " on" : ""), text: e_, attr: { type: "button" } }); g.onclick = ev => { ev.stopPropagation(); setEmo(f, e_); pick = null; render(); }; }
+          const ln = pk.createDiv({ cls: "emoln" }), inp = ln.createEl("input", { type: "text", attr: { placeholder: "Or paste any emoji", "aria-label": "Paste any emoji" } });
+          inp.oninput = () => { const e_ = first(inp.value); if (e_ && /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(e_)) { setEmo(f, e_); pick = null; render(); } };
+          inp.onkeydown = ev => { ev.stopPropagation(); if (ev.key === "Escape") { pick = null; render(); } };
+          if (own) { const rm = ln.createEl("button", { cls: "pchip", text: "Remove", attr: { type: "button" } }); rm.onclick = ev => { ev.stopPropagation(); setEmo(f, null); pick = null; render(); }; }
+          win.setTimeout(() => { if (!Platform.isMobile) inp.focus(); }, 0); }
+        if (kids && open.has(f)) for (const k_ of t.kids) row(k_, depth + 1); };
+      for (const f of FOLD) row(f, 0);
+      const nA = Object.keys(EMOF).length; link.setText(nA ? `Assign emojis (${nA}) ›` : "Assign emojis ›"); };
+    FUI.emo = render;
+    link.onclick = e => { e.stopPropagation(); pick = null; st.setText(""); render(); DI.p.classList.add("emomode"); };
+    back.onclick = e => { e.stopPropagation(); DI.p.classList.remove("emomode"); };
+    // Copy from a base column: each folder takes the emoji most of its notes have there (half or more), unless it's the same as its folder's above
+    imp.onclick = async e => { e.stopPropagation(); st.setText("Reading the base…"); const r = host.emojis ? await host.emojis() : { err: "this needs a newer Obsidian" };
+      if (r.err) { st.setText(`Couldn't read emojis: ${r.err}`); return; }
+      const cnt = new Map(); for (const [p_, e_] of Object.entries(r.map)) { if (!e_) continue; let q = p_; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); const m = cnt.get(q) || new Map(); m.set(e_, (m.get(e_) || 0) + 1); cnt.set(q, m); } }
+      const most = m => { let b_ = null, bn = 0, t = 0; for (const [k_, v] of m) { t += v; if (v > bn) { b_ = k_; bn = v; } } return bn * 2 >= t ? b_ : null; };
+      let added = 0; const walk = (f, inh) => { const m = cnt.get(f), mine = m ? most(m) : null; if (mine && mine !== inh && !EMOF[f]) { EMOF[f] = mine; added++; } const t = FT.get(f); for (const k_ of (t ? t.kids : [])) walk(k_, EMOF[f] || inh); };
+      for (const f of FOLD) walk(f, null);
+      if (added) { EMOF = { ...EMOF }; save("iv-emofold", EMOF); writeSaved(); emoBuild(); draw(); }
+      const bn = String(r.path || "").split("/").pop().replace(/\.base$/, "");
+      st.setText(added ? `Copied ${added} folder emoji${added === 1 ? "" : "s"} from ${bn}${r.col ? ` (${r.col})` : ""}` : `Nothing new to copy from ${bn}`); render(); };
+    render(); }
   DI.p.appendChild($("#scorebtn")); $("#scorebtn").className = "drow dlink"; $("#scorebtn").setText("How notes are scored ›");
   $("#scorebtn").addEventListener("click", () => closePops());
-  opener(DI, () => { alCb.checked = showAll; syncBac(); }); syncBac();
+  opener(DI, () => { alCb.checked = showAll; syncBac(); DI.p.classList.remove("emomode"); }); syncBac();
   // Find, Follow note (an icon), Saved, and the ︿ that tucks the bar away
   right.appendChild(root.querySelector("header .search"));
   // on a narrow pane Find is a magnifying glass that opens the search box
