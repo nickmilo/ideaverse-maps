@@ -4574,7 +4574,10 @@ POPS.push(["#viewbtn", "#viewpop", "#viewms", () => { renderViewList(); }]);
 { const t0 = $("#viewpop").querySelector(":scope > .pt"); if (t0) { const hd = doc.createElement("div"); hd.className = "vhd"; t0.before(hd); hd.appendChild(t0);
     hd.classList.add("fhd"); const fa = hd.createSpan({ cls: "facts" }); const vc = $("#vcount"); if (vc) fa.appendChild(vc);
     const ng = fa.createEl("button", { cls: "chip vgadd", text: "+ Group", attr: { type: "button", title: "Make a group for your views (Annual Review, Daily Drivers…)" } });
-    ng.onclick = e => { e.stopPropagation(); vNewGroup = true; renderViewList(); }; } }
+    ng.onclick = e => { e.stopPropagation(); vNewGroup = true; renderViewList(); };
+    // on a phone (no pointing, no dragging) the rows show just their names; Edit shows each view's controls on a line of its own beneath it (0.7.55)
+    const ed = fa.createEl("button", { cls: "chip vgedit", text: "Edit", attr: { type: "button" } });
+    ed.onclick = e => { e.stopPropagation(); const on = !$("#vlist").classList.contains("editing"); $("#vlist").classList.toggle("editing", on); ed.textContent = on ? "Done" : "Edit"; ed.classList.toggle("on", on); }; } }
 // Saved shows no hover hints (Nick, 0.7.50): each button keeps its words as a description for screen readers
 { const vp = $("#viewpop"); for (const el of vp.querySelectorAll("[title], [aria-label]")) { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); } syncFolderBtn(); }
 $("#viewbtn").onclick = e => { e.stopPropagation(); const el = $("#viewpop"), open = el.hidden; closePops("#viewpop"); closeColl(); el.hidden = !open; $("#viewbtn").setAttribute("aria-expanded", String(open)); if (open) { renderViewList(); if (typeof renderTourList === "function") renderTourList(); } };

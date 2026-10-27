@@ -1209,3 +1209,11 @@ body:not(.is-mobile) .ivm.ivm #vlist.vlist2 .vr:hover .vgo .m{display:none}
 .ivm.ivm #viewpop .msf .vfpill{font-size:11px;padding:1px 9px;height:auto;min-height:0;border-radius:999px}
 .ivm #viewpop .msf{justify-content:flex-start;align-items:center}
 .ivm.ivm #viewpop .msf #vdone{margin-left:auto}
+/* 0.7.55 · Saved on a phone: names only, full width; Edit puts each view's controls on a line beneath it */
+.ivm #viewpop .vgedit{display:none}
+body.is-mobile .ivm #viewpop .vgedit{display:inline-flex}
+body.is-mobile .ivm.ivm #vlist.vlist2:not(.editing) .vr > :not(.vgo),
+body.is-mobile .ivm.ivm #vlist.vlist2:not(.editing) details.vgrp > summary > .va{display:none}
+body.is-mobile .ivm.ivm #vlist.vlist2.editing .vr{flex-wrap:wrap;justify-content:flex-end;row-gap:2px;padding-bottom:4px}
+body.is-mobile .ivm.ivm #vlist.vlist2.editing .vr > .vgo{flex:1 1 100%}
+body.is-mobile .ivm.ivm #vlist.vlist2 .vr{cursor:default}
