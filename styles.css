@@ -1186,3 +1186,10 @@ body:not(.is-mobile) .ivm #vlist.vlist2 details.vgrp > summary:not(:hover):not(:
 .ivm.ivm #vlist.vlist2 .vgloose > summary .t{color:var(--ink)}
 body:not(.is-mobile) .ivm #vlist.vlist2 .vr:not(:hover):not(:focus-within) > :not(.vgo),
 body:not(.is-mobile) .ivm #vlist.vlist2 details.vgrp > summary:not(:hover):not(:focus-within) > .va{display:none}
+/* 0.7.49 · phones: the second row takes Sync, Focus, Saved and Display, and wraps rather than running off the edge */
+.ivm header.tb2 .tbr.tbr-phone{flex-wrap:wrap;justify-content:flex-start;row-gap:6px}
+.ivm.ivm header.tb2 .tbr.tbr-phone > #viewms > .mspop,.ivm.ivm header.tb2 .tbr.tbr-phone > #dispms > .mspop{left:0;right:auto}
+.ivm.ivm[data-tbwrap="1"] header.tb2 .tbr > #viewms > .mspop,.ivm.ivm[data-tbwrap="1"] header.tb2 .tbr > #dispms > .mspop{left:0;right:auto}
+.ivm.ivm header.tb2 .tbr > #viewms,.ivm.ivm header.tb2 .tbr > #dispms{margin:0;padding:0;gap:0;order:0}
+.ivm.ivm header.tb2 .tbr > #follownote,.ivm.ivm header.tb2 .tbr > #focusmode{width:32px;min-width:32px;height:30px;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center}
+.ivm.ivm.ivm header.tb2 .tbl > #viewms,.ivm.ivm.ivm header.tb2 .tbl > #dispms{order:0}
