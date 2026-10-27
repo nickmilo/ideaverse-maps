@@ -3,7 +3,7 @@
 import { Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 
-export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse", "crumbs"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
+export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -80,7 +80,7 @@ const SLMIN = (() => { const c = {}; for (let i=0;i<n;i++) if (!isNaN(TV[i])) { 
   for (let y = minYear; y <= NOW_Y; y++) if ((c[y]||0) >= 10) return y; return minYear; })();
 const pref = (key, v) => { const s = host.store.get(key); return s === undefined ? v : s; };
 const save = (key, v) => host.store.set(key, v);
-// emoji labels (Linear Calendar, Recent Breadcrumbs): path → emoji, read once from a base
+// emoji labels (Linear Calendar): path → emoji, read once from a base
 let LCEMO = pref("iv-lcemo", false) === true, EMO = null, emoBusy = null;
 const loadEmo = async () => { if (!host.emojis) return "Emoji labels need a newer Obsidian"; if (emoBusy) return emoBusy; emoBusy = (async () => { const r = await host.emojis(); emoBusy = null; if (r.err) { EMO = null; return `Couldn't read emojis: ${r.err}`; } EMO = new Map(Object.entries(r.map)); return ""; })(); return emoBusy; };
 // Linear Calendar with Show emojis: a note's emoji takes the place of its dot, bigger the higher its level (Nick); notes with no emoji keep their dot
@@ -1069,7 +1069,6 @@ function morph(animate, cam){
 let camBusy = 0;
 function setView(v){
   if (v === view) return;
-  if (v === "crumbs" && !EMO) void loadEmo().then(() => { if (view === "crumbs" && EMO) relayout(false, false, () => fitTarget()); });   // the trail shows your emojis when there's a base to read
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
   if (v === "spacetime" && mode !== "time") { modeKeep = mode; mode = "time"; }
@@ -1921,51 +1920,6 @@ EXP.lifeline = {
     const tn = (Date.now() - yStart(y0))/(365.2425*DAY); if (tn > 0 && tn < y1 - y0 + 1) { ctx.fillStyle = css.accent; ctx.beginPath(); ctx.arc(sx(tn*pxYear), by, 5, 0, 6.2832); ctx.fill(); }
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
   legend: "Lifeline: your whole ideaverse on one line, left to right. Each note stands on it like a mark on a seismograph: the higher its level, the taller its stem (hubs tallest). Unlinked notes hang just below the line. The gold dot is today.",
-};
-
-// ---------- Recent Breadcrumbs (Experimental): the notes you changed lately, newest top-left, as a trail ----------
-// Three notes to a column, each a little further in (a small staircase), then the next column; a new day starts a new column under its name.
-// Meant for a short, wide pane (split one at the bottom). The text is a touch smaller than your note text (7/8 of it) and stays that size: the map scrolls sideways rather than zooming to fit.
-// A day keeps at most 30 notes; a burst (eight or more changed within two minutes, the ripple of one edit) keeps only its biggest note.
-const CR = { items: [], days: [], F: 14, lh: 24, font: "" };
-function crumbsPick(ids){ const out_ = []; if (!ids.length) return { keep: [], hid: 0 }; const big = i => N[i].level * 1e6 + out[i].length + inn[i].length; ids.sort((a_, b_) => N[a_].mt - N[b_].mt);
-  let run = [ids[0]]; const flush = () => { if (run.length >= BURST_MIN) out_.push(run.reduce((m, i) => big(i) > big(m) ? i : m, run[0])); else out_.push(...run); };
-  for (let q = 1; q < ids.length; q++) { if (N[ids[q]].mt - N[ids[q-1]].mt <= BURST_GAP) run.push(ids[q]); else { flush(); run = [ids[q]]; } } flush();
-  out_.sort((a_, b_) => N[b_].mt - N[a_].mt); return { keep: out_.slice(0, CAP_DAY), hid: ids.length - Math.min(out_.length, CAP_DAY) }; }
-function layoutCrumbs(){ for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
-  const cs = getComputedStyle(doc.body), base = parseFloat(cs.getPropertyValue("--font-text-size")) || parseFloat(cs.fontSize) || 16;
-  CR.F = base * .875; CR.lh = CR.F * 1.75; CR.font = `${CR.F}px ${cs.getPropertyValue("--font-interface") || cs.fontFamily}`; ctx.font = CR.font;
-  const ind = ctx.measureText("000").width, emW = CR.F * 1.35, dotW = CR.F * .9, gap = CR.F * 2.2, dayGap = CR.F * 2.4;
-  const ids = []; for (let i=0;i<n;i++) { EHID[i] = 1; if (vis[i] && N[i].mt) ids.push(i); } ids.sort((a_, b_) => N[b_].mt - N[a_].mt);
-  // group by day (your time zone), newest first, at most 21 days
-  const days = []; for (const i of ids) { const d0 = new Date(N[i].mt); d0.setHours(0, 0, 0, 0); const t = d0.getTime(); let g = days[days.length - 1]; if (!g || g.t !== t) { if (days.length >= 21) break; days.push(g = { t, ids: [] }); } g.ids.push(i); }
-  CR.items = []; CR.days = []; let x = 0;
-  for (const g of days) { const { keep, hid } = crumbsPick(g.ids); const dx = x; let colW = 0;
-    keep.forEach((i, j) => { const r = j % 3; if (j && r === 0) { x += colW + gap; colW = 0; }
-      const t0 = N[i].title, t = t0.length > 28 ? t0.slice(0, 27) + "…" : t0, em = EMO ? EMO.get(N[i].path) || "" : "", tw = ctx.measureText(t).width;
-      const x0 = x + r * ind, w = dotW + (em ? emW : 0) + tw; colW = Math.max(colW, r * ind + w);
-      CR.items.push({ i, x: x0, y: r * CR.lh, w, t, em }); EX[i] = x0 + CR.F * .3; EY[i] = r * CR.lh; EHID[i] = 0; });
-    x += colW; CR.days.push({ t: g.t, x0: dx, x1: x, hid }); x += dayGap; }
-  expBox = { x0: -CR.F, y0: -CR.lh * 1.6, x1: Math.max(x, 400), y1: CR.lh * 2.6 }; }
-EXP.crumbs = {
-  layout: layoutCrumbs, ownLabels: true,
-  pick: (wx_, wy_) => { for (const c of CR.items) if (vis[c.i] && wx_ >= c.x - CR.F*.3 && wx_ <= c.x + c.w && Math.abs(wy_ - c.y) <= CR.lh/2) return c.i; return -1; },
-  guides(){ const today = new Date(); today.setHours(0, 0, 0, 0); const T0 = today.getTime();
-    ctx.font = `600 ${Math.round(CR.F * .8 * Math.min(k, 1.6))}px ${css.mono}`; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
-    for (const d of CR.days) { const x0 = sx(d.x0), x1 = sx(d.x1); if (x1 < -40 || x0 > W + 40) continue; const dd = new Date(d.t), ago = Math.round((T0 - d.t) / DAY);
-      const name = ago === 0 ? "Today" : ago === 1 ? "Yesterday" : ago < 7 ? `${DOW[dd.getDay()]} ${dd.getDate()}` : `${MON[dd.getMonth()]} ${dd.getDate()}`;
-      ctx.fillStyle = css.accent; ctx.fillText(name.toUpperCase(), x0, sy(-CR.lh * .95));
-      if (d.hid > 0) { const w_ = ctx.measureText(name.toUpperCase()).width; ctx.fillStyle = css.muted; ctx.fillText(`+${d.hid.toLocaleString()}`, x0 + w_ + 8, sy(-CR.lh * .95)); }
-      ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.beginPath(); const xl = Math.round(x1 + CR.F * 1.2 * k) + .5; ctx.moveTo(xl, sy(-CR.lh * 1.3)); ctx.lineTo(xl, sy(CR.lh * 2.5)); ctx.stroke(); } },
-  notes(lit, dim){ ctx.font = CR.font.replace(/^[\d.]+px/, `${CR.F * k}px`); ctx.textBaseline = "middle"; ctx.textAlign = "left";
-    const emF = `${CR.F * k}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
-    for (const c of CR.items) { const i = c.i; if (!VV(i)) continue; const x = sx(c.x), y = sy(c.y); if (x > W + 20 || x + c.w * k < -20 || y < -20 || y > H + 20) continue;
-      const lv = N[i].level; ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? .35 : 1;
-      ctx.fillStyle = lv >= 3 ? GRAD[lv][0] : lv === 2 ? css.l2 : css.l1; ctx.beginPath(); ctx.arc(sx(EX[i]), y, Math.max(2, CR.F * .2 * k), 0, 6.2832); ctx.fill();
-      let tx_ = x + CR.F * .9 * k; if (c.em) { ctx.font = emF; ctx.fillStyle = css.ink; ctx.fillText(c.em, tx_, y); tx_ += CR.F * 1.35 * k; ctx.font = CR.font.replace(/^[\d.]+px/, `${CR.F * k}px`); }
-      ctx.fillStyle = lv >= 3 ? css.ink : css.muted; if (i === sel || i === hover) ctx.fillStyle = css.accent; ctx.fillText(c.t, tx_, y); }
-    ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; },
-  legend: "Recent Breadcrumbs: the notes you changed lately, newest at the top left, three to a column, a new column for each day. A day shows at most 30; a burst of changes from one edit (eight or more within two minutes) counts once, by its biggest note. Best in a short, wide pane at the bottom.",
 };
 
 // ---------- Posters: a targeted dataset (a base's view, a filter) laid out by its own properties ----------
@@ -3025,7 +2979,6 @@ function leftCol(){ if (isPhone()) return 0; const c = cv.getBoundingClientRect(
   for (const el of [$("#legend"), $("#animdock")]) { if (!el || el.hidden || el.classList.contains("collapsed")) continue; const b = el.getBoundingClientRect(); if (b.width > 0) r = Math.max(r, b.right - c.left + 12); }
   return Math.min(r, 400); }
 function fitTarget0(){ const pad = 56;
-  if (view === "crumbs") return { k: 1, tx: leftCol() + 8 - expBox.x0, ty: Math.max(CR.lh * 1.7, H/2 - CR.lh) };
   if (globeOn()) { const lc = leftCol(), vw = W - sideW() - lc; return {k: .44*Math.min(vw, H)/(CS_R*1.08), tx: lc + vw/2, ty: H/2}; }
   if (expOn()) { const lc = leftCol(), vw = W - sideW() - lc, b = expBox, bw = b.x1 - b.x0, bh = b.y1 - b.y0, kk = Math.min((vw - pad)/bw, (H - pad)/bh);   // beside the bars' column
     return {k: kk, tx: lc + vw/2 - (b.x0 + bw/2)*kk, ty: H/2 - (b.y0 + bh/2)*kk}; }
@@ -3112,7 +3065,7 @@ function visTarget(xs, ys){   // camera that frames every visible note, given wh
   const kk = Math.min(4, Math.max(.1, Math.min((vw - pad*2) / Math.max(x1-x0, 40), (vh - pad*2 - 40) / Math.max(y1-y0, 40))));
   return {k:kk, tx: vw/2 - (x0+x1)/2*kk, ty: (vh + 40)/2 - (y0+y1)/2*kk};
 }
-function rad(i){ if (view === "crumbs") return Math.max(2, CR.F * .2 * k); if (view === "lincal" && emoAt(i)) return emoSize(i) * .45; if (view === "lincal") return Math.max(1.8*BOOST, Math.min(R[i]*Math.pow(k, .55)*1.5*BOOST, 30, LC.C*k*(N[i].level >= 3 ? .17 : .12)));   // Linear Calendar: a dot stays small for its day box (maps and hubs a little bigger), so it never covers its neighbors
+function rad(i){ if (view === "lincal" && emoAt(i)) return emoSize(i) * .45; if (view === "lincal") return Math.max(1.8*BOOST, Math.min(R[i]*Math.pow(k, .55)*1.5*BOOST, 30, LC.C*k*(N[i].level >= 3 ? .17 : .12)));   // Linear Calendar: a dot stays small for its day box (maps and hubs a little bigger), so it never covers its neighbors
   if (view === "stars") return Math.max(.7*BOOST, Math.min(SR[i]*Math.pow(k, .5)*(S3D ? DS3[i] : 1)*BOOST, 16)); return Math.max((view === "lincal" ? 1.8 : 1.1)*BOOST, Math.min(R[i]*Math.pow(k, .55)*(geo3On() ? DS3[i] : view === "lincal" ? 1.5 : 1)*BOOST, 30)); }   // 3D Geometric: nearer notes are bigger
 
 // ---------- Way home (Kevin Bacon): from the note you're on, the fewest links back to one note (Home by default) ----------
@@ -3488,7 +3441,7 @@ function shape(lv, x, y, r){
 const order = [...N.keys()].sort((a,b) => (N[b].level - N[a].level) || (N[b].score - N[a].score));
 const dim_ok = () => (sel === focus || sel < 0) && hover < 0;
 let LH = [];   // where labels were drawn last frame: [x, y, w, h, note], so a click on the text works like a click on the dot
-function labels(lit){ if (view === "crumbs") return;   // the trail is its own names
+function labels(lit){
   LH = [];
   if (view === "chord" && !lit && k < 2) return;   // the ring is named by its kinds; note names show for the note you're on and its links, or once zoomed in
   const nv = NVIS;
@@ -3718,7 +3671,6 @@ function zoomAt(px, py, f){ if (domeOn() || sphOn()) { px = tx; py = ty; }   // 
   // big maps (a long Spiral or Lifeline) can always zoom out past their whole picture
   const lo = view === "stars" ? .04 : domeOn() ? .3 : .15, nk = Math.min(40, Math.max(expOn() ? Math.min(lo, fitTarget().k*.6) : lo, k*f)); f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
 cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
-  if (view === "crumbs" && !e.ctrlKey && !e.metaKey) { const d_ = (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY)*(e.deltaMode === 1 ? 16 : 1); tx = Math.min(fitTarget().tx, tx - d_); tip.hidden = true; draw(); return; }   // the trail: the wheel scrolls back in time (⌘ or ctrl + wheel zooms)
   if (view === "lincal" && LCR1 > LCR0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) { ty -= e.deltaY*(e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }   // all years: the wheel scrolls through them (⌘ or ctrl + wheel, or a pinch, zooms)
   if (!e.ctrlKey && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {   // shift + wheel (or a sideways swipe) pans left and right
     const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
@@ -4439,7 +4391,7 @@ setTheme(pref("iv-theme", autoTheme()));
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
 const PIDX = new Map(N.map((d,i) => [d.path, i]));
-const VIEW_NAME = {crumbs:"Recent Breadcrumbs", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
@@ -4931,7 +4883,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
   const VN = () => ({ emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
     chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
-    shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline", crumbs: "Recent Breadcrumbs" })[view] || view;
+    shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars", "sense"]);
   // the current map's menu: its variants (Emergence, Starfield) and the options that belong to it alone
   const mo = $("#vsegms").createDiv({ cls: "mspop mapopts", attr: { id: "mapopts", role: "dialog", "aria-label": "This map" } }); mo.hidden = true;
@@ -5221,13 +5173,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     sync(); new MutationObserver(sync).observe(seg, { attributes: true, subtree: true, attributeFilter: ["aria-pressed"] });
     opener(TH); seg.addEventListener("click", e => { if (e.target.closest("button")) closePops(); }); }
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
-  const ARR_OFF = new Set(["crumbs", "ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
+  const ARR_OFF = new Set(["ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   // a narrow map: the main tabs that don't fit fold into More (from the right: Sensemakers, then Starfield, then Ideaverse), which becomes More maps, with them at the top
   // a small Lucide icon before each map's name in the maps menu
   const MICON = { emergence: "layers", ideaverse: "orbit", stars: "sparkles", sense: "compass", gogravity: "circle-dot", gograph: "gem", gochord: "aperture", gocso: "sun", gocsi: "zap",
     gotreemap: "layout-dashboard", gomosaic: "layout-grid", goshelf: "library", gobuilder: "table-2", golincal: "calendar-range", goposters: "image", gopeople: "users",
     gogeosquare: "square", gogeohex: "hexagon", gogeomandala: "flower", gogeoocta: "diamond", gogeoshells: "globe", gospiral: "rotate-cw", golifeline: "activity",
-    goplflat: "map", gopltable: "table", goplglobe: "earth", gotree: "tree-deciduous", goskyline: "building-2", gocrumbs: "footprints" };
+    goplflat: "map", gopltable: "table", goplglobe: "earth", gotree: "tree-deciduous", goskyline: "building-2" };
   const micon = (el, name) => { if (!name || el.querySelector(":scope > .mic")) return; const s_ = doc.createElement("span"); s_.className = "mic"; s_.setAttribute("aria-hidden", "true"); setIcon(s_, name); el.prepend(s_); };
   const MAIN = [...$("#vseg").querySelectorAll(":scope > button[data-v]")].filter(b => !b.hidden && !b.classList.contains("vburied"));
   // the list: "Maps of the Ideaverse", the four main maps, a thin line, then the rest
@@ -5274,8 +5226,6 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     MB.setAttribute("aria-label", "Maps"); MB.title = "Maps";
     for (const [id, ic] of Object.entries(MICON)) { const el = id.startsWith("go") && MP.querySelector("#" + id); if (el) micon(el, ic); }
     const t0 = MP.querySelector(":scope > .pt"); if (t0) t0.after(Object.assign(doc.createElement("div"), { className: "vfold vfold0" }));
-    { const ex0 = MP.querySelector(":scope > details"); if (ex0) { const gc = doc.createElement("button"); gc.className = "chip"; gc.id = "gocrumbs"; gc.textContent = "Recent Breadcrumbs";
-        const su0 = ex0.querySelector(":scope > summary"); su0.after(gc); micon(gc, "footprints"); gc.onclick = () => { closePops(); driftStop(); setView("crumbs"); }; } }
     { const ex = MP.querySelector(":scope > details"); if (ex) { const exd = Object.assign(doc.createElement("div"), { className: "vfold" }); ex.before(exd);
         // Nick's order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Tesla, Corona, Chord, Base Builder (the quick keys follow it)
         for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
@@ -5286,7 +5236,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       for (const [id, k_] of Object.entries(QPIN)) { const el = MP.querySelector("#" + id); if (el) m_.set(k_, el); } return m_; };
     const KEYMAPS = () => [...MP.querySelectorAll(":scope > .chip")].filter(c_ => !c_.hidden);
     const chipFor = () => { const id = { gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", lincal: "golincal", spiral: "gospiral", lifeline: "golifeline",
-        tree: "gotree", skyline: "goskyline", crumbs: "gocrumbs", posters: "goposters", people: "gopeople", chord: CSPH === "out" ? "gocso" : CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
+        tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" ? "gocso" : CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
       return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };
     // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
     const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop"]) $(id).hidden = id !== v_; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
