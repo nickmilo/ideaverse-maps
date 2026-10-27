@@ -5258,15 +5258,16 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const fold = () => { for (const b of MAIN) { b.hidden = true; FOLD_T.add(b.dataset.v); } };
     // one row if it fits (folding tabs as needed); if even Emergence alone doesn't fit beside the tools, the tools drop to a second row and the tabs get the whole first row
     // keep one row as long as possible: first Find shrinks to its magnifying glass, then tabs fold into the ☰ list, and only if even one tab won't fit do the tools drop to a second row
-    // Sync, Focus, Saved and Display live at the end of the first row; when the tools take a second row, these four start it (else they run off the edge on a phone or a narrow pane)
-    const MOV = ["#follownote", "#focusmode", "#viewms", "#dispms"].map(id => $(id)).filter(Boolean), tr = root.querySelector("header .tbr");
-    if (MOV.length && MOV[0].parentElement !== tl) for (const el of MOV) tl.appendChild(el);
+    // the icons after the map button (Arrange, Sync, Focus, Saved, Display) stay on the first row while they fit; when the tools have taken a second row and the first still runs out of room,
+    // they move down one at a time, from the end, so the first row stays full and nothing runs off the edge (0.7.51; Nick: "one should only move down when it runs out of space")
+    const MOV = ["#arrms", "#follownote", "#focusmode", "#viewms", "#dispms"].map(id => $(id)).filter(Boolean), tr = root.querySelector("header .tbr");
+    if (MOV.some(el => el.parentElement !== tl)) for (const el of MOV) tl.appendChild(el);
     root.dataset.tbone = Platform.isMobile ? "" : "1"; root.dataset.tbwrap = ""; root.dataset.findmini = ""; root.dataset.vgoff = ""; fold();
     // Show more maps in the header: Find shrinks to its magnifying glass first, then the small map names go
     if (over()) { root.dataset.findmini = "1"; fold(); }
     if (VGRID && over()) { root.dataset.vgoff = "1"; fold(); }
     if (over()) { root.dataset.tbwrap = "1"; root.dataset.findmini = ""; root.dataset.vgoff = "1"; fold();
-      if (tr && over()) { const first = tr.firstChild; for (const el of MOV) tr.insertBefore(el, first); } }
+      if (tr) for (let q = MOV.length - 1; q >= 0 && over(); q--) tr.insertBefore(MOV[q], tr.firstChild); }
     $("#vmorepop").querySelectorAll(":scope > .vfoldb").forEach(x => x.remove()); vfold.hidden = false;
     for (const b of MAIN) { const c = $("#vmorepop").createEl("button", { cls: "chip", text: b.textContent.replace(/\s*▾\s*$/, ""), attr: { type: "button" } }); if (tabV(view) === b.dataset.v) c.classList.add("on");
       c.classList.add("vfoldb"); c.dataset.v = b.dataset.v; micon(c, MICON[b.dataset.v]); vfold.before(c);
