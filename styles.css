@@ -1157,3 +1157,14 @@ body:not(.is-mobile) .ivm #vlist.vlist2 .vr:not(:hover):not(:focus-within) > :no
 body:not(.is-mobile) .ivm #vlist.vlist2 details.vgrp > summary:not(:hover):not(:focus-within) > .va{visibility:hidden}
 .ivm.ivm #viewpop{width:min(420px,calc(100cqw - 24px))}
 .ivm #vlist.vlist2{max-height:min(460px,55vh)}
+/* 0.7.47 · Sync, Focus, Saved and Display: the same width and the same gap, whatever wraps them */
+.ivm.ivm header.tb2 .tbl > #viewms,.ivm.ivm header.tb2 .tbl > #dispms{margin:0;padding:0;gap:0}
+.ivm.ivm header.tb2 .tbl > #follownote,.ivm.ivm header.tb2 .tbl > #focusmode,.ivm.ivm header.tb2 #viewbtn,.ivm.ivm header.tb2 #dispbtn{width:32px;min-width:32px;height:30px;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;gap:0}
+.ivm.ivm header.tb2 #dispbtn > b,.ivm.ivm header.tb2 #viewbtn > b{display:none}
+/* 0.7.47 · Tours on their own button */
+.ivm header.tb2 #tourpop{width:min(340px,calc(100cqw - 24px))}
+.ivm #tourpop #tlist{overflow:auto;max-height:min(340px,50vh)}
+.ivm #tourpop #tlist .vr{display:flex;align-items:center;gap:4px;border-radius:6px;padding:2px 2px 2px 0}
+.ivm #tourbtn.recording{color:#fff;background:#c0392b;border-color:#c0392b}
+.ivm.ivm header.tb2 #tourbtn{width:32px;min-width:32px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.ivm.ivm header.tb2 #tourbtn > b{display:none}

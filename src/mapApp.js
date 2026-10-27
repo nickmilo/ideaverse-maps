@@ -4600,7 +4600,7 @@ let tours = (() => { const base = [], local = pref("iv-tours", null);
 let tourRun = null, pendingTour = null;   // tourRun: {t, ids, idx}; pendingTour: a finished recording waiting for a name
 const saveTours = () => { save("iv-tours", tours); writeSaved(); };
 function syncRec(){
-  { const vb = $("#viewbtn"); vb.textContent = rec ? `● Rec · ${rec.notes.length}` : "★ Saved"; vb.classList.toggle("recording", !!rec); }
+  { const tb = $("#tourbtn"); if (tb) { tb.classList.toggle("recording", !!rec); const t_ = rec ? `Recording a tour · ${rec.notes.length} note${rec.notes.length === 1 ? "" : "s"}` : "Tours"; tb.setAttribute("aria-label", t_); tb.title = t_; } }
   $("#recx").hidden = !rec;
   $("#recbtn").textContent = rec ? `■ Stop recording (${rec.notes.length} note${rec.notes.length === 1 ? "" : "s"})` : "● Record a tour";
   $("#recbtn").classList.toggle("on", !!rec);
@@ -4651,7 +4651,7 @@ function startTour(t, autoplay){
   win.setTimeout(() => { tourGo(0); if (autoplay) setPlaying(true); }, t.start ? 800 : 0);
 }
 function endTour(){ if (!tourRun) return; tourRun = null; if (playing) setPlaying(false); syncTour(); }
-function openTourPop(){ closePops("#viewpop"); closeColl(); $("#viewpop").hidden = false; $("#viewbtn").setAttribute("aria-expanded", "true"); renderViewList(); renderTourList(); }   // tours live in the Saved popover
+function openTourPop(){ const p_ = $("#tourpop") || $("#viewpop"), b_ = $("#tourbtn") || $("#viewbtn"); closePops("#" + p_.id); closeColl(); p_.hidden = false; b_.setAttribute("aria-expanded", "true"); renderTourList(); }   // tours have their own button (0.7.47), left of Capture
 $("#recx").onclick = e => { e.stopPropagation(); stopRec(); };
 $("#recbtn").onclick = async () => { if (rec) { stopRec(); return; } if (await ensureFolder()) startRec(); };
 $("#tsavebtn").onclick = saveTour;
@@ -5201,6 +5201,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     st.createSpan({ cls: "tbadge", text: c ? String(c) : "" }); const t = `${c || "Some"} notes changed · rescan`; st.setAttribute("aria-label", t); st.title = t; right.appendChild(st); } }
   // Theme: one orb in the toolbar, the theme you're on; it opens the list of themes, each with its name
   const thSlot = right.createDiv({ cls: "thslot" }); thSlot.hidden = true;
+  // Tours: their own button, just left of Capture (Nick, 0.7.47): record a tour, name it, play it
+  { const TO = popBtn("tour", "Tours", "star"); TO.b.empty(); setIcon(TO.b, "route"); { const sv = TO.b.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } }
+    TO.b.classList.add("tbi"); TO.b.setAttribute("aria-label", "Tours"); TO.b.title = "Tours"; const cm = $("#capms"); if (cm) right.insertBefore(TO.w, cm);
+    const vp = $("#viewpop"), tt = [...vp.querySelectorAll(":scope > .pt")].find(x => /tours/i.test(x.textContent));
+    if (tt) TO.p.appendChild(tt); for (const id of ["#recbtn", "#tsave", "#trecinfo", "#tlist"]) { const el = $(id); if (el) TO.p.appendChild(el); }
+    const rx = $("#recx"); if (rx) TO.w.insertBefore(rx, TO.p);
+    TO.p.classList.add("tourpop"); opener(TO, () => renderTourList()); syncRec(); }
   { const TH = popBtn("theme", "Theme", "star"); TH.b.empty(); TH.b.classList.add("tbi", "thorb"); TH.b.setAttribute("aria-label", "Theme"); TH.b.createEl("i"); TH.p.classList.add("thpop"); TH.p.createDiv({ cls: "pt", text: "Theme" });
     const seg = $("#themeseg"); TH.p.appendChild(seg); const THN = { paper: "Play", softpaper: "Soft Paper", lyt: "LYT Mode", obsidian: "Match Obsidian" };
     for (const b of seg.querySelectorAll("button")) if (!b.querySelector(".thn")) b.createSpan({ cls: "thn", text: THN[b.dataset.th] || b.dataset.th });
