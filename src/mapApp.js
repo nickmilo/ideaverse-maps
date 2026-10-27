@@ -20,7 +20,7 @@ const html = el => ({ set v(h) { el.empty(); el.append(sanitizeHTMLToDom(h)); } 
 const PACKS0 = (D.settings && D.settings.packs) || "";
 const cv = $("#cv"), ctx = cv.getContext("2d");
 let placeAnitab = () => {};   // set by the Animations dock (below)
-let fDots = () => {}; let ANCHOR_T = 0, CAPFIT = false, syncTB = () => {}, toggleMapOpts = () => {}, lastDown = null;   // lastDown: where the last press landed on the map   // set by the toolbar (below): labels, counts and which buttons show
+let fDots = () => {}; const FUI = {}; let ANCHOR_T = 0, CAPFIT = false, syncTB = () => {}, toggleMapOpts = () => {}, lastDown = null;   // lastDown: where the last press landed on the map   // set by the toolbar (below): labels, counts and which buttons show
 
 const N = D.nodes, E = D.edges, n = N.length;
 const LEVELS = [
@@ -4435,6 +4435,9 @@ function snapView(name){
     pg: view === "planet" ? PMODE : null, gcam: globeOn() ? {yaw: +csYaw.toFixed(3), pitch: +csPitch.toFixed(3)} : null,
     geo: view === "quincunx" ? GEO : null,
     s3d: view === "stars" ? {on: S3D, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
+    // every filter (0.7.54): the years' edge strips, dating by modified time and its window, MOCs, properties and bases; and Linear Calendar's years and halves
+    yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
+    lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF} : null,
     cam: {cx: +((W/2 - tx)/k).toFixed(1), cy: +((H/2 - ty)/k).toFixed(1), k: +k.toFixed(4)}, saved: new Date().toISOString().slice(0,10)};
 }
 function applySaved(v){
@@ -4454,6 +4457,14 @@ function applySaved(v){
   // the years shown (views saved before 0.4.14 show every year)
   { const yr = Array.isArray(v.yr) ? v.yr : [SLMIN, NOW_Y]; YR0 = Math.max(SLMIN, Math.min(NOW_Y, +yr[0] || SLMIN)); YR1 = Math.max(YR0, Math.min(NOW_Y, +yr[1] || NOW_Y)); fromY = fullY = YR0; save("iv-yr0", YR0); save("iv-yr1", YR1); }   // older views: their full-scale year becomes the start
   colls = (v.colls || []).filter(c => COLLNAME[c]); collMode = v.collMode === "all" ? "all" : "any"; save("iv-coll", colls); save("iv-collmode", collMode);
+  // every filter comes from the view (views saved before 0.7.54 had none of these: no MOCs, properties or bases, dated by the Date property)
+  if (typeof v.yrAll === "boolean") { YRALL = v.yrAll; save("iv-yrall", YRALL); }
+  { const bm = v.bymt === true; if (bm !== BYMT) { BYMT = bm; fillTV(); } save("iv-mtime", BYMT); MTWIN = MTW[v.mtwin] || v.mtwin === "all" ? v.mtwin || "all" : "all"; save("iv-mtwin", MTWIN); NOWMS = Date.now(); }
+  MOCSEL = Array.isArray(v.mocs) ? v.mocs.filter(p_ => PIDX.has(p_)) : []; MDEG = v.mocDeg === 2 ? 2 : 1; save("iv-mocs", MOCSEL); save("iv-mocdeg", MDEG); computeMS();
+  PSEL = v.props && typeof v.props === "object" && !Array.isArray(v.props) ? JSON.parse(JSON.stringify(v.props)) : {}; save("iv-props", PSEL); computePS();
+  { const nb = Array.isArray(v.bq) ? v.bq : []; if (JSON.stringify(nb) !== JSON.stringify(BQ)) { BQ = nb; save("iv-bq", BQ); void applyBQ(); } }
+  if (v.lc && view === "lincal") { LCR0 = +v.lc.r0 || LCR0; LCR1 = +v.lc.r1 || LCR1; LCHALF = v.lc.half !== false; save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); save("iv-lchalf", LCHALF); root.querySelectorAll(".lchalf button").forEach((b_, j) => b_.setAttribute("aria-pressed", String((j === 1) === LCHALF))); if (typeof syncLC === "function") syncLC(); }
+  for (const f_ of Object.values(FUI)) try { f_(); } catch (e) { /* a list not built yet */ }
   if (v.lanes) { lanes = v.lanes; save("iv-lanes", lanes); } if (v.subOrder) { subOrder = v.subOrder; save("iv-suborder", subOrder); }
   showAll = !!v.links; $("#alllinks").setAttribute("aria-pressed", String(showAll));
   fDir = v.fDir || "both"; fDepth = v.fDepth || 1; focusArmed = false;
@@ -4895,7 +4906,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const wbs = [["day", "Day"], ["week", "Week"], ["month", "Month"], ["year", "Year"], ["all", "All"]].map(([v, t]) => { const b_ = wsg.createEl("button", { text: t, attr: { type: "button" } });
       b_.onclick = e => { e.stopPropagation(); MTWIN = v; save("iv-mtwin", v); NOWMS = Date.now(); syncMT(); relayout(true, false, () => fitTarget()); if (typeof syncTB === "function") syncTB(); }; return [b_, v]; });
     const syncMT = () => { for (const [b_, v] of wbs) b_.setAttribute("aria-pressed", String(v === MTWIN)); wr.hidden = !BYMT; const ycol = $("#ycol") || yc; const rg = ycol.querySelector(".prng"); if (rg) rg.hidden = BYMT; syncYr(); };
-    win.setTimeout(syncMT, 0);
+    win.setTimeout(syncMT, 0); FUI.years = () => { cb.checked = YRALL; cm.checked = BYMT; syncMT(); };
     cm.onchange = () => { BYMT = cm.checked; save("iv-mtime", BYMT); NOWMS = Date.now(); fillTV(); syncMT(); if (typeof syncTB === "function") syncTB(); relayout(true, false, () => fitTarget()); legend(); };
     let t_ = 0; const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; SY0 = YR0; SY1 = YR1; syncYr();
       if (view === "sense" && typeof senseSteps === "function") { senseStop(); senseT = null; senseTrail = []; SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; $("#tldate").textContent = "All time"; }
@@ -5028,7 +5039,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       if (rows.length > 250) ml.createDiv({ cls: "pn", text: `${(rows.length - 250).toLocaleString()} more: type to find one.` }); };
     const applyMS = () => { computeMS(); let c_ = 0; if (MS) for (let i = 0; i < n; i++) c_ += MS[i]; mn.setText(MS ? `${c_.toLocaleString()} notes` : ""); relayout(true, false, () => fitTarget()); syncTB(); };
     mq.addEventListener("input", render); mclr.onclick = e => { e.stopPropagation(); MOCSEL = []; save("iv-mocs", MOCSEL); applyMS(); render(); };
-    FI.b.addEventListener("click", render); render(); if (MOCSEL.length) win.setTimeout(applyMS, 0); }
+    FI.b.addEventListener("click", render); render(); if (MOCSEL.length) win.setTimeout(applyMS, 0);
+    FUI.mocs = () => { syncD(); let c_ = 0; if (MS) for (let i = 0; i < n; i++) c_ += MS[i]; mn.setText(MS ? `${c_.toLocaleString()} notes` : ""); render(); }; }
   // Properties: every property your notes use (with a value shared by two or more notes), each opening to its values; pick values to keep only those notes
   { const pc = fcols.createDiv({ cls: "fcol pcol" }), hd = pc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Properties" }); const ac = hd.createSpan({ cls: "facts" });
     const pn_ = ac.createSpan({ cls: "bqn" }); const pclr = ac.createEl("button", { cls: "chip", text: "Clear", attr: { type: "button" } });
@@ -5052,6 +5064,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         if (vals.length > 150) det.createDiv({ cls: "pn", text: `${(vals.length - 150).toLocaleString()} more: type to find one.` }); }
       if (!shown) pl.createDiv({ cls: "pn", text: "No match." }); };
     const applyPS = () => { computePS(); let c_ = 0; if (PRS) for (let i = 0; i < n; i++) c_ += PRS[i]; pn_.setText(PRS ? `${c_.toLocaleString()} notes` : ""); relayout(true, false, () => fitTarget()); syncTB(); };
+    FUI.props = () => { let c_ = 0; if (PRS) for (let i = 0; i < n; i++) c_ += PRS[i]; pn_.setText(PRS ? `${c_.toLocaleString()} notes` : ""); if (!pl.hidden && PX) render(); };
     pq.addEventListener("input", render); pclr.onclick = e => { e.stopPropagation(); PSEL = {}; save("iv-props", PSEL); applyPS(); render(); };
     FI.b.addEventListener("click", render); if (Object.keys(PSEL).length) win.setTimeout(applyPS, 0); }
   // Bases: every base in the vault, A–Z; open one to pick its views. The map keeps only the notes those views hold (any of them).
