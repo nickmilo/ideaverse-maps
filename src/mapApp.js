@@ -4417,7 +4417,7 @@ setTheme(pref("iv-theme", autoTheme()));
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
 const PIDX = new Map(N.map((d,i) => [d.path, i]));
-const VIEW_NAME = {planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
@@ -4555,7 +4555,7 @@ function renderViewList(){
       for (const g of vgroups) sel_.createEl("option", { text: g.name, value: g.name }); sel_.value = v.group || "";
       sel_.onclick = e => e.stopPropagation(); sel_.onchange = () => { if (sel_.value) v.group = sel_.value; else delete v.group; const a = views.indexOf(v); views.splice(a, 1); views.push(v); saveViews(); renderViewList(); }; }
     // Rename (Nick, 0.7.58): a click on the name opens the view, so renaming has its own button; the name turns into a box in place
-    btn(r, "vren", "Rename", "Rename this view", () => { const inp = doc.createElement("input"); inp.type = "text"; inp.value = v.name; inp.className = "vgren vren"; go.replaceWith(inp); inp.focus(); inp.select();
+    btn(r, "vren", "Rename", "Rename this view", () => { const inp = doc.createElement("input"); inp.type = "text"; inp.value = v.name; inp.className = "vgren vrenin"; go.replaceWith(inp); inp.focus(); inp.select();
       let fired = false; const fin = ok => { if (fired) return; fired = true; const nm = (inp.value || "").trim();
         if (ok && nm && nm !== v.name && !views.some(x => x !== v && x.name === nm)) { if (curView === v.name) curView = nm; v.name = nm; saveViews(); }
         renderViewList(); };

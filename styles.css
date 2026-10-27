@@ -1248,4 +1248,4 @@ body.is-mobile .ivm.ivm #vlist.vlist2 .vr{cursor:default}
 .ivm .emoft .emoimp{align-self:flex-start;font-size:12.5px}
 .ivm .emohd,.ivm .emohelp,.ivm .emoft{flex:none}
 .ivm .emost:empty{display:none}
-.ivm.ivm #vlist.vlist2 .vr > .vren{flex:1 1 auto;min-width:0}
+.ivm.ivm #vlist.vlist2 .vr > .vrenin{flex:1 1 auto;min-width:0}
