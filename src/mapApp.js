@@ -74,14 +74,17 @@ const MTW = { day: DAY, week: 7*DAY, month: 30.44*DAY, year: YEAR }; let MTWIN =
 let NOWMS = Date.now(); const winSpan = () => BYMT && MTW[MTWIN] ? MTW[MTWIN] : 0, winStart = () => NOWMS - winSpan();
 const fillTV = () => N.forEach((d,i) => TV[i] = BYMT ? (d.mt || NaN) : /^\d{4}-\d{2}-\d{2}$/.test(d.date||"") ? Date.parse(d.date) : NaN); fillTV();
 const ARCH = Uint8Array.from(N, d => d.archive ? 1 : 0), hasArch = ARCH.some(v => v);
-let minYear = NOW_Y; for (let i=0;i<n;i++) if (!isNaN(TV[i])) minYear = Math.min(minYear, new Date(TV[i]).getUTCFullYear());
+// the years always come from the Date property, even when the map opened with Organize by most recently modified on (0.7.58: opened that way,
+// the slider took its years from the files' modified times, 2024–2026, and kept them after the switch went off; Nick)
+const TVD = Float64Array.from(N, d => /^\d{4}-\d{2}-\d{2}$/.test(d.date||"") ? Date.parse(d.date) : NaN);
+let minYear = NOW_Y; for (let i=0;i<n;i++) if (!isNaN(TVD[i])) minYear = Math.min(minYear, new Date(TVD[i]).getUTCFullYear());
 // the sliders start at the first year with a real body of notes (10+), so a stray 1984 note doesn't waste most of the track; older notes sit in "Before"
-const SLMIN = (() => { const c = {}; for (let i=0;i<n;i++) if (!isNaN(TV[i])) { const y = new Date(TV[i]).getUTCFullYear(); c[y] = (c[y]||0) + 1; }
+const SLMIN = (() => { const c = {}; for (let i=0;i<n;i++) if (!isNaN(TVD[i])) { const y = new Date(TVD[i]).getUTCFullYear(); c[y] = (c[y]||0) + 1; }
   for (let y = minYear; y <= NOW_Y; y++) if ((c[y]||0) >= 10) return y; return minYear; })();
 const pref = (key, v) => { const s = host.store.get(key); return s === undefined ? v : s; };
 const save = (key, v) => host.store.set(key, v);
 // emoji labels (Linear Calendar): path → emoji, read once from a base
-let LCEMO = pref("iv-lcemo", false) === true, EMEMO = pref("iv-ememo", false) === true, EMO = null, emoBusy = null;
+let LCEMO = pref("iv-lcemo", false) === true, EMEMO = pref("iv-ememo", false) === true, SMEMO = pref("iv-smemo", false) === true, EMO = null, emoBusy = null;
 // Display → Assign emojis (0.7.57): folder → emoji, kept with your saved views; a note takes the emoji of its deepest folder that has one,
 // and only a note with none falls back to the base column (Settings → Emoji labels)
 let EMOF = (() => { const o = pref("iv-emofold", null); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; })();
@@ -93,7 +96,7 @@ const loadEmo = async () => { if (!host.emojis) return Object.keys(EMOF).length 
   if (r.err) { EMO = null; emoBuild(); return Object.keys(EMOF).length ? "" : `Couldn't read emojis: ${r.err}`; } EMO = new Map(Object.entries(r.map)); emoBuild(); return ""; })(); return emoBusy; };
 // Linear Calendar with Show emojis: a note's emoji takes the place of its dot, bigger the higher its level (Nick); notes with no emoji keep their dot
 // where emojis replace dots: Linear Calendar (its own switch) and Emergence with Space-Time (theirs, 0.7.56)
-const emoView = () => !!EMOI && ((view === "lincal" && LCEMO) || ((view === "emergence" || view === "spacetime") && EMEMO && !DOME[view]));   // not in Planetarium
+const emoView = () => !!EMOI && ((view === "lincal" && LCEMO) || ((view === "emergence" || view === "spacetime") && EMEMO && !DOME[view]) || (view === "sense" && SMEMO));   // not in Planetarium
 const emoAt = i => emoView() ? EMOI[i] : undefined;
 const EMOSZ = [0, .85, 1, 1.3, 1.65, 2];
 const emoSize = i => view === "lincal" ? Math.max(8.1, Math.min(16.2, LC.C * k * .324)) * EMOSZ[N[i].level]   // 10% smaller than 0.7.39 (Nick)
@@ -361,7 +364,8 @@ const AXES = {
   "p:w":   {name:"Length (words)", get:d => d.p && d.p.w, kind:"log", jit:.006},
   "p:kb":  {name:"Size (KB)", get:d => d.p && d.p.kb, kind:"log", jit:.006},
   "links": {name:"Links (in + out)", get:d => d.body_in + d.body_out, kind:"log", jit:.01},
-  "upin":  {name:"Uplinks (notes that link up to it)", get:d => d.up_in, kind:"log", jit:.01}};
+  "upin":  {name:"Uplinks (notes that link up to it)", get:d => d.up_in, kind:"log", jit:.01},
+  "score": {name:"Link score", get:d => d.score, kind:"log", jit:.01}};   // the score that sets each note's level (Display → How notes are scored); Nick, for Gravity (0.7.58)
 // the number properties named in Settings → By → More… (year by default): each becomes an axis, scaled to its values.
 // Year-like ones that reach back centuries or millennia squeeze the far past, as Time's "Before" strip does.
 for (const key of (D.settings && D.settings.axis_props) || []) { const vals = N.map(d => d.p && d.p.n && d.p.n[key]).filter(v => v != null && isFinite(v)); if (!vals.length) continue;
@@ -406,6 +410,7 @@ function axisValue(d){   // "Rank 4.5", "Released 1972", … for the active Rank
     case "p:born": return `Born ${yrLabel(Math.round(v))}`;
     case "p:w": return `${Math.round(v).toLocaleString()} words`;
     case "p:kb": return v >= 1024 ? `${(v/1024).toFixed(1)} MB` : `${(+v).toFixed(v < 10 ? 1 : 0)} KB`;
+    case "score": return `Link score ${(+v).toFixed(v < 10 ? 1 : 0)}`;
     case "links": return `${v} links (${d.body_in} in · ${d.body_out} out)`;
     case "upin": return `${v} ${v === 1 ? "note links" : "notes link"} up to it`;
   } return "";
@@ -3694,6 +3699,7 @@ $("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoom
   fit(true); };   // in a dome: face forward again
 root.querySelectorAll("#xseg button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.x === mode)); b.onclick = () => setMode(b.dataset.x); });
 $("#xmore").onchange = e => setMode(e.target.value || "time");
+if (!root.querySelector('#xmore option[value="score"]')) { const o = doc.createElement("option"); o.value = "score"; o.textContent = AXES.score.name; const up = root.querySelector('#xmore option[value="upin"]'); if (up) up.after(o); else $("#xmore").appendChild(o); }
 for (const key of Object.keys(AXES)) if (key.startsWith("n:") && !root.querySelector(`#xmore option[value="${CSS.escape(key)}"]`)) $("#xmore").createEl("option", { value: key, text: AXES[key].name });   // your own number properties
 root.querySelectorAll("#xmore option").forEach(o => { if (o.value && !axisHas(o.value)) o.remove(); });   // only axes some note has
 { const rb = $('#xseg button[data-x="rank"]'); if (rb) rb.hidden = !axisHas("rank");
@@ -3972,9 +3978,14 @@ function goEmDome(m){ closePops(); DOME.emergence = true; save("iv-dome", DOME);
 POPS.push(['#vseg button[data-v="emergence"]', "#emerpop", "#vsegms"]);
 const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.checked = view === "spacetime" ? r.value === "spacetime" : r.value === (DOME.emergence ? "dome" : "flat"));
 // Emergence's gear: Show emojis, like Linear Calendar's (each note's emoji in place of its dot, bigger by level; Settings → Emoji labels says where they come from)
-{ const r = $("#emerpop").createEl("label", { cls: "mini lcemo ememo" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = EMEMO; r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
+{ const r = $("#emerpop").createEl("label", { cls: "mini lcemo ememo" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = EMEMO; { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = EMEMO; }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
   const st = $("#emerpop").createDiv({ cls: "pn lcemost" });
   cb.onchange = async () => { EMEMO = cb.checked; save("iv-ememo", EMEMO); st.setText(""); if (EMEMO && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
+// Sensemakers' gear: Show emojis too (Nick, 0.7.58)
+{ const se = doc.createElement("div"); se.id = "senseemo"; se.className = "mspop"; se.hidden = true; $("#sensepop").after(se);   // its own section, since Sensemakers' Placed by only shows with AI placement
+  const r = se.createEl("label", { cls: "mini lcemo smemo" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = SMEMO; { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = SMEMO; }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
+  const st = se.createDiv({ cls: "pn lcemost" });
+  cb.onchange = async () => { SMEMO = cb.checked; save("iv-smemo", SMEMO); st.setText(""); if (SMEMO && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
 root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if (!r.checked) return; if (r.value === "spacetime") { goMap("spacetime", false); syncEmd(); return; } if (view === "spacetime") { closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); setView("emergence"); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); morph(true, () => fitTarget()); syncEmd(); });
 syncEmd();
 function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
@@ -4002,7 +4013,7 @@ function dualEl(parent, label, id){ const yc = parent.createDiv({ cls: "postctl 
   d.createEl("input", { type: "range", attr: { "aria-label": "First year", step: "1" } }); d.createEl("input", { type: "range", attr: { "aria-label": "Last year", step: "1" } });
   const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yrh" }); lb.createSpan({ cls: "yrh" }); return { yc, hv }; }
 // emoji labels (Linear Calendar for now): path → emoji, read once from the base
-if (LCEMO || EMEMO) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
+if (LCEMO || EMEMO || SMEMO) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
 function drawEmojis(lit, dim){ if (!emoView()) return; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   for (const lv of [1, 2, 3, 4, 5]) for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i)) continue; const e_ = EMOI[i]; if (!e_) continue;
     const x = sx(X[i]), y = sy(Y[i]); if (x < -30 || x > W + 30 || y < -30 || y > H + 30) continue; const f = emoSize(i);
@@ -4020,7 +4031,7 @@ const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) e
   a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true);
   for (const [el, d] of [[pv, -1], [nx, 1]]) el.onclick = e => { e.stopPropagation(); const [y0, y1] = lcClamp(); const sh_ = Math.max(y0 - LCR0, Math.min(y1 - LCR1, d)); LCR0 += sh_; LCR1 += sh_; save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); syncLC(); if (view === "lincal") morph(true, () => fitTarget()); };
   // Show emojis: each note's emoji from a base (Settings → Emoji labels; by default your Recents base's ✨ column), just left of its dot
-  { const r = c.createEl("label", { cls: "mini lcemo", attr: { title: "Each note's emoji from a base column (Settings → Emoji labels), beside its dot" } }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = LCEMO; r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
+  { const r = c.createEl("label", { cls: "mini lcemo", attr: { title: "Each note's emoji from a base column (Settings → Emoji labels), beside its dot" } }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = LCEMO; { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = LCEMO; }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
     const st = c.createDiv({ cls: "pn lcemost" });
     cb.onchange = async () => { LCEMO = cb.checked; save("iv-lcemo", LCEMO); st.setText(""); if (LCEMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } draw(); }; }
   return { yc }; })(); LCUIOK = true;
@@ -4453,12 +4464,21 @@ function snapView(name){
     // every filter (0.7.54): the years' edge strips, dating by modified time and its window, MOCs, properties and bases; and Linear Calendar's years and halves
     yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
     lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF} : null,
+    emo: {lc: LCEMO, em: EMEMO, sm: SMEMO},   // Show emojis on Linear Calendar and Emergence (0.7.58, Nick)
+    // Base Builder and Posters (0.7.58): the layout (Rows, Scatter, Mosaic, Constellation, Timeline) and what each axis, row and size reads (Nick's movies Mosaic came back as Rows)
+    pst: view === "builder" || view === "posters" ? (P_ => ({ across: P_.across, lanes: P_.lanes, size: P_.size, height: P_.height, mosaic: !!P_.mosaic, con: !!P_.con, tl: !!P_.tl, conSel: P_.conSel, conMax: P_.conMax, rng: JSON.parse(JSON.stringify(P_.rng || {})), lhide: JSON.parse(JSON.stringify(P_.lhide || {})) }))(view === "builder" ? PSTB : PSTP) : null,
     cam: {cx: +((W/2 - tx)/k).toFixed(1), cy: +((H/2 - ty)/k).toFixed(1), k: +k.toFixed(4)}, saved: new Date().toISOString().slice(0,10)};
 }
 function applySaved(v){
   if (typeof playing !== "undefined" && playing) setPlaying(false);
   closePops(); curView = v.name;
   if (["square", "hex", "mandala", "octa", "shells"].includes(v.geo)) { GEO = v.geo; save("iv-geo", GEO); }
+  if (v.emo && typeof v.emo === "object") { LCEMO = v.emo.lc === true; EMEMO = v.emo.em === true; SMEMO = v.emo.sm === true; save("iv-lcemo", LCEMO); save("iv-ememo", EMEMO); save("iv-smemo", SMEMO); if (FUI.emosw) FUI.emosw();
+    if ((LCEMO || EMEMO || SMEMO) && !EMO) void loadEmo().then(() => draw()); }
+  if (v.pst && (v.view === "builder" || v.view === "posters")) { const P_ = v.view === "builder" ? PSTB : PSTP, c = v.view === "builder" ? "b" : "p", q = v.pst;
+    for (const key of ["across", "lanes", "size", "height"]) { P_[key] = q[key] ?? null; save(`iv-${c}${key}`, P_[key]); }
+    P_.mosaic = !!q.mosaic; save(`iv-${c}mosaic`, P_.mosaic); P_.rng = q.rng || {}; save(`iv-${c}rng`, P_.rng); P_.lhide = q.lhide || {}; save(`iv-${c}lhide`, P_.lhide);
+    if (c === "b") { P_.con = !!q.con; save("iv-bcon", P_.con); P_.tl = !!q.tl; save("iv-btl", P_.tl); P_.conSel = q.conSel ?? null; save("iv-bconsel", P_.conSel); P_.conMax = +q.conMax || 40; save("iv-bconmax", P_.conMax); } }
   { const nv = VIEWS_ON.includes(v.view) ? v.view : "emergence";
     if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
     ungrow();   // back to today's levels; a saved time-lapse point re-grows them below
@@ -4534,6 +4554,13 @@ function renderViewList(){
     if (vgroups.length) { const sel_ = r.createEl("select", { cls: "vgsel", attr: { "aria-description": "Move to a group" } }); sel_.createEl("option", { text: "No group", value: "" });
       for (const g of vgroups) sel_.createEl("option", { text: g.name, value: g.name }); sel_.value = v.group || "";
       sel_.onclick = e => e.stopPropagation(); sel_.onchange = () => { if (sel_.value) v.group = sel_.value; else delete v.group; const a = views.indexOf(v); views.splice(a, 1); views.push(v); saveViews(); renderViewList(); }; }
+    // Rename (Nick, 0.7.58): a click on the name opens the view, so renaming has its own button; the name turns into a box in place
+    btn(r, "vren", "Rename", "Rename this view", () => { const inp = doc.createElement("input"); inp.type = "text"; inp.value = v.name; inp.className = "vgren vren"; go.replaceWith(inp); inp.focus(); inp.select();
+      let fired = false; const fin = ok => { if (fired) return; fired = true; const nm = (inp.value || "").trim();
+        if (ok && nm && nm !== v.name && !views.some(x => x !== v && x.name === nm)) { if (curView === v.name) curView = nm; v.name = nm; saveViews(); }
+        renderViewList(); };
+      inp.onkeydown = ev => { ev.stopPropagation(); if (ev.key === "Enter") fin(true); if (ev.key === "Escape") fin(false); }; inp.onblur = () => win.setTimeout(() => fin(true), 0);
+      inp.onclick = ev => ev.stopPropagation(); inp.onpointerdown = ev => ev.stopPropagation(); });
     btn(r, "vre", "Update", "Replace with what's on screen now", b => sure(b, "Sure?", () => { const g = v.group; views[i] = snapView(v.name); if (g) views[i].group = g; curView = v.name; saveViews(); renderViewList(); }));
     btn(r, "vdel", "×", "Delete", b => sure(b, "Delete?", () => { views.splice(views.indexOf(v), 1); saveViews(); renderViewList(); })); };
   // a new group: a name box at the top
@@ -4927,7 +4954,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       b_.onclick = e => { e.stopPropagation(); MTWIN = v; save("iv-mtwin", v); NOWMS = Date.now(); syncMT(); relayout(true, false, () => fitTarget()); if (typeof syncTB === "function") syncTB(); }; return [b_, v]; });
     const syncMT = () => { for (const [b_, v] of wbs) b_.setAttribute("aria-pressed", String(v === MTWIN)); wr.hidden = !BYMT; const ycol = $("#ycol") || yc; const rg = ycol.querySelector(".prng"); if (rg) rg.hidden = BYMT; syncYr(); };
     win.setTimeout(syncMT, 0); FUI.years = () => { cb.checked = YRALL; cm.checked = BYMT; syncMT(); };
-    cm.onchange = () => { BYMT = cm.checked; save("iv-mtime", BYMT); NOWMS = Date.now(); fillTV(); syncMT(); if (typeof syncTB === "function") syncTB(); relayout(true, false, () => fitTarget()); legend(); };
+    cm.onchange = () => { BYMT = cm.checked; save("iv-mtime", BYMT); NOWMS = Date.now(); fillTV(); syncMT(); if (LCUIOK) syncLC(); if (typeof syncTB === "function") syncTB(); relayout(true, false, () => fitTarget()); legend(); };
     let t_ = 0; const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; SY0 = YR0; SY1 = YR1; syncYr();
       if (view === "sense" && typeof senseSteps === "function") { senseStop(); senseT = null; senseTrail = []; SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; $("#tldate").textContent = "All time"; }
       win.clearTimeout(t_); if (commit) { save("iv-yr0", YR0); save("iv-yr1", YR1); } t_ = win.setTimeout(() => { relayout(false); if (typeof syncTB === "function") syncTB(); }, commit ? 0 : 90); };
@@ -4981,7 +5008,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // the current map's menu: its variants (Emergence, Starfield) and the options that belong to it alone
   const mo = $("#vsegms").createDiv({ cls: "mspop mapopts", attr: { id: "mapopts", role: "dialog", "aria-label": "This map" } }); mo.hidden = true;
   const moT = mo.createDiv({ cls: "pt" });
-  for (const id of ["#emerpop", "#starpop", "#sensepop"]) { const el = $(id); el.classList.remove("mspop"); el.classList.add("mosec"); el.hidden = true; mo.appendChild(el); }
+  for (const id of ["#emerpop", "#starpop", "#sensepop", "#senseemo"]) { const el = $(id); el.classList.remove("mspop"); el.classList.add("mosec"); el.hidden = true; mo.appendChild(el); }
   { const g = $("#starpop").createDiv({ cls: "sglow" }); g.createSpan({ cls: "sgl", text: "Galaxy glow" }); const seg = g.createDiv({ cls: "seg", attr: { role: "group", "aria-label": "Galaxy glow" } });
     for (const [v, t] of [["soft", "Soft"], ["normal", "Normal"], ["bright", "Bright"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "data-g": v, "aria-pressed": String(v === sGlow) } });
       b.onclick = e => { e.stopPropagation(); sGlow = v; save("iv-sglow", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.g === v))); draw(); }; }
@@ -4992,9 +5019,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     tog("Turning galaxies", () => sTurn, v => { sTurn = v; save("iv-sturn", v); turnSync(); if (!v && view === "stars") { glowKey = ""; morph(true); } }); }
   const moL = mo.createDiv({ cls: "pt mol", text: "This map" }); mo.appendChild($("#laygrp")); const moNone = mo.createDiv({ cls: "pn", text: "Nothing to set on this map." });
   const hasLay = () => [...$("#laygrp").children].some(el => !el.hidden && !el.classList.contains("glbl"));
-  const variants = () => view === "emergence" || view === "spacetime" ? "#emerpop" : view === "stars" ? "#starpop" : view === "sense" && SAI ? "#sensepop" : null;
+  const variants = () => view === "emergence" || view === "spacetime" ? "#emerpop" : view === "stars" ? "#starpop" : view === "sense" ? (SAI ? "#sensepop" : "#senseemo") : null;
   toggleMapOpts = b => { const open = mo.hidden; closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!open) { mo.hidden = true; b.setAttribute("aria-expanded", "false"); return; }
-    const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop"]) $(id).hidden = id !== v_; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
+    const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop", "#senseemo"]) $(id).hidden = id !== v_; if (view === "sense") $("#senseemo").hidden = false; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
     syncRange(); moT.setText(VN()); const l = hasLay(); moL.hidden = !l || !v_; moNone.hidden = l || !!v_;
     mo.style.left = Math.max(0, b.offsetLeft - 4) + "px"; mo.hidden = false; b.setAttribute("aria-expanded", "true"); };
   POPS.push(["#vcur", "#mapopts", "#vsegms"]);
@@ -5184,7 +5211,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     pg.createDiv({ cls: "emohelp", text: "Pick an emoji for a folder and every note in it gets one. A subfolder's emoji wins over its folder's." });
     const list = pg.createDiv({ cls: "emolist" }), ft = pg.createDiv({ cls: "emoft" });
     const imp = ft.createEl("button", { cls: "pchip emoimp", text: "Copy emojis from a base column", attr: { type: "button" } }), st = ft.createDiv({ cls: "pn emost" });
-    ft.createDiv({ cls: "emowhere", text: "They show on Linear Calendar and Emergence: turn on Show emojis in each map's gear." });
+    ft.createDiv({ cls: "emowhere", text: "They show on Linear Calendar, Emergence and Sensemakers: turn on Show emojis in each map's gear." });
     const open = new Set(); let pick = null;   // folders showing their subfolders; the folder whose picker is open
     const first = v => { const g = [...new Intl.Segmenter().segment(v.trim())]; return g.length ? g[0].segment : ""; };
     const setEmo = (f, e_) => { if (e_) EMOF[f] = e_; else delete EMOF[f]; EMOF = { ...EMOF }; save("iv-emofold", EMOF); writeSaved(); emoBuild(); draw(); };
@@ -5241,6 +5268,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const aw = $("#arrms"); if (aw) left.insertBefore(aw, fb); }
   // Saved (the telescope): on the left, just before Display (Nick, 0.7.46)
   left.insertBefore($("#viewms"), DI.w); { const vb = $("#viewbtn"); vb.empty(); setIcon(vb, "telescope"); { const sv = vb.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } } vb.classList.add("tbb", "tbi"); vb.setAttribute("aria-label", "Saved views"); vb.title = "Saved views"; }
+  // Obsidian shows an element's aria-label as a hover tooltip, even on a whole menu ("Saved views and tours" hung under Saved, Nick 0.7.58); menus describe themselves instead
+  { const MENU = '[role="dialog"][aria-label], .mspop[aria-label], .tbpop[aria-label]', quiet = el => { el.setAttribute("aria-description", el.getAttribute("aria-label")); el.removeAttribute("aria-label"); };
+    root.querySelectorAll(MENU).forEach(quiet); on(root, "pointerover", e => { const el = e.target instanceof Element && e.target.closest(MENU); if (el && root.contains(el)) quiet(el); }, true); }
   // Capture: a picture (PNG) or a short clip (MP4, or WebM where MP4 can't be recorded) of the map, saved to the vault's attachments,
   // then a small card to copy it, open it, or post it with a ready caption
   { const CP = popBtn("cap", "Capture", "star"); CP.b.empty(); setIcon(CP.b, "camera"); { const sv = CP.b.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } CP.b.classList.add("tbi"); CP.b.setAttribute("aria-label", "Capture a picture or a clip to share"); CP.b.title = "Capture a picture or a clip to share";
@@ -5395,7 +5425,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" ? "gocso" : CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
       return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };
     // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
-    const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop"]) $(id).hidden = id !== v_; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
+    const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop", "#senseemo"]) $(id).hidden = id !== v_; if (view === "sense") $("#senseemo").hidden = false; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
       syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); moL.hidden = !l || !v_; moNone.hidden = true; return !!(l || v_); };
     // no hover hints in the maps menu (Nick): a map's description stays for screen readers only
     const quiet = () => MP.querySelectorAll("[aria-label], [title]").forEach(el => { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("title"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); });
@@ -5408,7 +5438,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const STW = doc.createElement("div"); STW.className = "ms mapsetms"; const ST = STW.createEl("button", { cls: "tbb tbi mapset", attr: { id: "mapsetbtn", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
     setIcon(ST, "settings"); SM.insertBefore(STW, MB.nextSibling); STW.appendChild(mo);
     POPS.push(["#mapsetbtn", "#mapopts", ".mapsetms"]);
-    const openSet = () => { closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!fillMO()) return; mo.setAttribute("aria-label", VN() + " settings"); mo.hidden = false; ST.setAttribute("aria-expanded", "true"); };
+    const openSet = () => { closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!fillMO()) return; mo.setAttribute("aria-description", VN() + " settings"); mo.hidden = false; ST.setAttribute("aria-expanded", "true"); };
     ST.onclick = e => { e.stopPropagation(); if (!mo.hidden) closePops(); else openSet(); };
     { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay()); }; }
     MB.onclick = e => { e.stopPropagation(); if (!MP.hidden) closePops(); else openMaps(); };
