@@ -1131,3 +1131,6 @@ body:not(.is-mobile) .ivm .wm-lyt{bottom:38px}
 .ivm #ycol .srange .yrh[hidden]{display:none}
 .ivm #ycol .srange .yrh.lft{transform:translateX(-100%)}
 .ivm #ycol .srange .yrh.rgt{transform:none}
+/* 0.7.42 · Display sits on the left now, after Focus: its menu opens to the right */
+.ivm.ivm header.tb2 .tbl > #dispms > #disppop{left:0;right:auto}
+.ivm header.tb2 .tbl > #dispms{flex:none}

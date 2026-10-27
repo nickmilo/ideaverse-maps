@@ -5094,6 +5094,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const fo = $("#focusmode"); fo.empty(); fo.appendChild(icon(I.focus)); fo.classList.add("tbb", "tbi"); fo.setAttribute("aria-label", "Focus on active note"); fo.title = "Focus on active note"; left.appendChild(fo);
   // Sync uses Obsidian's own link icon
   const fb = $("#follownote"); fb.empty(); setIcon(fb, "link"); { const sv = fb.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } fb.classList.add("tbb", "tbi"); fb.setAttribute("aria-label", "Sync active note with Obsidian editor"); fb.title = "Sync active note with Obsidian editor"; left.insertBefore(fb, fo);   // Sync (the link) sits left of Focus
+  // Display: just its sliders icon, right after Focus (Nick, 0.7.42)
+  { const t_ = DI.b.querySelector(".tbl2"); if (t_) t_.remove(); DI.b.classList.add("tbi"); DI.b.setAttribute("aria-label", "Display"); DI.b.title = "Display"; left.appendChild(DI.w); }
   // Arrange (how the notes are placed, with its current choice) sits just before Sync, by the map tabs
   { const aw = $("#arrms"); if (aw) left.insertBefore(aw, fb); }
   right.appendChild($("#viewms")); { const vb = $("#viewbtn"); vb.empty(); vb.appendChild(icon(I.star)); vb.classList.add("tbb", "tbi"); vb.setAttribute("aria-label", "Saved views and tours"); vb.title = "Saved views and tours"; }
