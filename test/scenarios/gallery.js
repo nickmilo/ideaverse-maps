@@ -3,7 +3,8 @@ module.exports = async ({ page, sleep, shot }) => {
   const errs = []; page.on('pageerror', e => errs.push(e.message));
   await page.evaluate(() => app.emulateMobile(false)); await sleep(3000);
   await page.evaluate(() => { for (const sp of [app.workspace.leftSplit, app.workspace.rightSplit]) if (sp && !sp.collapsed) sp.collapse(); });
-  await page.evaluate(() => app.commands.executeCommandById('ideaverse-maps:open')); await page.waitForSelector('.ivm canvas', { timeout: 600000 }); await sleep(8000);
+  for (let t = 0; t < 12; t++) { await page.evaluate(() => app.commands.executeCommandById('ideaverse-maps:open')); try { await page.waitForSelector('.ivm canvas', { timeout: 60000 }); break; } catch (e) { console.log('retry open', t); } }
+  await sleep(8000);
   await page.evaluate(() => { for (const sp of [app.workspace.leftSplit, app.workspace.rightSplit]) if (sp && !sp.collapsed) sp.collapse(); }); await sleep(1500);
   const R = '.ivm';
   await page.addStyleTag({ content: '.notice-container{display:none !important}' });
