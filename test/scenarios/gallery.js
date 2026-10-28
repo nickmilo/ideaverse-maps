@@ -46,6 +46,11 @@ module.exports = async ({ page, sleep, shot }) => {
       await clean(!!s.legend, !!s.anim);
       for (const c of s.clicks || []) { await page.evaluate(q => { const b = document.querySelector('.ivm ' + q); b && b.click(); }, c); await sleep(900); }
       if (s.fit) { await page.evaluate(() => document.querySelector('.ivm #zfit').click()); await sleep(2500); }
+      // center the notes themselves: measure where they land on screen, then right-drag the map (the plugin's pan) by the difference
+      if (s.center) for (let pass = 0; pass < 2; pass++) { const m = await page.evaluate(() => { const v = app.workspace.getLeavesOfType('ideaverse-maps')[0].view; const c = v.map._cam(); const r = v.containerEl.querySelector('.ivm canvas').getBoundingClientRect();
+          return { dx: c.W / 2 - (c.box[0] + c.box[2]) / 2, dy: c.H / 2 - (c.box[1] + c.box[3]) / 2, cx: r.left + r.width / 2, cy: r.top + r.height / 2 }; });
+        console.log('center', s.name, Math.round(m.dx), Math.round(m.dy)); if (Math.abs(m.dx) < 3 && Math.abs(m.dy) < 3) break;
+        await page.mouse.move(m.cx, m.cy); await page.mouse.down({ button: 'right' }); await page.mouse.move(m.cx + m.dx / 2, m.cy + m.dy / 2, { steps: 8 }); await page.mouse.move(m.cx + m.dx, m.cy + m.dy, { steps: 8 }); await page.mouse.up({ button: 'right' }); await sleep(800); }
       // fine zoom: wheel steps at the canvas center, or at a note (s.wz = {n, d, at})
       if (s.wz) { await page.evaluate(w => { const v = app.workspace.getLeavesOfType('ideaverse-maps')[0].view; const cv = v.containerEl.querySelector('.ivm canvas'); const r = cv.getBoundingClientRect();
           let x = r.left + r.width / 2, y = r.top + r.height / 2; if (w.at) { const p = v.map._at(w.at); if (p) { x = r.left + p[0]; y = r.top + p[1]; } } if (w.f) { x = r.left + r.width * w.f[0]; y = r.top + r.height * w.f[1]; }
