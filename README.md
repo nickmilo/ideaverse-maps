@@ -12,6 +12,16 @@ Made by [Nick Milo](https://www.linkingyourthinking.com) of Linking Your Thinkin
 ![Emergence: a map of content with links above and below](docs/emergence.png)
 <sub>Emergence in the LYT Mode theme. The selected map of content links up to the maps and hubs above it and down to the notes it gathers. The other screenshots use a made-up vault of 2,500 notes and 160 made-up films.</sub>
 
+## Gallery
+
+Eighteen views of one real vault, Nick's own, across the three themes (Play, Soft Paper and LYT Mode).
+
+![Gallery: Ideaverse 3D, Starfield in Focus mode, Base Builder's movie posters, Sensemakers with emojis, Emergence with Pace Layers selected, and Starfield around Triangulation](docs/gallery-1.webp)
+
+![Gallery: Treemap, Mosaic with Pace Layers' links, Spiral, Corona, Tesla around LYT Book Home, and Chord](docs/gallery-2.webp)
+
+![Gallery: Space-Time from 2020, a Starfield time-lapse with comets, Tree with the way home, a Gravity time-lapse, Ideaverse 3D close in on Triangulation, and Chord with emojis](docs/gallery-3.webp)
+
 ## The maps
 
 The toolbar starts with one button: **☰** and the name of the map you're on. Click it for the maps menu: every map with a small icon, the four main ones first (Emergence, Ideaverse, Starfield and Sensemakers). It stays open as you pick, so you can hop from map to map; click anywhere else to close it. The gear right after it opens the current map's own settings (its variants and options), on maps that have any. Quick keys along the top row of the keyboard jump to the maps in the list: **1–4** the main maps, **5** Gravity, **6** Obsidian, **7** Treemap, **8** Mosaic, **9** Bookshelf, **-** Tesla, **=** Corona and **[** Chord; Linear Calendar is always **0** and Base Builder always **\\**, wherever they sit in the list; each one's key shows at the end of its row. Letter keys work the map itself: **O** starts and stops Orbit, and **J**, **K** and **L** pick its three speeds (Earth, Mercury and LYT Speed on a globe; Calm, Slow and Lively on a flat map) and start it; **A** shows or tucks the Animations; **W** starts and stops Wander Mode; **T** the Timelapse; **S** turns Sync with the editor on or off; **F** opens Filter; **N** turns Focus on or off; **V** opens Saved views. Press **?** (or Display → Keyboard shortcuts) for a card of every key, and each button's hover hint ends with its key. Turn on **Display → Show more maps in the header** to list eight more of them by name in small type next to the button, whenever the row has room (Find shrinks to its magnifying glass first).
