@@ -1,7 +1,8 @@
 import { PluginSettingTab, Setting, TFolder, normalizePath } from "obsidian";
 import { DEFAULTS, dateKeys } from "./scan.js";
 
-const list = v => String(v || "").split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(s => normalizePath(s)).filter(s => s && s !== "/");
+const foldersToList = v => String(v || "").split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(s => normalizePath(s)).filter(s => s && s !== "/");
+const tagsToList = v => String(v || "").split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(s => s.startsWith("#") ? s : `#${s}`).filter(s => s);
 
 /** Sensible first-run settings, read from the vault's folders and note names. */
 export function detectDefaults(app) {
@@ -27,18 +28,18 @@ export class MapsSettingTab extends PluginSettingTab {
       el.setText(miss.length ? `Not found in this vault: ${miss.join(", ")}` : ""); };
     const folderList = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addTextArea(t => t
       .setPlaceholder("Folder/path, one per line").setValue((s[key] || []).join("\n"))
-      .onChange(async v => { s[key] = list(v); check(st, s[key]); await save(); })); check(st, s[key] || []); return st; };
+      .onChange(async v => { s[key] = foldersToList(v); check(st, s[key]); await save(); })); check(st, s[key] || []); return st; };
     const folderOne = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addText(t => t
       .setPlaceholder("Folder/path").setValue(s[key] || "")
-      .onChange(async v => { s[key] = list(v)[0] || ""; check(st, s[key] ? [s[key]] : []); await save(); })); check(st, s[key] ? [s[key]] : []); return st; };
-    // A line under tag fields naming any tag that isn't in the vault (capitals don't matter)
+      .onChange(async v => { s[key] = foldersToList(v)[0] || ""; check(st, s[key] ? [s[key]] : []); await save(); })); check(st, s[key] ? [s[key]] : []); return st; };
+    // A line under tag fields naming any tag that isn't in the vault (capitals and lack of hashtag don't matter)
     const tags = new Set(Object.keys(this.app.metadataCache.getTags()).map(t => t.toLowerCase())); // BUG metadataCache.getTags(...).map is not a function
     const checkTag = (setting, vals) => { const miss = vals.filter(v => !tags.has(v.toLowerCase()));
       let el = setting.descEl.querySelector(".ivm-miss"); if (!el) el = setting.descEl.createDiv({ cls: "ivm-miss mod-warning" });
       el.setText(miss.length ? `Not found in this vault: ${miss.join(", ")}` : ""); };
     const tagList = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addTextArea(t => t
       .setPlaceholder("Tag including #, one per line").setValue((s[key] || []).join("\n"))
-      .onChange(async v => { s[key] = list(v); checkTag(st, s[key]); await save(); })); checkTag(st, s[key] || []); return st; };
+      .onChange(async v => { s[key] = tagsToList(v); checkTag(st, s[key]); await save(); })); checkTag(st, s[key] || []); return st; };
 
     new Setting(containerEl).setName("Rescan").setDesc("Changes here take effect on the next scan. The map also offers a rescan when notes change.")
       .addButton(b => b.setButtonText("Rescan now").setCta().onClick(() => { void p.rescan(); }));
