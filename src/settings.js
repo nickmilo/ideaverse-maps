@@ -23,15 +23,15 @@ export class MapsSettingTab extends PluginSettingTab {
     const save = async () => { await p.saveSettings(); p.setDirty(); p.graph = null; };
     // a line under folder fields naming any folder that isn't in the vault (capitals don't matter)
     const folders = new Set(this.app.vault.getAllLoadedFiles().filter(f => f instanceof TFolder).map(f => f.path.toLowerCase()));
-    const check = (setting, vals) => { const miss = vals.filter(v => !folders.has(v.toLowerCase()));
+    const checkFolder = (setting, vals) => { const miss = vals.filter(v => !folders.has(v.toLowerCase()));
       let el = setting.descEl.querySelector(".ivm-miss"); if (!el) el = setting.descEl.createDiv({ cls: "ivm-miss mod-warning" });
       el.setText(miss.length ? `Not found in this vault: ${miss.join(", ")}` : ""); };
     const folderList = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addTextArea(t => t
       .setPlaceholder("Folder/path, one per line").setValue((s[key] || []).join("\n"))
-      .onChange(async v => { s[key] = foldersToList(v); check(st, s[key]); await save(); })); check(st, s[key] || []); return st; };
+      .onChange(async v => { s[key] = foldersToList(v); checkFolder(st, s[key]); await save(); })); checkFolder(st, s[key] || []); return st; };
     const folderOne = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addText(t => t
       .setPlaceholder("Folder/path").setValue(s[key] || "")
-      .onChange(async v => { s[key] = foldersToList(v)[0] || ""; check(st, s[key] ? [s[key]] : []); await save(); })); check(st, s[key] ? [s[key]] : []); return st; };
+      .onChange(async v => { s[key] = foldersToList(v)[0] || ""; checkFolder(st, s[key] ? [s[key]] : []); await save(); })); checkFolder(st, s[key] ? [s[key]] : []); return st; };
     // A line under tag fields naming any tag that isn't in the vault (capitals and lack of hashtag don't matter)
     const tags = new Set(Object.keys(this.app.metadataCache.getTags()).map(t => t.toLowerCase())); // BUG metadataCache.getTags(...).map is not a function
     const checkTag = (setting, vals) => { const miss = vals.filter(v => !tags.has(v.toLowerCase()));
