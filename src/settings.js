@@ -31,6 +31,14 @@ export class MapsSettingTab extends PluginSettingTab {
     const folderOne = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addText(t => t
       .setPlaceholder("Folder/path").setValue(s[key] || "")
       .onChange(async v => { s[key] = list(v)[0] || ""; check(st, s[key] ? [s[key]] : []); await save(); })); check(st, s[key] ? [s[key]] : []); return st; };
+    // A line under tag fields naming any tag that isn't in the vault (capitals don't matter)
+    const tags = new Set(Object.keys(this.app.metadataCache.getTags()).map(t => t.toLowerCase())); // BUG metadataCache.getTags(...).map is not a function
+    const checkTag = (setting, vals) => { const miss = vals.filter(v => !tags.has(v.toLowerCase()));
+      let el = setting.descEl.querySelector(".ivm-miss"); if (!el) el = setting.descEl.createDiv({ cls: "ivm-miss mod-warning" });
+      el.setText(miss.length ? `Not found in this vault: ${miss.join(", ")}` : ""); };
+    const tagList = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addTextArea(t => t
+      .setPlaceholder("Tag including #, one per line").setValue((s[key] || []).join("\n"))
+      .onChange(async v => { s[key] = list(v); checkTag(st, s[key]); await save(); })); checkTag(st, s[key] || []); return st; };
 
     new Setting(containerEl).setName("Rescan").setDesc("Changes here take effect on the next scan. The map also offers a rescan when notes change.")
       .addButton(b => b.setButtonText("Rescan now").setCta().onClick(() => { void p.rescan(); }));
@@ -97,8 +105,7 @@ export class MapsSettingTab extends PluginSettingTab {
     folderList("Map folders", "Every note in these folders counts as a map (Level 3 or higher). Notes with MOC in the title, or made mostly of links, count too.", "mapFolders");
     new Setting(containerEl).setName("Map collections").setDesc("Notes listed in these collections (the collections property) count as maps.").addText(t => t
       .setPlaceholder("Maps, Views").setValue((s.mapCollections || []).join(", ")).onChange(async v => { s.mapCollections = list(v); await save(); }));
-    new Setting(containerEl).setName("Map tags").setDesc("Notes with any of these tags count as maps.").addText(t => t
-      .setPlaceholder("#map, #view").setValue((s.mapTags || []).join(", ")).onChange(async v => { s.mapTags = list(v); await save(); }));
+    tagList("Map tags", "Notes with any of these tags count as maps.", "mapTags");
     new Setting(containerEl).setName("Level 5 seats").setDesc("How many top-scoring notes join the home notes at Level 5. 0 scales with the size of the vault.").addText(t => t
       .setPlaceholder("0").setValue(String(s.l5Top || 0)).onChange(async v => { const n = parseInt(v, 10); s.l5Top = isFinite(n) && n > 0 ? n : 0; await save(); }));
   }
