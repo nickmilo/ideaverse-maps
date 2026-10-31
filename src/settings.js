@@ -38,7 +38,7 @@ export class MapsSettingTab extends PluginSettingTab {
       let el = setting.descEl.querySelector(".ivm-miss"); if (!el) el = setting.descEl.createDiv({ cls: "ivm-miss mod-warning" });
       el.setText(miss.length ? `Not found in this vault: ${miss.join(", ")}` : ""); };
     const tagList = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addTextArea(t => t
-      .setPlaceholder("Tag including #, one per line").setValue((s[key] || []).join("\n"))
+      .setPlaceholder("Tag, one per line").setValue((s[key] || []).join("\n"))
       .onChange(async v => { s[key] = tagsToList(v); checkTag(st, s[key]); await save(); })); checkTag(st, s[key] || []); return st; };
 
     new Setting(containerEl).setName("Rescan").setDesc("Changes here take effect on the next scan. The map also offers a rescan when notes change.")
