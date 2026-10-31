@@ -196,7 +196,7 @@ export async function scanVault(adapter, settings, onProgress) {
     if (!date && C.fileDates && ctime.get(p)) date = new Date(ctime.get(p)).toISOString().slice(0, 10);   // no date in the note: when the file was made
     info.set(p, { title, created, date, rank, collections: colls, tags: e.tags || [], lines: lines.length, props,
       density: lines.length ? r3(linkLines / lines.length) : 0,
-      named_map: under(p, C.mapFolders) || /\bMOC\b/.test(title) || colls.some(x => C.mapCollections.some(m => m.toLowerCase() === x.toLowerCase())) || (e.tags || []).some(x => C.mapTags.some(m => m.toLowerCase() === x.toLowerCase()))
+      named_map: under(p, C.mapFolders) || /\bMOC\b/.test(title) || colls.some(x => C.mapCollections.some(m => m.toLowerCase() === x.toLowerCase())) || (e.tags || []).some(x => C.mapTags.some(m => m.toLowerCase() === `#${x.toLowerCase()}`))
     });
   }
 

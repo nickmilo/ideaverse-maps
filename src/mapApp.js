@@ -4794,7 +4794,7 @@ function mapWhy(d){
   if (/\bMOC\b/.test(d.title)) return "“MOC” is in its title";
   const c = (d.collections || []).map(x => x.toLowerCase()), mc = MAP_COLLS.find(m => c.includes(m.toLowerCase()));
   if (mc) return `it's in the ${mc} collection`;
-  const t = (d.tags || []).map(x => x.toLowerCase()), mt = MAP_TAGS.find(m => t.includes(m.toLowerCase()));
+  const t = (d.tags || []).map(x => `#${x.toLowerCase()}`), mt = MAP_TAGS.find(m => t.includes(m.toLowerCase()));
   if (mt) return `it has the tag ${mt}`;
   return "it's mostly links (10+ links out, half its lines carry links)";
 }
