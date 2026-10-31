@@ -46,6 +46,7 @@ export const DEFAULTS = {
   dateProps: ["created", "createdAt", "created_at", "created on", "date created", "dateCreated", "creation date", "creation_date", "date"],  // the property that says when a note was made; the first one a note has wins (any capitalization)    // number properties offered under By → More… (as well as the built-in axes)
   mapFolders: [],         // every note in these folders counts as a map
   mapCollections: ["Maps", "Views"],   // notes listed in these collections count as maps
+  mapTags: ["#map", "#view"], // notes tagged with any of these tags count as maps
   upProps: ["up"], relatedProps: ["related"], collectionProps: ["collections"], rankProps: ["rank"],   // property names (any capitalization); a note may use any of a list
   mdLinks: false,         // also count markdown links to notes ([text](Note.md)); off by default
   fileDates: true,        // a note with no created date and no date in its name is dated by when its file was made
@@ -195,7 +196,8 @@ export async function scanVault(adapter, settings, onProgress) {
     if (!date && C.fileDates && ctime.get(p)) date = new Date(ctime.get(p)).toISOString().slice(0, 10);   // no date in the note: when the file was made
     info.set(p, { title, created, date, rank, collections: colls, tags: e.tags || [], lines: lines.length, props,
       density: lines.length ? r3(linkLines / lines.length) : 0,
-      named_map: under(p, C.mapFolders) || /\bMOC\b/.test(title) || colls.some(x => C.mapCollections.some(m => m.toLowerCase() === x.toLowerCase())) });
+      named_map: under(p, C.mapFolders) || /\bMOC\b/.test(title) || colls.some(x => C.mapCollections.some(m => m.toLowerCase() === x.toLowerCase())) || (e.tags || []).some(x => C.mapTags.some(m => m.toLowerCase() === `#${x.toLowerCase()}`))
+    });
   }
 
   // series with a shared nav block: links between siblings still draw, but don't count toward the score
@@ -284,6 +286,6 @@ export async function scanVault(adapter, settings, onProgress) {
   return { generated: new Date().toISOString().slice(0, 19), vault: adapter.vaultName || "Vault",
     settings: { axis_props: C.axisProps || [], date_props: C.dateProps || ["created"], exclude: C.exclude, moc_only: C.privateFolders, home_notes: C.homeNotes, l5_top: L5, l4_map_links: C.l4MapLinks, l3_min_out: C.l3MinOut,
       l3_density: C.l3Density, promote_l4: C.promoteL4, promote_l3: C.promoteL3, nav_jaccard: C.navJaccard, weights: W, map_folders: C.mapFolders,
-      map_collections: C.mapCollections, packs: PACKS, archive: ARCHIVE },
+      map_collections: C.mapCollections, map_tags: C.mapTags, packs: PACKS, archive: ARCHIVE },
     nodes, edges, unresolved, dropped: dropped.length };
 }

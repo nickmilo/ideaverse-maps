@@ -4788,12 +4788,14 @@ dbg.__ivTours = { list: () => tours, run: () => tourRun && {name: tourRun.t.name
 
 // ---------- why a note sits where it does: its level rule and its score, piece by piece ----------
 const LN = x => Math.log1p(x), f2 = x => (Math.round(x*100)/100).toFixed(2);
-const MAP_FOLDERS = (D.settings && D.settings.map_folders) || ["Atlas/Maps"], MAP_COLLS = (D.settings && D.settings.map_collections) || ["Maps", "Views"];   // from scanner.py settings
+const MAP_FOLDERS = (D.settings && D.settings.map_folders) || ["Atlas/Maps"], MAP_COLLS = (D.settings && D.settings.map_collections) || ["Maps", "Views"], MAP_TAGS = (D.settings && D.settings.map_tags) || ["#map", "#view"];   // from scanner.py settings
 function mapWhy(d){
   const mf = MAP_FOLDERS.find(f => d.path === f || d.path.startsWith(f + "/")); if (mf) return `it lives in ${mf}, a maps folder`;
   if (/\bMOC\b/.test(d.title)) return "“MOC” is in its title";
   const c = (d.collections || []).map(x => x.toLowerCase()), mc = MAP_COLLS.find(m => c.includes(m.toLowerCase()));
   if (mc) return `it's in the ${mc} collection`;
+  const t = (d.tags || []).map(x => `#${x.toLowerCase()}`), mt = MAP_TAGS.find(m => t.includes(m.toLowerCase()));
+  if (mt) return `it has the tag ${mt}`;
   return "it's mostly links (10+ links out, half its lines carry links)";
 }
 function scoreRank(i){ return RANK[i] || 0; }
