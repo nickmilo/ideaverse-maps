@@ -97,6 +97,8 @@ export class MapsSettingTab extends PluginSettingTab {
     folderList("Map folders", "Every note in these folders counts as a map (Level 3 or higher). Notes with MOC in the title, or made mostly of links, count too.", "mapFolders");
     new Setting(containerEl).setName("Map collections").setDesc("Notes listed in these collections (the collections property) count as maps.").addText(t => t
       .setPlaceholder("Maps, Views").setValue((s.mapCollections || []).join(", ")).onChange(async v => { s.mapCollections = list(v); await save(); }));
+    new Setting(containerEl).setName("Map tags").setDesc("Notes with any of these tags count as maps.").addText(t => t
+      .setPlaceholder("#map, #view").setValue((s.mapTags || []).join(", ")).onChange(async v => { s.mapTags = list(v); await save(); }));
     new Setting(containerEl).setName("Level 5 seats").setDesc("How many top-scoring notes join the home notes at Level 5. 0 scales with the size of the vault.").addText(t => t
       .setPlaceholder("0").setValue(String(s.l5Top || 0)).onChange(async v => { const n = parseInt(v, 10); s.l5Top = isFinite(n) && n > 0 ? n : 0; await save(); }));
   }
