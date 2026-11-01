@@ -3528,8 +3528,9 @@ function labels(lit){
     if (!isMust && view === "stars" && COREB[i] >= 0 && BODIES[COREB[i]].r*k <= Math.min(W, H)*.8) continue;   // the galaxy's own label names it
     if (!isMust && lit && !lit.has(i) && !(focus >= 0 && dim_ok())) continue;
     const x = sx(X[i]), y = sy(Y[i]); if (x < -200 || x > W+20 || y < -20 || y > H+20) continue;
+    ctx.globalAlpha = 1;
     const big = N[i].level >= 4 || i === sel;
-    ctx.font = `${big ? 600 : 500} ${big ? 12.5 : 11.5}px ${css.body}`;
+    ctx.font = sel >= 0 && i === sel ? `700 14.5px ${css.body}` : `${big ? 600 : 500} ${big ? 12.5 : 11.5}px ${css.body}`;
     const t = N[i].title.length > 46 ? N[i].title.slice(0,45)+"…" : N[i].title;
     const w = ctx.measureText(t).width, r = rad(i), h = 15, edge = W - sideW() - 6;
     // a name starts at its dot; if that's taken (or past the right edge), it ends at its dot instead; if both are taken it waits for more zoom (the note you're on and the one under the pointer always show)
@@ -3552,6 +3553,9 @@ function labels(lit){
     if (!place) for (const [px0] of sides) for (const oy of [-dy, dy]) if (!place && fits(px0-2, y+oy-h/2, w+4, h) && y+oy > 8 && y+oy < H-8) place = { lx: px0, ly: y + oy };
     if (!place) { if (!(i === sel || i === hover)) continue; place = { lx: first, ly: y }; }
     ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.lineJoin = "round"; ctx.fillStyle = css.ink;
+    // the note you're on stands out: its links' names step back to 70%, and its own name is larger, in the accent color (0.8.15, Nick: "it's hard to tell")
+    const pick_ = sel >= 0 && i === sel, linkOf = sel >= 0 && i !== sel && i !== hover; ctx.globalAlpha = linkOf ? .7 : 1;
+    if (pick_) { ctx.fillStyle = css.accent || css.ink; ctx.lineWidth = 5; }
     if (place.a != null) { const { piv, a, right, bx } = place; for (const b_ of bx) taken.push(b_);
       const xs = bx.map(b_ => b_[0]), ys = bx.map(b_ => b_[1]); LH.push([Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs) + w/4 + 2, Math.max(...ys) - Math.min(...ys) + h, i]);
       ctx.save(); ctx.translate(piv, y); ctx.rotate(a); const ox = right ? 0 : -w; ctx.strokeText(t, ox, 0); ctx.fillText(t, ox, 0); ctx.restore(); }
@@ -3559,6 +3563,7 @@ function labels(lit){
     if (!isMust && lowLv) lowN++;
     if (++count > 260) break;
   }
+  ctx.globalAlpha = 1;
 }
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function axisLabels(){
@@ -4342,9 +4347,18 @@ function navTo(j, fromTrail){
 // Focus zoom (0.8.10, Nick: keep both, Normal the default): Normal frames every focused note; Close-Up (Starfield) frames the note with its hub.
 // A small square button on the map (in Focus, in Starfield) and the Z key switch between them.
 let FZC = pref("iv-fzclose", false) === true;
+const FZ_MAPS = new Set(["stars", "emergence", "spacetime", "gravity", "graph", "sense", "mosaic", "chord", "lincal", "spiral", "lifeline", "tree", "treemap", "shelf", "quincunx"]);
+const fzOn = () => FZ_MAPS.has(view) && !S3D_ON() && !sphOn() && !domeOn() && !globeOn() && !geo3On() && !csphOn();
+function S3D_ON(){ return view === "stars" && S3D; }
+// Close-Up anywhere but Starfield: the note centred, zoomed so most of its linked notes (the nearest three quarters) sit just inside the view
+function closeTarget(xs, ys, i){ if (view === "stars") return starFocusTarget(xs, ys, i);
+  const vw = W - sideW(), R = .42*Math.min(vw, H), ds = [];
+  for (const j of new Set([...out[i], ...inn[i]])) if (j !== i && vis[j]) ds.push(Math.hypot(xs[j] - xs[i], ys[j] - ys[i]));
+  ds.sort((a, b) => a - b); let d = ds.length ? ds[Math.min(ds.length - 1, Math.floor(ds.length * .75))] : 0; if (d < 20) d = 60;
+  const kk = Math.max(.08, Math.min(8, R/d)); return { k: kk, tx: vw/2 - xs[i]*kk, ty: H/2 - ys[i]*kk }; }
 function setFZ(c){ FZC = c; save("iv-fzclose", c); syncFZ(); if (focus >= 0) { setFocus(focus, true); return; }
-  if (view !== "stars" || S3D) return; if (c && sel >= 0) animateTo(starFocusTarget(X, Y, sel)); else if (!c) animateTo(fitTarget()); }
-function syncFZ(){ const b = root.querySelector("#fzbtn"); if (!b) return; const h = !(view === "stars" && !S3D); if (b.hidden !== h) { b.hidden = h; if (!h) draw(); } b.setAttribute("aria-pressed", String(FZC)); b.setAttribute("aria-description", FZC ? "Zoom: Close-Up (Z for Normal)" : "Zoom: Normal (Z for Close-Up on the note you're on)"); }
+  if (!fzOn()) return; if (c && sel >= 0) animateTo(closeTarget(X, Y, sel)); else if (!c) animateTo(fitTarget()); }
+function syncFZ(){ const b = root.querySelector("#fzbtn"); if (!b) return; const h = !fzOn(); if (b.hidden !== h) { b.hidden = h; if (!h) draw(); } b.setAttribute("aria-pressed", String(FZC)); b.setAttribute("aria-description", FZC ? "Zoom: Close-Up (Z for Normal)" : "Zoom: Normal (Z for Close-Up on the note you're on)"); }
 function starFocusTarget(xs, ys, i){ const vw = W - sideW(), cx = vw/2, cy = H/2, R = .44*Math.min(vw, H); let d = 0;
   const b = BOD[i] >= 0 ? BODIES[BOD[i]] : null, h = b && b.core != null ? b.core : -1;
   if (h >= 0 && h !== i) d = Math.hypot(xs[h] - xs[i], ys[h] - ys[i]);
@@ -4354,7 +4368,7 @@ function setFocus(i, fromTrail){
   focus = i; computeFocus();
   const fb = $("#focusbar"); if (fb.hidden !== (i < 0)) { fb.hidden = i < 0; if (i >= 0 && !fb.hasChildNodes()) html(fb).v = "&nbsp;"; resize(); }
   const prev = sel; if (i >= 0) { sel = i; if (drawer.hidden && !isPhone() && !drawerCollapsed) { ANCHOR_T = performance.now() + 700; drawer.hidden = false; resize(); } }   // open the panel first so the camera plans for the narrower map
-  relayout(true, false, i >= 0 ? (xs, ys) => (FZC && view === "stars" && !S3D ? starFocusTarget(xs, ys, i) : visTarget(xs, ys)) : () => fitTarget());
+  relayout(true, false, i >= 0 ? (xs, ys) => (FZC && fzOn() ? closeTarget(xs, ys, i) : visTarget(xs, ys)) : () => fitTarget());
   sel = prev;
   if (i >= 0) select(i, fromTrail || prev === i);   // refresh the drawer with the focused set
   else if (sel >= 0 && vis[sel]) select(sel, true);   // leaving focus: the panel's button goes back to "Focus on its links"
@@ -5711,14 +5725,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         o: () => hit("#dplay"),
         a: () => { const d = $("#animdock"); if (!d || d.hidden) return hit("#anitab"); const c_ = d.querySelector('button[aria-label="Tuck animations away"]'); if (c_) { c_.click(); return true; } return false; },
         w: () => hit("#pplay"), t: () => vis_($("#timebar")) || !$("#timebar").hidden ? hit("#tlplay") : false,
-        s: () => hit("#follownote"), f: () => hit("#filtbtn"), n: () => hit("#focusmode"), v: () => hit("#viewbtn"), z: () => { if (view !== "stars" || S3D) return false; setFZ(!FZC); return true; } };
+        s: () => hit("#follownote"), f: () => hit("#filtbtn"), n: () => hit("#focusmode"), v: () => hit("#viewbtn"), z: () => { if (!fzOn()) return false; setFZ(!FZC); return true; } };
       ["j", "k", "l"].forEach((key, j) => LK[key] = () => { const bs = [...root.querySelectorAll("#driftseg button")].filter(vis_); const b_ = bs[j]; if (!b_) return false; b_.click(); if (!orbitOn()) hit("#dplay"); return true; });
       // ? opens a card of every key; Display ends with a row that opens it too
       const card = cv.parentElement.createDiv({ cls: "keycard", attr: { role: "dialog", "aria-label": "Keyboard shortcuts" } }); card.hidden = true;
       const fillCard = () => { card.empty(); const hd = card.createDiv({ cls: "kch" }); hd.createSpan({ text: "Keyboard shortcuts" }); const x_ = hd.createEl("button", { cls: "kcx", text: "×", attr: { type: "button", "aria-label": "Close" } }); x_.onclick = () => { card.hidden = true; };
         const cols = card.createDiv({ cls: "kcc" }), sec = (t, rows) => { const c_ = cols.createDiv({ cls: "kcs" }); c_.createDiv({ cls: "pt", text: t }); for (const [k_, d_] of rows) { const r_ = c_.createDiv({ cls: "kcr" }); const kk = r_.createSpan({ cls: "kcks" }); for (const one of k_.split(" ")) kk.createEl("kbd", { text: one }); r_.createSpan({ text: d_ }); } };
         sec("Maps", [...KEYED()].map(([k_, ch]) => [k_, [...ch.childNodes].filter(x => !(x.classList && x.classList.contains("mkey"))).map(x => x.textContent).join("").trim()]).sort((a_, b_) => "1234567890-=[]\\".indexOf(a_[0]) - "1234567890-=[]\\".indexOf(b_[0])));
-        sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["Z", "Zoom: Normal or Close-Up on the note (Starfield)"], ["V", "Saved views"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]); };
+        sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["Z", "Zoom: Normal or Close-Up on the note"], ["V", "Saved views"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]); };
       const toggleCard = () => { if (card.hidden) { closePops(); fillCard(); } card.hidden = !card.hidden; return true; };
       LK["?"] = toggleCard; on(doc, "pointerdown", e => { if (!card.hidden && !card.contains(e.target)) card.hidden = true; });
       onKey(e => { if (e.key === "Escape" && !card.hidden) card.hidden = true; });
