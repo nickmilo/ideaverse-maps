@@ -3555,7 +3555,7 @@ function labels(lit){
     ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.lineJoin = "round"; ctx.fillStyle = css.ink;
     // the note you're on stands out: its links' names step back to 70%, and its own name is larger, in the accent color (0.8.15, Nick: "it's hard to tell")
     const pick_ = sel >= 0 && i === sel, linkOf = sel >= 0 && i !== sel && i !== hover; ctx.globalAlpha = linkOf ? .7 : 1;
-    if (pick_) { ctx.fillStyle = css.accent || css.ink; ctx.lineWidth = 5; }
+    if (pick_) { ctx.fillStyle = view === "stars" ? "#ffd84a" : css.accent || css.ink; ctx.lineWidth = 5; }
     if (place.a != null) { const { piv, a, right, bx } = place; for (const b_ of bx) taken.push(b_);
       const xs = bx.map(b_ => b_[0]), ys = bx.map(b_ => b_[1]); LH.push([Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs) + w/4 + 2, Math.max(...ys) - Math.min(...ys) + h, i]);
       ctx.save(); ctx.translate(piv, y); ctx.rotate(a); const ox = right ? 0 : -w; ctx.strokeText(t, ox, 0); ctx.fillText(t, ox, 0); ctx.restore(); }
@@ -4351,13 +4351,15 @@ const FZ_MAPS = new Set(["stars", "emergence", "spacetime", "gravity", "graph", 
 const fzOn = () => FZ_MAPS.has(view) && !S3D_ON() && !sphOn() && !domeOn() && !globeOn() && !geo3On() && !csphOn();
 function S3D_ON(){ return view === "stars" && S3D; }
 // Close-Up anywhere but Starfield: the note centred, zoomed so most of its linked notes (the nearest three quarters) sit just inside the view
-function closeTarget(xs, ys, i){ if (view === "stars") return starFocusTarget(xs, ys, i);
+function closeTarget(xs, ys, i){ const f = fitTarget(), t = closeTarget0(xs, ys, i), kk = Math.max(f.k * 1.5, Math.min(f.k * 12, t.k)), vw = W - sideW();
+  return { k: kk, tx: vw/2 - xs[i]*kk, ty: H/2 - ys[i]*kk }; }
+function closeTarget0(xs, ys, i){ if (view === "stars") return starFocusTarget(xs, ys, i);
   const vw = W - sideW(), R = .42*Math.min(vw, H), ds = [];
   for (const j of new Set([...out[i], ...inn[i]])) if (j !== i && vis[j]) ds.push(Math.hypot(xs[j] - xs[i], ys[j] - ys[i]));
   ds.sort((a, b) => a - b); let d = ds.length ? ds[Math.min(ds.length - 1, Math.floor(ds.length * .75))] : 0; if (d < 20) d = 60;
   const kk = Math.max(.08, Math.min(8, R/d)); return { k: kk, tx: vw/2 - xs[i]*kk, ty: H/2 - ys[i]*kk }; }
 function setFZ(c){ FZC = c; save("iv-fzclose", c); syncFZ(); if (focus >= 0) { setFocus(focus, true); return; }
-  if (!fzOn()) return; if (c && sel >= 0) animateTo(closeTarget(X, Y, sel)); else if (!c) animateTo(fitTarget()); }
+  if (!fzOn()) return; if (c && sel >= 0 && vis[sel] && VV(sel)) animateTo(closeTarget(X, Y, sel)); else if (!c) animateTo(fitTarget()); }
 function syncFZ(){ const b = root.querySelector("#fzbtn"); if (!b) return; const h = !fzOn(); if (b.hidden !== h) { b.hidden = h; if (!h) draw(); } b.setAttribute("aria-pressed", String(FZC)); b.setAttribute("aria-description", FZC ? "Zoom: Close-Up (Z for Normal)" : "Zoom: Normal (Z for Close-Up on the note you're on)"); }
 function starFocusTarget(xs, ys, i){ const vw = W - sideW(), cx = vw/2, cy = H/2, R = .44*Math.min(vw, H); let d = 0;
   const b = BOD[i] >= 0 ? BODIES[BOD[i]] : null, h = b && b.core != null ? b.core : -1;
