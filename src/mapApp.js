@@ -3554,8 +3554,8 @@ function labels(lit){
     if (!place) { if (!(i === sel || i === hover)) continue; place = { lx: first, ly: y }; }
     ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.lineJoin = "round"; ctx.fillStyle = css.ink;
     // the note you're on stands out: its links' names step back to 70%, and its own name is larger, in the accent color (0.8.15, Nick: "it's hard to tell")
-    const pick_ = sel >= 0 && i === sel, linkOf = sel >= 0 && i !== sel && i !== hover; ctx.globalAlpha = linkOf ? .7 : 1;
-    if (pick_) { ctx.fillStyle = view === "stars" ? "hsl(58,86%,66%)" : css.accent || css.ink;   // Starfield: LYT Mode's yellow ctx.lineWidth = 5; }
+    const pick_ = (sel >= 0 && i === sel) || (sel < 0 && i === hover && view === "stars"), linkOf = sel >= 0 && i !== sel && i !== hover; ctx.globalAlpha = linkOf ? .7 : 1;
+    if (pick_) { ctx.fillStyle = view === "stars" ? "hsl(58,86%,66%)" : css.accent || css.ink; /* Starfield: LYT Mode's yellow */ ctx.lineWidth = 5; }
     if (place.a != null) { const { piv, a, right, bx } = place; for (const b_ of bx) taken.push(b_);
       const xs = bx.map(b_ => b_[0]), ys = bx.map(b_ => b_[1]); LH.push([Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs) + w/4 + 2, Math.max(...ys) - Math.min(...ys) + h, i]);
       ctx.save(); ctx.translate(piv, y); ctx.rotate(a); const ox = right ? 0 : -w; ctx.strokeText(t, ox, 0); ctx.fillText(t, ox, 0); ctx.restore(); }
