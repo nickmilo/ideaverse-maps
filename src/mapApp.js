@@ -3316,9 +3316,10 @@ function render(){
   if (emoView()) drawEmojis(lit, dim);
   if (chartOn()) drawChart();
   drawMini();   // Starfield's overview map, bottom right
-  { const fb = root.querySelector("#fzbtn"); if (fb && !fb.hidden) { const bot = doc.body.classList.contains("is-mobile") ? 14 : 42; fb.style.left = (cv.offsetLeft + W - sideW() - 36) + "px"; fb.style.top = (cv.offsetTop + H - bot - 22 - (miniOn() ? 140 : 0)) + "px"; } }
+
   orbWake();   // Star Chart's turning orbits run on their own layer (starts or stops it)
   if (!(CAP.on && CAP.hide)) labels(lit);
+  if (chartOn() && CHRO.length) { ctx.save(); RODONE = []; for (const [i, x, y, r] of CHRO) chartReadout(i, x, y, r); ctx.restore(); }
   if (BACON) drawBacon();
   axisLabels();
   if (GROWV() && senseT != null) drawGrowth();
@@ -3740,7 +3741,7 @@ cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
     tx -= dx * (e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }
   const f = Math.min(1.35, Math.max(.74, Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)))); zoomAt(e.offsetX, e.offsetY, f); }, {passive:false});
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
-{ const b = doc.createElement("button"); b.id = "fzbtn"; b.type = "button"; b.className = "fzbtn"; b.hidden = true; cv.parentElement.appendChild(b); b.onclick = e => { e.stopPropagation(); setFZ(!FZC); }; }
+{ const b = doc.createElement("button"); b.id = "fzbtn"; b.type = "button"; b.className = "fzbtn"; b.hidden = true; $("#zfit").after(b); b.onclick = e => { e.stopPropagation(); setFZ(!FZC); }; }
 $("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoomAt(W/2, H/2, 1/1.6); $("#zfit").onclick = () => { if (globeOn()) { csYaw = 0; csPitch = 0; csKeep(); }   // the globe faces the Sea of Knowledge again
   if (sphOn()) { morph(true, () => fitTarget()); return; } if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, 0]; domeKeep(); morph(true, () => fitTarget()); return; }
   fit(true); };   // in a dome: face forward again
@@ -4092,12 +4093,23 @@ function chartLines(){ const dimF = sel >= 0 ? .35 : 1; ctx.lineWidth = 1;
 function chartReadout(i, x, y, r){ const nb = new Set([...out[i], ...inn[i]]); const CY = new Date().getUTCFullYear(); let first = Infinity, yr = 0; const y0 = Date.UTC(CY, 0, 1);
   for (const j of nb) { const t = TVD[j]; if (!(t > 0)) continue; if (t < first) first = t; if (t >= y0) yr++; }
   const L = [`L${N[i].level} · SCORE ${N[i].score.toFixed(N[i].score < 10 ? 1 : 0)}`, `IN ${N[i].body_in} · OUT ${N[i].body_out}`, `${isFinite(first) ? "SINCE " + new Date(first).getUTCFullYear() : "NO DATES"} · +${yr} ${CY}`];
-  const ang = -.62, ax = x + Math.cos(ang) * r, ay = y + Math.sin(ang) * r, bx = ax + 22, by = ay - 16;
-  ctx.strokeStyle = HUD(.55); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(bx + 8, by); ctx.stroke();
-  ctx.font = `500 9.5px ${css.mono}`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-  L.forEach((t, q) => { const ty = by + q * 12; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(4,5,12,.8)"; ctx.strokeText(t, bx + 12, ty); ctx.fillStyle = HUD(q ? .7 : .95); ctx.fillText(t, bx + 12, ty); });
+  ctx.font = `500 9.5px ${css.mono}`; const tw = Math.max(...L.map(t => ctx.measureText(t).width)) + 12, th = L.length * 12 + 6;
+  // try spots around the ring, upper right first, and take the one that covers the fewest names and notes
+  const busy = (x0, y0, x1, y1) => { let c = 0; for (const q of LH) if (q[0] < x1 && q[0] + q[2] > x0 && q[1] < y1 && q[1] + q[3] > y0) c += 3;
+    for (const j of [...out[i], ...inn[i]]) { if (!VV(j)) continue; const px = sx(X[j]), py = sy(Y[j]); if (px > x0 && px < x1 && py > y0 && py < y1) c++; }
+    for (const q of RODONE) if (q[0] < x1 && q[2] > x0 && q[1] < y1 && q[3] > y0) c += 40;   // never on another readout
+    if (x0 < 0 || y0 < 0 || x1 > W - sideW() || y1 > H) c += 50; return c; };
+  let best = null;
+  for (const ang of [-.62, -.95, -.3, -1.25, 0, .35, -2.5, -2.2, -2.85, 2.6]) { const ax = x + Math.cos(ang) * r, ay = y + Math.sin(ang) * r, right = Math.cos(ang) >= -.1, bx = right ? ax + 22 : ax - 22, by = ay + (Math.sin(ang) < .3 ? -16 : 10);
+    const x0 = right ? bx + 6 : bx - 6 - tw, b = busy(x0, by - 9, x0 + tw, by - 9 + th); if (!best || b < best.b) best = { b, ax, ay, bx, by, right, x0 }; if (b === 0) break; }
+  const { ax, ay, bx, by, right, x0 } = best; if (best.b >= 40) return; RODONE.push([x0, by - 9, x0 + tw, by - 9 + th]);
+  ctx.strokeStyle = HUD(.55); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(bx + (right ? 6 : -6), by); ctx.stroke();
+  ctx.fillStyle = "rgba(4,5,12,.78)"; ctx.beginPath(); ctx.roundRect(x0, by - 9, tw, th, 4); ctx.fill();   // a dark card, so it reads over names and stars
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  L.forEach((t, q) => { const ty = by + q * 12; ctx.fillStyle = HUD(q ? .75 : .98); ctx.fillText(t, x0 + 6, ty); });
   ctx.textBaseline = "alphabetic"; }
-function drawChart(){ CHPOST = [];
+let CHRO = [], RODONE = [];   // readouts waiting to be drawn after the names
+function drawChart(){ CHPOST = []; CHRO = [];
   const s = Math.max(1, Math.min(1.7, Math.pow(k, .3) * 1.15)), hubs = chartHubs(), full = new Set(hubs);
   ctx.save(); ctx.lineCap = "round"; if (chx("lines")) chartLines();
   for (let i=0;i<n;i++) { if (N[i].level !== 5 || full.has(i) || !VV(i)) continue; const x = sx(X[i]), y = sy(Y[i]); if (x < -80 || x > W + 80 || y < -80 || y > H + 80) continue;
@@ -4136,7 +4148,7 @@ function chartRings(i, s, picked){
     ctx.textAlign = ox < -.2 ? "right" : ox > .2 ? "left" : "center"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(4,5,12,.8)"; ctx.strokeText(t, lx, ly); ctx.fillStyle = HUD(.9); ctx.fillText(t, lx, ly);
     CHPOST.push([px, py, j]); }
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  if (chx("read")) chartReadout(i, x, y, r1); }
+  if (chx("read")) CHRO.push([i, x, y, r1]); }
 function drawEmojis(lit, dim){ if (!emoView()) return; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   for (const lv of [1, 2, 3, 4, 5]) for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i)) continue; const e_ = EMOI[i]; if (!e_) continue;
     const x = sx(X[i]), y = sy(Y[i]); if (x < -30 || x > W + 30 || y < -30 || y > H + 30) continue; const f = emoSize(i);
@@ -4219,7 +4231,7 @@ const SROWS = [
   {key:"w.coll", label:"Notes in its collection", hint:"Notes that list it in their collections, which makes it a collection note (Maps, People, Reviews…). Off by default: big collections are named by hundreds of notes and would swamp everything.", min:0, max:2, step:.05}];
 const getS = key => key.split(".").reduce((o,k2) => o[k2], S) ?? 0;   // a weight missing from older saved settings reads as 0
 const setS = (key, v) => { const ks = key.split("."); ks.slice(0,-1).reduce((o,k2) => o[k2], S)[ks.at(-1)] = v; };
-html($("#srows")).v = SROWS.map((r,j) => r.h ? `<h6>${r.h}</h6>${r.h === "Link weights" ? `<p class="pn" style="margin:-2px 0 6px">Score = each kind of link, counted with diminishing returns (1 link → 0.7, 3 → 1.4, 10 → 2.4, 100 → 4.6), times its weight, added up. Prev/next series links don't count. Within a level, a higher score sits higher.</p>` : `<p class="pn" style="margin:-2px 0 6px">Checked top down, first match wins: 5 (home or top N), 4, 3, then 2 (any link) and 1 (no links). Open a note to see exactly why it landed where it did.</p>`}` : `<label class="srow"><span>${r.label}</span><b id="sv${j}"></b><input type="range" id="s${j}" min="${r.min}" max="${r.max}" step="${r.step}"><small>${r.hint}</small></label>`).join("");
+html($("#srows")).v = SROWS.map((r,j) => r.h ? `<h6>${r.h}</h6>${r.h === "Link weights" ? `<p class="pn" style="margin:-2px 0 6px">Score = each kind of link, counted with diminishing returns (1 link → 0.7, 3 → 1.4, 10 → 2.4, 100 → 4.6), times its weight, added up. Prev/next series links don't count. Within a level, a higher score sits higher.</p>` : `<p class="pn" style="margin:-2px 0 6px">A note gets the highest level it qualifies for. Level 5: a home note, or one of the top scorers. Level 4: a map linking 3+ maps, or a score at the Level 4 cut-off. Level 3: any map, or a score at the Level 3 cut-off. Level 2: any link. Level 1: no links yet. Click a note to see why it landed where it did.</p>`}` : `<label class="srow"><span>${r.label}</span><b id="sv${j}"></b><input type="range" id="s${j}" min="${r.min}" max="${r.max}" step="${r.step}"><small>${r.hint}</small></label>`).join("");
 { const hs = [...$("#srows").querySelectorAll("h6")].find(h => /Where the levels start/.test(h.textContent));
   if (hs) { const w = doc.createElement("div"); w.className = "sbal"; const l = doc.createElement("label"); l.className = "mini lcemo"; const cb = doc.createElement("input"); cb.type = "checkbox"; cb.id = "sbal"; const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = "Balance levels by vault size";
     l.append(cb, sw, t); const p_ = doc.createElement("p"); p_.className = "pn sbalp"; w.append(l, p_); hs.after(w);
@@ -4330,8 +4342,9 @@ function navTo(j, fromTrail){
 // Focus zoom (0.8.10, Nick: keep both, Normal the default): Normal frames every focused note; Close-Up (Starfield) frames the note with its hub.
 // A small square button on the map (in Focus, in Starfield) and the Z key switch between them.
 let FZC = pref("iv-fzclose", false) === true;
-function setFZ(c){ FZC = c; save("iv-fzclose", c); syncFZ(); if (focus >= 0) setFocus(focus, true); }
-function syncFZ(){ const b = root.querySelector("#fzbtn"); if (!b) return; const h = !(focus >= 0 && view === "stars" && !S3D); if (b.hidden !== h) { b.hidden = h; if (!h) draw(); } b.setAttribute("aria-pressed", String(FZC)); b.setAttribute("aria-description", FZC ? "Focus zoom: Close-Up (Z for Normal)" : "Focus zoom: Normal (Z for Close-Up)"); }
+function setFZ(c){ FZC = c; save("iv-fzclose", c); syncFZ(); if (focus >= 0) { setFocus(focus, true); return; }
+  if (view !== "stars" || S3D) return; if (c && sel >= 0) animateTo(starFocusTarget(X, Y, sel)); else if (!c) animateTo(fitTarget()); }
+function syncFZ(){ const b = root.querySelector("#fzbtn"); if (!b) return; const h = !(view === "stars" && !S3D); if (b.hidden !== h) { b.hidden = h; if (!h) draw(); } b.setAttribute("aria-pressed", String(FZC)); b.setAttribute("aria-description", FZC ? "Zoom: Close-Up (Z for Normal)" : "Zoom: Normal (Z for Close-Up on the note you're on)"); }
 function starFocusTarget(xs, ys, i){ const vw = W - sideW(), cx = vw/2, cy = H/2, R = .44*Math.min(vw, H); let d = 0;
   const b = BOD[i] >= 0 ? BODIES[BOD[i]] : null, h = b && b.core != null ? b.core : -1;
   if (h >= 0 && h !== i) d = Math.hypot(xs[h] - xs[i], ys[h] - ys[i]);
@@ -5698,14 +5711,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         o: () => hit("#dplay"),
         a: () => { const d = $("#animdock"); if (!d || d.hidden) return hit("#anitab"); const c_ = d.querySelector('button[aria-label="Tuck animations away"]'); if (c_) { c_.click(); return true; } return false; },
         w: () => hit("#pplay"), t: () => vis_($("#timebar")) || !$("#timebar").hidden ? hit("#tlplay") : false,
-        s: () => hit("#follownote"), f: () => hit("#filtbtn"), n: () => hit("#focusmode"), v: () => hit("#viewbtn"), z: () => { if (focus < 0 || view !== "stars" || S3D) return false; setFZ(!FZC); return true; } };
+        s: () => hit("#follownote"), f: () => hit("#filtbtn"), n: () => hit("#focusmode"), v: () => hit("#viewbtn"), z: () => { if (view !== "stars" || S3D) return false; setFZ(!FZC); return true; } };
       ["j", "k", "l"].forEach((key, j) => LK[key] = () => { const bs = [...root.querySelectorAll("#driftseg button")].filter(vis_); const b_ = bs[j]; if (!b_) return false; b_.click(); if (!orbitOn()) hit("#dplay"); return true; });
       // ? opens a card of every key; Display ends with a row that opens it too
       const card = cv.parentElement.createDiv({ cls: "keycard", attr: { role: "dialog", "aria-label": "Keyboard shortcuts" } }); card.hidden = true;
       const fillCard = () => { card.empty(); const hd = card.createDiv({ cls: "kch" }); hd.createSpan({ text: "Keyboard shortcuts" }); const x_ = hd.createEl("button", { cls: "kcx", text: "×", attr: { type: "button", "aria-label": "Close" } }); x_.onclick = () => { card.hidden = true; };
         const cols = card.createDiv({ cls: "kcc" }), sec = (t, rows) => { const c_ = cols.createDiv({ cls: "kcs" }); c_.createDiv({ cls: "pt", text: t }); for (const [k_, d_] of rows) { const r_ = c_.createDiv({ cls: "kcr" }); const kk = r_.createSpan({ cls: "kcks" }); for (const one of k_.split(" ")) kk.createEl("kbd", { text: one }); r_.createSpan({ text: d_ }); } };
         sec("Maps", [...KEYED()].map(([k_, ch]) => [k_, [...ch.childNodes].filter(x => !(x.classList && x.classList.contains("mkey"))).map(x => x.textContent).join("").trim()]).sort((a_, b_) => "1234567890-=[]\\".indexOf(a_[0]) - "1234567890-=[]\\".indexOf(b_[0])));
-        sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["Z", "Focus zoom: Normal or Close-Up (Starfield)"], ["V", "Saved views"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]); };
+        sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["Z", "Zoom: Normal or Close-Up on the note (Starfield)"], ["V", "Saved views"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]); };
       const toggleCard = () => { if (card.hidden) { closePops(); fillCard(); } card.hidden = !card.hidden; return true; };
       LK["?"] = toggleCard; on(doc, "pointerdown", e => { if (!card.hidden && !card.contains(e.target)) card.hidden = true; });
       onKey(e => { if (e.key === "Escape" && !card.hidden) card.hidden = true; });

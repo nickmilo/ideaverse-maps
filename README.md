@@ -51,7 +51,7 @@ In Starfield, your biggest hubs become the cores of galaxies. Every note joins t
 
 Starfield's menu lets you switch to 3D, set how strongly the galaxies glow (Clear turns their light off so every note reads as a crisp dot), add a rare twinkle, and make the galaxies turn slowly. During the Timelapse, each new note flares as it appears.
 
-**Star Chart**, a switch that works in 2D or 3D, lays a navigator's chart over the galaxies. Rings around the note you're on show its links by kind and a dial of time, and signposts on the outer ring point toward the hubs it links to. Click a signpost to go there. In Focus, press **Z** (or the small square button in the corner) to switch between Normal, which frames every focused note, and Close-Up, which frames the note with its hub. Four switches under it add lines between your hubs, a small readout beside each ringed hub, a glow in each galaxy's folder color, and slowly turning orbits.
+**Star Chart**, a switch that works in 2D or 3D, lays a navigator's chart over the galaxies. Rings around the note you're on show its links by kind and a dial of time, and signposts on the outer ring point toward the hubs it links to. Click a signpost to go there. Press **Z** (or the square zoom button) to switch between Normal and Close-Up, which frames the note you're on with its hub. Four switches under it add lines between your hubs, a small readout beside each ringed hub, a glow in each galaxy's folder color, and slowly turning orbits.
 
 ![Starfield in 3D: galaxies of notes around their hubs](docs/starfield.png)
 <sub>Starfield in 3D, LYT Mode. Each galaxy is a hub plus the notes that reach it first.</sub>

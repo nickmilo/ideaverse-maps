@@ -10,7 +10,7 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.keyboard.press('z'); await sleep(3000); await page.mouse.move(5, 900); await shot('fz-close');
   console.log('pressed', await page.evaluate(() => document.querySelector('.ivm #fzbtn').getAttribute('aria-pressed')));
   await page.locator('.ivm #fzbtn').click(); await sleep(2500); console.log('after click', await page.evaluate(() => document.querySelector('.ivm #fzbtn').getAttribute('aria-pressed')));
-  await page.keyboard.press('n'); await sleep(2000);
+  await page.keyboard.press('n'); await sleep(2500); await page.keyboard.press('z'); await sleep(2500); await page.mouse.move(5, 900); await shot('fz-nofocus-close'); await page.keyboard.press('z'); await sleep(2500); await shot('fz-nofocus-normal');
   await page.locator('.ivm #mapsetbtn').click(); await sleep(400); await shot('fz-menu');
   await page.locator('.ivm .sfseg button[data-m="3d"]').click(); await sleep(2000); await page.locator('.ivm .chartsw').click(); await sleep(1500); await page.keyboard.press('Escape'); await sleep(1500); await page.mouse.move(5, 900); await shot('fz-chart3d');
   console.log('errors:', errs.join(' | ') || 'none');
