@@ -4227,7 +4227,7 @@ html($("#srows")).v = SROWS.map((r,j) => r.h ? `<h6>${r.h}</h6>${r.h === "Link w
 function syncScore(){
   { const cb = $("#sbal"), p_ = root.querySelector(".sbalp"), nn = N.filter(d => !d.archive).length; if (cb) { cb.checked = !!S.bal;
       p_.textContent = (S.bal ? `On: Level 4 from ${CUT.l4.toFixed(1)}, Level 3 from ${CUT.l3.toFixed(1)} (the top 2% and 5% of linked notes); the two sliders below rest. ` : "")
-        + `Toggle on for ideaverses under ${BAL_N.toLocaleString()} notes, for a better balance between the five levels of idea emergence. ` + (nn < BAL_N ? `Yours has ${nn.toLocaleString()}: recommended.` : `Yours has ${nn.toLocaleString()}: the fixed cut-offs already fit.`);
+        + `Toggle on for ideaverses under ${BAL_N.toLocaleString()} notes, for a better balance between the five levels of idea emergence. ` + (nn < BAL_N ? `Yours has ${nn.toLocaleString()}: recommended.` : `Yours has ${nn.toLocaleString()}: the fixed cut-offs already fit. Keep toggle off.`);
       for (const k_ of ["l4", "l3"]) { const j = SROWS.findIndex(r => r.key === k_), el = $("#s" + j); if (el) { el.disabled = !!S.bal; el.closest(".srow, label, div").classList.toggle("dim", !!S.bal); } } } }
   SROWS.forEach((r,j) => { if (r.h) return; const v = getS(r.key); $("#s"+j).value = v; $("#sv"+j).textContent = r.step >= 1 ? v : (+v).toFixed(r.step < .1 ? 2 : 1); });
   const c = {}; for (const d of N) if (!d.archive) c[d.level] = (c[d.level]||0) + 1;
