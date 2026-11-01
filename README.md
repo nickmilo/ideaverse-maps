@@ -47,7 +47,7 @@ Gravity draws the same five levels as rings. Home notes and hubs sit at the cent
 
 ### Starfield
 
-In Starfield, your biggest hubs become the cores of galaxies. Every note joins the hub it can reach in the fewest links. Maps gather near the center of their galaxy, linked notes trail out along its arms, and unlinked notes drift in clouds, one for each folder. Click a galaxy's name to fly into it.
+In Starfield, your biggest hubs become the cores of galaxies. Every note joins the hub it can reach in the fewest links. Maps gather near the center of their galaxy, linked notes trail out along its arms, and unlinked notes drift in clouds, one for each folder. Click a galaxy's name to fly into it. A small overview map in the bottom right shows where you are in the whole sky; click it to move there.
 
 Starfield's menu lets you switch to 3D, set how strongly the galaxies glow (Clear turns their light off so every note reads as a crisp dot), add a rare twinkle, and make the galaxies turn slowly. During the Timelapse, each new note flares as it appears.
 

@@ -1249,3 +1249,7 @@ body.is-mobile .ivm.ivm #vlist.vlist2 .vr{cursor:default}
 .ivm .emohd,.ivm .emohelp,.ivm .emoft{flex:none}
 .ivm .emost:empty{display:none}
 .ivm.ivm #vlist.vlist2 .vr > .vrenin{flex:1 1 auto;min-width:0}
+
+/* 0.8.7 Starfield's overview map: bottom right, beside the zoom buttons */
+.ivm canvas.minimap{position:absolute;z-index:3;border-radius:10px;border:1px solid rgba(160,180,255,.28);background:rgba(4,5,12,.82);box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:crosshair;touch-action:none}
+.ivm canvas.minimap[hidden]{display:none}

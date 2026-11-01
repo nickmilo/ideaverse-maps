@@ -2998,7 +2998,13 @@ let hover = -1, sel = -1, showAll = false;
 const css = {};
 const COLORS = ["bg","panel","line","ink","muted","accent","accent-soft","up","down","band-a","band-b","l2","l1","sl2","sl1","rel","upp","prop","edge-faint"];
 let probe = null;   // colors go through the browser once, so the canvas gets plain rgb() even when a theme writes color-mix() or Obsidian's own variables
-function readCss(){ const s = win.getComputedStyle(root);
+// Display → Starfield link colors (0.8.7, Nick): gold above, blue below, lilac related, pale gold up, slate other, on every map and in the note panel
+let SFLINKS = pref("iv-sflinks", false) === true;
+const SFDARK = { up: "#ffcf6e", down: "#6fd3ff", rel: "#c9a2ff", upp: "#fff09a", prop: "#a9b4c8" }, SFLIGHT = { up: "#c4870c", down: "#1f86c4", rel: "#8a3ff0", upp: "#9c8a00", prop: "#6b7c93" };
+function applySfLinks(){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || (th === "obsidian" && doc.body.classList.contains("theme-dark"));
+  const P = dark ? SFDARK : SFLIGHT; for (const kk of Object.keys(P)) { if (SFLINKS) root.style.setProperty("--" + kk, P[kk]); else root.style.removeProperty("--" + kk); }
+  let t = null; try { t = tip; } catch { t = null; } if (t) for (const kk of Object.keys(P)) { if (SFLINKS) t.style.setProperty("--" + kk, P[kk]); else t.style.removeProperty("--" + kk); } }
+function readCss(){ applySfLinks(); const s = win.getComputedStyle(root);
   if (!probe) { probe = root.createSpan({ cls: "ivm-probe" }); }
   for (const v of ["qa","display","mono","body","dw"]) css[v] = s.getPropertyValue("--"+v).trim();
   for (const lv of [5, 4, 3]) for (const [j, ab] of ["a", "b"].entries()) { probe.setCssProps({ "--probe": s.getPropertyValue(`--g${lv}${ab}`).trim() }); GRAD[lv][j] = win.getComputedStyle(probe).color || GRAD[lv][j]; }   // level colors come from the theme
@@ -3302,6 +3308,7 @@ function render(){
 
   if (emoView()) drawEmojis(lit, dim);
   if (chartOn()) drawChart();
+  drawMini();   // Starfield's overview map, bottom right
   orbWake();   // Star Chart's turning orbits run on their own layer (starts or stops it)
   if (!(CAP.on && CAP.hide)) labels(lit);
   if (BACON) drawBacon();
@@ -3709,7 +3716,7 @@ const end = e => { pts.delete(e.pointerId);
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
-    { const h = chartPostAt(e.offsetX, e.offsetY); if (h >= 0) { select(h); flyTo(h, true); drag = null; return; } }   // Star Chart: a signpost takes you to its hub
+    { const h = chartPostAt(e.offsetX, e.offsetY); if (h >= 0) { if (focus >= 0 || focusArmed) navTo(h); else { select(h); flyTo(h, true); } drag = null; return; } }   // in Focus, the signpost's note becomes the focus, with all its links   // Star Chart: a signpost takes you to its hub
   if (i >= 0 && host.openNote && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (Platform.isMobile || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); else if (i >= 0) nudgeTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
@@ -4071,9 +4078,9 @@ function chartLines(){ const dimF = sel >= 0 ? .35 : 1; ctx.lineWidth = 1;
       ctx.strokeStyle = HUD((both ? .34 : .14) * dimF); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x2, y2); ctx.stroke();
       if (both || N[i].level === 5 || N[j].level === 5) { ctx.fillStyle = HUD(.7 * dimF); ctx.fillRect(x2 - 1.5, y2 - 1.5, 3, 3); } } } }
 // a readout beside each ringed hub: level and score, links in and out, the year its linked notes began, and how many came this year
-function chartReadout(i, x, y, r){ const nb = new Set([...out[i], ...inn[i]]); let first = Infinity, yr = 0; const y0 = Date.UTC(NOW_Y, 0, 1);
+function chartReadout(i, x, y, r){ const nb = new Set([...out[i], ...inn[i]]); const CY = new Date().getUTCFullYear(); let first = Infinity, yr = 0; const y0 = Date.UTC(CY, 0, 1);
   for (const j of nb) { const t = TVD[j]; if (!(t > 0)) continue; if (t < first) first = t; if (t >= y0) yr++; }
-  const L = [`L${N[i].level} · SCORE ${N[i].score.toFixed(N[i].score < 10 ? 1 : 0)}`, `IN ${N[i].body_in} · OUT ${N[i].body_out}`, `${isFinite(first) ? "SINCE " + new Date(first).getUTCFullYear() : "NO DATES"} · +${yr} ${NOW_Y}`];
+  const L = [`L${N[i].level} · SCORE ${N[i].score.toFixed(N[i].score < 10 ? 1 : 0)}`, `IN ${N[i].body_in} · OUT ${N[i].body_out}`, `${isFinite(first) ? "SINCE " + new Date(first).getUTCFullYear() : "NO DATES"} · +${yr} ${CY}`];
   const ang = -.62, ax = x + Math.cos(ang) * r, ay = y + Math.sin(ang) * r, bx = ax + 22, by = ay - 16;
   ctx.strokeStyle = HUD(.55); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(bx + 8, by); ctx.stroke();
   ctx.font = `500 9.5px ${css.mono}`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
@@ -4771,6 +4778,34 @@ $("#dplay").onclick = () => drifting ? driftStop() : driftStart(); syncDrift();
 { const r3 = root.querySelector('input[name="s3d"][value="3d"]'); if (r3 && !root.querySelector('input[name="s3d"][value="chart"]')) { const l3 = r3.closest("label"), lc = l3.cloneNode(true), ic = lc.querySelector("input"); ic.value = "chart"; ic.checked = false;
     lc.querySelector("b").textContent = "Star Chart"; lc.querySelector("em").textContent = "a navigator's chart: rings around a hub, and signposts to the hubs it links to"; l3.after(lc); } }
 // the second layer set: a mini switch in Starfield's gear, shown while Star Chart is on
+// ---------- Starfield's overview map (0.8.7, Nick): a small picture of the whole sky in the bottom right, with a box for where you are ----------
+// so a jump from one note to another far away (Focus, a signpost, a link) never loses your place. Click or drag in it to move the view there.
+let MINI = pref("iv-mini", true) !== false, MB = null;   // MB: the world box the overview shows
+const miniCv = doc.createElement("canvas"); miniCv.className = "minimap"; miniCv.hidden = true; cv.parentElement.appendChild(miniCv); const mctx = miniCv.getContext("2d");
+const miniOn = () => MINI && view === "stars" && !S3D && W > 520 && H > 380 && !(CAP.on && CAP.hide);
+function drawMini(){ if (!miniOn() || !BODIES.length) { miniCv.hidden = true; return; } miniCv.hidden = false;
+  const mw = 196, mh = 128, d = Math.min(2, win.devicePixelRatio || 1); if (miniCv.width !== mw*d) { miniCv.width = mw*d; miniCv.height = mh*d; miniCv.style.width = mw + "px"; miniCv.style.height = mh + "px"; }
+  miniCv.style.left = Math.max(0, cv.offsetLeft + W - sideW() - 62 - mw) + "px"; miniCv.style.top = (cv.offsetTop + H - mh - (doc.body.classList.contains("is-mobile") ? 14 : 42)) + "px";   // beside the zoom buttons, in the part of the map you can see
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const b of BODIES) { const bx = UC.x + b.x, by = UC.y + b.y; x0 = Math.min(x0, bx - b.r); x1 = Math.max(x1, bx + b.r); y0 = Math.min(y0, by - b.r); y1 = Math.max(y1, by + b.r); }
+  const pad = 8, sc = Math.min((mw - 2*pad)/(x1 - x0), (mh - 2*pad)/(y1 - y0)), ox = (mw - (x1 - x0)*sc)/2 - x0*sc, oy = (mh - (y1 - y0)*sc)/2 - y0*sc; MB = { sc, ox, oy };
+  const mx = x => x*sc + ox, my = y => y*sc + oy;
+  mctx.setTransform(d, 0, 0, d, 0, 0); mctx.clearRect(0, 0, mw, mh);
+  mctx.globalCompositeOperation = "lighter";
+  for (const b of BODIES) { const r = Math.max(2, b.r*sc*(b.kind === "neb" ? 1.1 : 1.5)), g = mctx.createRadialGradient(mx(UC.x + b.x), my(UC.y + b.y), 0, mx(UC.x + b.x), my(UC.y + b.y), r);
+    const col = b.kind === "old" ? "#ff7a3c" : b.kind === "home" ? "#ffd27a" : b.hue || "#9fb0ff"; g.addColorStop(0, col + "cc"); g.addColorStop(1, col + "00"); mctx.fillStyle = g; mctx.beginPath(); mctx.arc(mx(UC.x + b.x), my(UC.y + b.y), r, 0, 6.2832); mctx.fill(); }
+  mctx.globalCompositeOperation = "source-over";
+  if (focus >= 0) { mctx.fillStyle = "rgba(255,255,255,.75)"; for (let i=0;i<n;i++) if (vis[i]) mctx.fillRect(mx(X[i]) - .75, my(Y[i]) - .75, 1.5, 1.5); }   // in Focus, the focused notes, wherever they are
+  if (sel >= 0) { mctx.fillStyle = css.accent || "#ffe27a"; mctx.beginPath(); mctx.arc(mx(X[sel]), my(Y[sel]), 2.6, 0, 6.2832); mctx.fill(); }
+  const lc = leftCol(), vx0 = mx(wx(0)), vy0 = my(wy(0)), vx1 = mx(wx(W - sideW())), vy1 = my(wy(H));   // where you are: the part of the sky the map shows
+  mctx.strokeStyle = "rgba(255,255,255,.9)"; mctx.lineWidth = 1.2; mctx.strokeRect(Math.max(1, vx0), Math.max(1, vy0), Math.min(mw - 2, vx1) - Math.max(1, vx0), Math.min(mh - 2, vy1) - Math.max(1, vy0));
+  void lc; }
+{ let dragM = false; const go = e => { if (!MB) return; const r = miniCv.getBoundingClientRect(), px = (e.clientX - r.left - MB.ox)/MB.sc, py = (e.clientY - r.top - MB.oy)/MB.sc;
+    tx = (W - sideW())/2 - px*k; ty = H/2 - py*k; tip.hidden = true; draw(); };
+  miniCv.addEventListener("pointerdown", e => { e.stopPropagation(); e.preventDefault(); dragM = true; miniCv.setPointerCapture(e.pointerId); driftStop(); go(e); });
+  miniCv.addEventListener("pointermove", e => { if (dragM) go(e); });
+  miniCv.addEventListener("pointerup", () => { dragM = false; }); miniCv.addEventListener("pointercancel", () => { dragM = false; }); miniCv.addEventListener("wheel", e => e.stopPropagation(), { passive: true }); }
+{ const sp = root.querySelector('#starpop'); if (sp) { const r = doc.createElement("label"); r.className = "mini lcemo minisw"; const cb = doc.createElement("input"); cb.type = "checkbox"; cb.checked = MINI; const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = "Show the overview map";
+    r.append(cb, sw, t); sp.appendChild(r); cb.onchange = () => { MINI = cb.checked; save("iv-mini", MINI); draw(); }; } }
 let syncCh2 = () => {};
 { const sp = root.querySelector('#starpop'); if (sp) { const r = doc.createElement("label"); r.className = "mini lcemo chart2"; const cb = doc.createElement("input"); cb.type = "checkbox"; cb.checked = STCH2; const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = "Lines, readouts, gas and orbits";
     r.append(cb, sw, t); const lc = root.querySelector('input[name="s3d"][value="chart"]'); (lc ? lc.closest("label") : sp.lastChild).after(r);
@@ -5318,6 +5353,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   vgCb.checked = VGRID; vgCb.onchange = () => { VGRID = vgCb.checked; save("iv-vgrid", VGRID); syncTB(); };
   const alSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Draw every link on the map, faintly" } }); const alCb = alSw.createEl("input", { type: "checkbox" }); alSw.createEl("i", { cls: "sw" }); alSw.createSpan({ text: "Show all links" });
   alCb.onchange = () => { if (alCb.checked !== showAll) $("#alllinks").click(); };
+  { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
+    cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
   // Show the way home (Kevin Bacon): from the note you're on, the fewest links back to Home, or to a note you choose
   const bcSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Kevin Bacon: from the note you're on, light up the fewest links back to Home (or a note you choose)" } }); const bcCb = bcSw.createEl("input", { type: "checkbox" }); bcSw.createEl("i", { cls: "sw" }); bcSw.createSpan({ text: "Show the way home" });
   const bcTo = DI.p.createDiv({ cls: "bacto" }); bcTo.createSpan({ cls: "btl", text: "To" }); const bcName = bcTo.createEl("button", { cls: "bcname", attr: { type: "button", "aria-label": "Choose the note to find the way to" } });
