@@ -2465,9 +2465,11 @@ EXP.people = {
 // unlinked notes at the edge. Within a frame, notes of a folder sit together, so folders show as patches of one color.
 // Scattered: the same tiles, set in no order at all. A tile's size comes from its link score; color from its level
 // (maps and hubs wear the level colors) or its folder.
-let MOS = pref("iv-mos", "emergence") === "scatter" ? "scatter" : "emergence"; const MOSF = [];
+// Ranked (0.8.25, Nick's idea): every note in rank order, read like a page turned upside down: from the bottom left, left to right,
+// row by row up to #1 at the top right. A row is as tall as its notes are big, so the top rows (the hubs) are the tallest.
+let MOS = ["scatter", "rank"].includes(pref("iv-mos", "emergence")) ? pref("iv-mos", "emergence") : "emergence"; const MOSF = [], MOSR = [];
 function layoutMosaic2(){
-  for (let i=0;i<n;i++) RW[i] = RH[i] = 0; MOSF.length = 0;
+  for (let i=0;i<n;i++) RW[i] = RH[i] = 0; MOSF.length = 0; MOSR.length = 0;
   const wt = i => .6 + Math.pow(Math.max(0, N[i].score), 1.35) * .35, fold = i => N[i].path.includes("/") ? N[i].path.slice(0, N[i].path.lastIndexOf("/")) : "";
   const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i); if (!ids.length) { expBox = { x0: 0, y0: 0, x1: 100, y1: 100 }; return; }
   const area = ids.reduce((a, i) => a + wt(i), 0), U = 1600 / Math.max(1, ids.reduce((a, i) => a + wt(i), 0) / ids.length);   // about 1,600 square units for an average tile
@@ -2476,6 +2478,16 @@ function layoutMosaic2(){
   const fill = (items, x, y, w, h) => { if (!items.length || w <= 0 || h <= 0) return; const by = new Map(); for (const it of items) { const f = fold(it.i); let a = by.get(f); if (!a) by.set(f, a = []); a.push(it); }
     const groups = [...by.values()].map(a => ({ items: a.sort((p, q) => q.v - p.v), v: a.reduce((t, it) => t + it.v, 0) })).sort((p, q) => q.v - p.v);
     squarify(groups, x, y, w, h, (g, x2, y2, w2, h2) => squarify(g.items, x2, y2, w2, h2, set)); };
+  if (MOS === "rank") {
+    // highest first, from the top right going left; each row justified to the full width (the last, at the bottom, keeps its natural size, flush right)
+    const items = ids.map(i => ({ i, v: wt(i) * U })).sort((p, q) => N[q.i].score - N[p.i].score || (N[p.i].path < N[q.i].path ? -1 : 1));
+    const S_ = Math.sqrt(area * U) * 1.25; let y = -S_ * .4, k_ = 0, rk = 0;
+    while (k_ < items.length) { const row = []; let sw = 0, h = 0;
+      while (k_ < items.length) { const it = items[k_]; if (!row.length) h = Math.sqrt(it.v) * 1.15; const w = it.v / h; if (row.length && sw + w > S_ * 1.04) break; row.push(it); sw += w; k_++; if (sw >= S_) break; }
+      const last = k_ >= items.length && sw < S_ * .6, f = last ? 1 : S_ / sw, hh = h; let x = S_ / 2;
+      for (const it of row) { const w = it.v / hh * f; x -= w; set(it, x, y, w, hh); }
+      MOSR.push({ y, h: hh, r0: rk + 1, r1: rk + row.length, xl: x }); rk += row.length; y += hh; }
+    expBox = { x0: -S_ / 2 - 20, y0: -S_ * .4 - 30, x1: S_ / 2 + 60, y1: y + 20 }; return; }
   if (MOS === "scatter") {
     // in no order, laid like a brick wall: each row as tall as it needs to be to fill the width; a tile is wider the higher its score
     const items = ids.map(i => ({ i, a: .8 + 1.8 * Math.sqrt(Math.pow(Math.max(0, N[i].score), 1.35) * .35 / 3), r: hash(N[i].path, 97) })).sort((p, q) => p.r - q.r);
@@ -2496,6 +2508,13 @@ function layoutMosaic2(){
       const pv = part.reduce((t, it) => t + it.v, 0) || 1, [rx, ry, rw, rh] = strips[r]; for (const it of part) it.v *= rw * rh / pv; fill(part, rx, ry, rw, rh); }
     inner = outer; }
   expBox = { x0: -inner / 2 - 20, y0: -inner / 2 - 20, x1: inner / 2 + 20, y1: inner / 2 + 20 }; }
+// Ranked: at the right end of a row (its highest rank), the milestone it holds (#1, #10, #25, #100…) (#1, #10, #25, #100…), so you can tell how far down you are
+function rankGuides(){ const ms = [1, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000]; let next = 0, lastY = -1e9;
+  ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.font = `600 11px ${css.mono || css.body}`;
+  for (const r of MOSR) { while (next < ms.length && ms[next] < r.r0) next++; if (next >= ms.length) break; if (ms[next] > r.r1) continue;
+    const y = sy(r.y + r.h / 2), x = sx((expBox.x1 - expBox.x0 - 80) / 2) + 8; next++; if (y - lastY < 14 || y < -20 || y > H + 20) continue; lastY = y;
+    ctx.fillStyle = css.muted; ctx.globalAlpha = .9; ctx.fillText("#" + ms[next - 1].toLocaleString(), x, y); }
+  ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 EXP.mosaic = {
   layout: layoutMosaic2, pick: (x, y) => rectPick(x, y), ownLabels: true,
   notes(lit, dim){ const gr = Math.max(.5, Math.min(2, k * 1.2));   // the grout between tiles
@@ -2510,12 +2529,12 @@ EXP.mosaic = {
       if (i === sel) { ctx.strokeStyle = css.ink; ctx.lineWidth = 2; ctx.stroke(); }
       if (w > 64 && h > 18) { ctx.fillStyle = d.level >= 3 ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.72)"; ctx.font = `500 ${Math.min(13, h * .3, w * .1)}px ${css.body}`; ctx.textBaseline = "top"; let t = d.title; while (t.length > 3 && ctx.measureText(t).width > w - 10) t = t.slice(0, -2); if (t !== d.title) t += "…"; ctx.fillText(t, x + 5, y + 5); } }
     ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; overLinks(lit); },
-  guides(){ if (MOS !== "emergence") return;   // each level's frame, named at its top left corner
+  guides(){ if (MOS === "rank") { rankGuides(); return; } if (MOS !== "emergence") return;   // each level's frame, named at its top left corner
     ctx.textBaseline = "bottom"; ctx.textAlign = "left";
     // each level's frame, a faint outline; the level names and counts live in the legend
     for (const f of MOSF) { const x = sx(-f.s / 2), y = sy(-f.s / 2), w = f.s * k; if (w < 30) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .9; ctx.lineWidth = 1; ctx.strokeRect(x - 2, y - 2, w + 4, w + 4); }
     ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; },
-  legend: "Mosaic: every note a tile, set like stones. Emergence (the default) puts Level 5 at the heart and each level in a square frame around the one above it (the levels and counts above, from the middle out), out to the unlinked notes at the edge; inside a frame, a folder's notes sit together as a patch of color. Scattered sets the same tiles in no order. A tile's size is its link score; maps and hubs wear their level colors. Click the Mosaic tab to switch.",
+  legend: "Mosaic: every note a tile, set like stones. Emergence (the default) puts Level 5 at the heart and each level in a square frame around the one above it (the levels and counts above, from the middle out), out to the unlinked notes at the edge; inside a frame, a folder's notes sit together as a patch of color. Scattered sets the same tiles in no order. Ranked lays every note out by rank, from the bottom left, left to right and row by row, up to #1 at the top right; the numbers at the left mark where a row reaches #10, #100, #1,000. A tile's size is its link score; maps and hubs wear their level colors. Click the Mosaic tab to switch.",
 };
 
 // ---------- Graph: our take on Obsidian's graph view ----------
@@ -5300,7 +5319,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     r.oninput = () => { PPL.max = +r.value; win.clearTimeout(t_); t_ = win.setTimeout(() => { save("iv-pplmax", PPL.max); morph(true, () => fitTarget()); }, 180); }; }
   // Mosaic's own option: Emergence or Scattered
   { const ms_ = $("#laygrp").createDiv({ cls: "seg", attr: { id: "mosseg", role: "group", "aria-label": "Mosaic" } }); ms_.hidden = true;
-    for (const [v, t, tip] of [["emergence", "Emergence", "Level 5 at the heart, each level a frame around it"], ["scatter", "Scattered", "The same tiles, in no order"]]) {
+    for (const [v, t, tip] of [["emergence", "Emergence", "Level 5 at the heart, each level a frame around it"], ["scatter", "Scattered", "The same tiles, in no order"], ["rank", "Ranked", "Every note in rank order: from the bottom left, row by row, up to #1 at the top right"]]) {
       const b = ms_.createEl("button", { text: t, attr: { type: "button", "data-ms": v, "aria-label": tip, "aria-pressed": String(MOS === v) } });
       b.onclick = e => { e.stopPropagation(); MOS = v; save("iv-mos", v); ms_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.ms === v))); morph(true, () => fitTarget()); legend(); }; } }
   // Years shown: two handles from the first note's year to this year
