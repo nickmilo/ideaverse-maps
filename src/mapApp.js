@@ -3318,6 +3318,7 @@ function render(){
   if (emoView()) drawEmojis(lit, dim);
   if (chartOn()) drawChart();
   drawMini();   // Starfield's overview map, bottom right
+  if (CARD) { const gone = cv.offsetParent === null; if (cardEl.hidden !== gone) { cardEl.hidden = gone; cardR = ""; } }   // the card is on the page: hide it while the map's tab isn't showing
   placeCard();
 
   orbWake();   // Star Chart's turning orbits run on their own layer (starts or stops it)
@@ -3818,17 +3819,28 @@ function renderTrail(){
 let EDITM = pref("iv-editm", false) === true, CARD = null, CARDP = null, cardR = "";
 const CARDMAPS = new Set(["stars", "emergence", "spacetime"]);
 const cardOn = () => EDITM && CARDMAPS.has(view) && !!host.editCard && !isPhone() && !S3D_ON();
-const cardEl = doc.createElement("div"); cardEl.className = "ivm-card"; cardEl.hidden = true; cv.parentElement.appendChild(cardEl);
+let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84;   // the card's theme: Obsidian's, or the map's (dark or light); its opacity, %
+const cardEl = doc.createElement("div"); cardEl.className = "ivm-card"; cardEl.hidden = true; root.after(cardEl);
+// Editor theme → Map: Obsidian works out its colors once, on the page body (--background-primary: var(--color-base-00)…), so a dark or light
+// class on the card alone changes nothing; the card re-declares those body colors itself, so they resolve with its own dark or light base colors
+let BODYV = null;
+const bodyVars = () => { if (BODYV) return BODYV; BODYV = {}; for (const sh of [...doc.styleSheets]) { let rs; try { rs = sh.cssRules; } catch { continue; }
+    for (const r of [...rs]) { if (!r.style || !/^(body|\.theme-light, ?\.theme-dark|\.theme-dark, ?\.theme-light)$/.test(r.selectorText || "")) continue;
+      for (const nm of [...r.style]) if (nm.startsWith("--")) { const v = r.style.getPropertyValue(nm).trim(); if (v.includes("var(")) BODYV[nm] = v; } } }
+  return BODYV; };
+function cardLook(){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || (th === "obsidian" && doc.body.classList.contains("theme-dark")), m = CARDTH === "map";
+  cardEl.classList.toggle("theme-dark", m && dark); cardEl.classList.toggle("theme-light", m && !dark);
+  const bv = bodyVars(); cardEl.setCssProps(Object.fromEntries(Object.keys(bv).map(nm => [nm, m ? bv[nm] : ""]))); cardEl.setCssProps({ "--cardop": CARDOP + "%" }); }
 const cardHd = cardEl.createDiv({ cls: "cardhd" }), cardT = cardHd.createSpan({ cls: "cardt" }), cardOpen = cardHd.createEl("button", { cls: "cardbtn", text: "Open in editor", attr: { type: "button" } }), cardX = cardHd.createEl("button", { cls: "cardbtn cardx", text: "×", attr: { type: "button", "aria-description": "Close the card" } });
 const cardBody = cardEl.createDiv({ cls: "cardbody" });
 for (const t of ["pointerdown", "wheel", "click"]) cardEl.addEventListener(t, e => e.stopPropagation());
 function cardRect(){ const vw = W - sideW(), cw = Math.round(Math.max(380, Math.min(640, vw*.34))), y = Math.round(H*.33); return { x: Math.round((vw - cw)/2), y, w: cw, h: H - y - 12 }; }
-function placeCard(){ if (cardEl.hidden) return; const r = cardRect(), key = [r.x, r.y, r.w, r.h, cv.offsetLeft, cv.offsetTop].join(); if (key === cardR) return; cardR = key;
-  cardEl.style.left = (cv.offsetLeft + r.x) + "px"; cardEl.style.top = (cv.offsetTop + r.y) + "px"; cardEl.style.width = r.w + "px"; cardEl.style.height = r.h + "px"; if (CARD) CARD.resize(); }
+function placeCard(){ if (cardEl.hidden) return; const r = cardRect(), c0 = cv.getBoundingClientRect(), key = [r.x, r.y, r.w, r.h, c0.left, c0.top].join(); if (key === cardR) return; cardR = key;
+  const c = cv.getBoundingClientRect(), pr = cardEl.parentElement.getBoundingClientRect(); cardEl.style.left = (c.left - pr.left + r.x) + "px"; cardEl.style.top = (c.top - pr.top + r.y) + "px"; cardEl.style.width = r.w + "px"; cardEl.style.height = r.h + "px"; if (CARD) CARD.resize(); }
 function closeCard(){ if (!CARD && cardEl.hidden) return; cardEl.hidden = true; CARDP = null; cardR = ""; if (CARD) { CARD.close(); CARD = null; } }
 async function openCard(i){ if (!cardOn() || i < 0 || !vis[i]) { closeCard(); return; }
   const p = N[i].path; if (!CARD) { CARD = host.editCard(); cardBody.appendChild(CARD.el); }
-  cardT.setText(N[i].title); cardEl.hidden = false; placeCard();
+  cardT.setText(N[i].title); cardLook(); cardEl.hidden = false; placeCard();
   const r = cardRect(); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k });   // the note above the card, in the top third
   if (CARDP !== p) { CARDP = p; await CARD.open(p); CARD.resize(); } }
 cardX.onclick = () => closeCard();
@@ -5453,7 +5465,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const alSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Draw every link on the map, faintly" } }); const alCb = alSw.createEl("input", { type: "checkbox" }); alSw.createEl("i", { cls: "sw" }); alSw.createSpan({ text: "Show all links" });
   alCb.onchange = () => { if (alCb.checked !== showAll) $("#alllinks").click(); };
   { const l = DI.p.createEl("label", { cls: "pmaps drow editm" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = EDITM; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Edit mode (experimental)" });
-    cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); if (EDITM && sel >= 0) void openCard(sel); else closeCard(); }; }
+    const g = DI.p.createDiv({ cls: "editopts" }); g.hidden = !EDITM;
+    const tr = g.createDiv({ cls: "eorow" }); tr.createSpan({ cls: "eol", text: "Editor theme" }); const seg = tr.createDiv({ cls: "seg" });
+    for (const [v, t] of [["obsidian", "Obsidian"], ["map", "Map"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDTH === v) } });
+      b.onclick = e => { e.stopPropagation(); CARDTH = v; save("iv-cardth", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); cardLook(); }; }
+    const or_ = g.createEl("label", { cls: "eorow" }); or_.createSpan({ cls: "eol", text: "Opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
+    sl.oninput = () => { CARDOP = +sl.value; ov.setText(CARDOP + "%"); cardLook(); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
+    cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); g.hidden = !EDITM; if (EDITM && sel >= 0) void openCard(sel); else closeCard(); }; }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
   // Show the way home (Kevin Bacon): from the note you're on, the fewest links back to Home, or to a note you choose
@@ -5799,7 +5817,7 @@ let scopeSig = null, baseSig = null, baseDirty = false;
 if (following) win.setTimeout(() => followPath(host.activePath && host.activePath(), true), 400);   // opened while following: start on the active note
 
 return {
-  destroy(){ dead = true; closeCard(); ro.disconnect(); popObs.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
+  destroy(){ dead = true; closeCard(); cardEl.remove(); ro.disconnect(); popObs.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
     win.clearTimeout(senseTimer); win.clearTimeout(pTimer); driftStop(); tip.remove(); },
   openNote(path){ const i = PIDX.get(path); if (i != null) navTo(i); },
   follow(path){ followPath(path); },

@@ -1293,15 +1293,23 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 /* Starfield: the Linking Your Thinking mark sits halfway to the left (at a quarter of the width), clear of the galaxies below the middle (0.8.14, Nick) */
 .ivm[data-view="stars"] .wm-lyt{left:25%}
 
-/* Edit mode (experimental): the card under the picked note, holding a real Obsidian editor */
-.ivm .ivm-card{position:absolute;z-index:4;display:flex;flex-direction:column;background:color-mix(in srgb,var(--bg) 94%,transparent);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 32px rgba(0,0,0,.35);overflow:hidden;backdrop-filter:blur(6px)}
-.ivm .ivm-card[hidden]{display:none}
-.ivm .ivm-card .cardhd{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 14px;border-bottom:1px solid var(--line);flex:none}
-.ivm .ivm-card .cardt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 12.5px var(--font-interface,inherit);color:var(--ink)}
-.ivm.ivm .ivm-card .cardbtn{border:1px solid var(--line);background:transparent;box-shadow:none;height:24px;padding:0 8px;border-radius:6px;font:500 11.5px var(--font-interface,inherit);color:var(--muted);cursor:pointer}
-.ivm.ivm .ivm-card .cardbtn:hover{color:var(--ink)}
-.ivm.ivm .ivm-card .cardx{width:24px;padding:0;font-size:15px}
-.ivm .ivm-card .cardbody{flex:1;min-height:0;position:relative}
-.ivm .ivm-card .cardbody > .workspace-split{position:absolute;inset:0;display:flex}
-.ivm .ivm-card .cardbody .workspace-leaf{flex:1;height:100%}
-.ivm .ivm-card .cardbody .view-header{display:none}
+/* Edit mode (experimental): the card under the picked note, holding a real Obsidian editor. It sits on the page, outside the map's styles,
+   so the editor looks like Obsidian (or, with Editor theme → Map, like Obsidian in the map's dark or light) */
+.ivm-card{position:absolute;z-index:3;display:flex;flex-direction:column;background:color-mix(in srgb,var(--background-primary) var(--cardop,84%),transparent);color:var(--text-normal);border:1px solid var(--background-modifier-border);border-radius:12px;box-shadow:0 10px 32px rgba(0,0,0,.35);overflow:hidden;backdrop-filter:blur(2px)}
+.ivm-card[hidden]{display:none}
+.ivm-card .cardhd{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 14px;border-bottom:1px solid var(--background-modifier-border);flex:none}
+.ivm-card .cardt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:12.5px;color:var(--text-normal)}
+.ivm-card.ivm-card .cardbtn{border:1px solid var(--background-modifier-border);background:transparent;box-shadow:none;height:24px;padding:0 8px;border-radius:6px;font-size:11.5px;color:var(--text-muted);cursor:pointer}
+.ivm-card.ivm-card .cardbtn:hover{color:var(--text-normal)}
+.ivm-card.ivm-card .cardx{width:24px;padding:0;font-size:15px}
+.ivm-card .cardbody{flex:1;min-height:0;position:relative;--background-primary:transparent;--background-primary-alt:transparent}
+.ivm-card .cardbody > .workspace-split{position:absolute;inset:0;display:flex;background:transparent}
+.ivm-card .cardbody .workspace-leaf{flex:1;height:100%}
+.ivm-card .cardbody .view-header{display:none}
+/* Display → Edit mode's settings */
+.ivm .dlist .editopts{display:flex;flex-direction:column;gap:6px;margin:0 0 6px 34px;padding-left:10px;border-left:2px solid var(--line)}
+.ivm .dlist .editopts[hidden]{display:none}
+.ivm .dlist .eorow{display:flex;align-items:center;gap:8px;font:500 12px var(--font-interface,inherit);color:var(--muted)}
+.ivm .dlist .eorow .eol{min-width:84px}
+.ivm .dlist .eorow input[type=range]{width:110px}
+.ivm .dlist .eorow .eov{font:500 11px var(--mono);min-width:34px}
