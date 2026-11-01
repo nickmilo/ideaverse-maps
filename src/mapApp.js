@@ -3282,6 +3282,7 @@ function render(){
   for (const i of [sel, hover]) if (i >= 0) { const x = sx(X[i]), y = sy(Y[i]); ctx.strokeStyle = css.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x,y,rad(i)+3,0,6.2832); ctx.stroke(); }
 
   if (emoView()) drawEmojis(lit, dim);
+  if (chartOn()) drawChart();
   if (!(CAP.on && CAP.hide)) labels(lit);
   if (BACON) drawBacon();
   axisLabels();
@@ -3668,6 +3669,7 @@ cv.addEventListener("pointermove", e => {
   const i = pick(e.offsetX, e.offsetY);
   if (i !== hover) { hover = i; cv.classList.toggle("hot", i >= 0); draw(); }
   if (pplOn() && i < 0) cv.classList.toggle("hot", pplHubAt(e.offsetX, e.offsetY) >= 0);
+  if (i < 0 && chartOn()) { const h = chartPostAt(e.offsetX, e.offsetY); cv.classList.toggle("hot", h >= 0); if (h >= 0) { tip.classList.remove("arc"); html(tip).v = `<b>${esc(N[h].title)}</b><span>Level ${N[h].level} · click to go there</span>`; tip.hidden = false; const tw = tip.offsetWidth; tip.style.left = Math.min(e.clientX + 14, win.innerWidth - tw - 8) + "px"; tip.style.top = (e.clientY + 14) + "px"; return; } }
   if (i < 0 && view === "chord" && !csphOn()) { const a = chordArcAt(e.offsetX, e.offsetY);   // hovering an arc: its ribbons light up, with the counts
     if (a !== chArc) { chArc = a; draw(); }
     if (a >= 0) { showArcTip(a); return; }
@@ -3687,6 +3689,7 @@ const end = e => { pts.delete(e.pointerId);
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
+    { const h = chartPostAt(e.offsetX, e.offsetY); if (h >= 0) { select(h); flyTo(h, true); drag = null; return; } }   // Star Chart: a signpost takes you to its hub
   if (i >= 0 && host.openNote && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (Platform.isMobile || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); else if (i >= 0) nudgeTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
@@ -4022,6 +4025,54 @@ function dualEl(parent, label, id){ const yc = parent.createDiv({ cls: "postctl 
   const lb = box.createDiv({ cls: "srange" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yre" }); lb.createSpan({ cls: "yrh" }); lb.createSpan({ cls: "yrh" }); return { yc, hv }; }
 // emoji labels (Linear Calendar for now): path → emoji, read once from the base
 if (emoAny()) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
+// ---------- Star Chart: Starfield's third mode (0.8.2), a navigator's chart over the 2D galaxies ----------
+// Rings around the picked note (or, with nothing picked, the biggest Level 5 hubs): its links by kind, a dial of time, and signposts
+// pointing the way to the hubs it links to; click a signpost to go there. Every other Level 5 hub wears one faint broken arc.
+let STCH = pref("iv-schart", false) === true, CHPOST = [];   // the signposts drawn this frame: [x, y, note]
+const chartOn = () => view === "stars" && STCH && !S3D;
+const HUD = a => `rgba(127,231,255,${a})`;
+const chartPostAt = (x, y) => { if (!chartOn()) return -1; let b = -1, bd = 13; for (const [px, py, j] of CHPOST) { const d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; b = j; } } return b; };
+function chartHubs(){ if (sel >= 0) return VV(sel) ? [sel] : [];
+  const c = []; for (let i=0;i<n;i++) if (N[i].level === 5 && VV(i)) c.push(i); return c.sort((a, b) => N[b].score - N[a].score).slice(0, 4); }
+function drawChart(){ CHPOST = [];
+  const s = Math.max(1, Math.min(1.7, Math.pow(k, .3) * 1.15)), hubs = chartHubs(), full = new Set(hubs);
+  ctx.save(); ctx.lineCap = "round";
+  for (let i=0;i<n;i++) { if (N[i].level !== 5 || full.has(i) || !VV(i)) continue; const x = sx(X[i]), y = sy(Y[i]); if (x < -80 || x > W + 80 || y < -80 || y > H + 80) continue;
+    const a0 = hash(N[i].path, 7) * 6.2832; ctx.strokeStyle = HUD(.35); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, rad(i) + 18*s, a0, a0 + 4.3); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, rad(i) + 24*s, a0 + 4.6, a0 + 5.6); ctx.stroke(); }
+  for (const i of hubs) chartRings(i, s, i === sel);
+  ctx.restore(); }
+function chartRings(i, s, picked){
+  const x = sx(X[i]), y = sy(Y[i]), P = picked ? 1.9 : 1, r0 = Math.max(rad(i) + 16, 24) * s * P, r1 = r0 + 15*s*P, r2 = r1 + 30*s*P, TAU = 6.2832, TOP = -Math.PI/2;   // the picked note's rings stand well clear of its crowd
+  { const g = ctx.createRadialGradient(x, y, r0 * .6, x, y, r2 + 10*s); g.addColorStop(0, "rgba(4,5,12,0)"); g.addColorStop(.5, "rgba(4,5,12,.55)"); g.addColorStop(1, "rgba(4,5,12,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r2 + 10*s, 0, TAU); ctx.fill(); }   // a dark well behind the rings, so they read over a bright galaxy
+  const nb = [...new Set([...out[i], ...inn[i]])].filter(j => j !== i && VV(j));
+  // inner ring: its links by kind (up, related, above, below, other properties), each kind an arc as long as its share
+  const kinds = new Map(); for (const j of nb) { const c = edgeColor(i, j, upOf(i, j)); kinds.set(c, (kinds.get(c) || 0) + 1); }
+  ctx.lineWidth = 3.6*s; let a = TOP; const gap = nb.length > 1 ? .07 : 0;
+  if (!nb.length) { ctx.strokeStyle = HUD(.35); ctx.beginPath(); ctx.arc(x, y, r0, 0, TAU); ctx.stroke(); }
+  for (const [c, m] of [...kinds].sort((p, q) => q[1] - p[1])) { const da = m / nb.length * TAU; ctx.strokeStyle = c; ctx.beginPath(); ctx.arc(x, y, r0, a + gap/2, a + Math.max(da - gap/2, gap/2 + .02)); ctx.stroke(); a += da; }
+  // middle ring: a dial of time from the first year (at twelve o'clock) round to today; a tick for each month its linked notes were made, longer for busier months
+  const t0 = Date.UTC(SLMIN, 0, 1), span = Math.max(DAY, Date.now() - t0), MO = 30.44*DAY, months = new Map();
+  for (const j of nb) { const t = TVD[j]; if (!(t >= t0)) continue; const m = Math.floor((t - t0) / MO); months.set(m, (months.get(m) || 0) + 1); }
+  ctx.strokeStyle = HUD(.3); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, r1, 0, TAU); ctx.stroke();
+  for (let yr = SLMIN + 1; yr <= NOW_Y; yr++) { const ang = TOP + (Date.UTC(yr, 0, 1) - t0) / span * TAU; ctx.strokeStyle = HUD(.35); ctx.beginPath(); ctx.moveTo(x + Math.cos(ang)*(r1 + 2*s), y + Math.sin(ang)*(r1 + 2*s)); ctx.lineTo(x + Math.cos(ang)*(r1 + 5*s), y + Math.sin(ang)*(r1 + 5*s)); ctx.stroke(); }
+  ctx.strokeStyle = HUD(1); ctx.lineWidth = 1.6;
+  for (const [m, c] of months) { const ang = TOP + (m * MO) / span * TAU, h = (1.5 + Math.min(4.5, Math.log2(1 + c) * 1.6)) * s;
+    ctx.beginPath(); ctx.moveTo(x + Math.cos(ang)*(r1 - h), y + Math.sin(ang)*(r1 - h)); ctx.lineTo(x + Math.cos(ang)*(r1 + h*.4), y + Math.sin(ang)*(r1 + h*.4)); ctx.stroke(); }
+  { const tx_ = x, ty_ = y - r1 - 3*s; ctx.fillStyle = HUD(.95); ctx.beginPath(); ctx.moveTo(tx_, ty_ + 4*s); ctx.lineTo(tx_ - 3*s, ty_ - 1*s); ctx.lineTo(tx_ + 3*s, ty_ - 1*s); ctx.closePath(); ctx.fill(); }   // today, at twelve
+  // outer ring: signposts toward the hubs it links to (maps of maps and up), each on the ring at that hub's direction, with its name
+  ctx.setLineDash([2*s, 5*s]); ctx.strokeStyle = HUD(.6); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, r2, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  const posts = nb.filter(j => N[j].level >= 4 || (N[j].level === 3 && picked)).sort((p, q) => N[q].level - N[p].level || N[q].score - N[p].score), used = [], MAXP = picked ? 10 : 5;
+  const fs = Math.round(10 * Math.min(1.2, s)); ctx.font = `500 ${fs}px ${css.mono}`; ctx.textBaseline = "middle";
+  for (const j of posts) { if (used.length >= MAXP) break; const dx = sx(X[j]) - x, dy = sy(Y[j]) - y; if (Math.hypot(dx, dy) < r2 + 6) continue;
+    const ang = Math.atan2(dy, dx); if (used.some(u => Math.abs(Math.atan2(Math.sin(u - ang), Math.cos(u - ang))) < .26)) continue; used.push(ang);
+    const px = x + Math.cos(ang)*r2, py = y + Math.sin(ang)*r2, sz = (N[j].level === 5 ? 4.2 : 3.8) * s;
+    ctx.fillStyle = "rgba(4,5,12,.85)"; ctx.beginPath(); ctx.arc(px, py, sz + 3, 0, TAU); ctx.fill();
+    ctx.fillStyle = HUD(1); ctx.beginPath(); shape(N[j].level, px, py, sz); ctx.fill();
+    const ox = Math.cos(ang), lx = px + ox * (sz + 7), ly = py + Math.sin(ang) * (sz + 5), t = N[j].title.length > 24 ? N[j].title.slice(0, 23) + "…" : N[j].title;
+    const far = sx(X[j]) < 0 || sx(X[j]) > W || sy(Y[j]) < 0 || sy(Y[j]) > H || Math.hypot(dx, dy) > 320; if (!far) { CHPOST.push([px, py, j]); continue; }
+    ctx.textAlign = ox < -.2 ? "right" : ox > .2 ? "left" : "center"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(4,5,12,.8)"; ctx.strokeText(t, lx, ly); ctx.fillStyle = HUD(.9); ctx.fillText(t, lx, ly);
+    CHPOST.push([px, py, j]); }
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 function drawEmojis(lit, dim){ if (!emoView()) return; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   for (const lv of [1, 2, 3, 4, 5]) for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i)) continue; const e_ = EMOI[i]; if (!e_) continue;
     const x = sx(X[i]), y = sy(Y[i]); if (x < -30 || x > W + 30 || y < -30 || y > H + 30) continue; const f = emoSize(i);
@@ -4468,7 +4519,7 @@ function snapView(name){
     csph: csphOn() ? {mode: CSPH, yaw: +csYaw.toFixed(3), pitch: +csPitch.toFixed(3)} : null,
     pg: view === "planet" ? PMODE : null, gcam: globeOn() ? {yaw: +csYaw.toFixed(3), pitch: +csPitch.toFixed(3)} : null,
     geo: view === "quincunx" ? GEO : null,
-    s3d: view === "stars" ? {on: S3D, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
+    s3d: view === "stars" ? {on: S3D, chart: STCH, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
     // every filter (0.7.54): the years' edge strips, dating by modified time and its window, MOCs, properties and bases; and Linear Calendar's years and halves
     yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
     lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF} : null,
@@ -4522,8 +4573,8 @@ function applySaved(v){
   if (view === "spacetime" || view === "gravity" || view === "emergence") { DOME[view] = !!v.dome; save("iv-dome", DOME); if (v.dome) { DOMECAM[view] = [+v.dome.yaw || 0, +v.dome.pitch || .5]; save("iv-domecam", DOMECAM); } root.dataset.dome = domeOn() ? "1" : ""; }
   if (view === "chord") { CSPH = v.csph && ["out", "in"].includes(v.csph.mode) ? v.csph.mode : ""; save("iv-csph", CSPH); if (v.csph) { camOwner = "chord"; csYaw = +v.csph.yaw || 0; csPitch = +v.csph.pitch || 0; csKeep(); } root.dataset.dome = csphOn() ? "1" : ""; }
   if (view === "planet" && v.pg != null) { PMODE = v.pg === true ? "globe" : v.pg === false ? "table" : ["flat", "table", "globe"].includes(v.pg) ? v.pg : PMODE; PGLOBE = PMODE === "globe"; save("iv-planetmode", PMODE); syncPG(); if (v.gcam) { camOwner = "globe"; csYaw = +v.gcam.yaw || 0; csPitch = +v.gcam.pitch || 0; csKeep(); } root.dataset.dome = sphOn() ? "1" : ""; }
-  if (view === "stars" && v.s3d) { S3D = !!v.s3d.on; save("iv-s3d", S3D); if (isFinite(+v.s3d.yaw)) yaw3 = +v.s3d.yaw; if (isFinite(+v.s3d.pitch)) pitch3 = +v.s3d.pitch; save("iv-cam3", [yaw3, pitch3]);
-    root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = (r.value === "3d") === S3D); placePlaybar(); }
+  if (view === "stars" && v.s3d) { S3D = !!v.s3d.on; STCH = !S3D && v.s3d.chart === true; save("iv-s3d", S3D); save("iv-schart", STCH); if (isFinite(+v.s3d.yaw)) yaw3 = +v.s3d.yaw; if (isFinite(+v.s3d.pitch)) pitch3 = +v.s3d.pitch; save("iv-cam3", [yaw3, pitch3]);
+    syncS3D(); placePlaybar(); }
   // the time-lapse, at the step it was saved on (or all time); set before the camera move below, so that move has the last word
   if (v.tl && isFinite(+v.tl.t)) { senseStep = v.tl.step === "week" ? "week" : "month"; save("iv-sstep", senseStep);
     SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1;
@@ -4666,8 +4717,11 @@ root.querySelectorAll("#driftseg button").forEach(b => b.onclick = () => { const
 root.querySelectorAll("#driftseg button").forEach(b => { if (!b.classList.contains("dearth")) b.classList.add("dflat"); });
 $("#dplay").onclick = () => drifting ? driftStop() : driftStart(); syncDrift();
 { const c3 = pref("iv-cam3", null); if (Array.isArray(c3)) { yaw3 = +c3[0] || yaw3; pitch3 = +c3[1] || pitch3; } }
-const syncS3D = () => { root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = (r.value === "3d") === S3D); $('#vseg button[data-v="stars"]').title = S3D ? "Starfield · 3D (click again to switch)" : "Starfield · 2D (click again to switch)"; };
-root.querySelectorAll('input[name="s3d"]').forEach(r => r.onchange = () => { if (!r.checked) return; S3D = r.value === "3d"; save("iv-s3d", S3D); syncS3D(); placePlaybar(); morph(true, () => fitTarget()); });
+// a third Starfield mode, Star Chart (0.8.2): its row sits under 3D
+{ const r3 = root.querySelector('input[name="s3d"][value="3d"]'); if (r3 && !root.querySelector('input[name="s3d"][value="chart"]')) { const l3 = r3.closest("label"), lc = l3.cloneNode(true), ic = lc.querySelector("input"); ic.value = "chart"; ic.checked = false;
+    lc.querySelector("b").textContent = "Star Chart"; lc.querySelector("em").textContent = "a navigator's chart: rings around a hub, and signposts to the hubs it links to"; l3.after(lc); } }
+const syncS3D = () => { root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = r.value === (S3D ? "3d" : STCH ? "chart" : "2d")); $('#vseg button[data-v="stars"]').title = S3D ? "Starfield · 3D (click again to switch)" : "Starfield · 2D (click again to switch)"; };
+root.querySelectorAll('input[name="s3d"]').forEach(r => r.onchange = () => { if (!r.checked) return; S3D = r.value === "3d"; STCH = r.value === "chart"; save("iv-s3d", S3D); save("iv-schart", STCH); syncS3D(); placePlaybar(); morph(true, () => fitTarget()); });
 syncS3D();
 function syncSenseSrc(){ root.querySelectorAll('input[name="ssrc"]').forEach(r => { r.checked = r.value === senseSrc; r.disabled = r.value === "ai" && !SAI; });
   $("#saidate").textContent = SAI ? `one-time read of each note${SAI.date ? ` · ${SAI.date}` : ""}` : "not run yet (no ideaverse-sense-ai.js)";
