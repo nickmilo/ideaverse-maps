@@ -104,6 +104,7 @@ export async function mountInto(owner, el, opts) {
   if (!graph.nodes.length) { el.createDiv({ cls: "ivm-loading" }).createDiv({ cls: "ivm-loading-t", text: "No notes to map yet." }); return null; }
   // the map's data is changed in place by the map (levels during the time-lapse), so each view gets its own copy
   const D = structuredClone(graph);
+  let cardLinkCb = null;   // Edit mode: where a link clicked in a card goes (set by the map)
   const root = el.createDiv({ cls: "ivm" });
   buildUI(root, UI);
   const stale = root.querySelector("header").createEl("button", { cls: "chip ivm-stale", text: "↻ Notes changed · rescan" });
@@ -171,10 +172,20 @@ export async function mountInto(owner, el, opts) {
     openFile: path => { const f = app.vault.getAbstractFileByPath(path); if (f instanceof TFile) void app.workspace.getLeaf("tab").openFile(f); },
     // Edit mode (experimental): a real Obsidian editor (Live Preview, links, other plugins) in the map's card. The leaf lives in a split of
     // our own that isn't part of the workspace layout, so it's never saved there (the technique the Hover Editor plugin uses)
+    onCardLink: cb => { cardLinkCb = cb; },
     editCard: () => {
       const W = app.workspace, Split = W.rootSplit.constructor, split = new Split(W, "vertical");
       split.getRoot = () => W.rootSplit; split.getContainer = () => W.rootSplit;
       let leaf = null;
+      // a link clicked in the card stays on the map (Obsidian would open it in a tab): the map picks that note, and ⌘-click makes it the support note
+      if (!plugin.linkPatched) { plugin.linkPatched = true; const W0 = app.workspace, orig = W0.openLinkText;
+        W0.openLinkText = function (linktext, sourcePath, newLeaf, ...rest) { const cd = plugin.cardDown;
+          if (cd && performance.now() - cd.t < 1500 && cd.el.isConnected) { plugin.cardDown = null;
+            const f = app.metadataCache.getFirstLinkpathDest(String(linktext).split("#")[0].split("|")[0], sourcePath || "");
+            if (f instanceof TFile && cd.cb(f.path, !!newLeaf)) return Promise.resolve(); }
+          return orig.call(this, linktext, sourcePath, newLeaf, ...rest); };
+        plugin.register(() => { W0.openLinkText = orig; }); }
+      split.containerEl.addEventListener("pointerdown", () => { if (cardLinkCb) plugin.cardDown = { t: performance.now(), el: split.containerEl, cb: cardLinkCb }; }, true);
       return { el: split.containerEl,
         open: async path => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return false;
           if (!leaf) leaf = W.createLeafInParent(split, 0);
@@ -186,6 +197,15 @@ export async function mountInto(owner, el, opts) {
     preview: async (path, el) => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return;
       const txt = (await app.vault.cachedRead(f)).replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").slice(0, 1200);
       await MarkdownRenderer.render(app, txt, el, path, events); },
+    // the map reacting as you write (0.8.23): when Obsidian has re-read a note's links, hand the map that note's links, resolved, each with its kind
+    // (0 in the text, 1 up, 4 related, 5 any other property; collections are left to a rescan)
+    onLinks: cb => { const st = plugin.settings, nm = (v, d) => (Array.isArray(v) ? v : String(v || d).split(",")).map(x => String(x).trim().toLowerCase()).filter(Boolean);
+      events.registerEvent(app.metadataCache.on("changed", (f, _data, c) => { if (!(f instanceof TFile) || !c) return;
+        const UP = nm(st.upProps, "up"), RL = nm(st.relatedProps, "related"), CL = nm(st.collectionProps, "collections"), L = [];
+        const res = l => { const t = app.metadataCache.getFirstLinkpathDest(String(l).split("#")[0].split("|")[0], f.path); return t instanceof TFile && t.extension === "md" ? t.path : null; };
+        for (const l of [...(c.links || []), ...(c.embeds || [])]) { const q = res(l.link); if (q) L.push([q, 0]); }
+        for (const l of c.frontmatterLinks || []) { const k = String(l.key || "").split(".")[0].toLowerCase(); if (CL.includes(k)) continue; const q = res(l.link); if (q) L.push([q, UP.includes(k) ? 1 : RL.includes(k) ? 4 : 5]); }
+        cb(f.path, L); })); },
     activePath: () => { const f = app.workspace.getActiveFile(); return f ? f.path : null; },
     debug: (owner.debug = {}),
   });

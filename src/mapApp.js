@@ -3319,6 +3319,7 @@ function render(){
   if (emoView()) drawEmojis(lit, dim);
   if (chartOn()) drawChart();
   drawMini();   // Starfield's overview map, bottom right
+  drawLive();
   for (const o of Object.values(EDS)) o.place();
   drawPreviews();
 
@@ -3737,7 +3738,7 @@ const end = e => { pts.delete(e.pointerId);
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
     { const h = chartPostAt(e.offsetX, e.offsetY); if (h >= 0) { if (focus >= 0 || focusArmed) navTo(h); else { select(h); if (!S3D) flyTo(h, true); } drag = null; return; } }   // in Focus, the signpost's note becomes the focus, with all its links   // Star Chart: a signpost takes you to its hub
-  if (i >= 0 && edOn() && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { void EDS.right.open(i); drag = null; return; }   // Edit mode: ⌘-click opens the note in the right-hand editor, Roam-style
+  if (i >= 0 && edOn() && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { void EDS.right.open(i); drag = null; return; }   // Edit mode: ⌘-click opens the note as a support note, in the right-hand editor
   if (i >= 0 && host.openNote && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (Platform.isMobile || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); else if (i >= 0) nudgeTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
@@ -3818,7 +3819,7 @@ function renderTrail(){
 }
 // ---------- Edit mode (experimental, the road to 1.0): edit notes right on the map ----------
 // Three editors, each a real Obsidian editor (host.editCard): the main one, in a card under the picked note (the centre) or on the left side;
-// and a Roam-style one on the right for any note you ⌘-click. One theme and one opacity for all three. Starfield first, Emergence as the stress test.
+// and a support note on the right for any note you ⌘-click. One theme and one opacity for all three. Starfield first, Emergence as the stress test.
 let EDITM = pref("iv-editm", false) === true, EDLEFT = pref("iv-edleft", false) === true, HUBPV = pref("iv-hubpv", false) === true;
 const CARDMAPS = new Set(["stars", "emergence", "spacetime"]);
 const edOn = () => EDITM && CARDMAPS.has(view) && !!host.editCard && !isPhone() && !S3D_ON();
@@ -3844,14 +3845,21 @@ function makeEd(kind){
   const hd = el.createDiv({ cls: "cardhd" }), t = hd.createSpan({ cls: "cardt" }), ob = hd.createEl("button", { cls: "cardbtn", text: "Open in editor", attr: { type: "button" } }), xb = hd.createEl("button", { cls: "cardbtn cardx", text: "×", attr: { type: "button", "aria-description": "Close" } });
   const body = el.createDiv({ cls: "cardbody" });
   for (const ty of ["pointerdown", "wheel", "click"]) el.addEventListener(ty, e => e.stopPropagation());
-  const o = { kind, el, ed: null, path: null, key: "",
-    place(){ if (el.hidden) return; const r = edRect(kind), c = cv.getBoundingClientRect(), pr = (el.offsetParent || el.parentElement).getBoundingClientRect(), key = [r.x, r.y, r.w, r.h, c.left - pr.left, c.top - pr.top].join(); if (key === o.key) return; o.key = key;
+  // the side editors tuck away to a tab on their edge, like the legend and the note panel; the note stays open in them
+  const side = kind !== "center", cb = side ? hd.createEl("button", { cls: "cardbtn cardcol", text: kind === "left" ? "‹" : "›", attr: { type: "button", "aria-label": "Tuck away", title: "Tuck away" } }) : null;
+  if (cb) hd.insertBefore(cb, ob);
+  const tab = side ? $("#main").createEl("button", { cls: "dtab edtab edtab-" + kind, attr: { "aria-label": "Show the editor", title: "Show the editor" } }) : null; if (tab) tab.hidden = true;
+  const o = { kind, el, ed: null, path: null, key: "", col: side && pref("iv-edcol-" + kind, false) === true,
+    tabSync(){ if (!tab) return; const on = o.col && !!o.path; tab.hidden = !on; if (!on) return; const nm = t.textContent || "";
+      tab.setText((kind === "left" ? "›  " : "‹  ") + (nm.length > 40 ? nm.slice(0, 39) + "…" : nm)); if (kind === "right") tab.style.right = sideW() + "px"; },
+    collapse(c){ o.col = c; save("iv-edcol-" + kind, c); if (o.path) { el.hidden = c; o.key = ""; o.place(); } o.tabSync(); edFree(); if (!c && o.ed) { o.ed.resize(); } draw(); },
+    place(){ o.tabSync(); if (el.hidden) return; const r = edRect(kind), c = cv.getBoundingClientRect(), pr = (el.offsetParent || el.parentElement).getBoundingClientRect(), key = [r.x, r.y, r.w, r.h, c.left - pr.left, c.top - pr.top].join(); if (key === o.key) return; o.key = key;
       el.style.left = (c.left - pr.left + r.x) + "px"; el.style.top = (c.top - pr.top + r.y) + "px"; el.style.width = r.w + "px"; el.style.height = r.h + "px"; if (o.ed) o.ed.resize(); },
-    close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; if (o.ed) { o.ed.close(); o.ed = null; } edFree(); },
+    close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; o.tabSync(); if (o.ed) { o.ed.close(); o.ed = null; } edFree(); },
     async open(i){ const p = N[i].path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
-      t.setText(N[i].title); edLook(el); const was = el.hidden; el.hidden = false; o.key = ""; o.place(); if (was) edFree();
-      if (o.path !== p) { o.path = p; await o.ed.open(p); o.ed.resize(); } } };
-  xb.onclick = () => o.close(); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
+      const nw = o.path !== p; o.path = p; t.setText(N[i].title); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
+      if (nw) { await o.ed.open(p); o.ed.resize(); } } };
+  xb.onclick = () => o.close(); if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
   return o; }
 let EDS = null; EDS = { center: makeEd("center"), left: makeEd("left"), right: makeEd("right") };
 const edMain = () => EDLEFT ? EDS.left : EDS.center;
@@ -3860,8 +3868,12 @@ function closeEds(){ for (const o of Object.values(EDS)) o.close(); }
 async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(); EDS.left.close(); if (!edOn()) EDS.right.close(); return; }
   const m = edMain(); (m === EDS.left ? EDS.center : EDS.left).close(); const p = m.open(i);
   if (m === EDS.center) { const r = edRect("center"); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k }); }   // the note above the card, in the top third
-  else { const L = edRect("left").x + edRect("left").w, R = EDS.right.el.hidden ? W - sideW() : edRect("right").x; animateTo({ k, tx: (L + R)/2 - X[i]*k, ty: H/2 - Y[i]*k }); }   // the note in the free middle
+  else { const L = EDS.left.col ? 0 : edRect("left").x + edRect("left").w, R = EDS.right.el.hidden ? W - sideW() : edRect("right").x; animateTo({ k, tx: (L + R)/2 - X[i]*k, ty: H/2 - Y[i]*k }); }   // the note in the free middle
   await p; }
+// a link clicked inside a card: the map picks that note (the main editor follows); ⌘-click (or a modifier Obsidian reads as "new tab") opens it as the support note.
+// A note that isn't on the map right now (filtered out, or not mapped) opens in Obsidian as usual
+if (host.onCardLink) host.onCardLink((path, side) => { const i = PIDX.get(path); if (i == null || !vis[i] || !edOn() || dead) return false;
+  if (side) void EDS.right.open(i); else select(i); draw(); return true; });
 // Starfield: a small read-only preview of each galaxy's hub note, above it
 const pvLayer = doc.createElement("div"); pvLayer.className = "ivm-pvl"; root.after(pvLayer); const HPV = new Map();
 function drawPreviews(){ const on = EDITM && HUBPV && view === "stars" && !S3D_ON() && !!host.preview && W > 0;
@@ -3874,7 +3886,7 @@ function drawPreviews(){ const on = EDITM && HUBPV && view === "stars" && !S3D_O
     edLook(e); const w = 210, h = 128; e.style.left = Math.round(ox + g.x - w/2) + "px"; e.style.top = Math.round(oy + g.y - h - 22) + "px"; }
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
 function select(i, fromTrail){
-  if (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden))) win.setTimeout(() => { void openMain(sel); }, 0);
+  if (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden || EDS.left.col && EDS.left.path))) win.setTimeout(() => { void openMain(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
   if (rec && i >= 0 && rec.notes[rec.notes.length - 1] !== N[i].path) { rec.notes.push(N[i].path); syncRec(); }   // recording a tour
@@ -4653,6 +4665,62 @@ updateCounts();
 { const t = pref("iv-theme", null); if (t === "sepia") save("iv-theme", "softpaper"); if (t === "cybertron" || t === "dark") save("iv-theme", "lyt"); }   // Dark was retired for LYT Mode (0.7.2)   // Sepia became Soft Paper (0.1.2); Cybertron was retired for LYT Mode (0.1.49)   // Sepia became Soft Paper (0.1.2)
 setTheme(pref("iv-theme", autoTheme()));
 
+
+// ---------- the map reacting as you write (0.8.23) ----------
+// When Obsidian has re-read a note's links (a save, in the card or anywhere else), that note's links on the map are replaced by its new ones:
+// counts, score and level follow, the map moves to fit, a new link flares along its length and a note that changes level sends out a ring.
+// New notes, renames and collections wait for a rescan; a note's galaxy in Starfield stays put.
+const LIVE = { links: [], rings: [] }, LIVE_MS = 2600;
+function liveLinks(path, list){ const i = PIDX.get(path); if (i == null || ARCH[i] || dead) return;
+  const nk = new Map();   // target → kind, the way the scan decides it: up, then related, then the text, then any other property
+  const rank = t => t === 1 ? 0 : t === 4 ? 1 : t === 0 ? 2 : 3;
+  for (const [q, t] of list) { const j = PIDX.get(q); if (j == null || j === i || ARCH[j]) continue; const o = nk.get(j); if (o == null || rank(t) < rank(o)) nk.set(j, t); }
+  const ok = new Map(); for (const [a, b2, t] of E) if (a === i && t !== 3) ok.set(b2, t);
+  for (const [j, t] of nk) if (t === 0 && ok.get(j) === 2) nk.set(j, 2);   // a link the scan read as navigation stays one
+  let same = ok.size === nk.size; if (same) for (const [j, t] of nk) if (ok.get(j) !== t) { same = false; break; } if (same) return;
+  const lv0 = N.map(d => d.level), now = performance.now(), upk = t => t === 1 || t === 4;
+  // the edge list, the adjacency and each link's kind
+  for (let e = E.length - 1; e >= 0; e--) if (E[e][0] === i && E[e][2] !== 3) E.splice(e, 1);
+  for (const [j, t] of nk) E.push([i, j, t]);
+  out[i] = out[i].filter(j => !ok.has(j)); for (const j of nk.keys()) out[i].push(j);
+  for (const j of new Set([...ok.keys(), ...nk.keys()])) { inn[j] = inn[j].filter(a => a !== i); if (nk.has(j)) inn[j].push(i);
+    EIN[j] = (a => { const r = []; for (let q = 0; q < a.length; q += 2) if (a[q] !== i) r.push(a[q], a[q+1]); return r; })(EIN[j]); if (nk.has(j)) EIN[j].push(i, nk.get(j));
+    EKIND.delete(i*n + j); if (nk.has(j)) EKIND.set(i*n + j, nk.get(j)); REL.delete(i*n + j); REL.delete(j*n + i); }
+  EOUT[i] = []; for (const [j, t] of nk) EOUT[i].push(j, t);
+  for (const [a, b2, t] of E) if (t === 4 && (a === i || b2 === i)) { REL.add(a*n + b2); REL.add(b2*n + a); }
+  // counts: links out of this note, and into each note it gained or lost
+  const d = N[i], dOut = nk.size - ok.size; d.body_out = Math.max(0, d.body_out + dOut); if (d.s) d.s[1] = Math.max(0, d.s[1] + dOut);
+  for (const j of new Set([...ok.keys(), ...nk.keys()])) { const g = N[j], had = ok.has(j), has = nk.has(j);
+    if (had !== has) { g.body_in = Math.max(0, g.body_in + (has ? 1 : -1)); if (g.s) g.s[0] = Math.max(0, g.s[0] + (has ? 1 : -1)); }
+    const hu = had && upk(ok.get(j)), nu = has && upk(nk.get(j)); if (hu !== nu) { g.up_in = Math.max(0, (g.up_in || 0) + (nu ? 1 : -1)); if (g.s) g.s[2] = Math.max(0, g.s[2] + (nu ? 1 : -1)); }
+    g.lk = !!(g.body_in || g.body_out || g.coll_in || (g.s && g.s[3])); }
+  d.lk = !!(d.body_in || d.body_out || d.coll_in || (d.s && d.s[3]));
+  for (const j of nk.keys()) if (!ok.has(j)) LIVE.links.push({ a: i, b: j, t0: now, add: true });
+  for (const j of ok.keys()) if (!nk.has(j)) LIVE.links.push({ a: i, b: j, t0: now, add: false });
+  starsDirty = true; glowKey = "";
+  relayout(true, true);
+  for (let q = 0; q < n; q++) if (N[q].level !== lv0[q]) LIVE.rings.push({ i: q, t0: now + 300, up: N[q].level > lv0[q], from: lv0[q] });
+  if (sel >= 0) win.setTimeout(() => { if (!dead && sel >= 0) select(sel, true); }, 820);   // the panel's numbers, once the map has settled
+  draw(); }
+function drawLive(){ if (!LIVE.links.length && !LIVE.rings.length) return; const now = performance.now();
+  LIVE.links = LIVE.links.filter(o => now - o.t0 < LIVE_MS); LIVE.rings = LIVE.rings.filter(o => now - o.t0 < LIVE_MS);
+  for (const o of LIVE.links) { if (!VV(o.a) || !VV(o.b)) continue; const e = (now - o.t0)/LIVE_MS, x1 = sx(X[o.a]), y1 = sy(Y[o.a]), x2 = sx(X[o.b]), y2 = sy(Y[o.b]);
+    const g = Math.min(1, e*3), xm = x1 + (x2 - x1)*g, ym = y1 + (y2 - y1)*g;   // a new link draws itself from the note you're writing to its target
+    ctx.save(); ctx.lineCap = "round";
+    if (o.add) { ctx.globalAlpha = .9*(1 - e); ctx.strokeStyle = view === "stars" ? "hsl(58,86%,66%)" : css.accent; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 14; ctx.lineWidth = 3.2;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(xm, ym); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(x2, y2, Math.max(4, rad(o.b)) * (1 + 2.5*e), 0, 6.2832); ctx.lineWidth = 1.6; ctx.stroke(); }
+    else { ctx.globalAlpha = .7*(1 - e); ctx.strokeStyle = css.muted; ctx.setLineDash([4, 5]); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+    ctx.restore(); }
+  ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+  for (const o of LIVE.rings) { const i = o.i; if (now < o.t0 || !VV(i)) continue; const e = (now - o.t0)/LIVE_MS, x = sx(X[i]), y = sy(Y[i]), r = Math.max(4, rad(i)), lv = N[i].level;
+    const col = o.up ? (GRAD[lv] ? GRAD[lv][0] : css.accent) : css.muted;
+    for (const lag of [0, .18]) { const g = (e - lag)/(1 - lag); if (g <= 0) continue; ctx.globalAlpha = .8*Math.pow(1 - g, 1.3); ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(x, y, r*(1.4 + 6*g), 0, 6.2832); ctx.stroke(); }
+    const t_ = `${N[i].title} ${o.up ? "↑" : "↓"} Level ${lv}`; ctx.globalAlpha = e < .75 ? 1 : (1 - e)/.25; ctx.font = `600 13px ${css.body}`;
+    ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.strokeText(t_, x, y - r - 8); ctx.fillStyle = css.ink; ctx.fillText(t_, x, y - r - 8); }
+  ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  draw(); }   // keep drawing until the last flare fades
+if (host.onLinks) host.onLinks((p_, list) => liveLinks(p_, list));
 
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
@@ -5502,7 +5570,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const sw = (txt, get, set) => { const l_ = g.createEl("label", { cls: "mini lcemo eosw" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = get(); l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: txt }); c_.onchange = () => set(c_.checked); };
     sw("Open the editor on the left side", () => EDLEFT, v => { EDLEFT = v; save("iv-edleft", v); if (sel >= 0) void openMain(sel); });
     sw("Hub previews (Starfield)", () => HUBPV, v => { HUBPV = v; save("iv-hubpv", v); draw(); });
-    g.createDiv({ cls: "eonote", text: "⌘-click a note to open it in a second editor on the right." });
+    g.createDiv({ cls: "eonote", text: "⌘-click a note to open it as a support note on the right." });
     cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); g.hidden = !EDITM; if (EDITM && sel >= 0) void openMain(sel); else closeEds(); draw(); }; }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
@@ -5865,6 +5933,7 @@ return {
   _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
   _cam(){ let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i=0;i<n;i++) if (vis[i]) { x0 = Math.min(x0, sx(X[i])); x1 = Math.max(x1, sx(X[i])); y0 = Math.min(y0, sy(Y[i])); y1 = Math.max(y1, sy(Y[i])); } return { view, k, tx, ty, W, H, box: [x0, y0, x1, y1].map(Math.round), side: sideW() }; },
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
+  _note(path){ const i = PIDX.get(path); return i == null ? null : { sel: sel === i, level: N[i].level, in: N[i].body_in, out: N[i].body_out, score: N[i].score }; },
   _graph(){ return { mlive: morphing, rms: GPH.x ? Math.round(Math.sqrt([...GPH.x].reduce((t, v, i) => t + v * v + GPH.y[i] * GPH.y[i], 0) / GPH.x.length)) : 0, st: GPH.stepMs, dr: GPH.drawMs, mo: GPH.morph, it: GPH.it, its: GPH.its, key: GPH.key }; },
   setBaseInfo(info){ const sig = info ? JSON.stringify([info.sort, info.order, info.cols, info.groups ? [...info.groups].join() : ""]) : ""; if (sig === baseSig) return;
     baseSig = sig; BASEINFO = info || null; FMC.clear(); PSTP.key = PSTB.key = null; baseDirty = true; },
