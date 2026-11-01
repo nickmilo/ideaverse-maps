@@ -5955,7 +5955,7 @@ return {
   _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
   _cam(){ let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i=0;i<n;i++) if (vis[i]) { x0 = Math.min(x0, sx(X[i])); x1 = Math.max(x1, sx(X[i])); y0 = Math.min(y0, sy(Y[i])); y1 = Math.max(y1, sy(Y[i])); } return { view, k, tx, ty, W, H, box: [x0, y0, x1, y1].map(Math.round), side: sideW() }; },
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
-  _cam(){ return [k, tx, ty]; },
+  _kt(){ return [k, tx, ty]; },
   _note(path){ const i = PIDX.get(path); return i == null ? null : { sel: sel === i, level: N[i].level, in: N[i].body_in, out: N[i].body_out, score: N[i].score }; },
   _graph(){ return { mlive: morphing, rms: GPH.x ? Math.round(Math.sqrt([...GPH.x].reduce((t, v, i) => t + v * v + GPH.y[i] * GPH.y[i], 0) / GPH.x.length)) : 0, st: GPH.stepMs, dr: GPH.drawMs, mo: GPH.morph, it: GPH.it, its: GPH.its, key: GPH.key }; },
   setBaseInfo(info){ const sig = info ? JSON.stringify([info.sort, info.order, info.cols, info.groups ? [...info.groups].join() : ""]) : ""; if (sig === baseSig) return;

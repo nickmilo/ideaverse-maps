@@ -10,7 +10,7 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.locator('.ivm #q').fill('Pace Layers'); await sleep(700); await page.keyboard.press('Enter'); await sleep(4000); await page.evaluate(() => document.activeElement && document.activeElement.blur());
   await page.mouse.move(5, 900); await shot('cam-before');
   const P = 'Atlas/Things/Pace Layers.md', orig = await page.evaluate(p => app.vault.read(app.vault.getAbstractFileByPath(p)), P);
-  await page.evaluate(() => { window.__cam = []; const m = app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map; const t0 = performance.now(); const f = () => { window.__cam.push([Math.round(performance.now() - t0)].concat(m._cam().map(v => +v.toFixed(3)))); if (performance.now() - t0 < 3500) requestAnimationFrame(f); }; f(); });
+  await page.evaluate(() => { window.__cam = []; const m = app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map; const t0 = performance.now(); const f = () => { window.__cam.push([Math.round(performance.now() - t0)].concat(m._kt().map(v => +v.toFixed(3)))); if (performance.now() - t0 < 3500) requestAnimationFrame(f); }; f(); });
   await page.evaluate(p => app.vault.process(app.vault.getAbstractFileByPath(p), t => t + '\n\nLIVETEST [[Aikido]] [[Affordances]]\n'), P);
   await sleep(1000); await page.mouse.move(5, 900); await shot('cam-flare'); await sleep(2800);
   const cam = await page.evaluate(() => window.__cam); const ks = new Set(cam.map(c => c[1])), txs = cam.map(c => c[2]);
