@@ -3861,6 +3861,7 @@ function makeEd(kind){
       if (nw) { await o.ed.open(p); o.ed.resize(); } } };
   xb.onclick = () => o.close(); if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
   return o; }
+let LIVEQ = false;   // the map reacting as you write refreshes the note panel quietly: no camera move, no editor reload
 let EDS = null; EDS = { center: makeEd("center"), left: makeEd("left"), right: makeEd("right") };
 const edMain = () => EDLEFT ? EDS.left : EDS.center;
 function edFree(){ EDLW = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 0; for (const o of Object.values(EDS)) { o.key = ""; o.place(); } }
@@ -3886,7 +3887,7 @@ function drawPreviews(){ const on = EDITM && HUBPV && view === "stars" && !S3D_O
     edLook(e); const w = 210, h = 128; e.style.left = Math.round(ox + g.x - w/2) + "px"; e.style.top = Math.round(oy + g.y - h - 22) + "px"; }
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
 function select(i, fromTrail){
-  if (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden || EDS.left.col && EDS.left.path))) win.setTimeout(() => { void openMain(sel); }, 0);
+  if (!LIVEQ && (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden || EDS.left.col && EDS.left.path)))) win.setTimeout(() => { void openMain(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
   if (rec && i >= 0 && rec.notes[rec.notes.length - 1] !== N[i].path) { rec.notes.push(N[i].path); syncRec(); }   // recording a tour
@@ -4698,9 +4699,11 @@ function liveLinks(path, list){ const i = PIDX.get(path); if (i == null || ARCH[
   for (const j of nk.keys()) if (!ok.has(j)) LIVE.links.push({ a: i, b: j, t0: now, add: true });
   for (const j of ok.keys()) if (!nk.has(j)) LIVE.links.push({ a: i, b: j, t0: now, add: false });
   starsDirty = true; glowKey = "";
-  relayout(true, true);
+  // the camera holds still: the note you're on (or the one you wrote in) keeps its spot on screen while the map moves around it (0.8.24; Nick saw a zoom stutter)
+  const keep = sel >= 0 ? sel : i, kp = k, px = sx(X[keep]), py = sy(Y[keep]), fixed = sphOn() || geo3On() || s3dOn() || domeOn();
+  relayout(true, true, fixed ? undefined : (tX, tY) => ({ k: kp, tx: px - tX[keep]*kp, ty: py - tY[keep]*kp }));
   for (let q = 0; q < n; q++) if (N[q].level !== lv0[q]) LIVE.rings.push({ i: q, t0: now + 300, up: N[q].level > lv0[q], from: lv0[q] });
-  if (sel >= 0) win.setTimeout(() => { if (!dead && sel >= 0) select(sel, true); }, 820);   // the panel's numbers, once the map has settled
+  if (sel >= 0) win.setTimeout(() => { if (dead || sel < 0) return; const st0 = drawer.scrollTop; LIVEQ = true; try { select(sel, true); } finally { LIVEQ = false; } drawer.scrollTop = st0; }, 820);   // the panel's numbers, once the map has settled (no camera move, no editor reload)
   draw(); }
 function drawLive(){ if (!LIVE.links.length && !LIVE.rings.length) return; const now = performance.now();
   LIVE.links = LIVE.links.filter(o => now - o.t0 < LIVE_MS); LIVE.rings = LIVE.rings.filter(o => now - o.t0 < LIVE_MS);
@@ -5933,6 +5936,7 @@ return {
   _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
   _cam(){ let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i=0;i<n;i++) if (vis[i]) { x0 = Math.min(x0, sx(X[i])); x1 = Math.max(x1, sx(X[i])); y0 = Math.min(y0, sy(Y[i])); y1 = Math.max(y1, sy(Y[i])); } return { view, k, tx, ty, W, H, box: [x0, y0, x1, y1].map(Math.round), side: sideW() }; },
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
+  _cam(){ return [k, tx, ty]; },
   _note(path){ const i = PIDX.get(path); return i == null ? null : { sel: sel === i, level: N[i].level, in: N[i].body_in, out: N[i].body_out, score: N[i].score }; },
   _graph(){ return { mlive: morphing, rms: GPH.x ? Math.round(Math.sqrt([...GPH.x].reduce((t, v, i) => t + v * v + GPH.y[i] * GPH.y[i], 0) / GPH.x.length)) : 0, st: GPH.stepMs, dr: GPH.drawMs, mo: GPH.morph, it: GPH.it, its: GPH.its, key: GPH.key }; },
   setBaseInfo(info){ const sig = info ? JSON.stringify([info.sort, info.order, info.cols, info.groups ? [...info.groups].join() : ""]) : ""; if (sig === baseSig) return;
