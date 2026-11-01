@@ -49,7 +49,7 @@ Gravity draws the same five levels as rings. Home notes and hubs sit at the cent
 
 In Starfield, your biggest hubs become the cores of galaxies. Every note joins the hub it can reach in the fewest links. Maps gather near the center of their galaxy, linked notes trail out along its arms, and unlinked notes drift in clouds, one for each folder. Click a galaxy's name to fly into it.
 
-Starfield's menu lets you switch to 3D, set how strongly the galaxies glow, add a rare twinkle, and make the galaxies turn slowly. During the Timelapse, each new note flares as it appears.
+Starfield's menu lets you switch to 3D, set how strongly the galaxies glow (Clear turns their light off so every note reads as a crisp dot), add a rare twinkle, and make the galaxies turn slowly. During the Timelapse, each new note flares as it appears.
 
 **Star Chart**, the third choice beside 2D and 3D, lays a navigator's chart over the galaxies. Rings around the note you're on show its links by kind and a dial of time, and signposts on the outer ring point toward the hubs it links to. Click a signpost to go there. A mini switch under it, **Lines, readouts, gas and orbits**, adds lines between your hubs, a small readout beside each ringed hub, a glow in each galaxy's folder color, and slowly turning orbits.
 

@@ -665,7 +665,7 @@ let GLOW = null, WEB = null, glowKey = "";
 function buildGlow(){
   const VG = i => vis[i] && (senseT == null || TV[i] <= senseT);   // the glow follows the timeline by step, not by each pop (so it is rebuilt once a step)
   let h = 0; for (let i=0;i<n;i++) if (VG(i)) h = (Math.imul(h, 31) + i) | 0;
-  const key = starVer + ":" + h + ":" + mode + ":" + fromY + ":" + fullY + ":" + (sTurn && !S3D ? Math.floor(turnA/4) : "s"); if (key === glowKey && GLOW) return; glowKey = key;
+  const key = starVer + ":" + h + ":" + mode + ":" + fromY + ":" + fullY + ":" + (sTurn && !S3D ? Math.floor(turnA/4) : "s") + ":" + CLEAR(); if (key === glowKey && GLOW) return; glowKey = key;
   const PX = sTurn && !S3D ? X : SX, PY = sTurn && !S3D ? Y : SY;   // turning: the light follows the stars
   const ww = UB.x1 - UB.x0, wh = UB.y1 - UB.y0, gs = Math.min(1, (isPhone() ? 1400 : 2000)/Math.max(ww, wh));
   GLOW ||= doc.createElement("canvas"); GLOW.width = Math.ceil(ww*gs); GLOW.height = Math.ceil(wh*gs); GLOW.gs = gs;
@@ -682,6 +682,8 @@ function buildGlow(){
     for (const [lw, al] of [[40, .018], [14, .035], [5, .09]]) { wc.lineWidth = lw*gs*(.5 + sz*.18); wc.strokeStyle = `rgba(140,160,255,${Math.min(.3, al*(.4 + sz*.25))})`;
       wc.beginPath(); wc.moveTo(x1,y1); wc.quadraticCurveTo(mx,my,x2,y2); wc.stroke(); } }
   for (const b of BODIES) { if (!on[b.id]) continue; const cx = gx(UC.x+b.x), cy = gy(UC.y+b.y), R = b.r*gs;
+    if (CLEAR()) { const g = c.createRadialGradient(cx, cy, 0, cx, cy, R*1.15); g.addColorStop(0, b.hue + "1c"); g.addColorStop(.7, b.hue + "0e"); g.addColorStop(1, b.hue + "00"); c.fillStyle = g;   // just a tinted region
+      c.save(); c.translate(cx, cy); c.rotate(b.pa || 0); c.scale(1, b.kind === "neb" ? 1 : Math.max(b.q || 1, .6)); c.translate(-cx, -cy); c.beginPath(); c.arc(cx, cy, R*1.15, 0, 6.2832); c.fill(); c.restore(); continue; }
     const halo = (rad, col, a0) => { const g = c.createRadialGradient(cx, cy, 0, cx, cy, rad); g.addColorStop(0, col + a0); g.addColorStop(1, col + "00"); c.fillStyle = g;
       c.save(); c.translate(cx, cy); c.rotate(b.pa || 0); c.scale(1, b.q || 1); c.translate(-cx, -cy); c.beginPath(); c.arc(cx, cy, rad, 0, 6.2832); c.fill(); c.restore(); };
     if (b.kind === "gal") { halo(R*1.1, b.hue, "30"); halo(R*.6, b.hue, "22"); halo(R*.3, "#fff1d6", "aa"); halo(R*.1, "#ffffff", "dd"); }
@@ -701,7 +703,10 @@ function buildGlow(){
 const BGS = (() => { let a = 1234567; const r = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   return [{p:.05, T:640, n:230}, {p:.14, T:900, n:150}].map(L => ({...L, pts: Array.from({length:L.n}, () => [r()*L.T, r()*L.T, .4 + r()*r()*1.3, .15 + r()*.6, r() < .12])})); })();
 // Starfield's galaxy glow: Soft by default, so the stars (your notes) read over it; Normal and Bright for the full nebula look
-let sGlow = ["soft", "normal", "bright"].includes(pref("iv-sglow", "soft")) ? pref("iv-sglow", "soft") : "soft";
+let sGlow = ["clear", "soft", "normal", "bright"].includes(pref("iv-sglow", "soft")) ? pref("iv-sglow", "soft") : "soft";
+// Clear (0.8.4, Nick: the galaxy light gets in the way of seeing the notes): galaxies become faint tinted regions, with no light of their own,
+// the faraway stars fade back, and every note is a crisp dot, so the only stars you see are your notes
+const CLEAR = () => sGlow === "clear";
 // Turning galaxies (an option): each galaxy slowly turns in its own plane, the big ones slower; flat Starfield only
 let sTurn = pref("iv-sturn", false) === true, turnA = 0, turnLast = 0, turnRaf = 0;
 function turnFrame(now){ turnRaf = 0; if (dead || !sTurn || view !== "stars" || S3D) return;
@@ -714,7 +719,7 @@ function turnFrame(now){ turnRaf = 0; if (dead || !sTurn || view !== "stars" || 
       const u2 = u*c - v*s_, v2 = (u*s_ + v*c)*q; X[i] = cx + u2*pc - v2*ps; Y[i] = cy + u2*ps + v2*pc; } }
   render(); turnRaf = RAF(turnFrame); }
 function turnSync(){ if (sTurn && view === "stars" && !S3D) { if (!turnRaf) { turnLast = 0; turnRaf = RAF(turnFrame); } } else if (turnRaf) { win.cancelAnimationFrame(turnRaf); turnRaf = 0; } }
-const GLOWF = () => ({ soft: .5, normal: 1, bright: 1.45 })[sGlow];
+const GLOWF = () => ({ clear: 1, soft: .5, normal: 1, bright: 1.45 })[sGlow];
 function starsBg(){
   const g = ctx.createRadialGradient(W*.5, H*.45, 0, W*.5, H*.45, Math.hypot(W, H)*.65);
   g.addColorStop(0, "#0c1126"); g.addColorStop(.6, "#060814"); g.addColorStop(1, "#020307");
@@ -723,11 +728,11 @@ function starsBg(){
   for (const L of BGS) { const ox = ((tx*L.p) % L.T + L.T) % L.T, oy = ((ty*L.p) % L.T + L.T) % L.T;
     for (let gx0 = ox - L.T; gx0 < W; gx0 += L.T) for (let gy0 = oy - L.T; gy0 < H; gy0 += L.T)
       for (const [x, y, s, a, blue] of L.pts) { const px = gx0 + x, py = gy0 + y; if (px < 0 || px > W || py < 0 || py > H) continue;
-        ctx.globalAlpha = a; ctx.fillStyle = blue ? "#b8ccff" : "#ffffff"; ctx.fillRect(px, py, s, s); } }
+        ctx.globalAlpha = CLEAR() ? a*.3 : a; ctx.fillStyle = blue ? "#b8ccff" : "#ffffff"; const ss = CLEAR() ? Math.min(s, .7) : s; ctx.fillRect(px, py, ss, ss); } }
   ctx.globalAlpha = 1;
   colorStars();
   const bgDim = (sel >= 0 ? .22 : focus >= 0 ? .7 : 1)*GLOWF();   // a selected note dims the galaxies so its links read clearly
-  if (S3D) { halos3D(bgDim); return; }
+  if (S3D) { halos3D(bgDim * (CLEAR() ? .18 : 1)); return; }   // Clear: in 3D the halos drop to a faint haze
   buildGlow();
   ctx.globalCompositeOperation = "lighter";
   for (let a = bgDim; a > .001; a -= 1) { ctx.globalAlpha = Math.min(1, a); ctx.drawImage(GLOW, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
@@ -742,13 +747,18 @@ function starsNotes(lit, dim){
     if (N[i].level >= 3) { bright.push(i); continue; }
     const key = N[i].level*32 + SC[i]; (bins.get(key) || bins.set(key, []).get(key)).push(i); }
   ctx.globalCompositeOperation = "lighter";
+  if (CLEAR()) ctx.globalCompositeOperation = "source-over";
   for (const [key, ids] of bins) { const lv = key >> 5, col = SPAL[key & 31];
-    ctx.globalAlpha = (lv === 1 ? .5 : .85) * dim; ctx.fillStyle = col; ctx.beginPath();
-    for (const i of ids) { const x = sx(X[i]), y = sy(Y[i]), r = rad(i); if (r < 1.4) ctx.rect(x - r, y - r, 2*r, 2*r); else { ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, 6.2832); } }
+    ctx.globalAlpha = (CLEAR() ? (lv === 1 ? .7 : 1) : (lv === 1 ? .5 : .85)) * dim; ctx.fillStyle = col; ctx.beginPath();
+    for (const i of ids) { const x = sx(X[i]), y = sy(Y[i]), r = CLEAR() ? Math.max(rad(i), 1.3) : rad(i); if (r < 1.4 && !CLEAR()) ctx.rect(x - r, y - r, 2*r, 2*r); else { ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, 6.2832); } }
     ctx.fill(); }
   bright.sort((a,b) => N[a].level - N[b].level);
   for (const i of bright) { const lv = N[i].level, x = sx(X[i]), y = sy(Y[i]), r = rad(i), col = SPAL[SC[i]];
     const a = (lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .2 : .7) : 1);
+    if (CLEAR()) { const R_ = r*(lv === 3 ? 1.15 : 1.3) + 1; ctx.globalAlpha = a*.55; ctx.fillStyle = "#020308"; ctx.beginPath(); ctx.arc(x, y, R_ + 1.1, 0, 6.2832); ctx.fill();   // a thin dark rim, so it stands off whatever is behind
+      ctx.globalAlpha = a; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, R_, 0, 6.2832); ctx.fill(); ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(x, y, R_*.45, 0, 6.2832); ctx.fill();
+      if (lv >= 4) { ctx.globalAlpha = a*(lv === 5 ? .7 : .45); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, R_ + (lv === 5 ? 4.5 : 3), 0, 6.2832); ctx.stroke(); }
+      continue; }
     ctx.globalAlpha = a * (lv === 3 ? .55 : lv === 4 ? .75 : .9); const s = r*(lv === 5 ? 9 : 7); ctx.drawImage(sprite(col), x - s/2, y - s/2, s, s);
     if (lv >= 4) { const sl = r*(lv === 5 ? 11 : 6.5); ctx.globalAlpha = a*.5; ctx.strokeStyle = col; ctx.lineWidth = lv === 5 ? 1.1 : .8;
       ctx.beginPath(); ctx.moveTo(x - sl, y); ctx.lineTo(x + sl, y); ctx.moveTo(x, y - sl); ctx.lineTo(x, y + sl); ctx.stroke();
@@ -5126,7 +5136,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const moT = mo.createDiv({ cls: "pt" });
   for (const id of ["#emerpop", "#starpop", "#sensepop", "#senseemo"]) { const el = $(id); el.classList.remove("mspop"); el.classList.add("mosec"); el.hidden = true; mo.appendChild(el); }
   { const g = $("#starpop").createDiv({ cls: "sglow" }); g.createSpan({ cls: "sgl", text: "Galaxy glow" }); const seg = g.createDiv({ cls: "seg", attr: { role: "group", "aria-label": "Galaxy glow" } });
-    for (const [v, t] of [["soft", "Soft"], ["normal", "Normal"], ["bright", "Bright"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "data-g": v, "aria-pressed": String(v === sGlow) } });
+    for (const [v, t] of [["clear", "Clear"], ["soft", "Soft"], ["normal", "Normal"], ["bright", "Bright"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "data-g": v, "aria-pressed": String(v === sGlow) } });
       b.onclick = e => { e.stopPropagation(); sGlow = v; save("iv-sglow", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.g === v))); draw(); }; }
     const tog = (label, get, set) => { const r = $("#starpop").createDiv({ cls: "sglow" }); r.createSpan({ cls: "sgl", text: label }); const sg = r.createDiv({ cls: "seg", attr: { role: "group", "aria-label": label } });
       for (const [v, t] of [[false, "Off"], [true, "On"]]) { const b = sg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(get() === v) } });
