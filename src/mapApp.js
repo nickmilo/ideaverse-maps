@@ -4307,11 +4307,17 @@ function navTo(j, fromTrail){
   if (focus >= 0 || focusArmed) { focusArmed = false; setFocus(j, fromTrail); }
   else { select(j, fromTrail); flyTo(j); }
 }
+// Starfield in Focus (0.8.8, Nick): the note centred, zoomed so its galaxy's hub sits just inside the edge (a hub itself: its galaxy fills the view)
+function starFocusTarget(xs, ys, i){ const vw = W - sideW(), cx = vw/2, cy = H/2, R = .44*Math.min(vw, H); let d = 0;
+  const b = BOD[i] >= 0 ? BODIES[BOD[i]] : null, h = b && b.core != null ? b.core : -1;
+  if (h >= 0 && h !== i) d = Math.hypot(xs[h] - xs[i], ys[h] - ys[i]);
+  if (d < 30) d = b ? b.r * .8 : 160;
+  const kk = Math.max(.15, Math.min(6, R/d)); return { k: kk, tx: cx - xs[i]*kk, ty: cy - ys[i]*kk }; }
 function setFocus(i, fromTrail){
   focus = i; computeFocus();
   const fb = $("#focusbar"); if (fb.hidden !== (i < 0)) { fb.hidden = i < 0; if (i >= 0 && !fb.hasChildNodes()) html(fb).v = "&nbsp;"; resize(); }
   const prev = sel; if (i >= 0) { sel = i; if (drawer.hidden && !isPhone() && !drawerCollapsed) { ANCHOR_T = performance.now() + 700; drawer.hidden = false; resize(); } }   // open the panel first so the camera plans for the narrower map
-  relayout(true, false, i >= 0 ? (xs, ys) => visTarget(xs, ys) : () => fitTarget());
+  relayout(true, false, i >= 0 ? (xs, ys) => (view === "stars" && !S3D ? starFocusTarget(xs, ys, i) : visTarget(xs, ys)) : () => fitTarget());
   sel = prev;
   if (i >= 0) select(i, fromTrail || prev === i);   // refresh the drawer with the focused set
   else if (sel >= 0 && vis[sel]) select(sel, true);   // leaving focus: the panel's button goes back to "Focus on its links"
