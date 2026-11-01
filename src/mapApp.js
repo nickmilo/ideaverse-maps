@@ -732,7 +732,7 @@ function starsBg(){
   ctx.globalAlpha = 1;
   colorStars();
   const bgDim = (sel >= 0 ? .22 : focus >= 0 ? .7 : 1)*GLOWF();   // a selected note dims the galaxies so its links read clearly
-  if (S3D) { halos3D(bgDim * (CLEAR() ? .18 : 1)); return; }   // Clear: in 3D the halos drop to a faint haze
+  if (S3D) { halos3D(bgDim); return; }
   buildGlow();
   ctx.globalCompositeOperation = "lighter";
   for (let a = bgDim; a > .001; a -= 1) { ctx.globalAlpha = Math.min(1, a); ctx.drawImage(GLOW, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
@@ -2966,6 +2966,8 @@ function halos3D(dim){   // in 3D the cached glow can't follow the camera: each 
     if (x < -R*2 || x > W + R*2 || y < -R*2 || y > H + R*2) continue;
     const col = b.kind === "old" ? "#ff7a3c" : b.kind === "home" ? "#ffd27a" : b.hue || "#9fb0ff";
     ctx.save(); ctx.translate(x, y); ctx.rotate(B.ang); ctx.scale(1, B.flatK);
+    if (CLEAR()) { const g = ctx.createRadialGradient(0, 0, 0, 0, 0, R); g.addColorStop(0, col + "1c"); g.addColorStop(.7, col + "0e"); g.addColorStop(1, col + "00");   // Clear: just a tinted region, as in 2D
+      ctx.globalCompositeOperation = "source-over"; ctx.fillStyle = g; ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(0, 0, R, 0, 6.2832); ctx.fill(); ctx.globalCompositeOperation = "lighter"; ctx.restore(); continue; }
     ctx.globalAlpha = (b.kind === "neb" ? .35 : .55)*dim; ctx.drawImage(sprite(col), -R, -R, 2*R, 2*R);
     if (b.kind === "gal" || b.kind === "home") { ctx.globalAlpha = .7*dim; const r2 = R*.28; ctx.drawImage(sprite("#fff1d6"), -r2, -r2, 2*r2, 2*r2); }
     ctx.restore(); }
@@ -4065,7 +4067,7 @@ function chartLines(){ const dimF = sel >= 0 ? .35 : 1; ctx.lineWidth = 1;
 // a readout beside each ringed hub: level and score, links in and out, the year its linked notes began, and how many came this year
 function chartReadout(i, x, y, r){ const nb = new Set([...out[i], ...inn[i]]); let first = Infinity, yr = 0; const y0 = Date.UTC(NOW_Y, 0, 1);
   for (const j of nb) { const t = TVD[j]; if (!(t > 0)) continue; if (t < first) first = t; if (t >= y0) yr++; }
-  const L = [`L${N[i].level} · SCORE ${N[i].score.toFixed(N[i].score < 10 ? 1 : 0)}`, `IN ${inn[i].length} · OUT ${out[i].length}`, `${isFinite(first) ? "SINCE " + new Date(first).getUTCFullYear() : "NO DATES"} · +${yr} ${NOW_Y}`];
+  const L = [`L${N[i].level} · SCORE ${N[i].score.toFixed(N[i].score < 10 ? 1 : 0)}`, `IN ${N[i].body_in} · OUT ${N[i].body_out}`, `${isFinite(first) ? "SINCE " + new Date(first).getUTCFullYear() : "NO DATES"} · +${yr} ${NOW_Y}`];
   const ang = -.62, ax = x + Math.cos(ang) * r, ay = y + Math.sin(ang) * r, bx = ax + 22, by = ay - 16;
   ctx.strokeStyle = HUD(.55); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(bx + 8, by); ctx.stroke();
   ctx.font = `500 9.5px ${css.mono}`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
@@ -4464,9 +4466,13 @@ function starLegend(){
   const ex = (txt) => `<div style="opacity:.85">${txt}</div>`;
   return `<div class="lh"><span>Legend · Starfield</span><span class="lc" id="legclose" aria-hidden="true" title="Click anywhere to collapse">‹</span></div>`
     + `<div style="margin-top:2px;color:var(--ink)">Star color: ${mode === "ace" ? "folder" : mode === "time" ? "age" : esc(ax ? ax.name.toLowerCase() : "")}</div>` + key
-    + `<div style="margin-top:4px;color:var(--ink)">Brighter, larger stars: higher level</div>`
-    + ex(`Galaxy: the notes that reach a hub (level 5) first`) + ex(`Core: maps · arms: linked notes`) + ex(`Nebulae: unlinked notes, by folder`)
-    + (showArch && hasArch ? ex(`Ancient elliptical: archive`) : "") + ex(`Faint filaments: links between galaxies`)
+    + (CLEAR() ? `<div style="margin-top:4px;color:var(--ink)">Every dot is a note · larger: higher level</div>` + ex(`Ringed dots: maps of maps and hubs (levels 4 and 5)`)
+        + ex(`Tinted region: a galaxy, the notes that reach a hub (level 5) first`) + ex(`Nebulae: unlinked notes, by folder`) + (showArch && hasArch ? ex(`Ancient elliptical: archive`) : "")
+      : `<div style="margin-top:4px;color:var(--ink)">Brighter, larger stars: higher level</div>`
+        + ex(`Galaxy: the notes that reach a hub (level 5) first`) + ex(`Core: maps · arms: linked notes`) + ex(`Nebulae: unlinked notes, by folder`)
+        + (showArch && hasArch ? ex(`Ancient elliptical: archive`) : "") + ex(`Faint filaments: links between galaxies`))
+    + (chartOn() ? `<div style="margin-top:4px;color:var(--ink)">Star Chart</div>` + ex(`Inner ring: links by kind (colors as below)`) + ex(`Middle ring: a dial of time, first year at the top, clockwise to today (▼); a tick per month of linked notes`)
+        + ex(`Outer ring: signposts to the maps it links to; click one to go there`) + (STCH2 ? ex(`Readout: level · score, links in · out, first year · new this year`) + ex(`Lines: links between maps and hubs`) : "") : "")
     + `<div style="margin-top:4px"><i class="ln" style="border-color:${SPACE.up}"></i>links above</div><div><i class="ln" style="border-color:${SPACE.down}"></i>links below</div>`;
 }
 function legend(){
@@ -4762,9 +4768,9 @@ $("#dplay").onclick = () => drifting ? driftStop() : driftStart(); syncDrift();
 let syncCh2 = () => {};
 { const sp = root.querySelector('#starpop'); if (sp) { const r = doc.createElement("label"); r.className = "mini lcemo chart2"; const cb = doc.createElement("input"); cb.type = "checkbox"; cb.checked = STCH2; const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = "Lines, readouts, gas and orbits";
     r.append(cb, sw, t); const lc = root.querySelector('input[name="s3d"][value="chart"]'); (lc ? lc.closest("label") : sp.lastChild).after(r);
-    cb.onchange = () => { STCH2 = cb.checked; save("iv-schart2", STCH2); orbWake(); draw(); }; syncCh2 = () => { cb.checked = STCH2; r.hidden = !STCH; }; } }
+    cb.onchange = () => { STCH2 = cb.checked; save("iv-schart2", STCH2); orbWake(); legend(); draw(); }; syncCh2 = () => { cb.checked = STCH2; r.hidden = !STCH; }; } }
 const syncS3D = () => { syncCh2(); root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = r.value === (S3D ? "3d" : STCH ? "chart" : "2d")); $('#vseg button[data-v="stars"]').title = S3D ? "Starfield · 3D (click again to switch)" : "Starfield · 2D (click again to switch)"; };
-root.querySelectorAll('input[name="s3d"]').forEach(r => r.onchange = () => { if (!r.checked) return; S3D = r.value === "3d"; STCH = r.value === "chart"; save("iv-s3d", S3D); save("iv-schart", STCH); orbWake(); syncS3D(); placePlaybar(); morph(true, () => fitTarget()); });
+root.querySelectorAll('input[name="s3d"]').forEach(r => r.onchange = () => { if (!r.checked) return; S3D = r.value === "3d"; STCH = r.value === "chart"; save("iv-s3d", S3D); save("iv-schart", STCH); orbWake(); legend(); syncS3D(); placePlaybar(); morph(true, () => fitTarget()); });
 syncS3D();
 function syncSenseSrc(){ root.querySelectorAll('input[name="ssrc"]').forEach(r => { r.checked = r.value === senseSrc; r.disabled = r.value === "ai" && !SAI; });
   $("#saidate").textContent = SAI ? `one-time read of each note${SAI.date ? ` · ${SAI.date}` : ""}` : "not run yet (no ideaverse-sense-ai.js)";
@@ -5137,7 +5143,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   for (const id of ["#emerpop", "#starpop", "#sensepop", "#senseemo"]) { const el = $(id); el.classList.remove("mspop"); el.classList.add("mosec"); el.hidden = true; mo.appendChild(el); }
   { const g = $("#starpop").createDiv({ cls: "sglow" }); g.createSpan({ cls: "sgl", text: "Galaxy glow" }); const seg = g.createDiv({ cls: "seg", attr: { role: "group", "aria-label": "Galaxy glow" } });
     for (const [v, t] of [["clear", "Clear"], ["soft", "Soft"], ["normal", "Normal"], ["bright", "Bright"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "data-g": v, "aria-pressed": String(v === sGlow) } });
-      b.onclick = e => { e.stopPropagation(); sGlow = v; save("iv-sglow", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.g === v))); draw(); }; }
+      b.onclick = e => { e.stopPropagation(); sGlow = v; save("iv-sglow", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.g === v))); legend(); draw(); }; }
     const tog = (label, get, set) => { const r = $("#starpop").createDiv({ cls: "sglow" }); r.createSpan({ cls: "sgl", text: label }); const sg = r.createDiv({ cls: "seg", attr: { role: "group", "aria-label": label } });
       for (const [v, t] of [[false, "Off"], [true, "On"]]) { const b = sg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(get() === v) } });
         b.onclick = e => { e.stopPropagation(); set(v); sg.querySelectorAll("button").forEach((x, j) => x.setAttribute("aria-pressed", String((j === 1) === v))); }; } };

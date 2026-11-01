@@ -11,5 +11,7 @@ module.exports = async ({ page, sleep, shot }) => {
   await glow('soft'); await page.mouse.move(5, 900); await shot('soft'); await zoom(6); await sleep(1200); await shot('soft-zoom');
   await glow('clear'); await page.mouse.move(5, 900); await sleep(800); await shot('clear-zoom');
   await page.evaluate(() => document.querySelector('.ivm #zfit').click()); await sleep(2500); await page.mouse.move(5, 900); await shot('clear');
+  await page.evaluate(() => { const t = document.querySelector('.ivm #legtab'); t && t.click(); }); await sleep(800); await shot('clear-legend');
+  await page.locator('.ivm #mapsetbtn').click(); await sleep(400); await page.locator('.ivm input[name="s3d"][value="3d"]').click(); await sleep(3000); await page.keyboard.press('Escape'); await sleep(1500); await page.mouse.move(5, 900); await shot('clear-3d');
   console.log('errors:', errs.join(' | ') || 'none');
 };
