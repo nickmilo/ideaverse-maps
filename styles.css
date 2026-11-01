@@ -1275,3 +1275,11 @@ body.is-mobile .ivm.ivm #vlist.vlist2 .vr{cursor:default}
 .ivm.ivm header.tb2 #mapopts .sfmenu .sglow{margin-top:2px;padding-top:8px}
 .ivm.ivm header.tb2 #mapopts .sfmenu .sflist{display:flex;flex-direction:column;gap:5px;margin-top:2px;padding-top:8px;border-top:1px solid var(--line)}
 .ivm.ivm header.tb2 #mapopts .sfmenu .sflist .mini{margin:0;padding:0;border:0}
+
+/* 0.8.10 Focus zoom: a small square button with the zoom buttons */
+.ivm button.fzbtn{position:absolute;z-index:3;width:22px;height:22px;padding:0;border-radius:4px;border:1.5px solid var(--muted);background:transparent;opacity:.7;cursor:pointer;box-shadow:none}
+.ivm button.fzbtn::after{content:"";display:block;width:8px;height:8px;margin:auto;border:1.5px solid var(--muted);border-radius:1px}
+.ivm button.fzbtn[aria-pressed="true"]{border-color:var(--accent);opacity:1}
+.ivm button.fzbtn[aria-pressed="true"]::after{width:4px;height:4px;background:var(--accent);border-color:var(--accent)}
+.ivm button.fzbtn:hover{opacity:1}
+.ivm button.fzbtn[hidden]{display:none}

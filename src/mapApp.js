@@ -739,7 +739,7 @@ function starsBg(){
   ctx.globalAlpha = 1;
   colorStars();
   const bgDim = (sel >= 0 ? .22 : focus >= 0 ? .7 : 1)*GLOWF();   // a selected note dims the galaxies so its links read clearly
-  if (S3D) { halos3D(bgDim); return; }
+  if (S3D) { halos3D(bgDim); if (chx("gas")) chartGas(bgDim); return; }
   buildGlow();
   ctx.globalCompositeOperation = "lighter";
   for (let a = bgDim; a > .001; a -= 1) { ctx.globalAlpha = Math.min(1, a); ctx.drawImage(GLOW, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
@@ -1115,7 +1115,7 @@ function morph(animate, cam){
   RAF(step);
 }
 let camBusy = 0;
-function setView(v){
+function setView(v){ win.setTimeout(() => { if (typeof syncFZ === "function") syncFZ(); }, 0);
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
@@ -3316,6 +3316,7 @@ function render(){
   if (emoView()) drawEmojis(lit, dim);
   if (chartOn()) drawChart();
   drawMini();   // Starfield's overview map, bottom right
+  { const fb = root.querySelector("#fzbtn"); if (fb && !fb.hidden) { const bot = doc.body.classList.contains("is-mobile") ? 14 : 42; fb.style.left = (cv.offsetLeft + W - sideW() - 36) + "px"; fb.style.top = (cv.offsetTop + H - bot - 22 - (miniOn() ? 140 : 0)) + "px"; } }
   orbWake();   // Star Chart's turning orbits run on their own layer (starts or stops it)
   if (!(CAP.on && CAP.hide)) labels(lit);
   if (BACON) drawBacon();
@@ -3723,7 +3724,7 @@ const end = e => { pts.delete(e.pointerId);
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
-    { const h = chartPostAt(e.offsetX, e.offsetY); if (h >= 0) { if (focus >= 0 || focusArmed) navTo(h); else { select(h); flyTo(h, true); } drag = null; return; } }   // in Focus, the signpost's note becomes the focus, with all its links   // Star Chart: a signpost takes you to its hub
+    { const h = chartPostAt(e.offsetX, e.offsetY); if (h >= 0) { if (focus >= 0 || focusArmed) navTo(h); else { select(h); if (!S3D) flyTo(h, true); } drag = null; return; } }   // in Focus, the signpost's note becomes the focus, with all its links   // Star Chart: a signpost takes you to its hub
   if (i >= 0 && host.openNote && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (Platform.isMobile || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); else if (i >= 0) nudgeTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
@@ -3739,6 +3740,7 @@ cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
     tx -= dx * (e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }
   const f = Math.min(1.35, Math.max(.74, Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)))); zoomAt(e.offsetX, e.offsetY, f); }, {passive:false});
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
+{ const b = doc.createElement("button"); b.id = "fzbtn"; b.type = "button"; b.className = "fzbtn"; b.hidden = true; cv.parentElement.appendChild(b); b.onclick = e => { e.stopPropagation(); setFZ(!FZC); }; }
 $("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoomAt(W/2, H/2, 1/1.6); $("#zfit").onclick = () => { if (globeOn()) { csYaw = 0; csPitch = 0; csKeep(); }   // the globe faces the Sea of Knowledge again
   if (sphOn()) { morph(true, () => fitTarget()); return; } if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, 0]; domeKeep(); morph(true, () => fitTarget()); return; }
   fit(true); };   // in a dome: face forward again
@@ -4065,7 +4067,7 @@ if (emoAny()) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
 let STCH = pref("iv-schart", false) === true, CHPOST = [], orbWake = () => {};
 // Star Chart's extra layers (0.8.9: one switch each, Nick); the 0.8.3 single switch turns them all on
 const CHL = (() => { const o = pref("iv-chx", null); if (o && typeof o === "object") return { lines: !!o.lines, read: !!o.read, gas: !!o.gas, orb: !!o.orb }; const a = pref("iv-schart2", false) === true; return { lines: a, read: a, gas: a, orb: a }; })();   // STCH2: Star Chart's second layer set (0.8.3)   // the signposts drawn this frame: [x, y, note]
-const chartOn = () => view === "stars" && STCH && !S3D, chx = k_ => chartOn() && CHL[k_];
+const chartOn = () => view === "stars" && STCH, chx = k_ => chartOn() && CHL[k_];
 const HUD = a => `rgba(127,231,255,${a})`;
 const chartPostAt = (x, y) => { if (!chartOn()) return -1; let b = -1, bd = 13; for (const [px, py, j] of CHPOST) { const d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; b = j; } } return b; };
 function chartHubs(){ if (sel >= 0) return VV(sel) ? [sel] : [];
@@ -4325,6 +4327,11 @@ function navTo(j, fromTrail){
   else { select(j, fromTrail); flyTo(j); }
 }
 // Starfield in Focus (0.8.8, Nick): the note centred, zoomed so its galaxy's hub sits just inside the edge (a hub itself: its galaxy fills the view)
+// Focus zoom (0.8.10, Nick: keep both, Normal the default): Normal frames every focused note; Close-Up (Starfield) frames the note with its hub.
+// A small square button on the map (in Focus, in Starfield) and the Z key switch between them.
+let FZC = pref("iv-fzclose", false) === true;
+function setFZ(c){ FZC = c; save("iv-fzclose", c); syncFZ(); if (focus >= 0) setFocus(focus, true); }
+function syncFZ(){ const b = root.querySelector("#fzbtn"); if (!b) return; const h = !(focus >= 0 && view === "stars" && !S3D); if (b.hidden !== h) { b.hidden = h; if (!h) draw(); } b.setAttribute("aria-pressed", String(FZC)); b.setAttribute("aria-description", FZC ? "Focus zoom: Close-Up (Z for Normal)" : "Focus zoom: Normal (Z for Close-Up)"); }
 function starFocusTarget(xs, ys, i){ const vw = W - sideW(), cx = vw/2, cy = H/2, R = .44*Math.min(vw, H); let d = 0;
   const b = BOD[i] >= 0 ? BODIES[BOD[i]] : null, h = b && b.core != null ? b.core : -1;
   if (h >= 0 && h !== i) d = Math.hypot(xs[h] - xs[i], ys[h] - ys[i]);
@@ -4334,12 +4341,12 @@ function setFocus(i, fromTrail){
   focus = i; computeFocus();
   const fb = $("#focusbar"); if (fb.hidden !== (i < 0)) { fb.hidden = i < 0; if (i >= 0 && !fb.hasChildNodes()) html(fb).v = "&nbsp;"; resize(); }
   const prev = sel; if (i >= 0) { sel = i; if (drawer.hidden && !isPhone() && !drawerCollapsed) { ANCHOR_T = performance.now() + 700; drawer.hidden = false; resize(); } }   // open the panel first so the camera plans for the narrower map
-  relayout(true, false, i >= 0 ? (xs, ys) => (view === "stars" && !S3D ? starFocusTarget(xs, ys, i) : visTarget(xs, ys)) : () => fitTarget());
+  relayout(true, false, i >= 0 ? (xs, ys) => (FZC && view === "stars" && !S3D ? starFocusTarget(xs, ys, i) : visTarget(xs, ys)) : () => fitTarget());
   sel = prev;
   if (i >= 0) select(i, fromTrail || prev === i);   // refresh the drawer with the focused set
   else if (sel >= 0 && vis[sel]) select(sel, true);   // leaving focus: the panel's button goes back to "Focus on its links"
   $("#focusmode").setAttribute("aria-pressed", String(focus >= 0 || focusArmed));
-  renderFocusBar(); if (!$("#effpanel").hidden) renderEffList();
+  renderFocusBar(); if (!$("#effpanel").hidden) renderEffList(); syncFZ();
 }
 function renderFocusBar(){
   const fb = $("#focusbar");
@@ -4653,7 +4660,7 @@ function applySaved(v){
   if (view === "spacetime" || view === "gravity" || view === "emergence") { DOME[view] = !!v.dome; save("iv-dome", DOME); if (v.dome) { DOMECAM[view] = [+v.dome.yaw || 0, +v.dome.pitch || .5]; save("iv-domecam", DOMECAM); } root.dataset.dome = domeOn() ? "1" : ""; }
   if (view === "chord") { CSPH = v.csph && ["out", "in"].includes(v.csph.mode) ? v.csph.mode : ""; save("iv-csph", CSPH); if (v.csph) { camOwner = "chord"; csYaw = +v.csph.yaw || 0; csPitch = +v.csph.pitch || 0; csKeep(); } root.dataset.dome = csphOn() ? "1" : ""; }
   if (view === "planet" && v.pg != null) { PMODE = v.pg === true ? "globe" : v.pg === false ? "table" : ["flat", "table", "globe"].includes(v.pg) ? v.pg : PMODE; PGLOBE = PMODE === "globe"; save("iv-planetmode", PMODE); syncPG(); if (v.gcam) { camOwner = "globe"; csYaw = +v.gcam.yaw || 0; csPitch = +v.gcam.pitch || 0; csKeep(); } root.dataset.dome = sphOn() ? "1" : ""; }
-  if (view === "stars" && v.s3d) { S3D = !!v.s3d.on; STCH = !S3D && v.s3d.chart === true; { const o = v.s3d.chx || (v.s3d.chart2 ? { lines: true, read: true, gas: true, orb: true } : {}); for (const k_ of Object.keys(CHL)) CHL[k_] = !!o[k_]; save("iv-chx", CHL); if (FUI.chx) FUI.chx(); } save("iv-s3d", S3D); save("iv-schart", STCH); orbWake(); if (isFinite(+v.s3d.yaw)) yaw3 = +v.s3d.yaw; if (isFinite(+v.s3d.pitch)) pitch3 = +v.s3d.pitch; save("iv-cam3", [yaw3, pitch3]);
+  if (view === "stars" && v.s3d) { S3D = !!v.s3d.on; STCH = v.s3d.chart === true; { const o = v.s3d.chx || (v.s3d.chart2 ? { lines: true, read: true, gas: true, orb: true } : {}); for (const k_ of Object.keys(CHL)) CHL[k_] = !!o[k_]; save("iv-chx", CHL); if (FUI.chx) FUI.chx(); } save("iv-s3d", S3D); save("iv-schart", STCH); orbWake(); if (isFinite(+v.s3d.yaw)) yaw3 = +v.s3d.yaw; if (isFinite(+v.s3d.pitch)) pitch3 = +v.s3d.pitch; save("iv-cam3", [yaw3, pitch3]);
     syncS3D(); placePlaybar(); }
   // the time-lapse, at the step it was saved on (or all time); set before the camera move below, so that move has the last word
   if (v.tl && isFinite(+v.tl.t)) { senseStep = v.tl.step === "week" ? "week" : "month"; save("iv-sstep", senseStep);
@@ -4835,9 +4842,9 @@ let syncCh2 = () => {};
       const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = txt; r.append(cb, sw, t); box.appendChild(r);
       cb.onchange = () => { CHL[k_] = cb.checked; save("iv-chx", CHL); orbWake(); legend(); draw(); }; return [k_, cb]; });
     const lc = root.querySelector('input[name="s3d"][value="chart"]'); (lc ? lc.closest("label") : sp.lastChild).after(box);
-    FUI.chx = () => { for (const [k_, cb] of sws) cb.checked = CHL[k_]; }; syncCh2 = () => { FUI.chx(); box.hidden = !STCH || S3D; }; } }
-const syncS3D = () => { syncCh2(); if (FUI.sfseg) FUI.sfseg(); root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = r.value === (S3D ? "3d" : STCH ? "chart" : "2d")); $('#vseg button[data-v="stars"]').title = S3D ? "Starfield · 3D (click again to switch)" : "Starfield · 2D (click again to switch)"; };
-root.querySelectorAll('input[name="s3d"]').forEach(r => r.onchange = () => { if (!r.checked) return; S3D = r.value === "3d"; STCH = r.value === "chart"; save("iv-s3d", S3D); save("iv-schart", STCH); orbWake(); legend(); syncS3D(); placePlaybar(); morph(true, () => fitTarget()); });
+    FUI.chx = () => { for (const [k_, cb] of sws) cb.checked = CHL[k_]; }; syncCh2 = () => { FUI.chx(); box.hidden = !STCH; }; } }
+const syncS3D = () => { syncCh2(); if (FUI.sfseg) FUI.sfseg(); if (typeof syncFZ === "function") syncFZ(); root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = r.value === (S3D ? "3d" : "2d")); $('#vseg button[data-v="stars"]').title = S3D ? "Starfield · 3D (click again to switch)" : "Starfield · 2D (click again to switch)"; };
+root.querySelectorAll('input[name="s3d"]').forEach(r => r.onchange = () => { if (!r.checked) return; S3D = r.value === "3d"; save("iv-s3d", S3D); orbWake(); legend(); syncS3D(); placePlaybar(); morph(true, () => fitTarget()); });
 syncS3D();
 function syncSenseSrc(){ root.querySelectorAll('input[name="ssrc"]').forEach(r => { r.checked = r.value === senseSrc; r.disabled = r.value === "ai" && !SAI; });
   $("#saidate").textContent = SAI ? `one-time read of each note${SAI.date ? ` · ${SAI.date}` : ""}` : "not run yet (no ideaverse-sense-ai.js)";
@@ -5218,12 +5225,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // a tighter Starfield menu (0.8.9, with Filter as the reference): the three ways to see it as one row, the chosen one's line beneath,
   // Star Chart's layers two to a row under it, then Galaxy glow, then the switches in one list
   { const sp = $("#starpop"); sp.classList.add("sfmenu"); const rows = [...sp.querySelectorAll("label.srow")], note = sp.querySelector(":scope > p.pn");
-    const DESC = { "2d": "The flat map of galaxies.", "3d": "Galaxies get a depth and a tilt. Drag to orbit, right-drag to pan, scroll to fly in.", chart: "A navigator's chart: rings around a hub and signposts to the hubs it links to." };
+    const DESC = { "2d": "The flat map of galaxies.", "3d": "Galaxies get a depth and a tilt. Drag to orbit, right-drag to pan, scroll to fly in." };
     const seg = doc.createElement("div"); seg.className = "seg sfseg"; seg.setAttribute("role", "group"); const desc = doc.createElement("p"); desc.className = "pn sfdesc";
-    const sync = () => { const cur = S3D ? "3d" : STCH ? "chart" : "2d"; seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === cur))); desc.textContent = DESC[cur]; };
-    for (const [m, t] of [["2d", "2D"], ["3d", "3D"], ["chart", "Star Chart"]]) { const b = doc.createElement("button"); b.type = "button"; b.dataset.m = m; b.textContent = t; seg.appendChild(b);
-      b.onclick = e => { e.stopPropagation(); const r = sp.querySelector(`input[name="s3d"][value="${m}"]`); if (r && !r.checked) { r.checked = true; r.dispatchEvent(new Event("change")); } sync(); syncCh2(); }; }
-    if (rows.length) { rows[0].before(seg); seg.after(desc); for (const r of rows) r.hidden = true; } if (note) note.hidden = true;
+    const chl = doc.createElement("label"); chl.className = "mini lcemo chartsw"; const chc = doc.createElement("input"); chc.type = "checkbox"; const chs = doc.createElement("i"); chs.className = "sw"; const cht = doc.createElement("span"); cht.textContent = "Star Chart: rings and signposts around a hub"; chl.append(chc, chs, cht);
+    const sync = () => { const cur = S3D ? "3d" : "2d"; seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === cur))); desc.textContent = DESC[cur]; chc.checked = STCH; };
+    chc.onchange = () => { STCH = chc.checked; save("iv-schart", STCH); syncCh2(); orbWake(); legend(); draw(); };
+    for (const [m, t] of [["2d", "2D"], ["3d", "3D"]]) { const b = doc.createElement("button"); b.type = "button"; b.dataset.m = m; b.textContent = t; seg.appendChild(b);
+      b.onclick = e => { e.stopPropagation(); if ((m === "3d") === S3D) return; S3D = m === "3d"; save("iv-s3d", S3D); syncS3D(); placePlaybar(); morph(true, () => fitTarget()); sync(); syncCh2(); orbWake(); }; }
+    if (rows.length) { rows[0].before(seg); seg.after(desc); desc.after(chl); const cb_ = sp.querySelector(".chxbox"); if (cb_) chl.after(cb_); for (const r of rows) r.hidden = true; } if (note) note.hidden = true;
     sp.querySelectorAll('input[name="s3d"]').forEach(r => r.addEventListener("change", sync)); FUI.sfseg = sync; sync();
     const list = doc.createElement("div"); list.className = "sflist"; sp.appendChild(list); for (const el of [...sp.querySelectorAll(":scope > label.sfsw"), ...sp.querySelectorAll(":scope > label.minisw")]) list.appendChild(el); }
   const moL = mo.createDiv({ cls: "pt mol", text: "This map" }); mo.appendChild($("#laygrp")); const moNone = mo.createDiv({ cls: "pn", text: "Nothing to set on this map." });
@@ -5674,14 +5683,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         o: () => hit("#dplay"),
         a: () => { const d = $("#animdock"); if (!d || d.hidden) return hit("#anitab"); const c_ = d.querySelector('button[aria-label="Tuck animations away"]'); if (c_) { c_.click(); return true; } return false; },
         w: () => hit("#pplay"), t: () => vis_($("#timebar")) || !$("#timebar").hidden ? hit("#tlplay") : false,
-        s: () => hit("#follownote"), f: () => hit("#filtbtn"), n: () => hit("#focusmode"), v: () => hit("#viewbtn") };
+        s: () => hit("#follownote"), f: () => hit("#filtbtn"), n: () => hit("#focusmode"), v: () => hit("#viewbtn"), z: () => { if (focus < 0 || view !== "stars" || S3D) return false; setFZ(!FZC); return true; } };
       ["j", "k", "l"].forEach((key, j) => LK[key] = () => { const bs = [...root.querySelectorAll("#driftseg button")].filter(vis_); const b_ = bs[j]; if (!b_) return false; b_.click(); if (!orbitOn()) hit("#dplay"); return true; });
       // ? opens a card of every key; Display ends with a row that opens it too
       const card = cv.parentElement.createDiv({ cls: "keycard", attr: { role: "dialog", "aria-label": "Keyboard shortcuts" } }); card.hidden = true;
       const fillCard = () => { card.empty(); const hd = card.createDiv({ cls: "kch" }); hd.createSpan({ text: "Keyboard shortcuts" }); const x_ = hd.createEl("button", { cls: "kcx", text: "×", attr: { type: "button", "aria-label": "Close" } }); x_.onclick = () => { card.hidden = true; };
         const cols = card.createDiv({ cls: "kcc" }), sec = (t, rows) => { const c_ = cols.createDiv({ cls: "kcs" }); c_.createDiv({ cls: "pt", text: t }); for (const [k_, d_] of rows) { const r_ = c_.createDiv({ cls: "kcr" }); const kk = r_.createSpan({ cls: "kcks" }); for (const one of k_.split(" ")) kk.createEl("kbd", { text: one }); r_.createSpan({ text: d_ }); } };
         sec("Maps", [...KEYED()].map(([k_, ch]) => [k_, [...ch.childNodes].filter(x => !(x.classList && x.classList.contains("mkey"))).map(x => x.textContent).join("").trim()]).sort((a_, b_) => "1234567890-=[]\\".indexOf(a_[0]) - "1234567890-=[]\\".indexOf(b_[0])));
-        sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["V", "Saved views"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]); };
+        sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["Z", "Focus zoom: Normal or Close-Up (Starfield)"], ["V", "Saved views"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]); };
       const toggleCard = () => { if (card.hidden) { closePops(); fillCard(); } card.hidden = !card.hidden; return true; };
       LK["?"] = toggleCard; on(doc, "pointerdown", e => { if (!card.hidden && !card.contains(e.target)) card.hidden = true; });
       onKey(e => { if (e.key === "Escape" && !card.hidden) card.hidden = true; });
