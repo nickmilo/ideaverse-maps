@@ -1283,3 +1283,9 @@ body.is-mobile .ivm.ivm #vlist.vlist2 .vr{cursor:default}
 .ivm button.fzbtn[aria-pressed="true"]::after{width:4px;height:4px;background:var(--accent);border-color:var(--accent)}
 .ivm button.fzbtn:hover{opacity:1}
 .ivm button.fzbtn[hidden]{display:none}
+
+/* 0.8.13 every map's gear in the tighter look: one row of choices, a line beneath, switches in a list */
+.ivm.ivm header.tb2 #mapopts .tseg{align-self:flex-start}
+.ivm.ivm header.tb2 #mapopts .tdesc{margin:-2px 0 2px;font-size:11.5px;line-height:1.35;max-width:300px}
+.ivm.ivm header.tb2 #mapopts .tgone{display:none}
+.ivm.ivm header.tb2 #mapopts .mini + .mini,.ivm.ivm header.tb2 #mapopts .tgone + .mini,.ivm.ivm header.tb2 #mapopts .mini + .tgone + .mini{margin-top:5px;padding-top:0;border-top:0}

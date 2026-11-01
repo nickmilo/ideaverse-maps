@@ -4207,16 +4207,16 @@ root.querySelectorAll("#vseg button[data-v]").forEach(b => b.onclick = e => {
 
 // scoring panel
 const SROWS = [
+  {h:"Where the levels start"},
+  {key:"top", label:"Level 5: top notes by score", hint:"The highest-scoring notes join the home notes at the top. Raising it fills Level 5 from Level 4 down.", min:0, max:100, step:1},
+  {key:"l4", label:"Level 4 from score", hint:"Any note scoring at least this. A map that links to 3+ other maps is Level 4 whatever its score.", min:2, max:12, step:.1},
+  {key:"l3", label:"Level 3 from score", hint:"Any note scoring at least this. Every map is at least Level 3 whatever its score; so a Level 2 note can outscore a Level 3 map.", min:1, max:12, step:.1},
   {h:"Link weights"},
   {key:"w.in", label:"Links in", hint:"Other notes link to it, in their text or in a property (up, related or any other). The clearest sign of a hub: other notes point here.", min:0, max:2, step:.05},
   {key:"w.out", label:"Links out", hint:"It links out, in its own text or its properties. Lifts maps and indexes, and also busy notes like monthly reviews that link every daily note.", min:0, max:2, step:.05},
   {key:"w.both", label:"Links both in and out", hint:"A bonus only when a note has links in AND out (zero if either side is zero). Rewards notes woven into the web over pure lists or pure targets.", min:0, max:2, step:.05},
   {key:"w.up", label:"Notes that link up to it", hint:"Uplinks: notes that name it in their up or related property. Lifts the parent of a series: a year above its months, a project above its notes.", min:0, max:2, step:.05},
-  {key:"w.coll", label:"Notes in its collection", hint:"Notes that list it in their collections, which makes it a collection note (Maps, People, Reviews…). Off by default: big collections are named by hundreds of notes and would swamp everything.", min:0, max:2, step:.05},
-  {h:"Where the levels start"},
-  {key:"top", label:"Level 5: top notes by score", hint:"The highest-scoring notes join the home notes at the top. Raising it fills Level 5 from Level 4 down.", min:0, max:100, step:1},
-  {key:"l4", label:"Level 4 from score", hint:"Any note scoring at least this. A map that links to 3+ other maps is Level 4 whatever its score.", min:2, max:12, step:.1},
-  {key:"l3", label:"Level 3 from score", hint:"Any note scoring at least this. Every map is at least Level 3 whatever its score; so a Level 2 note can outscore a Level 3 map.", min:1, max:12, step:.1}];
+  {key:"w.coll", label:"Notes in its collection", hint:"Notes that list it in their collections, which makes it a collection note (Maps, People, Reviews…). Off by default: big collections are named by hundreds of notes and would swamp everything.", min:0, max:2, step:.05}];
 const getS = key => key.split(".").reduce((o,k2) => o[k2], S) ?? 0;   // a weight missing from older saved settings reads as 0
 const setS = (key, v) => { const ks = key.split("."); ks.slice(0,-1).reduce((o,k2) => o[k2], S)[ks.at(-1)] = v; };
 html($("#srows")).v = SROWS.map((r,j) => r.h ? `<h6>${r.h}</h6>${r.h === "Link weights" ? `<p class="pn" style="margin:-2px 0 6px">Score = each kind of link, counted with diminishing returns (1 link → 0.7, 3 → 1.4, 10 → 2.4, 100 → 4.6), times its weight, added up. Prev/next series links don't count. Within a level, a higher score sits higher.</p>` : `<p class="pn" style="margin:-2px 0 6px">Checked top down, first match wins: 5 (home or top N), 4, 3, then 2 (any link) and 1 (no links). Open a note to see exactly why it landed where it did.</p>`}` : `<label class="srow"><span>${r.label}</span><b id="sv${j}"></b><input type="range" id="s${j}" min="${r.min}" max="${r.max}" step="${r.step}"><small>${r.hint}</small></label>`).join("");
@@ -5650,8 +5650,23 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" ? "gocso" : CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
       return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };
     // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
+    // every map's gear in Starfield's tighter look (0.8.13, Nick: "apply to the other map settings"): a group of choices becomes one row with
+    // the chosen one's line beneath it, and Off | On rows become plain switches; run each time the gear opens, so it follows any change
+    const tightenMO = () => { const mo_ = $("#mapopts"); if (!mo_) return;
+      const groups = new Map(); mo_.querySelectorAll('label.srow input[type="radio"]').forEach(r => { if (r.closest(".sfmenu")) return; (groups.get(r.name) || groups.set(r.name, []).get(r.name)).push(r); });
+      for (const [name, rs] of groups) { const first = rs[0].closest("label"); let seg = mo_.querySelector(`.tseg[data-g="${name}"]`), desc;
+        if (!seg) { seg = doc.createElement("div"); seg.className = "seg tseg"; seg.dataset.g = name; desc = doc.createElement("p"); desc.className = "pn tdesc"; first.before(seg); seg.after(desc);
+          for (const r of rs) { const l = r.closest("label"), b = doc.createElement("button"); b.type = "button"; b.dataset.v = r.value; b.textContent = (l.querySelector("b") || l).textContent.trim(); seg.appendChild(b); l.hidden = true;
+            b.onclick = e => { e.stopPropagation(); if (!r.checked) { r.checked = true; r.dispatchEvent(new Event("change", { bubbles: true })); } tightenMO(); }; } }
+        desc = seg.nextElementSibling; const cur = rs.find(r => r.checked) || rs[0];
+        seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === cur.value))); const em = cur.closest("label").querySelector("em"); desc.textContent = em ? em.textContent.trim().replace(/^./, c => c.toUpperCase()) : ""; desc.hidden = !em; }
+      mo_.querySelectorAll(".sglow").forEach(row => { if (row.closest(".sfmenu")) return; const bs = [...row.querySelectorAll(":scope > .seg > button")]; if (bs.length !== 2 || bs[0].textContent.trim() !== "Off" || bs[1].textContent.trim() !== "On") return;
+        let sw_ = row.nextElementSibling && row.nextElementSibling.classList.contains("tsw") ? row.nextElementSibling : null;
+        if (!sw_) { sw_ = doc.createElement("label"); sw_.className = "mini lcemo tsw"; const cb = doc.createElement("input"); cb.type = "checkbox"; const i_ = doc.createElement("i"); i_.className = "sw"; const t = doc.createElement("span"); t.textContent = (row.querySelector(".sgl") || row).textContent.trim();
+          sw_.append(cb, i_, t); row.after(sw_); cb.onchange = () => { (cb.checked ? bs[1] : bs[0]).click(); tightenMO(); }; }
+        row.classList.add("tgone"); sw_.querySelector("input").checked = bs[1].getAttribute("aria-pressed") === "true"; sw_.hidden = row.hidden; }); };
     const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop", "#senseemo"]) $(id).hidden = id !== v_; if (view === "sense") $("#senseemo").hidden = false; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
-      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); FUI.emoany(); moL.hidden = !l || !(v_ || emoGen()); moNone.hidden = true; return !!(l || v_ || emoGen()); };
+      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); FUI.emoany(); moL.hidden = !l || !v_; moNone.hidden = true; tightenMO(); return !!(l || v_ || emoGen()); };
     // no hover hints in the maps menu (Nick): a map's description stays for screen readers only
     const quiet = () => MP.querySelectorAll("[aria-label], [title]").forEach(el => { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("title"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); });
     const openMaps = () => { quiet(); closePops("#vmorepop"); if (typeof closeColl === "function") closeColl(); MP.hidden = false; MB.setAttribute("aria-expanded", "true");
@@ -5663,7 +5678,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const STW = doc.createElement("div"); STW.className = "ms mapsetms"; const ST = STW.createEl("button", { cls: "tbb tbi mapset", attr: { id: "mapsetbtn", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
     setIcon(ST, "settings"); SM.insertBefore(STW, MB.nextSibling); STW.appendChild(mo);
     POPS.push(["#mapsetbtn", "#mapopts", ".mapsetms"]);
-    const openSet = () => { closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!fillMO()) return; mo.setAttribute("aria-description", VN() + " settings"); mo.hidden = false; ST.setAttribute("aria-expanded", "true"); };
+    const openSet = () => { closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!fillMO()) return; mo.setAttribute("aria-description", VN() + " settings"); mo.hidden = false; ST.setAttribute("aria-expanded", "true"); if (!moL.hidden && $("#laygrp").getBoundingClientRect().height < 4) moL.hidden = true; };
     ST.onclick = e => { e.stopPropagation(); if (!mo.hidden) closePops(); else openSet(); };
     { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay() || emoGen()); }; }
     MB.onclick = e => { e.stopPropagation(); if (!MP.hidden) closePops(); else openMaps(); };
