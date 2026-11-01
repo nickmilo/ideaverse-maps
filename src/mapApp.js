@@ -3005,9 +3005,9 @@ let hover = -1, sel = -1, showAll = false;
 const css = {};
 const COLORS = ["bg","panel","line","ink","muted","accent","accent-soft","up","down","band-a","band-b","l2","l1","sl2","sl1","rel","upp","prop","edge-faint"];
 let probe = null;   // colors go through the browser once, so the canvas gets plain rgb() even when a theme writes color-mix() or Obsidian's own variables
-// Display → Starfield link colors (0.8.7, Nick): gold above, blue below, lilac related, pale gold up, slate other, on every map and in the note panel
+// Display → Starfield link colors (0.8.7, Nick): red above, blue below, gold up, lilac related, slate other, on every map and in the note panel
 let SFLINKS = pref("iv-sflinks", false) === true;
-const SFDARK = { up: "#ffcf6e", down: "#6fd3ff", rel: "#c9a2ff", upp: "#fff09a", prop: "#a9b4c8" }, SFLIGHT = { up: "#c4870c", down: "#1f86c4", rel: "#8a3ff0", upp: "#9c8a00", prop: "#6b7c93" };
+const SFDARK = { up: "#ff6f61", down: "#6fd3ff", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }, SFLIGHT = { up: "#d0453f", down: "#1f86c4", rel: "#8a3ff0", upp: "#b8860b", prop: "#6b7c93" };   // red above, blue below (a Doppler pair, 0.8.12, Nick); up is gold, clear of both
 function applySfLinks(){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || (th === "obsidian" && doc.body.classList.contains("theme-dark"));
   const P = dark ? SFDARK : SFLIGHT; for (const kk of Object.keys(P)) { if (SFLINKS) root.style.setProperty("--" + kk, P[kk]); else root.style.removeProperty("--" + kk); }
   let t = null; try { t = tip; } catch { t = null; } if (t) for (const kk of Object.keys(P)) { if (SFLINKS) t.style.setProperty("--" + kk, P[kk]); else t.style.removeProperty("--" + kk); } }
