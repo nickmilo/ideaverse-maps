@@ -7,6 +7,8 @@ module.exports = async ({ page, sleep, shot }) => {
   await sleep(6000); await page.keyboard.press('3'); await sleep(3000);
   await page.locator('.ivm #mapsetbtn').click(); await sleep(400); await shot('chart-menu');
   await page.locator('.ivm input[name="s3d"][value="chart"]').click(); await sleep(2500); await page.keyboard.press('Escape'); await sleep(1500); await shot('chart-hubs');
+  if (process.env.V2) { await page.locator('.ivm #mapsetbtn').click(); await sleep(400); await shot('chart-menu2'); await page.locator('.ivm .chart2').click(); await sleep(2000); await page.keyboard.press('Escape'); await sleep(1500); await shot('chart2-hubs');
+    console.log('orbit px', await page.evaluate(() => { const c = document.querySelector('.ivm canvas.chartorb'); if (!c) return 'none'; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let k = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) k++; return k + ' ' + c.style.left + ' ' + getComputedStyle(c).position; })); }
   await page.locator('.ivm #q').fill('Triangulation'); await sleep(700); await page.keyboard.press('Enter'); await sleep(2500);
   await page.evaluate(() => document.activeElement && document.activeElement.blur());
   const dc = page.locator('.ivm #dcol'); if (await dc.isVisible()) { await dc.click(); await sleep(1200); }

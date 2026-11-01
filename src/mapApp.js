@@ -733,6 +733,7 @@ function starsBg(){
   for (let a = bgDim; a > .001; a -= 1) { ctx.globalAlpha = Math.min(1, a); ctx.drawImage(GLOW, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
   const wf = Math.max(0, Math.min(1, (.7 - k)/.45));   // the cosmic web fades out as you zoom into a galaxy
   if (wf > 0 && showAll) { ctx.globalAlpha = wf*bgDim; ctx.drawImage(WEB, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
+  if (chart2On()) chartGas(bgDim);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
 }
 function starsNotes(lit, dim){
@@ -3283,6 +3284,7 @@ function render(){
 
   if (emoView()) drawEmojis(lit, dim);
   if (chartOn()) drawChart();
+  orbWake();   // Star Chart's turning orbits run on their own layer (starts or stops it)
   if (!(CAP.on && CAP.hide)) labels(lit);
   if (BACON) drawBacon();
   axisLabels();
@@ -4028,15 +4030,40 @@ if (emoAny()) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
 // ---------- Star Chart: Starfield's third mode (0.8.2), a navigator's chart over the 2D galaxies ----------
 // Rings around the picked note (or, with nothing picked, the biggest Level 5 hubs): its links by kind, a dial of time, and signposts
 // pointing the way to the hubs it links to; click a signpost to go there. Every other Level 5 hub wears one faint broken arc.
-let STCH = pref("iv-schart", false) === true, CHPOST = [];   // the signposts drawn this frame: [x, y, note]
-const chartOn = () => view === "stars" && STCH && !S3D;
+let STCH = pref("iv-schart", false) === true, STCH2 = pref("iv-schart2", false) === true, CHPOST = [], orbWake = () => {};   // STCH2: Star Chart's second layer set (0.8.3)   // the signposts drawn this frame: [x, y, note]
+const chartOn = () => view === "stars" && STCH && !S3D, chart2On = () => chartOn() && STCH2;
 const HUD = a => `rgba(127,231,255,${a})`;
 const chartPostAt = (x, y) => { if (!chartOn()) return -1; let b = -1, bd = 13; for (const [px, py, j] of CHPOST) { const d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; b = j; } } return b; };
 function chartHubs(){ if (sel >= 0) return VV(sel) ? [sel] : [];
   const c = []; for (let i=0;i<n;i++) if (N[i].level === 5 && VV(i)) c.push(i); return c.sort((a, b) => N[b].score - N[a].score).slice(0, 4); }
+// Star Chart, second layer set (0.8.3, a mini switch): folder gas around each galaxy, lines between hubs, readouts, turning orbits
+function chartFolder(b){ if (b.kind === "neb") return b.ace; if (b._fold !== undefined) return b._fold; const c = {}; let best = null, bn = 0;
+  for (const i of b.members) { const a = N[i].ace; if (!NEBC[a]) continue; c[a] = (c[a] || 0) + 1; if (c[a] > bn) { bn = c[a]; best = a; } } return (b._fold = best); }
+function chartGas(dim){ ctx.globalCompositeOperation = "lighter";
+  for (const b of BODIES) { if (b.kind !== "gal" && b.kind !== "dwarf") continue; const col = NEBC[chartFolder(b)]; if (!col) continue;
+    const [bx, by] = bodyPos(b), x = sx(bx), y = sy(by), R = b.r * k * 2.1; if (x + R < 0 || x - R > W || y + R < 0 || y - R > H) continue;
+    const g = ctx.createRadialGradient(x, y, R * .15, x, y, R); g.addColorStop(0, col + "38"); g.addColorStop(.55, col + "16"); g.addColorStop(1, col + "00");
+    ctx.globalAlpha = Math.min(1, .5 + dim * .5); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R, 0, 6.2832); ctx.fill(); }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; }
+// lines between hubs: every link between two Level 4–5 notes, always shown (brighter when both link each other); they step back while a note is picked
+function chartLines(){ const dimF = sel >= 0 ? .35 : 1; ctx.lineWidth = 1;
+  for (let i=0;i<n;i++) { if (N[i].level < 4 || !VV(i)) continue; const x = sx(X[i]), y = sy(Y[i]);
+    for (const j of out[i]) { if (j === i || N[j].level < 4 || !VV(j)) continue; const both = out[j].includes(i); if (both && j < i) continue;
+      const x2 = sx(X[j]), y2 = sy(Y[j]); if ((x < 0 && x2 < 0) || (x > W && x2 > W) || (y < 0 && y2 < 0) || (y > H && y2 > H)) continue;
+      ctx.strokeStyle = HUD((both ? .34 : .14) * dimF); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x2, y2); ctx.stroke();
+      if (both || N[i].level === 5 || N[j].level === 5) { ctx.fillStyle = HUD(.7 * dimF); ctx.fillRect(x2 - 1.5, y2 - 1.5, 3, 3); } } } }
+// a readout beside each ringed hub: level and score, links in and out, the year its linked notes began, and how many came this year
+function chartReadout(i, x, y, r){ const nb = new Set([...out[i], ...inn[i]]); let first = Infinity, yr = 0; const y0 = Date.UTC(NOW_Y, 0, 1);
+  for (const j of nb) { const t = TVD[j]; if (!(t > 0)) continue; if (t < first) first = t; if (t >= y0) yr++; }
+  const L = [`L${N[i].level} · SCORE ${N[i].score.toFixed(N[i].score < 10 ? 1 : 0)}`, `IN ${inn[i].length} · OUT ${out[i].length}`, `${isFinite(first) ? "SINCE " + new Date(first).getUTCFullYear() : "NO DATES"} · +${yr} ${NOW_Y}`];
+  const ang = -.62, ax = x + Math.cos(ang) * r, ay = y + Math.sin(ang) * r, bx = ax + 22, by = ay - 16;
+  ctx.strokeStyle = HUD(.55); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(bx + 8, by); ctx.stroke();
+  ctx.font = `500 9.5px ${css.mono}`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  L.forEach((t, q) => { const ty = by + q * 12; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(4,5,12,.8)"; ctx.strokeText(t, bx + 12, ty); ctx.fillStyle = HUD(q ? .7 : .95); ctx.fillText(t, bx + 12, ty); });
+  ctx.textBaseline = "alphabetic"; }
 function drawChart(){ CHPOST = [];
   const s = Math.max(1, Math.min(1.7, Math.pow(k, .3) * 1.15)), hubs = chartHubs(), full = new Set(hubs);
-  ctx.save(); ctx.lineCap = "round";
+  ctx.save(); ctx.lineCap = "round"; if (chart2On()) chartLines();
   for (let i=0;i<n;i++) { if (N[i].level !== 5 || full.has(i) || !VV(i)) continue; const x = sx(X[i]), y = sy(Y[i]); if (x < -80 || x > W + 80 || y < -80 || y > H + 80) continue;
     const a0 = hash(N[i].path, 7) * 6.2832; ctx.strokeStyle = HUD(.35); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, rad(i) + 18*s, a0, a0 + 4.3); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, rad(i) + 24*s, a0 + 4.6, a0 + 5.6); ctx.stroke(); }
   for (const i of hubs) chartRings(i, s, i === sel);
@@ -4072,7 +4099,8 @@ function chartRings(i, s, picked){
     const far = sx(X[j]) < 0 || sx(X[j]) > W || sy(Y[j]) < 0 || sy(Y[j]) > H || Math.hypot(dx, dy) > 320; if (!far) { CHPOST.push([px, py, j]); continue; }
     ctx.textAlign = ox < -.2 ? "right" : ox > .2 ? "left" : "center"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(4,5,12,.8)"; ctx.strokeText(t, lx, ly); ctx.fillStyle = HUD(.9); ctx.fillText(t, lx, ly);
     CHPOST.push([px, py, j]); }
-  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  if (chart2On()) chartReadout(i, x, y, r1); }
 function drawEmojis(lit, dim){ if (!emoView()) return; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   for (const lv of [1, 2, 3, 4, 5]) for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i)) continue; const e_ = EMOI[i]; if (!e_) continue;
     const x = sx(X[i]), y = sy(Y[i]); if (x < -30 || x > W + 30 || y < -30 || y > H + 30) continue; const f = emoSize(i);
@@ -4519,7 +4547,7 @@ function snapView(name){
     csph: csphOn() ? {mode: CSPH, yaw: +csYaw.toFixed(3), pitch: +csPitch.toFixed(3)} : null,
     pg: view === "planet" ? PMODE : null, gcam: globeOn() ? {yaw: +csYaw.toFixed(3), pitch: +csPitch.toFixed(3)} : null,
     geo: view === "quincunx" ? GEO : null,
-    s3d: view === "stars" ? {on: S3D, chart: STCH, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
+    s3d: view === "stars" ? {on: S3D, chart: STCH, chart2: STCH2, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
     // every filter (0.7.54): the years' edge strips, dating by modified time and its window, MOCs, properties and bases; and Linear Calendar's years and halves
     yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
     lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF} : null,
@@ -4573,7 +4601,7 @@ function applySaved(v){
   if (view === "spacetime" || view === "gravity" || view === "emergence") { DOME[view] = !!v.dome; save("iv-dome", DOME); if (v.dome) { DOMECAM[view] = [+v.dome.yaw || 0, +v.dome.pitch || .5]; save("iv-domecam", DOMECAM); } root.dataset.dome = domeOn() ? "1" : ""; }
   if (view === "chord") { CSPH = v.csph && ["out", "in"].includes(v.csph.mode) ? v.csph.mode : ""; save("iv-csph", CSPH); if (v.csph) { camOwner = "chord"; csYaw = +v.csph.yaw || 0; csPitch = +v.csph.pitch || 0; csKeep(); } root.dataset.dome = csphOn() ? "1" : ""; }
   if (view === "planet" && v.pg != null) { PMODE = v.pg === true ? "globe" : v.pg === false ? "table" : ["flat", "table", "globe"].includes(v.pg) ? v.pg : PMODE; PGLOBE = PMODE === "globe"; save("iv-planetmode", PMODE); syncPG(); if (v.gcam) { camOwner = "globe"; csYaw = +v.gcam.yaw || 0; csPitch = +v.gcam.pitch || 0; csKeep(); } root.dataset.dome = sphOn() ? "1" : ""; }
-  if (view === "stars" && v.s3d) { S3D = !!v.s3d.on; STCH = !S3D && v.s3d.chart === true; save("iv-s3d", S3D); save("iv-schart", STCH); if (isFinite(+v.s3d.yaw)) yaw3 = +v.s3d.yaw; if (isFinite(+v.s3d.pitch)) pitch3 = +v.s3d.pitch; save("iv-cam3", [yaw3, pitch3]);
+  if (view === "stars" && v.s3d) { S3D = !!v.s3d.on; STCH = !S3D && v.s3d.chart === true; STCH2 = v.s3d.chart2 === true; save("iv-s3d", S3D); save("iv-schart", STCH); save("iv-schart2", STCH2); orbWake(); if (isFinite(+v.s3d.yaw)) yaw3 = +v.s3d.yaw; if (isFinite(+v.s3d.pitch)) pitch3 = +v.s3d.pitch; save("iv-cam3", [yaw3, pitch3]);
     syncS3D(); placePlaybar(); }
   // the time-lapse, at the step it was saved on (or all time); set before the camera move below, so that move has the last word
   if (v.tl && isFinite(+v.tl.t)) { senseStep = v.tl.step === "week" ? "week" : "month"; save("iv-sstep", senseStep);
@@ -4720,8 +4748,13 @@ $("#dplay").onclick = () => drifting ? driftStop() : driftStart(); syncDrift();
 // a third Starfield mode, Star Chart (0.8.2): its row sits under 3D
 { const r3 = root.querySelector('input[name="s3d"][value="3d"]'); if (r3 && !root.querySelector('input[name="s3d"][value="chart"]')) { const l3 = r3.closest("label"), lc = l3.cloneNode(true), ic = lc.querySelector("input"); ic.value = "chart"; ic.checked = false;
     lc.querySelector("b").textContent = "Star Chart"; lc.querySelector("em").textContent = "a navigator's chart: rings around a hub, and signposts to the hubs it links to"; l3.after(lc); } }
-const syncS3D = () => { root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = r.value === (S3D ? "3d" : STCH ? "chart" : "2d")); $('#vseg button[data-v="stars"]').title = S3D ? "Starfield · 3D (click again to switch)" : "Starfield · 2D (click again to switch)"; };
-root.querySelectorAll('input[name="s3d"]').forEach(r => r.onchange = () => { if (!r.checked) return; S3D = r.value === "3d"; STCH = r.value === "chart"; save("iv-s3d", S3D); save("iv-schart", STCH); syncS3D(); placePlaybar(); morph(true, () => fitTarget()); });
+// the second layer set: a mini switch in Starfield's gear, shown while Star Chart is on
+let syncCh2 = () => {};
+{ const sp = root.querySelector('#starpop'); if (sp) { const r = doc.createElement("label"); r.className = "mini lcemo chart2"; const cb = doc.createElement("input"); cb.type = "checkbox"; cb.checked = STCH2; const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = "Lines, readouts, gas and orbits";
+    r.append(cb, sw, t); const lc = root.querySelector('input[name="s3d"][value="chart"]'); (lc ? lc.closest("label") : sp.lastChild).after(r);
+    cb.onchange = () => { STCH2 = cb.checked; save("iv-schart2", STCH2); orbWake(); draw(); }; syncCh2 = () => { cb.checked = STCH2; r.hidden = !STCH; }; } }
+const syncS3D = () => { syncCh2(); root.querySelectorAll('input[name="s3d"]').forEach(r => r.checked = r.value === (S3D ? "3d" : STCH ? "chart" : "2d")); $('#vseg button[data-v="stars"]').title = S3D ? "Starfield · 3D (click again to switch)" : "Starfield · 2D (click again to switch)"; };
+root.querySelectorAll('input[name="s3d"]').forEach(r => r.onchange = () => { if (!r.checked) return; S3D = r.value === "3d"; STCH = r.value === "chart"; save("iv-s3d", S3D); save("iv-schart", STCH); orbWake(); syncS3D(); placePlaybar(); morph(true, () => fitTarget()); });
 syncS3D();
 function syncSenseSrc(){ root.querySelectorAll('input[name="ssrc"]').forEach(r => { r.checked = r.value === senseSrc; r.disabled = r.value === "ai" && !SAI; });
   $("#saidate").textContent = SAI ? `one-time read of each note${SAI.date ? ` · ${SAI.date}` : ""}` : "not run yet (no ideaverse-sense-ai.js)";
@@ -4901,6 +4934,21 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
 // Starfield twinkle: now and then (every few seconds) one star, rarely two, glints and fades. It draws on its own
 // thin canvas over the map, so the map never redraws for it.
 let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
+{ const oc = doc.createElement("canvas"); oc.className = "twinkle chartorb"; cv.after(oc); const ox = oc.getContext("2d"); let raf = 0, last = 0;
+  const active = () => chart2On() && !dead && !doc.hidden && W > 0;
+  const speed = b => { if (b._spd !== undefined) return b._spd; const y1 = Date.now() - YEAR; let c = 0; for (const i of b.members) if (TVD[i] > y1) c++; return (b._spd = .04 + Math.min(.5, c / Math.max(20, b.members.length) * 2.2)); };
+  const frame = now => { raf = 0; if (!active()) { ox.clearRect(0, 0, oc.width, oc.height); return; }
+    if (now - last > 66) { last = now; const d = Math.min(2, win.devicePixelRatio || 1); if (oc.width !== Math.round(W*d) || oc.height !== Math.round(H*d)) { oc.width = Math.round(W*d); oc.height = Math.round(H*d); }
+      oc.style.left = cv.offsetLeft + "px"; oc.style.top = cv.offsetTop + "px"; oc.style.width = W + "px"; oc.style.height = H + "px";
+      ox.setTransform(d, 0, 0, d, 0, 0); ox.clearRect(0, 0, W, H); const t = now / 1000, dimF = sel >= 0 ? .4 : 1;
+      for (const b of BODIES) { if (b.kind !== "gal") continue; const [bx, by] = bodyPos(b), x = sx(bx), y = sy(by), R = b.r * k * 1.25; if (x + R < 0 || x - R > W || y + R < 0 || y - R > H || R < 14) continue;
+        const sp = speed(b), q = Math.max(.35, b.q || .6), rot = b.pa || 0;
+        ox.strokeStyle = HUD(.32 * dimF); ox.lineWidth = 1; ox.setLineDash([3, 9]); ox.lineDashOffset = -t * 40 * sp * (b.tw > 0 ? 1 : -1);
+        ox.beginPath(); ox.ellipse(x, y, R, R * q, rot, 0, 6.2832); ox.stroke();
+        const a = t * sp * (b.tw > 0 ? 1 : -1), mx = x + Math.cos(a) * R * Math.cos(rot) - Math.sin(a) * R * q * Math.sin(rot), my = y + Math.cos(a) * R * Math.sin(rot) + Math.sin(a) * R * q * Math.cos(rot);
+        ox.setLineDash([]); ox.fillStyle = HUD(.85 * dimF); ox.beginPath(); ox.arc(mx, my, 2.2, 0, 6.2832); ox.fill(); } }
+    raf = RAF(frame); };
+  orbWake = () => { if (active()) { if (!raf) raf = RAF(frame); } else { if (raf) { win.cancelAnimationFrame(raf); raf = 0; } ox.clearRect(0, 0, oc.width, oc.height); } }; }
 { const tw = doc.createElement("canvas"); tw.className = "twinkle"; cv.after(tw); const tx_ = tw.getContext("2d"); let list = [], next = 0, raf = 0, tmo = 0;
   const active = () => twOn && view === "stars" && !dead && !doc.hidden && W > 0 && senseT == null;
   const pickStar = () => { for (let t = 0; t < 40; t++) { const i = Math.floor(Math.random()*n); if (!VV(i) || N[i].level < 2 || i === sel) continue; const x = sx(X[i]), y = sy(Y[i]); if (x > 20 && x < W - 20 && y > 20 && y < H - 20) return i; } return -1; };
