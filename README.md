@@ -120,6 +120,10 @@ Base Builder has five layouts. **Rows** gives each category its own row. **Scatt
 
 Notes with a picture property show up as cards with their picture. Notes without one show up as dots, colored by their row. When you add a Maps of the Ideaverse view to a base, it opens on Base Builder, and the base remembers your settings.
 
+### Edit mode (experimental)
+
+Turn on **Display → Edit mode (experimental)** and pick a note in Starfield or Emergence: a card opens below it, in the middle of the map, holding Obsidian's own editor, with Live Preview, links and properties. Changes save to the note as you type, and the map stays all around you.
+
 ### Linear Calendar
 
 Linear Calendar shows a year as twelve rows, one for each month, with every day as a box and the weeks lined up down the page. The notes you made on a day fill its box, and each one sits at its own spot so the names of neighboring days don't run into each other. Drag the **Years** slider in its menu to show one year or several, stacked one above the other, and use ‹ › to move a year at a time. It opens in **Half months**, where each month takes two rows, the 1st to the 15th and then the 16th to the end, so the calendar fits a narrow pane. Switch to **Whole months** for one row a month with the weeks lined up; the map remembers your choice.

@@ -169,6 +169,19 @@ export async function mountInto(owner, el, opts) {
       if (dir && !app.vault.getAbstractFileByPath(dir)) await app.vault.createFolder(dir);
       await app.vault.createBinary(path, buf); return path; },
     openFile: path => { const f = app.vault.getAbstractFileByPath(path); if (f instanceof TFile) void app.workspace.getLeaf("tab").openFile(f); },
+    // Edit mode (experimental): a real Obsidian editor (Live Preview, links, other plugins) in the map's card. The leaf lives in a split of
+    // our own that isn't part of the workspace layout, so it's never saved there (the technique the Hover Editor plugin uses)
+    editCard: () => {
+      const W = app.workspace, Split = W.rootSplit.constructor, split = new Split(W, "vertical");
+      split.getRoot = () => W.rootSplit; split.getContainer = () => W.rootSplit;
+      let leaf = null;
+      return { el: split.containerEl,
+        open: async path => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return false;
+          if (!leaf) leaf = W.createLeafInParent(split, 0);
+          await leaf.openFile(f, { state: { mode: "source", source: false }, active: false }); return true; },
+        resize: () => { if (leaf && leaf.view && typeof leaf.view.onResize === "function") leaf.view.onResize(); },
+        focus: () => { if (leaf) W.setActiveLeaf(leaf, { focus: true }); },
+        close: () => { if (leaf) { leaf.detach(); leaf = null; } split.containerEl.remove(); } }; },
     activePath: () => { const f = app.workspace.getActiveFile(); return f ? f.path : null; },
     debug: (owner.debug = {}),
   });

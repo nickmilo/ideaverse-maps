@@ -14,7 +14,7 @@ let dead = false;
 const frames = new Set();
 const RAF = f => { const id = win.requestAnimationFrame(t => { frames.delete(id); if (!dead) f(t); }); frames.add(id); return id; };
 const on = (target, type, fn, opts) => host.registerDomEvent(target, type, fn, opts);
-const onKey = fn => on(doc, "keydown", e => { if (!dead && host.isActive() && (!doc.activeElement || doc.activeElement === doc.body || root.contains(doc.activeElement))) fn(e); });
+const onKey = fn => on(doc, "keydown", e => { if (!dead && host.isActive() && (!doc.activeElement || doc.activeElement === doc.body || root.contains(doc.activeElement)) && !(doc.activeElement && doc.activeElement.closest && doc.activeElement.closest(".ivm-card"))) fn(e); });
 // HTML built from note titles and numbers goes through Obsidian's sanitizer (titles are also escaped with esc())
 const html = el => ({ set v(h) { el.empty(); el.append(sanitizeHTMLToDom(h)); } });
 const PACKS0 = (D.settings && D.settings.packs) || "";
@@ -1117,7 +1117,7 @@ function morph(animate, cam){
   RAF(step);
 }
 let camBusy = 0;
-function setView(v){ win.setTimeout(() => { if (typeof syncFZ === "function") syncFZ(); }, 0);
+function setView(v){ win.setTimeout(() => { if (typeof syncFZ === "function") syncFZ(); if (typeof openCard === "function" && (EDITM || CARD)) void openCard(sel); }, 0);
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
@@ -3318,6 +3318,7 @@ function render(){
   if (emoView()) drawEmojis(lit, dim);
   if (chartOn()) drawChart();
   drawMini();   // Starfield's overview map, bottom right
+  placeCard();
 
   orbWake();   // Star Chart's turning orbits run on their own layer (starts or stops it)
   if (!(CAP.on && CAP.hide)) labels(lit);
@@ -3812,7 +3813,28 @@ function renderTrail(){
   el.scrollLeft = 0;
   addTrailGrip(el);
 }
+// ---------- Edit mode (experimental, the road to 1.0): click a note and edit it in a card beneath it, the map all around ----------
+// Starfield first, Emergence as the stress test. The card holds a real Obsidian editor (host.editCard); the note sits in the top third, above it.
+let EDITM = pref("iv-editm", false) === true, CARD = null, CARDP = null, cardR = "";
+const CARDMAPS = new Set(["stars", "emergence", "spacetime"]);
+const cardOn = () => EDITM && CARDMAPS.has(view) && !!host.editCard && !isPhone() && !S3D_ON();
+const cardEl = doc.createElement("div"); cardEl.className = "ivm-card"; cardEl.hidden = true; cv.parentElement.appendChild(cardEl);
+const cardHd = cardEl.createDiv({ cls: "cardhd" }), cardT = cardHd.createSpan({ cls: "cardt" }), cardOpen = cardHd.createEl("button", { cls: "cardbtn", text: "Open in editor", attr: { type: "button" } }), cardX = cardHd.createEl("button", { cls: "cardbtn cardx", text: "×", attr: { type: "button", "aria-description": "Close the card" } });
+const cardBody = cardEl.createDiv({ cls: "cardbody" });
+for (const t of ["pointerdown", "wheel", "click"]) cardEl.addEventListener(t, e => e.stopPropagation());
+function cardRect(){ const vw = W - sideW(), cw = Math.round(Math.max(380, Math.min(640, vw*.34))), y = Math.round(H*.33); return { x: Math.round((vw - cw)/2), y, w: cw, h: H - y - 12 }; }
+function placeCard(){ if (cardEl.hidden) return; const r = cardRect(), key = [r.x, r.y, r.w, r.h, cv.offsetLeft, cv.offsetTop].join(); if (key === cardR) return; cardR = key;
+  cardEl.style.left = (cv.offsetLeft + r.x) + "px"; cardEl.style.top = (cv.offsetTop + r.y) + "px"; cardEl.style.width = r.w + "px"; cardEl.style.height = r.h + "px"; if (CARD) CARD.resize(); }
+function closeCard(){ if (!CARD && cardEl.hidden) return; cardEl.hidden = true; CARDP = null; cardR = ""; if (CARD) { CARD.close(); CARD = null; } }
+async function openCard(i){ if (!cardOn() || i < 0 || !vis[i]) { closeCard(); return; }
+  const p = N[i].path; if (!CARD) { CARD = host.editCard(); cardBody.appendChild(CARD.el); }
+  cardT.setText(N[i].title); cardEl.hidden = false; placeCard();
+  const r = cardRect(); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k });   // the note above the card, in the top third
+  if (CARDP !== p) { CARDP = p; await CARD.open(p); CARD.resize(); } }
+cardX.onclick = () => closeCard();
+cardOpen.onclick = () => { if (CARDP && host.openNote) host.openNote(CARDP); };
 function select(i, fromTrail){
+  if (EDITM || CARD) win.setTimeout(() => { void openCard(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
   if (rec && i >= 0 && rec.notes[rec.notes.length - 1] !== N[i].path) { rec.notes.push(N[i].path); syncRec(); }   // recording a tour
@@ -5430,6 +5452,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   vgCb.checked = VGRID; vgCb.onchange = () => { VGRID = vgCb.checked; save("iv-vgrid", VGRID); syncTB(); };
   const alSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Draw every link on the map, faintly" } }); const alCb = alSw.createEl("input", { type: "checkbox" }); alSw.createEl("i", { cls: "sw" }); alSw.createSpan({ text: "Show all links" });
   alCb.onchange = () => { if (alCb.checked !== showAll) $("#alllinks").click(); };
+  { const l = DI.p.createEl("label", { cls: "pmaps drow editm" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = EDITM; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Edit mode (experimental)" });
+    cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); if (EDITM && sel >= 0) void openCard(sel); else closeCard(); }; }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
   // Show the way home (Kevin Bacon): from the note you're on, the fewest links back to Home, or to a note you choose
@@ -5775,7 +5799,7 @@ let scopeSig = null, baseSig = null, baseDirty = false;
 if (following) win.setTimeout(() => followPath(host.activePath && host.activePath(), true), 400);   // opened while following: start on the active note
 
 return {
-  destroy(){ dead = true; ro.disconnect(); popObs.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
+  destroy(){ dead = true; closeCard(); ro.disconnect(); popObs.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
     win.clearTimeout(senseTimer); win.clearTimeout(pTimer); driftStop(); tip.remove(); },
   openNote(path){ const i = PIDX.get(path); if (i != null) navTo(i); },
   follow(path){ followPath(path); },
