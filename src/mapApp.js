@@ -1117,7 +1117,7 @@ function morph(animate, cam){
   RAF(step);
 }
 let camBusy = 0;
-function setView(v){ win.setTimeout(() => { if (typeof syncFZ === "function") syncFZ(); if (typeof openCard === "function" && (EDITM || CARD)) void openCard(sel); }, 0);
+function setView(v){ win.setTimeout(() => { if (typeof syncFZ === "function") syncFZ(); if (EDS) void openMain(sel); }, 0);
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
@@ -3033,7 +3033,8 @@ function fitTarget(){ const f = fitTarget0(); if (!CAPFIT) return f; const a = c
   return { k: f.k * s_, tx: cx - (cx - f.tx) * s_, ty: cy - (cy - f.ty) * s_ }; }
 // the room the open Legend and Animations dock take on the left (desktop); tucked away, just their tabs. Fit all used to keep 400 px free
 // whatever was open, leaving Ideaverse, Obsidian, Treemap, Mosaic and the rest small and pushed right
-function leftCol(){ if (isPhone()) return 0; const c = cv.getBoundingClientRect(); let r = 40;
+let EDLW = 0;   // the left editor's width, when it's open
+function leftCol(){ if (isPhone()) return 0; if (EDLW) return EDLW; const c = cv.getBoundingClientRect(); let r = 40;
   for (const el of [$("#legend"), $("#animdock")]) { if (!el || el.hidden || el.classList.contains("collapsed")) continue; const b = el.getBoundingClientRect(); if (b.width > 0) r = Math.max(r, b.right - c.left + 12); }
   return Math.min(r, 400); }
 function fitTarget0(){ const pad = 56;
@@ -3318,8 +3319,8 @@ function render(){
   if (emoView()) drawEmojis(lit, dim);
   if (chartOn()) drawChart();
   drawMini();   // Starfield's overview map, bottom right
-  if (CARD) { const gone = cv.offsetParent === null; if (cardEl.hidden !== gone) { cardEl.hidden = gone; cardR = ""; } }   // the card is on the page: hide it while the map's tab isn't showing
-  placeCard();
+  for (const o of Object.values(EDS)) o.place();
+  drawPreviews();
 
   orbWake();   // Star Chart's turning orbits run on their own layer (starts or stops it)
   if (!(CAP.on && CAP.hide)) labels(lit);
@@ -3736,6 +3737,7 @@ const end = e => { pts.delete(e.pointerId);
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
     { const h = chartPostAt(e.offsetX, e.offsetY); if (h >= 0) { if (focus >= 0 || focusArmed) navTo(h); else { select(h); if (!S3D) flyTo(h, true); } drag = null; return; } }   // in Focus, the signpost's note becomes the focus, with all its links   // Star Chart: a signpost takes you to its hub
+  if (i >= 0 && edOn() && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { void EDS.right.open(i); drag = null; return; }   // Edit mode: ⌘-click opens the note in the right-hand editor, Roam-style
   if (i >= 0 && host.openNote && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (Platform.isMobile || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); else if (i >= 0) nudgeTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
@@ -3814,39 +3816,65 @@ function renderTrail(){
   el.scrollLeft = 0;
   addTrailGrip(el);
 }
-// ---------- Edit mode (experimental, the road to 1.0): click a note and edit it in a card beneath it, the map all around ----------
-// Starfield first, Emergence as the stress test. The card holds a real Obsidian editor (host.editCard); the note sits in the top third, above it.
-let EDITM = pref("iv-editm", false) === true, CARD = null, CARDP = null, cardR = "";
+// ---------- Edit mode (experimental, the road to 1.0): edit notes right on the map ----------
+// Three editors, each a real Obsidian editor (host.editCard): the main one, in a card under the picked note (the centre) or on the left side;
+// and a Roam-style one on the right for any note you ⌘-click. One theme and one opacity for all three. Starfield first, Emergence as the stress test.
+let EDITM = pref("iv-editm", false) === true, EDLEFT = pref("iv-edleft", false) === true, HUBPV = pref("iv-hubpv", false) === true;
 const CARDMAPS = new Set(["stars", "emergence", "spacetime"]);
-const cardOn = () => EDITM && CARDMAPS.has(view) && !!host.editCard && !isPhone() && !S3D_ON();
-let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84;   // the card's theme: Obsidian's, or the map's (dark or light); its opacity, %
-const cardEl = doc.createElement("div"); cardEl.className = "ivm-card"; cardEl.hidden = true; root.after(cardEl);
+const edOn = () => EDITM && CARDMAPS.has(view) && !!host.editCard && !isPhone() && !S3D_ON();
+let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84;   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
 // Editor theme → Map: Obsidian works out its colors once, on the page body (--background-primary: var(--color-base-00)…), so a dark or light
-// class on the card alone changes nothing; the card re-declares those body colors itself, so they resolve with its own dark or light base colors
+// class alone changes nothing; each editor re-declares those body colors itself, so they resolve with its own dark or light base colors
 let BODYV = null;
 const bodyVars = () => { if (BODYV) return BODYV; BODYV = {}; for (const sh of [...doc.styleSheets]) { let rs; try { rs = sh.cssRules; } catch { continue; }
     for (const r of [...rs]) { if (!r.style || !/^(body|\.theme-light, ?\.theme-dark|\.theme-dark, ?\.theme-light)$/.test(r.selectorText || "")) continue;
       for (const nm of [...r.style]) if (nm.startsWith("--")) { const v = r.style.getPropertyValue(nm).trim(); if (v.includes("var(")) BODYV[nm] = v; } } }
   return BODYV; };
-function cardLook(){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || (th === "obsidian" && doc.body.classList.contains("theme-dark")), m = CARDTH === "map";
-  cardEl.classList.toggle("theme-dark", m && dark); cardEl.classList.toggle("theme-light", m && !dark);
-  const bv = bodyVars(); cardEl.setCssProps(Object.fromEntries(Object.keys(bv).map(nm => [nm, m ? bv[nm] : ""]))); cardEl.setCssProps({ "--cardop": CARDOP + "%" }); }
-const cardHd = cardEl.createDiv({ cls: "cardhd" }), cardT = cardHd.createSpan({ cls: "cardt" }), cardOpen = cardHd.createEl("button", { cls: "cardbtn", text: "Open in editor", attr: { type: "button" } }), cardX = cardHd.createEl("button", { cls: "cardbtn cardx", text: "×", attr: { type: "button", "aria-description": "Close the card" } });
-const cardBody = cardEl.createDiv({ cls: "cardbody" });
-for (const t of ["pointerdown", "wheel", "click"]) cardEl.addEventListener(t, e => e.stopPropagation());
-function cardRect(){ const vw = W - sideW(), cw = Math.round(Math.max(380, Math.min(640, vw*.34))), y = Math.round(H*.33); return { x: Math.round((vw - cw)/2), y, w: cw, h: H - y - 12 }; }
-function placeCard(){ if (cardEl.hidden) return; const r = cardRect(), c0 = cv.getBoundingClientRect(), key = [r.x, r.y, r.w, r.h, c0.left, c0.top].join(); if (key === cardR) return; cardR = key;
-  const c = cv.getBoundingClientRect(), pr = cardEl.parentElement.getBoundingClientRect(); cardEl.style.left = (c.left - pr.left + r.x) + "px"; cardEl.style.top = (c.top - pr.top + r.y) + "px"; cardEl.style.width = r.w + "px"; cardEl.style.height = r.h + "px"; if (CARD) CARD.resize(); }
-function closeCard(){ if (!CARD && cardEl.hidden) return; cardEl.hidden = true; CARDP = null; cardR = ""; if (CARD) { CARD.close(); CARD = null; } }
-async function openCard(i){ if (!cardOn() || i < 0 || !vis[i]) { closeCard(); return; }
-  const p = N[i].path; if (!CARD) { CARD = host.editCard(); cardBody.appendChild(CARD.el); }
-  cardT.setText(N[i].title); cardLook(); cardEl.hidden = false; placeCard();
-  const r = cardRect(); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k });   // the note above the card, in the top third
-  if (CARDP !== p) { CARDP = p; await CARD.open(p); CARD.resize(); } }
-cardX.onclick = () => closeCard();
-cardOpen.onclick = () => { if (CARDP && host.openNote) host.openNote(CARDP); };
+function edLook(el){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || (th === "obsidian" && doc.body.classList.contains("theme-dark")), m = CARDTH === "map";
+  el.classList.toggle("theme-dark", m && dark); el.classList.toggle("theme-light", m && !dark);
+  const bv = bodyVars(); el.setCssProps(Object.fromEntries(Object.keys(bv).map(nm => [nm, m ? bv[nm] : ""]))); el.setCssProps({ "--cardop": CARDOP + "%" }); }
+const clampN = (v, a, b) => Math.round(Math.max(a, Math.min(b, v)));
+function edRect(kind){ const vw = W - sideW();
+  if (kind === "left") { const w = clampN(vw*.34, 340, 560); return { x: 8, y: 8, w, h: H - 16 }; }
+  if (kind === "right") { const w = clampN(vw*.3, 320, 520); return { x: vw - w - 8, y: 8, w, h: H - 16 }; }
+  const R = EDS && !EDS.right.el.hidden ? edRect("right").x - 8 : vw, L = EDS && !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 8 : 0;   // the centre card sits between the side editors
+  const fw = R - L, cw = clampN(fw*.42, 360, 640), y = Math.round(H*.33); return { x: Math.round(L + (fw - cw)/2), y, w: cw, h: H - y - 12 }; }
+function makeEd(kind){
+  const el = doc.createElement("div"); el.className = "ivm-card ivm-card-" + kind; el.hidden = true; root.after(el);
+  const hd = el.createDiv({ cls: "cardhd" }), t = hd.createSpan({ cls: "cardt" }), ob = hd.createEl("button", { cls: "cardbtn", text: "Open in editor", attr: { type: "button" } }), xb = hd.createEl("button", { cls: "cardbtn cardx", text: "×", attr: { type: "button", "aria-description": "Close" } });
+  const body = el.createDiv({ cls: "cardbody" });
+  for (const ty of ["pointerdown", "wheel", "click"]) el.addEventListener(ty, e => e.stopPropagation());
+  const o = { kind, el, ed: null, path: null, key: "",
+    place(){ if (el.hidden) return; const r = edRect(kind), c = cv.getBoundingClientRect(), pr = (el.offsetParent || el.parentElement).getBoundingClientRect(), key = [r.x, r.y, r.w, r.h, c.left - pr.left, c.top - pr.top].join(); if (key === o.key) return; o.key = key;
+      el.style.left = (c.left - pr.left + r.x) + "px"; el.style.top = (c.top - pr.top + r.y) + "px"; el.style.width = r.w + "px"; el.style.height = r.h + "px"; if (o.ed) o.ed.resize(); },
+    close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; if (o.ed) { o.ed.close(); o.ed = null; } edFree(); },
+    async open(i){ const p = N[i].path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
+      t.setText(N[i].title); edLook(el); const was = el.hidden; el.hidden = false; o.key = ""; o.place(); if (was) edFree();
+      if (o.path !== p) { o.path = p; await o.ed.open(p); o.ed.resize(); } } };
+  xb.onclick = () => o.close(); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
+  return o; }
+let EDS = null; EDS = { center: makeEd("center"), left: makeEd("left"), right: makeEd("right") };
+const edMain = () => EDLEFT ? EDS.left : EDS.center;
+function edFree(){ EDLW = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 0; for (const o of Object.values(EDS)) { o.key = ""; o.place(); } }
+function closeEds(){ for (const o of Object.values(EDS)) o.close(); }
+async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(); EDS.left.close(); if (!edOn()) EDS.right.close(); return; }
+  const m = edMain(); (m === EDS.left ? EDS.center : EDS.left).close(); const p = m.open(i);
+  if (m === EDS.center) { const r = edRect("center"); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k }); }   // the note above the card, in the top third
+  else { const L = edRect("left").x + edRect("left").w, R = EDS.right.el.hidden ? W - sideW() : edRect("right").x; animateTo({ k, tx: (L + R)/2 - X[i]*k, ty: H/2 - Y[i]*k }); }   // the note in the free middle
+  await p; }
+// Starfield: a small read-only preview of each galaxy's hub note, above it
+const pvLayer = doc.createElement("div"); pvLayer.className = "ivm-pvl"; root.after(pvLayer); const HPV = new Map();
+function drawPreviews(){ const on = EDITM && HUBPV && view === "stars" && !S3D_ON() && !!host.preview && W > 0;
+  if (!on) { if (pvLayer.childElementCount) { pvLayer.empty(); HPV.clear(); } return; }
+  const c = cv.getBoundingClientRect(), pr = pvLayer.getBoundingClientRect(), ox = c.left - pr.left, oy = c.top - pr.top, want = new Set();
+  const gals = BODIES.filter(b => b.kind === "gal" && b.core != null && vis[b.core] && b.core !== sel).map(b => ({ b, i: b.core, rr: b.r*k, x: sx(X[b.core]), y: sy(Y[b.core]) }))
+    .filter(g => g.rr >= 55 && g.x > 60 && g.x < W - sideW() - 60 && g.y > 120 && g.y < H - 20).sort((a, b) => b.rr - a.rr).slice(0, 10);
+  for (const g of gals) { const p = N[g.i].path; want.add(p); let e = HPV.get(p);
+    if (!e) { e = pvLayer.createDiv({ cls: "ivm-card ivm-pv" }); e.createDiv({ cls: "pvt", text: N[g.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); HPV.set(p, e); }
+    edLook(e); const w = 210, h = 128; e.style.left = Math.round(ox + g.x - w/2) + "px"; e.style.top = Math.round(oy + g.y - h - 22) + "px"; }
+  for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
 function select(i, fromTrail){
-  if (EDITM || CARD) win.setTimeout(() => { void openCard(sel); }, 0);
+  if (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden))) win.setTimeout(() => { void openMain(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
   if (rec && i >= 0 && rec.notes[rec.notes.length - 1] !== N[i].path) { rec.notes.push(N[i].path); syncRec(); }   // recording a tour
@@ -5468,10 +5496,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const g = DI.p.createDiv({ cls: "editopts" }); g.hidden = !EDITM;
     const tr = g.createDiv({ cls: "eorow" }); tr.createSpan({ cls: "eol", text: "Editor theme" }); const seg = tr.createDiv({ cls: "seg" });
     for (const [v, t] of [["obsidian", "Obsidian"], ["map", "Map"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDTH === v) } });
-      b.onclick = e => { e.stopPropagation(); CARDTH = v; save("iv-cardth", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); cardLook(); }; }
+      b.onclick = e => { e.stopPropagation(); CARDTH = v; save("iv-cardth", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; }
     const or_ = g.createEl("label", { cls: "eorow" }); or_.createSpan({ cls: "eol", text: "Opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
-    sl.oninput = () => { CARDOP = +sl.value; ov.setText(CARDOP + "%"); cardLook(); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
-    cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); g.hidden = !EDITM; if (EDITM && sel >= 0) void openCard(sel); else closeCard(); }; }
+    sl.oninput = () => { CARDOP = +sl.value; ov.setText(CARDOP + "%"); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
+    const sw = (txt, get, set) => { const l_ = g.createEl("label", { cls: "mini lcemo eosw" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = get(); l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: txt }); c_.onchange = () => set(c_.checked); };
+    sw("Open the editor on the left side", () => EDLEFT, v => { EDLEFT = v; save("iv-edleft", v); if (sel >= 0) void openMain(sel); });
+    sw("Hub previews (Starfield)", () => HUBPV, v => { HUBPV = v; save("iv-hubpv", v); draw(); });
+    g.createDiv({ cls: "eonote", text: "⌘-click a note to open it in a second editor on the right." });
+    cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); g.hidden = !EDITM; if (EDITM && sel >= 0) void openMain(sel); else closeEds(); draw(); }; }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
   // Show the way home (Kevin Bacon): from the note you're on, the fewest links back to Home, or to a note you choose
@@ -5817,7 +5849,7 @@ let scopeSig = null, baseSig = null, baseDirty = false;
 if (following) win.setTimeout(() => followPath(host.activePath && host.activePath(), true), 400);   // opened while following: start on the active note
 
 return {
-  destroy(){ dead = true; closeCard(); cardEl.remove(); ro.disconnect(); popObs.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
+  destroy(){ dead = true; closeEds(); for (const o of Object.values(EDS)) o.el.remove(); pvLayer.remove(); ro.disconnect(); popObs.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
     win.clearTimeout(senseTimer); win.clearTimeout(pTimer); driftStop(); tip.remove(); },
   openNote(path){ const i = PIDX.get(path); if (i != null) navTo(i); },
   follow(path){ followPath(path); },

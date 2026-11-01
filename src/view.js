@@ -1,5 +1,5 @@
 import { BaseQ, NeedThis, Unsupported } from "./baseq.js";
-import { Component, FuzzySuggestModal, ItemView, TFile, TFolder, normalizePath } from "obsidian";
+import { Component, FuzzySuggestModal, ItemView, MarkdownRenderer, TFile, TFolder, normalizePath } from "obsidian";
 
 /** Pick a folder in the vault, or type a new one (resolves null if closed without choosing). */
 const SAVED_NAME = "Maps of the Ideaverse - saved views.json";
@@ -182,6 +182,10 @@ export async function mountInto(owner, el, opts) {
         resize: () => { if (leaf && leaf.view && typeof leaf.view.onResize === "function") leaf.view.onResize(); },
         focus: () => { if (leaf) W.setActiveLeaf(leaf, { focus: true }); },
         close: () => { if (leaf) { leaf.detach(); leaf = null; } split.containerEl.remove(); } }; },
+    // a read-only preview of a note (Starfield's hub previews): its text without the properties, the start of it, rendered as Obsidian would
+    preview: async (path, el) => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return;
+      const txt = (await app.vault.cachedRead(f)).replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").slice(0, 1200);
+      await MarkdownRenderer.render(app, txt, el, path, events); },
     activePath: () => { const f = app.workspace.getActiveFile(); return f ? f.path : null; },
     debug: (owner.debug = {}),
   });
