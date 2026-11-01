@@ -47,11 +47,11 @@ Gravity draws the same five levels as rings. Home notes and hubs sit at the cent
 
 ### Starfield
 
-In Starfield, your biggest hubs become the cores of galaxies. Every note joins the hub it can reach in the fewest links. Maps gather near the center of their galaxy, linked notes trail out along its arms, and unlinked notes drift in clouds, one for each folder. Click a galaxy's name to fly into it. A small overview map in the bottom right shows where you are in the whole sky; click it to move there.
+In Starfield, your biggest hubs become the cores of galaxies. Every note joins the hub it can reach in the fewest links. Maps gather near the center of their galaxy, linked notes trail out along its arms, and unlinked notes drift in clouds, one for each folder. Click a galaxy's name to fly into it. Turn on the overview map for a small picture of the whole sky in the bottom right, showing where you are; click it to move there.
 
 Starfield's menu lets you switch to 3D, set how strongly the galaxies glow (Clear turns their light off so every note reads as a crisp dot), add a rare twinkle, and make the galaxies turn slowly. During the Timelapse, each new note flares as it appears.
 
-**Star Chart**, the third choice beside 2D and 3D, lays a navigator's chart over the galaxies. Rings around the note you're on show its links by kind and a dial of time, and signposts on the outer ring point toward the hubs it links to. Click a signpost to go there. A mini switch under it, **Lines, readouts, gas and orbits**, adds lines between your hubs, a small readout beside each ringed hub, a glow in each galaxy's folder color, and slowly turning orbits.
+**Star Chart**, the third choice beside 2D and 3D, lays a navigator's chart over the galaxies. Rings around the note you're on show its links by kind and a dial of time, and signposts on the outer ring point toward the hubs it links to. Click a signpost to go there. Four switches under it add lines between your hubs, a small readout beside each ringed hub, a glow in each galaxy's folder color, and slowly turning orbits.
 
 ![Starfield in 3D: galaxies of notes around their hubs](docs/starfield.png)
 <sub>Starfield in 3D, LYT Mode. Each galaxy is a hub plus the notes that reach it first.</sub>
@@ -174,7 +174,7 @@ Open **Animations** in the bottom left, choose **Timelapse**, and press ▶ to r
 | 2 | Linked notes | it has any link in or out |
 | 1 | Unlinked notes | no links yet |
 
-A note's score counts the links coming in, the links going out, links that go both ways, and uplinks. Every link counts, whether it's in the note's text or in a property: `up`, `related`, or any other, such as `topics` or `source`. A note that links another twice (in its text and in `up`, say) counts once. Uplinks, links from another note's `up` or `related` property, add a little extra on top. Each extra link counts a little less than the one before it. Open **Scoring** on the map to change the weights and watch notes move. Click any note to see exactly why it sits at its level.
+A note's score counts the links coming in, the links going out, links that go both ways, and uplinks. Every link counts, whether it's in the note's text or in a property: `up`, `related`, or any other, such as `topics` or `source`. A note that links another twice (in its text and in `up`, say) counts once. Uplinks, links from another note's `up` or `related` property, add a little extra on top. Each extra link counts a little less than the one before it. Open **Scoring** on the map to change the weights and watch notes move. For an ideaverse under 2,000 notes, turn on **Balance levels by vault size**: Levels 4 and 3 then start at the top 2% and 5% of linked notes, so all five levels fill. Click any note to see exactly why it sits at its level.
 
 ## Using it
 

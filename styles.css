@@ -1253,3 +1253,25 @@ body.is-mobile .ivm.ivm #vlist.vlist2 .vr{cursor:default}
 /* 0.8.7 Starfield's overview map: bottom right, beside the zoom buttons */
 .ivm canvas.minimap{position:absolute;z-index:3;border-radius:10px;border:1px solid rgba(160,180,255,.28);background:rgba(4,5,12,.82);box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:crosshair;touch-action:none}
 .ivm canvas.minimap[hidden]{display:none}
+
+/* 0.8.9 Scoring → Balance levels by vault size */
+.ivm .sbal{margin:2px 0 8px}
+.ivm .sbal .mini{display:flex;align-items:center;gap:8px;font:500 12.5px var(--font-interface,inherit);color:var(--ink);cursor:pointer}
+.ivm .sbal .mini input{position:absolute;opacity:0;width:1px;height:1px}
+.ivm .sbal .mini .sw{width:22px;height:10px;border-radius:6px;background:var(--line);position:relative;flex:none}
+.ivm .sbal .mini .sw::after{content:"";position:absolute;top:1px;left:1px;width:8px;height:8px;border-radius:50%;background:var(--muted);transition:left .15s}
+.ivm .sbal .mini input:checked + .sw{background:var(--accent)}
+.ivm .sbal .mini input:checked + .sw::after{left:13px;background:var(--bg)}
+.ivm .sbal .sbalp{margin:4px 0 0 30px;line-height:1.4}
+.ivm #srows .dim{opacity:.45}
+
+/* 0.8.9 a tighter Starfield menu */
+.ivm.ivm header.tb2 #mapopts .sfmenu{gap:6px}
+.ivm.ivm header.tb2 #mapopts .sfmenu .sfseg{align-self:flex-start}
+.ivm.ivm header.tb2 #mapopts .sfmenu .sfdesc{margin:-2px 0 2px;font-size:11.5px;line-height:1.35;max-width:300px}
+.ivm.ivm header.tb2 #mapopts .sfmenu .chxbox{display:flex;flex-wrap:wrap;width:320px;margin:0 0 4px 2px;padding-left:10px;border-left:2px solid var(--line)}
+.ivm.ivm header.tb2 #mapopts .sfmenu .chxbox[hidden]{display:none}
+.ivm.ivm header.tb2 #mapopts .sfmenu .chxbox .mini{margin:0 0 4px;padding:0;border:0;flex:0 0 50%;align-self:auto}
+.ivm.ivm header.tb2 #mapopts .sfmenu .sglow{margin-top:2px;padding-top:8px}
+.ivm.ivm header.tb2 #mapopts .sfmenu .sflist{display:flex;flex-direction:column;gap:5px;margin-top:2px;padding-top:8px;border-top:1px solid var(--line)}
+.ivm.ivm header.tb2 #mapopts .sfmenu .sflist .mini{margin:0;padding:0;border:0}
