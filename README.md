@@ -174,7 +174,7 @@ Open **Animations** in the bottom left, choose **Timelapse**, and press ▶ to r
 | 2 | Linked notes | it has any link in or out |
 | 1 | Unlinked notes | no links yet |
 
-A note's score counts the links coming in, the links going out, links that go both ways, and uplinks. An uplink is a link from another note's `up` or `related` property. Each extra link counts a little less than the one before it. A link in any other property, such as `topics` or `source`, makes both notes count as linked, but it doesn't raise either score. Open **Scoring** on the map to change the weights and watch notes move. Click any note to see exactly why it sits at its level.
+A note's score counts the links coming in, the links going out, links that go both ways, and uplinks. Every link counts, whether it's in the note's text or in a property: `up`, `related`, or any other, such as `topics` or `source`. A note that links another twice (in its text and in `up`, say) counts once. Uplinks, links from another note's `up` or `related` property, add a little extra on top. Each extra link counts a little less than the one before it. Open **Scoring** on the map to change the weights and watch notes move. Click any note to see exactly why it sits at its level.
 
 ## Using it
 

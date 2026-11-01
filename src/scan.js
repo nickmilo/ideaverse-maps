@@ -204,8 +204,11 @@ export async function scanVault(adapter, settings, onProgress) {
     for (const q of outs) { if (!(p < q) || !get(bodyOut, q).has(p) || dirname(p) !== dirname(q)) continue;
       const sq = new Set([...get(bodyOut, q), q]); let inter = 0; for (const x of sp) if (sq.has(x)) inter++;
       if (inter / (sp.size + sq.size - inter) >= C.navJaccard) { nav.add(NK(p, q)); nav.add(NK(q, p)); } } }
+  // links in and out count every link (0.8.6, Nick): in the text, in up and related, and in any other property; a note that links
+  // another both ways (text and up, say) counts once. Collections keep their own weight. A series' shared nav block still doesn't count.
+  const allIn = p => new Set([...get(bodyIn, p), ...get(upIn, p), ...get(propIn, p)]), allOut = p => new Set([...get(bodyOut, p), ...get(upOut, p), ...get(propOut, p)]);
   const effIn = new Map(), effOut = new Map(), series = new Map();
-  for (const p of paths) { effIn.set(p, [...get(bodyIn, p)].filter(q => !nav.has(NK(q, p))).length); effOut.set(p, [...get(bodyOut, p)].filter(q => !nav.has(NK(p, q))).length); }
+  for (const p of paths) { effIn.set(p, [...allIn(p)].filter(q => !nav.has(NK(q, p))).length); effOut.set(p, [...allOut(p)].filter(q => !nav.has(NK(p, q))).length); }
   for (const k of nav) { const a = k.split("\u0000")[0]; series.set(a, (series.get(a) || 0) + 1); }
 
   // links in any property make a note linked; only up and related lift its score
@@ -247,7 +250,7 @@ export async function scanVault(adapter, settings, onProgress) {
   const nodes = keep.map(p => { const i = info.get(p), parts = p.split("/");
     return { id: idx.get(p), path: p, mt: mtime.get(p) || 0, title: i.title, ace: p.includes("/") ? parts[0] : "(root)", sub: parts.length > 2 ? parts.slice(0, 2).join("/") : parts[0],
       created: i.created, date: i.date, rank: i.rank, collections: i.collections, tags: i.tags && i.tags.length ? i.tags : undefined, p: i.props,
-      body_in: cnt(get(bodyIn, p)), body_out: cnt(get(bodyOut, p)), up_in: cnt(get(upIn, p)), coll_in: cnt(get(collIn, p)),
+      body_in: cnt(allIn(p)), body_out: cnt(allOut(p)), up_in: cnt(get(upIn, p)), coll_in: cnt(get(collIn, p)),
       series: series.get(p) || 0, density: i.density, is_map: i.is_map, maps_linked: i.maps_linked, score: i.score, level: i.level, why: i.why,
       s: [effIn.get(p), effOut.get(p), get(upIn, p).size, get(collIn, p).size], home: homes.has(p),
       lk: !!anyLink(p) }; });

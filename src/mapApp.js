@@ -791,6 +791,12 @@ function starLabels(){
     ctx.strokeText(sub, cx, y + 15); ctx.fillText(sub, cx, y + 15); }
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.globalAlpha = 1;
 }
+// Starfield's link colors (0.8.6, Nick: the legend and the panel disagreed): the theme's own link colors, so above, below, up, related and other
+// properties read the same as in the note panel and on every other map; on a light theme they're lifted toward white to show on the dark sky
+let LIFTC = null; const liftHex = (c, f) => { LIFTC ||= doc.createElement("canvas").getContext("2d"); LIFTC.fillStyle = "#000"; LIFTC.fillStyle = c; const h = LIFTC.fillStyle;
+  if (!/^#[0-9a-f]{6}$/i.test(h)) return c; const v = [1, 3, 5].map(o => parseInt(h.slice(o, o + 2), 16)), m = v.map(x => Math.round(x + (255 - x) * f)); return `rgb(${m.join(",")})`; };
+const SPACELINK = () => { const light = root.dataset.theme === "paper" || root.dataset.theme === "softpaper" || (root.dataset.theme === "obsidian" && !doc.body.classList.contains("theme-dark")), f = light ? .32 : 0;
+  return Object.fromEntries(["up", "down", "rel", "upp", "prop"].map(kk => [kk, liftHex(css[kk], f)])); };
 const SPACE = {bg:"#04050c", ink:"#eef1ff", muted:"#8f98b8", line:"rgba(160,180,255,.14)", accent:"#b9a6ff", up:"#ffcf6e", down:"#6fd3ff", rel:"#c9a2ff", upp:"#fff09a", prop:"#a9b4c8", "edge-faint":"rgba(150,170,255,.08)"};
 // ---------- Sensemaking map: the four sensemaking archetypes as a 2×2 ----------
 // Left → right: Reflection → Expression. Bottom → top: Bottom-up → Top-down.
@@ -3160,7 +3166,7 @@ function render(){
   if (!(W > 0 && H > 0) || !isFinite(k) || !isFinite(tx) || !isFinite(ty)) return;   // hidden (a background tab or a base still laying out): nothing to draw yet
   if (!popFrozen) popNow = performance.now();
   const swap = view === "stars" ? Object.fromEntries(Object.keys(SPACE).map(kk => [kk, css[kk]])) : null;
-  if (swap) Object.assign(css, SPACE);
+  if (swap) { const L_ = SPACELINK(); Object.assign(css, SPACE, L_); }   // the links from the theme, read before the sky palette replaces it
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.fillStyle = css.bg; ctx.fillRect(0,0,W,H);
 
@@ -4184,8 +4190,8 @@ root.querySelectorAll("#vseg button[data-v]").forEach(b => b.onclick = e => {
 // scoring panel
 const SROWS = [
   {h:"Link weights"},
-  {key:"w.in", label:"Links in", hint:"Other notes link to it in their text. The clearest sign of a hub: other notes point here.", min:0, max:2, step:.05},
-  {key:"w.out", label:"Links out", hint:"It links out in its own text. Lifts maps and indexes, and also busy notes like monthly reviews that link every daily note.", min:0, max:2, step:.05},
+  {key:"w.in", label:"Links in", hint:"Other notes link to it, in their text or in a property (up, related or any other). The clearest sign of a hub: other notes point here.", min:0, max:2, step:.05},
+  {key:"w.out", label:"Links out", hint:"It links out, in its own text or its properties. Lifts maps and indexes, and also busy notes like monthly reviews that link every daily note.", min:0, max:2, step:.05},
   {key:"w.both", label:"Links both in and out", hint:"A bonus only when a note has links in AND out (zero if either side is zero). Rewards notes woven into the web over pure lists or pure targets.", min:0, max:2, step:.05},
   {key:"w.up", label:"Notes that link up to it", hint:"Uplinks: notes that name it in their up or related property. Lifts the parent of a series: a year above its months, a project above its notes.", min:0, max:2, step:.05},
   {key:"w.coll", label:"Notes in its collection", hint:"Notes that list it in their collections, which makes it a collection note (Maps, People, Reviews…). Off by default: big collections are named by hundreds of notes and would swamp everything.", min:0, max:2, step:.05},
@@ -4473,7 +4479,7 @@ function starLegend(){
         + (showArch && hasArch ? ex(`Ancient elliptical: archive`) : "") + ex(`Faint filaments: links between galaxies`))
     + (chartOn() ? `<div style="margin-top:4px;color:var(--ink)">Star Chart</div>` + ex(`Inner ring: links by kind (colors as below)`) + ex(`Middle ring: a dial of time, first year at the top, clockwise to today (▼); a tick per month of linked notes`)
         + ex(`Outer ring: signposts to the maps it links to; click one to go there`) + (STCH2 ? ex(`Readout: level · score, links in · out, first year · new this year`) + ex(`Lines: links between maps and hubs`) : "") : "")
-    + `<div style="margin-top:4px"><i class="ln" style="border-color:${SPACE.up}"></i>links above</div><div><i class="ln" style="border-color:${SPACE.down}"></i>links below</div>`;
+    + (L_ => `<div style="margin-top:4px"><i class="ln" style="border-color:${L_.up}"></i>links above</div><div><i class="ln" style="border-color:${L_.down}"></i>links below</div><div><i class="ln" style="border-color:${L_.upp}"></i>up property</div><div><i class="ln" style="border-color:${L_.rel}"></i>related property</div><div><i class="ln" style="border-color:${L_.prop}"></i>other properties</div>`)(SPACELINK());
 }
 function legend(){
   if (view === "stars") { html($("#legend")).v = starLegend(); return; }
