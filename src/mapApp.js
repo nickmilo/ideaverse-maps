@@ -739,15 +739,17 @@ function starsBg(){
   ctx.globalAlpha = 1;
   colorStars();
   const bgDim = (sel >= 0 ? .22 : focus >= 0 ? .7 : 1)*GLOWF();   // a selected note dims the galaxies so its links read clearly
-  if (S3D) { halos3D(bgDim); if (chx("gas")) chartGas(bgDim); return; }
+  if (S3D) { halos3D(bgDim); if (chx("gas")) chartGas(bgDim); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; galNames(); return; }
   buildGlow();
   ctx.globalCompositeOperation = "lighter";
   for (let a = bgDim; a > .001; a -= 1) { ctx.globalAlpha = Math.min(1, a); ctx.drawImage(GLOW, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
   const wf = Math.max(0, Math.min(1, (.7 - k)/.45));   // the cosmic web fades out as you zoom into a galaxy
   if (wf > 0 && showAll) { ctx.globalAlpha = wf*bgDim; ctx.drawImage(WEB, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
   if (chx("gas")) chartGas(bgDim);
-  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; galNames();
 }
+// Starfield: galaxy names sit behind everything but the Linking Your Thinking mark (0.8.19, Nick): drawn with the sky, before links, stars and note names
+const galNames = () => { if (view !== "stars" || expOn() || domeOn()) return; LH = []; ctx.save(); starLabels(); ctx.restore(); };
 function starsNotes(lit, dim){
   const vx0 = -30, vx1 = W+30, vy0 = -30, vy1 = H+30, bins = new Map(), bright = [];
   for (let i=0;i<n;i++) { if (!VV(i)) continue; const x = sx(X[i]), y = sy(Y[i]); if (x<vx0||x>vx1||y<vy0||y>vy1) continue;
@@ -778,7 +780,7 @@ function starsNotes(lit, dim){
 }
 const galLabelOn = b => { const rr = b.r*k; return rr >= 16 && rr <= Math.min(W, H)*.8; };
 function starLabels(){
-  ctx.globalAlpha = sel >= 0 ? .5 : 1;   // galaxy names step back while a note is selected
+  ctx.globalAlpha = sel >= 0 ? .38 : 1;   // galaxy names step back while a note is selected
   ctx.textAlign = "center"; ctx.textBaseline = "top";
   const hasLS = "letterSpacing" in ctx, taken = [];
   for (const b of [...BODIES].sort((p,q2) => q2.r - p.r)) {
@@ -3502,8 +3504,8 @@ function shape(lv, x, y, r){
 const order = [...N.keys()].sort((a,b) => (N[b].level - N[a].level) || (N[b].score - N[a].score));
 const dim_ok = () => (sel === focus || sel < 0) && hover < 0;
 let LH = [];   // where labels were drawn last frame: [x, y, w, h, note], so a click on the text works like a click on the dot
-function labels(lit){
-  LH = [];
+function labels(lit){ let PICKDRAW = null;   // the picked note's name is drawn again last, so nothing covers it
+  LH = view === "stars" ? LH.filter(q => q[5] != null) : [];   // Starfield's galaxy names were placed earlier, with the sky
   if (view === "chord" && !lit && k < 2) return;   // the ring is named by its kinds; note names show for the note you're on and its links, or once zoomed in
   const nv = NVIS;
   // in focus, or with a filter that leaves few notes, name the low levels too
@@ -3558,18 +3560,19 @@ function labels(lit){
     if (pick_) { ctx.fillStyle = view === "stars" ? "hsl(58,86%,66%)" : css.accent || css.ink; /* Starfield: LYT Mode's yellow */ ctx.lineWidth = 5; }
     if (place.a != null) { const { piv, a, right, bx } = place; for (const b_ of bx) taken.push(b_);
       const xs = bx.map(b_ => b_[0]), ys = bx.map(b_ => b_[1]); LH.push([Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs) + w/4 + 2, Math.max(...ys) - Math.min(...ys) + h, i]);
-      ctx.save(); ctx.translate(piv, y); ctx.rotate(a); const ox = right ? 0 : -w; ctx.strokeText(t, ox, 0); ctx.fillText(t, ox, 0); ctx.restore(); }
-    else { const { lx, ly } = place; taken.push([lx-2, ly-h/2, w+4, h]); LH.push([lx-2, ly-h/2, w+4, h, i]); ctx.strokeText(t, lx, ly); ctx.fillText(t, lx, ly); }
+      const dr = () => { ctx.save(); ctx.translate(piv, y); ctx.rotate(a); const ox = right ? 0 : -w; ctx.strokeText(t, ox, 0); ctx.fillText(t, ox, 0); ctx.restore(); }; dr(); if (pick_) PICKDRAW = [dr, ctx.font, ctx.fillStyle, ctx.lineWidth]; }
+    else { const { lx, ly } = place; taken.push([lx-2, ly-h/2, w+4, h]); LH.push([lx-2, ly-h/2, w+4, h, i]); const dr = () => { ctx.strokeText(t, lx, ly); ctx.fillText(t, lx, ly); }; dr(); if (pick_) PICKDRAW = [dr, ctx.font, ctx.fillStyle, ctx.lineWidth]; }
     if (!isMust && lowLv) lowN++;
     if (++count > 260) break;
   }
+  if (PICKDRAW) { const [dr, f, fs, lw] = PICKDRAW; ctx.globalAlpha = 1; ctx.font = f; ctx.fillStyle = fs; ctx.lineWidth = lw; ctx.strokeStyle = css.bg; ctx.lineJoin = "round"; dr(); }
   ctx.globalAlpha = 1;
 }
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function axisLabels(){
   if (expOn()) { if (EXP[view].labels) EXP[view].labels(); if (GRV()) drawPops(); return; }   // the Obsidian map's Timelapse: comets, rain or swirls, as on Starfield
   if (domeOn()) { domeLabels(); return; }
-  if (view === "stars") { starLabels(); drawPops(); return; }
+  if (view === "stars") { drawPops(); return; }   // galaxy names are drawn before the note names (render), so they sit behind them
   if (view === "sense") { senseLabels(); return; }
   if (view === "gravity") { gravityLabels(); return; }
   if (csphOn()) { csLabels(); return; }
