@@ -2465,7 +2465,7 @@ function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), tu
 const CKX_DEF = { names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
-const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"]];
+const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"]];
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2520,14 +2520,19 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   const cyw = Math.cos(CK.yaw), syw = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch), [X0, Y0, Z0] = CK.P;
   /* the star under the pointer (0.8.98, Nick): only when the pointer has rested, the ship isn't racing and nothing else is under it; within 9 px */
   const hm = CK.mouse && !CK.drag && !CK.auto && Math.abs(CK.v) < 500 && win.performance.now() - CK.mouseT > 140 && CK.hovS < 0 && !CK.mouseOnPanel ? CK.mouse : null; let hb = 81, hi = -1, hp = null;
+  /* emojis (0.8.102): a note with an emoji (Display → Assign emojis, or the base column) shows it in place of its star once it's near enough to read */
+  const emoL = CKX.emo && EMOI ? [] : null;
   for (let i = 0; i < n; i++) { if (!vis[i]) continue; const dx = P[3 * i] - X0, dy = P[3 * i + 1] - Y0, dz = P[3 * i + 2] - Z0, xc = cyw * dx - syw * dz, z1 = syw * dx + cyw * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1;
     if (zc < 6) continue; const px = cx + F * xc / zc, py = cy + F * yc / zc; if (px < -20 || px > W + 20 || py < -20 || py > VH + 20) continue;
     if (hm) { const dd = (px - hm[0]) ** 2 + (py - hm[1]) ** 2; if (dd < hb) { hb = dd; hi = i; hp = [px, py]; } }
     const lv = N[i].level, r = Math.max(.5, Math.min(lv >= 4 ? 9 : 5, (lv >= 5 ? 26 : lv === 4 ? 18 : lv === 3 ? 12 : lv === 2 ? 7 : 5) * F / zc / 9));
+    if (emoL && EMOI[i] && zc < 1500) { emoL.push([i, px, py, Math.max(11, Math.min(30, 9000 / zc)), zc, r]); continue; }
     if (lv >= 3 || i === ck || lk.has(i)) { bright.push([i, px, py, r, zc]); continue; } const key = SC[i]; (bins.get(key) || bins.set(key, []).get(key)).push(px, py, r); }
   for (const [key, a] of bins) { g.fillStyle = SPAL[key]; g.globalAlpha = .8; g.beginPath(); for (let q = 0; q < a.length; q += 3) { const r = a[q + 2]; if (r < 1.2) g.rect(a[q] - r, a[q + 1] - r, 2 * r, 2 * r); else { g.moveTo(a[q] + r, a[q + 1]); g.arc(a[q], a[q + 1], r, 0, 6.2832); } } g.fill(); }
   for (const [i, px, py, r] of bright) { const col = SPAL[SC[i]], s = r * 6; g.globalAlpha = .45; g.drawImage(sprite(col), px - s / 2, py - s / 2, s, s); g.globalAlpha = 1; g.fillStyle = i === ck ? "#ffffff" : col; g.beginPath(); g.arc(px, py, Math.max(1, r * .7), 0, 6.2832); g.fill(); }
   g.globalCompositeOperation = "source-over";
+  if (emoL) { emoL.sort((a, b) => a[4] - b[4]); const far = emoL.splice(40); g.fillStyle = "#cfd8ee"; g.globalAlpha = .7; g.beginPath(); for (const q of far) g.rect(q[1] - 1, q[2] - 1, 2, 2); g.fill();   /* only the 40 nearest show their emoji */
+    g.textAlign = "center"; g.textBaseline = "middle"; for (const [i, px, py, r] of emoL) { g.globalAlpha = 1; g.font = `${r}px ${font}`; g.fillText(EMOI[i], px, py); } g.textAlign = "left"; g.textBaseline = "alphabetic"; }
   CK.starHov = hi >= 0 && hi !== ck ? hi : -1;
   if (CK.starHov >= 0) { const d = N[hi], col = ckCol(d.level); let tt = d.title; g.font = `600 11.5px ${font}`; while (tt.length > 4 && g.measureText(tt).width > 260) tt = tt.slice(0, -2); if (tt !== d.title) tt += "…";
     const sub = `L${d.level} · ${CK.inL.includes(hi) || CK.outL.includes(hi) ? "linked" : "not linked"} · click to lock`, w1 = g.measureText(tt).width; g.font = `500 9.5px ${font}`; const w2 = g.measureText(sub).width, bw = Math.max(w1, w2) + 22, bx = Math.min(W - bw - 6, hp[0] + 14), by = Math.max(6, hp[1] - 34);
@@ -2657,7 +2662,7 @@ function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0 
   CK.lock = q; CK.auto = false; }
 function ckHit(x, y){ let b = -1, bz = 1e9; CK.items.forEach((it, q) => { if (it.zc <= 1 || !ckShows(it)) return; if (x >= it.sx - it.sw / 2 && x <= it.sx + it.sw / 2 && y >= it.sy - it.sh / 2 && y <= it.sy + it.sh / 2 && it.zc < bz) { b = q; bz = it.zc; } }); return b; }
 win.setTimeout(() => { if (!dead) ckView(); }, 0);
-function ckView(){ ckEl(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
+function ckView(){ ckEl(); if (CKX.emo && !EMOI) void loadEmo(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
   if (want) { CK.c = -2; ckSync(); CK.last = win.performance.now(); RAF(ckTick); } }
 function ckArrive(q){ const it = CK.items[q]; if (!it) return; CK.auto = false; CK.v = 0; const j = it.i; if (vis[j]) select(j); win.setTimeout(ckSync, 0); }
 function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK.last) / 1000); CK.last = t; RAF(ckTick);
@@ -6610,7 +6615,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     // Starfield's layers, one mini switch each, two to a row (shown when the world is Starfield)
     { const box = fa.createDiv({ cls: "ckxsf" }), grid = box.createDiv({ cls: "ckxgrid" });
       for (const [k_, label] of CKX_LABELS) { const l_ = grid.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = !!CKX[k_]; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: label });
-        c_.onchange = () => { CKX = { ...CKX, [k_]: c_.checked }; save("iv-ckx", CKX); if (k_ === "turn") CKSF.ver = -1; }; }
+        c_.onchange = () => { CKX = { ...CKX, [k_]: c_.checked }; save("iv-ckx", CKX); if (k_ === "turn") CKSF.ver = -1; if (k_ === "emo" && c_.checked && !EMOI) void loadEmo(); }; }
       const f1 = FUI.emoany; FUI.emoany = () => { if (f1) f1(); box.hidden = CKW !== "sf"; }; }
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKFRAME; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Cockpit frame" });
       c_.onchange = () => { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); }; }
@@ -7180,6 +7185,7 @@ return {
   _posters(){ return { pimg: [...PIMG].filter(([, e]) => e.ok).length, cur: PSC().cur, across: PSC().opts && PSC().opts.across.map(a => a.id + ":" + a.kind), lanes: PSC().opts && PSC().opts.lanes.map(a => a.id), img: PSC().img, ticks: PSC().ticks.length, fm: (() => { for (let i=0;i<n;i++) if (vis[i]) return [N[i].path, JSON.stringify(fmOf(i))]; })() }; },
   _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
   _cam(){ let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i=0;i<n;i++) if (vis[i]) { x0 = Math.min(x0, sx(X[i])); x1 = Math.max(x1, sx(X[i])); y0 = Math.min(y0, sy(Y[i])); y1 = Math.max(y1, sy(Y[i])); } return { view, k, tx, ty, W, H, box: [x0, y0, x1, y1].map(Math.round), side: sideW() }; },
+  _setEmo(o){ EMOF = o; emoBuild(); },
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
   _kt(){ return [k, tx, ty]; },
   _view(){ return view; },
