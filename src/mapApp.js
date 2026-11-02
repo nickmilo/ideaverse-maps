@@ -2609,6 +2609,18 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
     g.fillStyle = "rgba(8,14,28,.8)"; g.fillRect(cx - tw / 2, 10, tw, 24); g.strokeStyle = "rgba(255,207,90,.4)"; g.strokeRect(cx - tw / 2 + .5, 10.5, tw - 1, 23); g.fillStyle = "#ffcf5a";
     let m = CK.msg; while (m.length > 10 && g.measureText(m).width > tw - 20) m = m.slice(0, -2); if (m !== CK.msg) m += "…"; g.fillText(m, cx, 16); g.textAlign = "left"; }
   ckConsole(g, W, H, VH, cons, font); }
+// X-Wing's two scopes (0.8.87, Nick): the front one shows every panel ahead of the ship, the rear one every panel behind it.
+// A dot's distance from the middle is how far it lies off the nose (or the tail): the middle is dead ahead (or dead behind), the rim is square to your side.
+function ckScope3(g, x, y, R, front, font){ g.save(); g.fillStyle = "rgba(8,18,40,.92)"; g.beginPath(); g.arc(x, y, R, 0, 6.2832); g.fill();
+  g.strokeStyle = front ? "rgba(90,150,255,.85)" : "rgba(90,150,255,.55)"; g.lineWidth = 1.6; g.stroke(); g.lineWidth = 1; g.strokeStyle = "rgba(90,150,255,.22)";
+  for (const f_ of [.33, .66]) { g.beginPath(); g.arc(x, y, R * f_, 0, 6.2832); g.stroke(); } g.beginPath(); g.moveTo(x - R, y); g.lineTo(x + R, y); g.moveTo(x, y - R); g.lineTo(x, y + R); g.stroke();
+  const lk = (CK.items[CK.lock] || {}).i; let cnt = 0;
+  for (const it of CK.items) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z), d = Math.hypot(xc, yc, zc) || 1; if (front ? zc < 0 : zc >= 0) continue; cnt++;
+    const ang = Math.acos(Math.max(-1, Math.min(1, zc / d))), off = front ? ang : Math.PI - ang, rr = Math.min(1, off / (Math.PI / 2)) * R * .94, h = Math.hypot(xc, yc) || 1;
+    const px = x + xc / h * rr, py = y + yc / h * rr, on = it.i === lk; g.globalAlpha = ckShows(it) ? 1 : .2; g.fillStyle = on ? "#ffcf5a" : ckCol(N[it.i].level);
+    g.beginPath(); g.arc(px, py, on ? 3.6 : 2, 0, 6.2832); g.fill(); if (on) { g.strokeStyle = "#ffcf5a"; g.beginPath(); g.arc(px, py, 6.5, 0, 6.2832); g.stroke(); } }
+  g.globalAlpha = 1; g.fillStyle = "rgba(160,200,255,.9)"; g.beginPath(); if (front) { g.moveTo(x, y - 4); g.lineTo(x - 3, y + 3); g.lineTo(x + 3, y + 3); } else { g.moveTo(x, y + 4); g.lineTo(x - 3, y - 3); g.lineTo(x + 3, y - 3); } g.closePath(); g.fill();
+  g.font = `600 9.5px ${font}`; g.fillStyle = "rgba(150,195,255,.9)"; g.textAlign = "center"; g.textBaseline = "top"; g.fillText(`${front ? "FRONT" : "REAR"} · ${cnt}`, x, y + R + 4); g.restore(); g.textAlign = "left"; }
 function ckScope(g, x, y, R, label, key, ids, act, font){ g.save(); g.fillStyle = "rgba(10,30,24,.9)"; g.beginPath(); g.arc(x, y, R, 0, 6.2832); g.fill();
   g.strokeStyle = act ? "#7dffb0" : "rgba(110,220,160,.45)"; g.lineWidth = act ? 2 : 1; g.stroke(); g.lineWidth = 1; g.strokeStyle = "rgba(110,220,160,.22)";
   for (const f_ of [.33, .66]) { g.beginPath(); g.arc(x, y, R * f_, 0, 6.2832); g.stroke(); } g.beginPath(); g.moveTo(x - R, y); g.lineTo(x + R, y); g.moveTo(x, y - R); g.lineTo(x, y + R); g.stroke();
@@ -2626,8 +2638,8 @@ function ckConsole(g, W, H, VH, cons, font){ const c = CK.c; g.fillStyle = "#0a0
   /* the canopy's frame: two struts from the console up into the view */
   g.fillStyle = "#0a0f1c"; g.beginPath(); g.moveTo(0, VH); g.lineTo(W * .12, VH); g.lineTo(0, VH - cons * .9); g.closePath(); g.fill(); g.beginPath(); g.moveTo(W, VH); g.lineTo(W * .88, VH); g.lineTo(W, VH - cons * .9); g.closePath(); g.fill();
   if (c < 0) return; const d = N[c], L = stripLists(c), R = Math.min(cons * .36, 54), sy_ = VH + cons * .44;
-  ckScope(g, Math.max(R + 18, W * .16), sy_, R, "IN", "F", L.in, CK.only === "in", font);
-  ckScope(g, Math.min(W - R - 18, W * .84), sy_, R, "OUT", "R", L.out, CK.only === "out", font);
+  ckScope3(g, Math.max(R + 18, W * .16), sy_, R, true, font);
+  ckScope3(g, Math.min(W - R - 18, W * .84), sy_, R, false, font);
   /* the centre display */
   const bw = Math.min(W * .46, 520), bx = W / 2 - bw / 2, by = VH + 10, bh = cons - 20; g.fillStyle = "rgba(14,24,44,.95)"; g.fillRect(bx, by, bw, bh); g.strokeStyle = "rgba(120,170,255,.35)"; g.strokeRect(bx + .5, by + .5, bw - 1, bh - 1);
   const col = ckCol(d.level); g.fillStyle = col; g.fillRect(bx, by, 3, bh); g.textBaseline = "top";
@@ -2657,7 +2669,7 @@ EXP.cockpit = {
       "The note you pick is the cockpit. Its links hang ahead of you as panels: links in on the left, links out on the right, links both ways straight ahead. What it links up to sits above the horizon, what sits below it beneath. The strongest links (by relevance from this note) are nearest.",
       "Fly: W or ↑ forward, S or ↓ back, A D or ← → to turn, Q E to look up and down. On a trackpad, two fingers steer and a pinch flies; or drag to steer. A mouse wheel flies. Fly into a panel and that note becomes the cockpit.",
       "Click a panel to lock on; click it again, double-click, or press Space to fly there on autopilot. Tab moves the lock. B flies back.",
-      "F shows only the links in, R only the links out (press again for both). The scopes count them.",
+      "F shows only the links in, R only the links out (press again for both); the names down each side list them. The two scopes, as in X-Wing: the left one shows every panel ahead of you, the right one every panel behind you; the middle is dead ahead (or dead behind), the rim is square to your side.",
       "The message line names the closest relative it doesn't yet link up or related to; it starts locked on. The centre display: level, rank, score, links, and what the next level takes. The left dial is links made this year, the right one its age. Eject unpins the editor."
     ]; },
   legend: "Cockpit: fly through a note's links. Fly into a panel to make it the cockpit.",
