@@ -6,8 +6,8 @@ const SAVED_NAME = "Maps of the Ideaverse - saved views.json";
 
 // Arena (0.8.41): pick a note for an empty slot, from the notes on the map
 class NotePicker extends FuzzySuggestModal {
-  constructor(app, items, done) { super(app); this.items = items; this.done = done; this.picked = false;
-    this.setPlaceholder("Put a note in this slot"); this.setInstructions([{ command: "↵", purpose: "choose" }, { command: "esc", purpose: "cancel" }]); }
+  constructor(app, items, done, ph) { super(app); this.items = items; this.done = done; this.picked = false;
+    this.setPlaceholder(ph || "Put a note in this slot"); this.setInstructions([{ command: "↵", purpose: "choose" }, { command: "esc", purpose: "cancel" }]); }
   getItems() { return this.items; }
   getItemText(it) { return it.title; }
   onChooseItem(it) { this.picked = true; this.done(it.path); }
@@ -224,7 +224,7 @@ export async function mountInto(owner, el, opts) {
         for (const l of [...(c.links || []), ...(c.embeds || [])]) { const q = res(l.link); if (q) L.push([q, 0]); }
         for (const l of c.frontmatterLinks || []) { const k = String(l.key || "").split(".")[0].toLowerCase(); if (CL.includes(k)) continue; const q = res(l.link); if (q) L.push([q, UP.includes(k) ? 1 : RL.includes(k) ? 4 : 5]); }
         cb(f.path, L); })); },
-    pickNote: items => new Promise(res => new NotePicker(app, items, res).open()),
+    pickNote: (items, ph) => new Promise(res => new NotePicker(app, items, res, ph).open()),
     activePath: () => { const f = app.workspace.getActiveFile(); return f ? f.path : null; },
     debug: (owner.debug = {}),
   });
