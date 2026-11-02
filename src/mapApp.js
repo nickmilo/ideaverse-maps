@@ -4011,7 +4011,7 @@ function makeEd(kind){
   const pb = kind !== "right" ? hd.createEl("button", { cls: "cardbtn cardpin", attr: { type: "button", "aria-label": "Pin this note", title: "Pin this note" } }) : null;
   if (pb) { setIcon(pb, "pin"); hd.insertBefore(pb, cb || ob); pb.onclick = () => tabPin(); }
   const tab = side ? $("#main").createEl("button", { cls: "dtab edtab edtab-" + kind, attr: { "aria-label": "Show the editor", title: "Show the editor" } }) : null; if (tab) tab.hidden = true;
-  const o = { kind, el, nav, strip, drop, open_: "", ed: null, path: null, key: "", pb, col: side && pref("iv-edcol-" + kind, false) === true,
+  const o = { kind, el, nav, strip, drop, open_: "", sub_: "", ed: null, path: null, key: "", pb, col: side && pref("iv-edcol-" + kind, false) === true,
     tabSync(){ if (!tab) return; const on = o.col && !!o.path; tab.hidden = !on; if (!on) return; const nm = t.textContent || "";
       tab.setText((kind === "left" ? "›  " : "‹  ") + (nm.length > 40 ? nm.slice(0, 39) + "…" : nm)); if (kind === "right") tab.style.right = sideW() + "px"; },
     collapse(c){ o.col = c; save("iv-edcol-" + kind, c); if (o.path) { el.hidden = c; o.key = ""; o.place(); } o.tabSync(); edFree(); if (!c && o.ed) { o.ed.resize(); } draw(); },
@@ -4019,7 +4019,7 @@ function makeEd(kind){
       el.style.left = (c.left - pr.left + r.x) + "px"; el.style.top = (c.top - pr.top + r.y) + "px"; el.style.width = r.w + "px"; el.style.height = r.h + "px"; if (o.ed) o.ed.resize(); },
     close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; o.tabSync(); if (o.ed) { o.ed.close(); o.ed = null; } edFree(); },
     async open(i){ const p = N[i].path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
-      const nw = o.path !== p; o.path = p; t.setText(N[i].title); if (nw) o.open_ = ""; fillStrip(o, i); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
+      const nw = o.path !== p; o.path = p; t.setText(N[i].title); if (nw) { o.open_ = ""; o.sub_ = ""; } fillStrip(o, i); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
       if (nw) { await o.ed.open(p); o.ed.resize(); } } };
   // a side editor tucks away from anywhere on its header but its buttons, like the legend (0.8.31); its inner edge drags to resize
   if (side) { hd.classList.add("cardhd-tuck"); hd.title = "Tuck away"; hd.addEventListener("click", e => { if (!(e.target instanceof Element) || e.target.closest("button")) return; o.collapse(true); });
@@ -4042,12 +4042,11 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   const lv = o.strip.createSpan({ cls: "slv", text: "L" + d.level }); lv.setCssProps({ "--slc": d.level >= 3 ? GRAD[d.level][0] : d.level === 2 ? css.l2 : css.l1 }); lv.setAttribute("aria-description", LV[d.level] ? LV[d.level].name : "");
   const chip = (key, label, cls) => { const b = o.strip.createEl("button", { cls: "schip " + cls + (o.open_ === key ? " on" : ""), text: label, attr: { type: "button", "aria-expanded": String(o.open_ === key) } });
     b.onclick = e => { e.stopPropagation(); o.open_ = o.open_ === key ? "" : key; fillStrip(o, i); }; };
-  // Nick's order (0.8.42, in before out since 0.8.46): level, up, related | in, out | above, below, then the rank; the rank's pill opens the score, how it adds up, and why
+  // Nick's order (0.8.42; in before out since 0.8.46; above and below inside the rank since 0.8.47): level, up, related | in, out | the rank; the rank's pill opens the score, how it adds up, and why
   const bar = () => o.strip.createSpan({ cls: "sbar" });
   if (L.up.length) chip("up", `${L.up.length} up`, "spill"); if (L.related.length) chip("related", `${L.related.length} related`, "spill");
   bar(); chip("in", `${d.body_in} in`, "spill"); chip("out", `${d.body_out} out`, "spill");
-  if (L.above.length || L.below.length) bar();
-  if (L.above.length) chip("above", `${L.above.length} above`, "sab"); if (L.below.length) chip("below", `${L.below.length} below`, "sbe");
+  bar();
   const rk = scoreRank(i); chip("score", rk ? `#${rk.toLocaleString()}` : d.score.toFixed(1), "spill sscore");
   o.drop.empty();
   if (o.open_ === "score") { o.drop.hidden = false; o.drop.createDiv({ cls: "sdh", text: `#${rk.toLocaleString()} IN ${d.archive ? "THE ARCHIVE" : "THE IDEAVERSE"} · SCORE ${f2(d.score)}` });
@@ -4059,6 +4058,13 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
       const t = o.drop.createDiv({ cls: "sdtab" }); for (const h of ["", "count", "weight", "adds"]) t.createSpan({ cls: "sdth", text: h });
       for (const [l, ct, wt, ad] of rows) { const z = !ad; t.createSpan({ cls: "sdtl" + (z ? " z" : ""), text: l }); t.createSpan({ cls: "sdtn" + (z ? " z" : ""), text: String(ct) }); t.createSpan({ cls: "sdtn" + (z ? " z" : ""), text: "×" + (+wt).toFixed(2) }); t.createSpan({ cls: "sdtn" + (z ? " z" : ""), text: f2(ad) }); }
       t.createSpan({ cls: "sdtl sdtt", text: "Score" }); t.createSpan(); t.createSpan(); t.createSpan({ cls: "sdtn sdtt", text: f2(d.score) }); }
+    // where it sits in emergence: the notes above it and below it, each list opening in place (0.8.47, Nick)
+    if (L.above.length || L.below.length) { const em = o.drop.createDiv({ cls: "sdem" }); em.createSpan({ cls: "sdh", text: "EMERGENCE" });
+      for (const [key, lab] of [["above", "above"], ["below", "below"]]) { if (!L[key].length) continue; const b = em.createEl("button", { cls: "schip " + (key === "above" ? "sab" : "sbe") + (o.sub_ === key ? " on" : ""), text: `${L[key].length} ${lab}`, attr: { type: "button", "aria-expanded": String(o.sub_ === key) } });
+        b.onclick = e => { e.stopPropagation(); o.sub_ = o.sub_ === key ? "" : key; fillStrip(o, i); }; }
+      if (o.sub_ && L[o.sub_] && L[o.sub_].length) { const rows = o.drop.createDiv({ cls: "sdl sdsub" });
+        for (const j of L[o.sub_]) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
+          r.onclick = e => { e.stopPropagation(); if (e.shiftKey) TABNEW = true; if (Platform.isMacOS ? e.metaKey : e.ctrlKey) void EDS.right.open(j); else select(j); }; } } }
     return; }
   const list = o.open_ ? L[o.open_] || [] : []; o.drop.hidden = !list.length; if (!list.length) { o.open_ = ""; return; }
   o.drop.createDiv({ cls: "sdh", text: `${o.open_.toUpperCase()} · ${list.length}` }); const rows = o.drop.createDiv({ cls: "sdl" });

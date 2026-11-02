@@ -1422,3 +1422,8 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card .cardnav:hover:not(:disabled){opacity:1;color:var(--text-normal)}
 .ivm-card .cardnav:disabled{opacity:.25;cursor:default}
 .ivm-card .cardnav + .cardnav{margin-right:4px}
+.ivm-card .carddrop .sdem{display:flex;align-items:center;gap:6px;margin:10px 8px 4px 0;padding-top:8px;border-top:1px solid var(--background-modifier-border)}
+.ivm-card .carddrop .sdem .sdh{margin:0 4px 0 0}
+.ivm-card .carddrop .sdem .schip{appearance:none;background:none;box-shadow:none;margin:0;height:auto;font-family:inherit;cursor:pointer;font-size:11px;line-height:1;padding:3px 8px;border:1px solid var(--background-modifier-border);border-radius:10px;color:var(--text-muted)}
+.ivm-card .carddrop .sdem .schip:hover,.ivm-card .carddrop .sdem .schip.on{border-color:var(--interactive-accent);color:var(--text-normal)}
+.ivm-card .carddrop .sdsub{max-height:180px;margin-top:4px}
