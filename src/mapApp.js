@@ -6024,7 +6024,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     POPS.push(["#mapsetbtn", "#mapopts", ".mapsetms"]);
     const openSet = () => { closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!fillMO()) return; mo.setAttribute("aria-description", VN() + " settings"); mo.hidden = false; ST.setAttribute("aria-expanded", "true"); if (!moL.hidden && $("#laygrp").getBoundingClientRect().height < 4) moL.hidden = true; };
     ST.onclick = e => { e.stopPropagation(); if (!mo.hidden) closePops(); else openSet(); };
-    { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay() || emoGen()); }; }
+    { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay() || emoGen() || view === "compass" || view === "mosaic" || view === "treemap"); }; }   // Compass's Relevance and the folder colors live in the gear too
     MB.onclick = e => { e.stopPropagation(); if (!MP.hidden) closePops(); else openMaps(); };
     // the one menu that stays open after you pick: hop from map to map (a click anywhere else, or Escape, still closes it)
     MP.addEventListener("click", e => { const c_ = e.target.closest(".chip"); if (!c_ || !MP.contains(c_) || MP.hidden) return; const st = MP.scrollTop;

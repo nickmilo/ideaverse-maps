@@ -29,5 +29,10 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.locator('.ivm #dispbtn').click(); await sleep(300); await page.locator('.ivm .editopts .eosw', { hasText: 'orb names' }).click(); await sleep(300); await page.locator('.ivm #dispbtn').click(); await sleep(800);
   await page.mouse.move(5, 900); await shot('orb-names');
   await page.locator('.ivm .ivm-orb').first().click(); await sleep(3000); console.log('6 orb 1', JSON.stringify(await state()));
+  const names = () => page.evaluate(() => [...document.querySelectorAll('.ivm .ivm-orb')].map(o => o.dataset.name + (o.classList.contains('cur') ? '*' : '')).join(', '));
+  console.log('7 before drag', await names());
+  const r = await page.evaluate(() => [...document.querySelectorAll('.ivm .ivm-orb')].map(o => { const b = o.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; }));
+  if (r.length >= 3) { await page.mouse.move(r[0][0], r[0][1]); await page.mouse.down(); await page.mouse.move(r[0][0] + 20, r[0][1], { steps: 4 }); await page.mouse.move(r[2][0] + 15, r[2][1], { steps: 6 }); await page.mouse.up(); await sleep(800); }
+  console.log('8 after drag', await names(), '| left', await page.evaluate(() => (document.querySelector('.ivm-card-left:not([hidden]) .cardt') || {}).textContent));
   console.log('errors:', errs.join(' | ') || 'none');
 };
