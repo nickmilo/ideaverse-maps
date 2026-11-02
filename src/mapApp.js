@@ -1773,13 +1773,13 @@ EXP.treemap = {
   layout: layoutTreemap, pick: (x, y) => rectPick(x, y),
   notes(lit, dim){
     for (let i=0;i<n;i++) { if (!RW[i] || !VV(i)) continue; const x = sx(RX[i]), y = sy(RY[i]), w = RW[i]*k, h = RH[i]*k; if (x > W || y > H || x + w < 0 || y + h < 0) continue;
-      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .25 : .7) : 1; const d = N[i];
-      if (w < 2.5 || h < 2.5) { ctx.fillStyle = d.level >= 3 ? GRAD[d.level][0] : hexHsl(aceHue(d), -.05, 0); ctx.fillRect(x, y, Math.max(.6, w), Math.max(.6, h)); continue; }
+      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .25 : .7) : 1; const d = N[i], lc = d.level >= 3 && !FCOL();
+      if (w < 2.5 || h < 2.5) { ctx.fillStyle = lc ? GRAD[d.level][0] : hexHsl(aceHue(d), -.05, 0); ctx.fillRect(x, y, Math.max(.6, w), Math.max(.6, h)); continue; }
       const g = ctx.createLinearGradient(x, y, x + w, y + h);   // the GrandPerspective cushion: light top-left, dark bottom-right
-      if (d.level >= 3) { g.addColorStop(0, GRAD[d.level][0]); g.addColorStop(1, GRAD[d.level][1]); }
+      if (lc) { g.addColorStop(0, GRAD[d.level][0]); g.addColorStop(1, GRAD[d.level][1]); }
       else { const base = aceHue(d), sh = (hash(d.path, 61) - .5)*.12; g.addColorStop(0, hexHsl(base, .18 + sh, 0)); g.addColorStop(1, hexHsl(base, -.22 + sh, d.level === 1 ? -.35 : 0)); }
       ctx.fillStyle = g; ctx.fillRect(x + .5, y + .5, w - 1, h - 1);
-      if (w > 70 && h > 16) { ctx.fillStyle = d.level >= 3 ? "#111" : "rgba(0,0,0,.72)"; ctx.font = `500 ${Math.min(13, h*.45)}px ${css.body}`; ctx.textBaseline = "top"; let t = d.title; while (t.length > 3 && ctx.measureText(t).width > w - 8) t = t.slice(0, -2); if (t !== d.title) t += "…"; ctx.fillText(t, x + 4, y + 3); } }
+      if (w > 70 && h > 16) { ctx.fillStyle = lc ? "#111" : "rgba(0,0,0,.72)"; ctx.font = `500 ${Math.min(13, h*.45)}px ${css.body}`; ctx.textBaseline = "top"; let t = d.title; while (t.length > 3 && ctx.measureText(t).width > w - 8) t = t.slice(0, -2); if (t !== d.title) t += "…"; ctx.fillText(t, x + 4, y + 3); } }
     ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; overLinks(lit); },
   labels(){ ctx.textBaseline = "top";
     const tag = (t, x, y, f, th, bold) => { ctx.font = f; const tw = ctx.measureText(t).width; ctx.globalAlpha = .82; ctx.fillStyle = css.bg; ctx.fillRect(x, y, tw + 8, th); ctx.globalAlpha = bold ? 1 : .92; ctx.fillStyle = css.ink; ctx.fillText(t, x + 4, y + (th - parseFloat(f.split(" ")[1]))/2); ctx.globalAlpha = 1; };
@@ -2467,6 +2467,9 @@ EXP.people = {
 // (maps and hubs wear the level colors) or its folder.
 // Ranked (0.8.25, Nick's idea): every note in rank order, read like a page turned upside down: from the bottom left, left to right,
 // row by row up to #1 at the top right. A row is as tall as its notes are big, so the top rows (the hubs) are the tallest.
+// Color by folder (0.8.28, Nick): Mosaic and Treemap can paint every note in its folder's color, maps and hubs too (off by default)
+let FOLDC = (() => { const o = pref("iv-foldc", null); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; })();
+const FCOL = () => FOLDC[view] === true;
 let MOS = ["scatter", "rank"].includes(pref("iv-mos", "emergence")) ? pref("iv-mos", "emergence") : "emergence"; const MOSF = [], MOSR = [];
 function layoutMosaic2(){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0; MOSF.length = 0; MOSR.length = 0;
@@ -2520,14 +2523,14 @@ EXP.mosaic = {
   notes(lit, dim){ const gr = Math.max(.5, Math.min(2, k * 1.2));   // the grout between tiles
     ctx.fillStyle = css.bg;
     for (let i=0;i<n;i++) { if (!RW[i] || !VV(i)) continue; const x = sx(RX[i]), y = sy(RY[i]), w = RW[i]*k, h = RH[i]*k; if (x > W || y > H || x + w < 0 || y + h < 0) continue;
-      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .25 : .7) : 1; const d = N[i], j_ = (hash(d.path, 53) - .5) * .14;
-      if (w < 3 || h < 3) { ctx.fillStyle = d.level >= 3 ? GRAD[d.level][hash(d.path, 7) < .5 ? 0 : 1] : hexHsl(aceHue(d), j_, d.level === 1 ? -.3 : 0); ctx.fillRect(x, y, Math.max(.6, w - gr * .5), Math.max(.6, h - gr * .5)); continue; }
+      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .25 : .7) : 1; const d = N[i], j_ = (hash(d.path, 53) - .5) * .14, lc = d.level >= 3 && !FCOL();
+      if (w < 3 || h < 3) { ctx.fillStyle = lc ? GRAD[d.level][hash(d.path, 7) < .5 ? 0 : 1] : hexHsl(aceHue(d), j_, d.level === 1 ? -.3 : 0); ctx.fillRect(x, y, Math.max(.6, w - gr * .5), Math.max(.6, h - gr * .5)); continue; }
       const g = ctx.createLinearGradient(x, y, x + w, y + h);   // each stone catches the light a little differently
-      if (d.level >= 3) { g.addColorStop(0, GRAD[d.level][0]); g.addColorStop(1, GRAD[d.level][1]); }
+      if (lc) { g.addColorStop(0, GRAD[d.level][0]); g.addColorStop(1, GRAD[d.level][1]); }
       else { const base = aceHue(d); g.addColorStop(0, hexHsl(base, .14 + j_, 0)); g.addColorStop(1, hexHsl(base, -.18 + j_, d.level === 1 ? -.35 : 0)); }
       ctx.fillStyle = g; const r = Math.min(w, h) * .12; ctx.beginPath(); ctx.roundRect(x + gr / 2, y + gr / 2, w - gr, h - gr, Math.min(r, 6)); ctx.fill();
       if (i === sel) { ctx.strokeStyle = css.ink; ctx.lineWidth = 2; ctx.stroke(); }
-      if (w > 64 && h > 18) { ctx.fillStyle = d.level >= 3 ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.72)"; ctx.font = `500 ${Math.min(13, h * .3, w * .1)}px ${css.body}`; ctx.textBaseline = "top"; let t = d.title; while (t.length > 3 && ctx.measureText(t).width > w - 10) t = t.slice(0, -2); if (t !== d.title) t += "…"; ctx.fillText(t, x + 5, y + 5); } }
+      if (w > 64 && h > 18) { ctx.fillStyle = lc ? "rgba(255,255,255,.95)" : "rgba(0,0,0,.72)"; ctx.font = `500 ${Math.min(13, h * .3, w * .1)}px ${css.body}`; ctx.textBaseline = "top"; let t = d.title; while (t.length > 3 && ctx.measureText(t).width > w - 10) t = t.slice(0, -2); if (t !== d.title) t += "…"; ctx.fillText(t, x + 5, y + 5); } }
     ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; overLinks(lit); },
   guides(){ if (MOS === "rank") { rankGuides(); return; } if (MOS !== "emergence") return;   // each level's frame, named at its top left corner
     ctx.textBaseline = "bottom"; ctx.textAlign = "left";
@@ -5476,6 +5479,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const ea = mo.createDiv({ cls: "mosec emoany", attr: { id: "emoany" } }); ea.hidden = true; const r = ea.createEl("label", { cls: "mini lcemo emosw" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
     const st = ea.createDiv({ cls: "pn lcemost" }); const sync_ = () => { cb.checked = emoOn(view); }; { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); sync_(); }; } FUI.emoany = () => { sync_(); st.setText(""); ea.hidden = !emoGen(); };
     cb.onchange = async () => { setEmoOn(view, cb.checked); st.setText(""); if (cb.checked && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
+  // Mosaic and Treemap: color every note by its folder
+  { const fa = mo.createDiv({ cls: "mosec emoany foldany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "mini lcemo" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Color every note by its folder" });
+    const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = !(view === "mosaic" || view === "treemap"); cb.checked = FCOL(); };
+    cb.onchange = () => { FOLDC = { ...FOLDC, [view]: cb.checked }; save("iv-foldc", FOLDC); draw(); }; }
   const hasLay = () => [...$("#laygrp").children].some(el => !el.hidden && !el.classList.contains("glbl"));
   const variants = () => view === "emergence" || view === "spacetime" ? "#emerpop" : view === "stars" ? "#starpop" : view === "sense" ? (SAI ? "#sensepop" : "#senseemo") : null;
   toggleMapOpts = b => { const open = mo.hidden; closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!open) { mo.hidden = true; b.setAttribute("aria-expanded", "false"); return; }
