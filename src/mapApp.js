@@ -4042,10 +4042,10 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   const lv = o.strip.createSpan({ cls: "slv", text: "L" + d.level }); lv.setCssProps({ "--slc": d.level >= 3 ? GRAD[d.level][0] : d.level === 2 ? css.l2 : css.l1 }); lv.setAttribute("aria-description", LV[d.level] ? LV[d.level].name : "");
   const chip = (key, label, cls) => { const b = o.strip.createEl("button", { cls: "schip " + cls + (o.open_ === key ? " on" : ""), text: label, attr: { type: "button", "aria-expanded": String(o.open_ === key) } });
     b.onclick = e => { e.stopPropagation(); o.open_ = o.open_ === key ? "" : key; fillStrip(o, i); }; };
-  // Nick's order (0.8.42): level, up, related | out, in | above, below, then the rank; the rank's pill opens the score, how it adds up, and why
+  // Nick's order (0.8.42, in before out since 0.8.46): level, up, related | in, out | above, below, then the rank; the rank's pill opens the score, how it adds up, and why
   const bar = () => o.strip.createSpan({ cls: "sbar" });
   if (L.up.length) chip("up", `${L.up.length} up`, "spill"); if (L.related.length) chip("related", `${L.related.length} related`, "spill");
-  bar(); chip("out", `${d.body_out} out`, "spill"); chip("in", `${d.body_in} in`, "spill");
+  bar(); chip("in", `${d.body_in} in`, "spill"); chip("out", `${d.body_out} out`, "spill");
   if (L.above.length || L.below.length) bar();
   if (L.above.length) chip("above", `${L.above.length} above`, "sab"); if (L.below.length) chip("below", `${L.below.length} below`, "sbe");
   const rk = scoreRank(i); chip("score", rk ? `#${rk.toLocaleString()}` : d.score.toFixed(1), "spill sscore");
