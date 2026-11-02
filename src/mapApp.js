@@ -3899,6 +3899,25 @@ cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
     tx -= dx * (e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }
   const f = Math.min(1.35, Math.max(.74, Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)))); zoomAt(e.offsetX, e.offsetY, f); }, {passive:false});
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
+// Hover labels (0.8.50, Nick: match the orbs' small label, not Obsidian's tooltip). Obsidian draws its own tooltip for anything with an
+// aria-label, so the toolbar's and zoom buttons' labels move to data-tip (and a hidden span, for screen readers) and one small label of ours shows
+// on hover. To go back to Obsidian's tooltips, set HTIP to false.
+const HTIP = true;
+if (HTIP) { const tipEl = root.createDiv({ cls: "ivm-htip" }); tipEl.hidden = true; let tT = 0;
+  const SEL = "header button, header [role=button], header .chip, .zoom button";
+  const conv = el => { if (!(el instanceof HTMLElement) || !el.matches(SEL)) return; const l = el.getAttribute("aria-label") || el.getAttribute("title"); if (!l) return;
+    el.removeAttribute("aria-label"); el.removeAttribute("title"); el.dataset.tip = l; let sr = el.querySelector(":scope > .ivm-sr"); if (!sr) sr = el.createSpan({ cls: "ivm-sr" }); if (sr.textContent !== l) sr.setText(l); };
+  const all = () => root.querySelectorAll(SEL).forEach(conv); all();
+  new MutationObserver(ms => { for (const m of ms) if (m.type === "attributes") conv(m.target); else for (const nd of m.addedNodes) if (nd instanceof HTMLElement) { conv(nd); nd.querySelectorAll && nd.querySelectorAll(SEL).forEach(conv); } })
+    .observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-label", "title"] });
+  const hide = () => { win.clearTimeout(tT); tipEl.hidden = true; };
+  root.addEventListener("pointerover", e => { const t = e.target instanceof Element ? e.target.closest("[data-tip]") : null; if (!t || !root.contains(t) || t.closest(".ivm-orbs")) return;
+    win.clearTimeout(tT); tT = win.setTimeout(() => { if (!t.isConnected) return; const r = t.getBoundingClientRect(), rr = root.getBoundingClientRect(); tipEl.setText(t.dataset.tip || ""); tipEl.hidden = false;
+      const w = tipEl.offsetWidth, below = !t.closest(".zoom"); let x = r.left - rr.left + r.width / 2 - w / 2; x = Math.max(6, Math.min(rr.width - w - 6, x));
+      const y = below ? r.bottom - rr.top + 6 : r.top - rr.top + r.height / 2 - tipEl.offsetHeight / 2;
+      tipEl.style.left = Math.round(below ? x : r.left - rr.left - w - 8) + "px"; tipEl.style.top = Math.round(y) + "px"; }, 380); });
+  root.addEventListener("pointerout", e => { const t = e.target instanceof Element ? e.target.closest("[data-tip]") : null; if (t && !(e.relatedTarget instanceof Node && t.contains(e.relatedTarget))) hide(); });
+  root.addEventListener("pointerdown", hide, true); }
 // Arena (0.8.44, Nick: "it's so nice, I think we need a special button for it"): put the note at the centre on the ring, in the next empty slot
 { const b = doc.createElement("button"); b.id = "arbtn"; b.type = "button"; b.className = "arbtn"; b.hidden = true; b.setAttribute("aria-label", "Put the centre note on the ring"); $("#zfit").after(b);
   b.onclick = e => { e.stopPropagation(); arenaRing(); }; }
