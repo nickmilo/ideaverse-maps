@@ -3,7 +3,7 @@
 import { Notice, Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 
-export const VIEWS_ON = ["arena", "compass", "emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
+export const VIEWS_ON = ["kandinsky", "arena", "compass", "emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -2161,6 +2161,43 @@ EXP.arena = {
 };
 const ARENA_LEG = "Arena: a ring of slots you fill with notes, a workspace of your own. Click an empty slot (+) to put a note in it; Option-click (Alt-click) a slot to empty it. The links between the ring's notes cross the middle, as in Chord. Pin a note in the editor to set it at the centre. ⚙ sets how many slots (8 to 20).";
 
+// ---------- Kandinsky (0.8.62, Nick): after "Squares with Concentric Circles" (1913) ----------
+// Each note is a square tile holding concentric circles, drawn by hand. The tile's colour is its top folder's; the circles' count is its level
+// (two for an unlinked note, up to six for a hub), their size its score, and the innermost is its level's colour. ⚙: your top notes by rank,
+// read left to right and down, or the note you picked with its links; 24, 48, 96 or 192 tiles.
+const KPAL = ["#f2c230", "#d98e04", "#c8312b", "#a0233f", "#5b3a8a", "#1f4e9c", "#3aa0c8", "#3a8f5a", "#1b1b1b", "#f2ede1", "#e6a0b0", "#e46b2a"];
+let KDN = [24, 48, 96, 192].includes(+pref("iv-kdn", 48)) ? +pref("iv-kdn", 48) : 48, KSC = pref("iv-ksc", "top") === "links" ? "links" : "top"; const KD = { ids: [], c: -1, T: 200 };
+function layoutKandinsky(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
+  let ids = []; KD.c = -1; let sl = -1; try { sl = sel; } catch (_) { /* the first layout runs before the picked note exists */ }
+  if (KSC === "links" && sl >= 0 && vis[sl]) { const sel = sl; KD.c = sel; ids = [sel, ...[...new Set([...out[sel], ...inn[sel]])].filter(j => j !== sel && vis[j] && !ARCH[j]).sort((a, b) => N[b].score - N[a].score)].slice(0, KDN); }
+  else { for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i]) ids.push(i); ids.sort((a, b) => N[b].score - N[a].score); ids = ids.slice(0, KDN); }
+  KD.ids = ids; const cols = Math.max(1, Math.ceil(Math.sqrt(ids.length * 1.33))), T = KD.T, G = 6;
+  ids.forEach((i, q) => { const r = Math.floor(q / cols), c = q % cols, x = c * (T + G), y = r * (T + G); EHID[i] = 0; RX[i] = x; RY[i] = y; RW[i] = T; RH[i] = T; EX[i] = x + T / 2; EY[i] = y + T / 2; });
+  const rows = Math.ceil(ids.length / cols); expBox = { x0: -40, y0: -40, x1: cols * (T + G) + 34, y1: rows * (T + G) + 34 }; }
+function kCircle(cx, cy, r, ph){ ctx.beginPath(); for (let q = 0; q <= 48; q++) { const a = q / 48 * 6.2832, rr = r * (1 + .022 * Math.sin(3 * a + ph) + .014 * Math.sin(5 * a + ph * 1.7)); const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr; q ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.closePath(); }
+const KTOP = { "Atlas": 5, "Calendar": 7, "Efforts": 2, "x": 4, "+": 0 };
+EXP.kandinsky = {
+  layout: layoutKandinsky, pick: (x, y) => rectPick(x, y), ownLabels: true,
+  notes(lit){ const T = KD.T;
+    for (const i of KD.ids) { if (!VV(i)) continue; const x = sx(RX[i]), y = sy(RY[i]), w = T * k; if (x > W || y > H || x + w < 0 || y + w < 0) continue; const d = N[i], p_ = d.path;
+      ctx.globalAlpha = lit && !lit.has(i) && sel >= 0 ? .28 : 1;
+      // the tile: its top folder's colour (a few set ones, the rest by name), a little dusty
+      const top = p_.split("/")[0], bg = KPAL[KTOP[top] != null ? KTOP[top] : Math.floor(hash(top, 41) * KPAL.length)];
+      ctx.fillStyle = bg; ctx.fillRect(x, y, w, w); ctx.fillStyle = "rgba(255,248,235,.08)"; ctx.fillRect(x, y, w, w);
+      if (w < 6) continue;
+      // the circles: as many as the level allows, outermost first, each a colour of its own (never the one it sits on), slightly off centre
+      const rings = d.level + 1, rMax = w * (.26 + .2 * Math.min(1, Math.max(0, d.score) / 10)), cx = x + w / 2 + (hash(p_, 42) - .5) * w * .12, cy = y + w / 2 + (hash(p_, 43) - .5) * w * .12;
+      let prev = bg; for (let q = 0; q < rings; q++) { const r = rMax * (1 - q / (rings + .4)) * (q ? 1 - (hash(p_, 50 + q) - .5) * .12 : 1);
+        let col = q === rings - 1 && d.level >= 3 ? GRAD[d.level][0] : KPAL[Math.floor(hash(p_, 60 + q) * KPAL.length)]; if (col === prev) col = KPAL[(KPAL.indexOf(col) + 3) % KPAL.length];
+        ctx.fillStyle = col; kCircle(cx, cy, r, hash(p_, 70 + q) * 6.28); ctx.fill(); prev = col; }
+      if (i === sel || i === KD.c) { ctx.strokeStyle = css.accent; ctx.lineWidth = 3; ctx.strokeRect(x + 1.5, y + 1.5, w - 3, w - 3); }
+      // its name, small, at the foot of the tile, once there's room
+      if (w > 90) { ctx.font = `600 ${Math.min(12, w * .065)}px ${css.body}`; ctx.textBaseline = "bottom"; let t = d.title; while (t.length > 4 && ctx.measureText(t).width > w - 12) t = t.slice(0, -2); if (t !== d.title) t += "…";
+        ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.strokeText(t, x + 6, y + w - 5); ctx.fillStyle = "#fbf8f0"; ctx.fillText(t, x + 6, y + w - 5); ctx.textBaseline = "alphabetic"; } }
+    ctx.globalAlpha = 1; },
+  legend: "Kandinsky: your notes as squares of concentric circles, after his 1913 colour study. A tile's colour is its top folder; it holds one circle more than its level (an unlinked note two, a hub six), bigger for a higher score, the innermost in the level's colour. ⚙: your top notes by rank (left to right, then down) or the note you picked with its links.",
+};
+
 // ---------- Posters: a targeted dataset (a base's view, a filter) laid out by its own properties ----------
 // Across: a date or number property (year, rating, created…). Lanes: a category (genre, status, a base's own groups).
 // Size: a number (your rank). Each note is a card, and when the note has an image property (a poster, a cover),
@@ -3469,7 +3506,7 @@ function render(){
     for (const j of nb) {
       lit.add(j);
       if (bundle && N[j].level < 5 && BOD[j] >= 0) { const g = bundle.get(BOD[j]) || bundle.set(BOD[j], []).get(BOD[j]); g.push(j); continue; }
-      if (view === "arena" && ARSTY === "board") continue;   // the board wires its own links (its traces light up instead)
+      if ((view === "arena" && ARSTY === "board") || view === "kandinsky") continue;   // the board wires its own links; Kandinsky's tiles say it without lines (its traces light up instead)
       const upward = upOf(hl, j);
       ctx.strokeStyle = edgeColor(hl, j, upward); ctx.globalAlpha = (sel >= 0 ? .75 : .5)*many; ctx.lineWidth = sel >= 0 ? 1.4 : 1;
       const x1 = sx(X[hl]), y1 = sy(Y[hl]), x2 = sx(X[j]), y2 = sy(Y[j]);
@@ -3722,7 +3759,7 @@ const order = [...N.keys()].sort((a,b) => (N[b].level - N[a].level) || (N[b].sco
 const dim_ok = () => (sel === focus || sel < 0) && hover < 0;
 let LH = [];   // where labels were drawn last frame: [x, y, w, h, note], so a click on the text works like a click on the dot
 function labels(lit){ let PICKDRAW = null;   // the picked note's name is drawn again last, so nothing covers it
-  if (view === "arena" && ARSTY === "board") { LH = []; return; }   // the board names its own notes, under their frames
+  if ((view === "arena" && ARSTY === "board") || view === "kandinsky") { LH = []; return; }   // these name their own notes
   LH = view === "stars" ? LH.filter(q => q[5] != null) : [];   // Starfield's galaxy names were placed earlier, with the sky
   if (view === "chord" && !lit && k < 2) return;   // the ring is named by its kinds; note names show for the note you're on and its links, or once zoomed in
   const nv = NVIS;
@@ -4334,6 +4371,7 @@ function select(i, fromTrail){
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
   if (view === "compass" && !LIVEQ) win.setTimeout(cmpSync, 0);
   if (view === "arena" && !LIVEQ) win.setTimeout(arenaSync, 0);
+  if (view === "kandinsky" && KSC === "links" && !LIVEQ) win.setTimeout(() => { if (!dead && view === "kandinsky" && sel !== KD.c) morph(true, () => fitTarget()); }, 0);
   if (!LIVEQ && (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden || EDS.left.col && EDS.left.path)))) win.setTimeout(() => { void openMain(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
@@ -5176,7 +5214,7 @@ if (host.onLinks) host.onLinks((p_, list) => liveLinks(p_, list));
 
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
-const VIEW_NAME = {arena:"Arena", compass:"Compass", posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {kandinsky:"Kandinsky", arena:"Arena", compass:"Compass", posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
@@ -5740,7 +5778,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const gc = doc.createElement("button"); gc.className = "chip"; gc.id = "gocompass"; gc.textContent = "Compass"; gc.setAttribute("aria-label", "One note at the centre: above it what it links up to, below what links up to it, time left to right");
       $("#gochord").after(gc); gc.onclick = () => { closePops(); driftStop(); setView("compass"); };
       const ga = doc.createElement("button"); ga.className = "chip"; ga.id = "goarena"; ga.textContent = "Arena"; ga.setAttribute("aria-label", "A ring of slots you fill with notes, their links crossing the middle");
-      gc.after(ga); ga.onclick = () => { closePops(); driftStop(); setView("arena"); }; }
+      gc.after(ga); ga.onclick = () => { closePops(); driftStop(); setView("arena"); };
+      const gk = doc.createElement("button"); gk.className = "chip"; gk.id = "gokandinsky"; gk.textContent = "Kandinsky"; gk.setAttribute("aria-label", "Your notes as squares of concentric circles, after Kandinsky's 1913 colour study");
+      ga.after(gk); gk.onclick = () => { closePops(); driftStop(); setView("kandinsky"); }; }
     // Mosaic: every note a tile, after Treemap
     const gm = doc.createElement("button"); gm.className = "chip"; gm.id = "gomosaic"; gm.textContent = "Mosaic"; gm.setAttribute("aria-label", "Every note a tile, set like stones: Level 5 at the heart, each level a frame around it");
     $("#gotreemap").after(gm); gm.onclick = () => { closePops(); driftStop(); setView("mosaic"); };
@@ -5829,7 +5869,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       sel_.onchange = () => { PSC()[key] = sel_.value; if (key === "height" && sel_.value) PSC().lastHeight = sel_.value; save(PK(key), sel_.value); morph(true, () => fitTarget()); legend(); };
       const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
-  const VN = () => ({ arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
+  const VN = () => ({ kandinsky: "Kandinsky", arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
     chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
     shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars", "sense"]);
@@ -5875,6 +5915,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     sl_.oninput = () => { ARN = +sl_.value; v_.setText(String(ARN)); save("iv-arn", ARN); arenaSlots(); save("iv-arena", ARENA); if (view === "arena") morph(true); };
     btn.onclick = e => { e.stopPropagation(); const sl = arenaSlots(); for (const t of TABS) if (t && t.path && !sl.includes(t.path)) { const k_ = sl.indexOf(null); if (k_ < 0) break; sl[k_] = t.path; } save("iv-arena", ARENA); if (view === "arena") morph(true); };
     clr.onclick = e => { e.stopPropagation(); ARENA = []; arenaSlots(); for (let q = 0; q < ARENA.length; q++) ARENA[q] = null; save("iv-arena", ARENA); if (view === "arena") morph(true); }; }
+  // Kandinsky: which notes, how many
+  { const fa = mo.createDiv({ cls: "mosec emoany kdany" }); fa.hidden = true;
+    const segRow = (label, opts, get, set) => { const r_ = fa.createDiv({ cls: "eorow arnrow" }); r_.createSpan({ cls: "eol", text: label }); const seg = r_.createDiv({ cls: "seg" });
+      for (const [v, t_] of opts) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(get() === v) } }); b.onclick = e => { e.stopPropagation(); set(v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (view === "kandinsky") morph(true, () => fitTarget()); }; } };
+    segRow("Notes", [["top", "Top by rank"], ["links", "Picked + links"]], () => KSC, v => { KSC = v; save("iv-ksc", v); });
+    segRow("Tiles", [[24, "24"], [48, "48"], [96, "96"], [192, "192"]], () => KDN, v => { KDN = v; save("iv-kdn", v); });
+    const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "kandinsky"; }; }
   // Compass: Relevance
   { const fa = mo.createDiv({ cls: "mosec emoany cmpany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "mini lcemo" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Relevance: pull related notes toward the centre" });
     const r2 = fa.createEl("label", { cls: "mini lcemo sub" }); const cb2 = r2.createEl("input", { type: "checkbox" }); r2.createEl("i", { cls: "sw" }); r2.createSpan({ text: "Push less related links outward (trial)" });
@@ -6244,10 +6291,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     sync(); new MutationObserver(sync).observe(seg, { attributes: true, subtree: true, attributeFilter: ["aria-pressed"] });
     opener(TH); seg.addEventListener("click", e => { if (e.target.closest("button")) closePops(); }); }
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
-  const ARR_OFF = new Set(["arena", "compass", "ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
+  const ARR_OFF = new Set(["kandinsky", "arena", "compass", "ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   // a narrow map: the main tabs that don't fit fold into More (from the right: Sensemakers, then Starfield, then Ideaverse), which becomes More maps, with them at the top
   // a small Lucide icon before each map's name in the maps menu
-  const MICON = { goarena: "circle-dashed", gocompass: "navigation", emergence: "layers", ideaverse: "orbit", stars: "sparkles", sense: "compass", gogravity: "circle-dot", gograph: "gem", gochord: "aperture", gocso: "sun", gocsi: "zap",
+  const MICON = { gokandinsky: "target", goarena: "circle-dashed", gocompass: "navigation", emergence: "layers", ideaverse: "orbit", stars: "sparkles", sense: "compass", gogravity: "circle-dot", gograph: "gem", gochord: "aperture", gocso: "sun", gocsi: "zap",
     gotreemap: "layout-dashboard", gomosaic: "layout-grid", goshelf: "library", gobuilder: "table-2", golincal: "calendar-range", goposters: "image", gopeople: "users",
     gogeosquare: "square", gogeohex: "hexagon", gogeomandala: "flower", gogeoocta: "diamond", gogeoshells: "globe", gospiral: "rotate-cw", golifeline: "activity",
     goplflat: "map", gopltable: "table", goplglobe: "earth", gotree: "tree-deciduous", goskyline: "building-2" };
@@ -6304,7 +6351,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const t0 = MP.querySelector(":scope > .pt"); if (t0) t0.after(Object.assign(doc.createElement("div"), { className: "vfold vfold0" }));
     { const ex = MP.querySelector(":scope > details"); if (ex) { const exd = Object.assign(doc.createElement("div"), { className: "vfold" }); ex.before(exd);
         // Nick's order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Tesla, Corona, Chord, Base Builder (the quick keys follow it)
-        for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gocompass", "goarena", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
+        for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gocompass", "goarena", "gokandinsky", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
         for (const v of ["gravity", "graph", "treemap", "mosaic", "shelf", "tesla", "corona", "chord"]) { const g_ = vgrid.querySelector(`[data-vg="${v}"]`); if (g_) vgrid.appendChild(g_); } const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
     // the quick keys in list order; two are pinned wherever their maps sit (Nick): Linear Calendar is always 0, Base Builder always \
     const QK = [..."123456789-=[]"], QPIN = { golincal: "0", gobuilder: "\\" };
@@ -6331,7 +6378,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
           sw_.append(cb, i_, t); row.after(sw_); cb.onchange = () => { (cb.checked ? bs[1] : bs[0]).click(); tightenMO(); }; }
         row.classList.add("tgone"); sw_.querySelector("input").checked = bs[1].getAttribute("aria-pressed") === "true"; sw_.hidden = row.hidden; }); };
     const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop", "#senseemo"]) $(id).hidden = id !== v_; if (view === "sense") $("#senseemo").hidden = false; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
-      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); FUI.emoany(); moL.hidden = !l || !v_; moNone.hidden = true; tightenMO(); return !!(l || v_ || emoGen() || view === "compass" || view === "arena"); };
+      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); FUI.emoany(); moL.hidden = !l || !v_; moNone.hidden = true; tightenMO(); return !!(l || v_ || emoGen() || view === "compass" || view === "arena" || view === "kandinsky"); };
     // no hover hints in the maps menu (Nick): a map's description stays for screen readers only
     const quiet = () => MP.querySelectorAll("[aria-label], [title]").forEach(el => { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("title"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); });
     const openMaps = () => { quiet(); closePops("#vmorepop"); if (typeof closeColl === "function") closeColl(); MP.hidden = false; MB.setAttribute("aria-expanded", "true");
@@ -6345,7 +6392,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     POPS.push(["#mapsetbtn", "#mapopts", ".mapsetms"]);
     const openSet = () => { closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!fillMO()) return; mo.setAttribute("aria-description", VN() + " settings"); mo.hidden = false; ST.setAttribute("aria-expanded", "true"); if (!moL.hidden && $("#laygrp").getBoundingClientRect().height < 4) moL.hidden = true; };
     ST.onclick = e => { e.stopPropagation(); if (!mo.hidden) closePops(); else openSet(); };
-    { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay() || emoGen() || view === "compass" || view === "arena" || view === "mosaic" || view === "treemap"); }; }   // Compass's Relevance and the folder colors live in the gear too
+    { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay() || emoGen() || view === "compass" || view === "arena" || view === "kandinsky" || view === "mosaic" || view === "treemap"); }; }   // Compass's Relevance and the folder colors live in the gear too
     MB.onclick = e => { e.stopPropagation(); if (!MP.hidden) closePops(); else openMaps(); };
     // the one menu that stays open after you pick: hop from map to map (a click anywhere else, or Escape, still closes it)
     MP.addEventListener("click", e => { const c_ = e.target.closest(".chip"); if (!c_ || !MP.contains(c_) || MP.hidden) return; const st = MP.scrollTop;
