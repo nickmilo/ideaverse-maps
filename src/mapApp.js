@@ -2173,7 +2173,7 @@ let KFOCUS = -1, KSTY = pref("iv-ksty", "squares") === "comp" ? "comp" : "square
 function layoutComp(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
   let c = -1; try { c = KFOCUS >= 0 && vis[KFOCUS] ? KFOCUS : sel; } catch (_) { /* not ready */ } if (c < 0 || !vis[c]) { c = -1; for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i] && N[i].is_map && (c < 0 || N[i].score > N[c].score)) c = i; }
   KC.c = c; KC.ids = []; KC.sz.clear(); KC.kind.clear(); if (c < 0) { expBox = { x0: -800, y0: -500, x1: 800, y1: 500 }; return; }
-  const nb = [...new Set([...out[c], ...inn[c]])].filter(j => j !== c && vis[j] && !ARCH[j]).sort((a, b) => N[b].score - N[a].score).slice(0, 60);
+  const nb = [...new Set([...out[c], ...inn[c]])].filter(j => j !== c && vis[j] && !ARCH[j]).sort((a, b) => N[b].score - N[a].score).slice(0, KDN);   // the Shapes setting
   EHID[c] = 0; EX[c] = -760; EY[c] = -420; KC.sz.set(c, 150 + Math.min(10, N[c].score) * 6); KC.kind.set(c, "sun");
   const P = nb.map((j, q) => { const lv = N[j].level, h = hash(N[j].path, 81), h2 = hash(N[j].path, 82);
     const kind = lv >= 4 ? "halo" : lv === 3 ? (h < .5 ? "ring" : "disc") : lv === 2 ? ["tri", "half", "check", "disc", "tri", "arc"][Math.floor(h2 * 6)] : "dot";
@@ -2280,7 +2280,7 @@ EXP.kandinsky = {
         ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.strokeText(t, x + 6, y + w - 5); ctx.fillStyle = "#fbf8f0"; ctx.fillText(t, x + 6, y + w - 5); ctx.textBaseline = "alphabetic"; } }
     ctx.globalAlpha = 1; },
   get about(){ return KSTY === "comp" ? [
-      "The note you pick becomes the map: the great dark circle at the upper left. Its links, up to 60 of them (the highest scoring), become the shapes.",
+      "The note you pick becomes the map: the great dark circle at the upper left. Its links (the highest scoring, as many as ⚙ → Shapes allows) become the shapes.",
       "What a shape means: its family comes from the note's level (haloed circles for hubs and maps of maps, a disc or ring for a map, a triangle, half-circle, arc or checkerboard for a linked note, a dot for an unlinked one). Its size is its link score. How close it sits to the map is its rank among the map's links, highest closest.",
       "What doesn't mean anything yet: which of the Level 2 shapes a note gets, each shape's colour, and which direction it lies from the map. They're chosen from the note's name, so they stay put, but they don't say anything about the note.",
       "The lines: a black line from the map to each link, straight for a link in the text, curved for one in an up or related property (thicker for up). Thin coloured lines join two shapes that link to each other.",
@@ -6041,15 +6041,17 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     btn.onclick = e => { e.stopPropagation(); const sl = arenaSlots(); for (const t of TABS) if (t && t.path && !sl.includes(t.path)) { const k_ = sl.indexOf(null); if (k_ < 0) break; sl[k_] = t.path; } save("iv-arena", ARENA); if (view === "arena") morph(true); };
     clr.onclick = e => { e.stopPropagation(); ARENA = []; arenaSlots(); for (let q = 0; q < ARENA.length; q++) ARENA[q] = null; save("iv-arena", ARENA); if (view === "arena") morph(true); }; }
   // Kandinsky: which notes, how many
-  { const fa = mo.createDiv({ cls: "mosec emoany kdany" }); fa.hidden = true;
-    const segRow = (label, opts, get, set) => { const r_ = fa.createDiv({ cls: "eorow arnrow" }); r_.createSpan({ cls: "eol", text: label }); const seg = r_.createDiv({ cls: "seg" });
+  { const fa = mo.createDiv({ cls: "mosec emoany kdany" }); fa.hidden = true; const rowsK = [];
+    // Composition paints the picked note and its links: Notes doesn't apply, and the count is how many shapes (0.8.75, Nick: "changing the tiles doesn't do anything")
+    const syncK = () => { const comp = KSTY === "comp"; if (rowsK[1]) rowsK[1].hidden = comp; if (rowsK[2]) rowsK[2].querySelector(".eol").setText(comp ? "Shapes" : "Tiles"); };
+    const segRow = (label, opts, get, set) => { const r_ = fa.createDiv({ cls: "eorow arnrow" }); r_.createSpan({ cls: "eol", text: label }); const seg = r_.createDiv({ cls: "seg" }); rowsK.push(r_);
       for (const [v, t_] of opts) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(get() === v) } }); b.onclick = e => { e.stopPropagation(); set(v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (view === "kandinsky") morph(true, () => fitTarget()); }; } };
-    segRow("Style", [["squares", "Squares"], ["comp", "Composition"]], () => KSTY, v => { KSTY = v; save("iv-ksty", v); legend(); });
+    segRow("Style", [["squares", "Squares"], ["comp", "Composition"]], () => KSTY, v => { KSTY = v; save("iv-ksty", v); legend(); syncK(); });
     segRow("Notes", [["top", "Top by rank"], ["links", "Picked + links"]], () => KSC, v => { KSC = v; save("iv-ksc", v); });
     segRow("Tiles", [[24, "24"], [48, "48"], [96, "96"], [192, "192"]], () => KDN, v => { KDN = v; save("iv-kdn", v); });
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = KNAMES; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Show note names" });
       c_.onchange = () => { KNAMES = c_.checked; save("iv-knames", KNAMES); draw(); }; }
-    const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "kandinsky"; }; }
+    syncK(); const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "kandinsky"; syncK(); }; }
   // Compass: Relevance
   { const fa = mo.createDiv({ cls: "mosec emoany cmpany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "mini lcemo" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Relevance: pull related notes toward the centre" });
     const r2 = fa.createEl("label", { cls: "mini lcemo sub" }); const cb2 = r2.createEl("input", { type: "checkbox" }); r2.createEl("i", { cls: "sw" }); r2.createSpan({ text: "Push less related links outward (trial)" });
