@@ -2616,8 +2616,8 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
     g.restore(); g.textAlign = "left"; }
   /* the message line */
   if (CK.msg) { g.font = `500 12px ${font}`; g.textAlign = "center"; g.textBaseline = "top"; const tw = Math.min(W - 40, g.measureText(CK.msg).width + 24);
-    g.fillStyle = "rgba(8,14,28,.8)"; g.fillRect(cx - tw / 2, 10, tw, 24); g.strokeStyle = "rgba(255,207,90,.4)"; g.strokeRect(cx - tw / 2 + .5, 10.5, tw - 1, 23); g.fillStyle = "#ffcf5a";
-    let m = CK.msg; while (m.length > 10 && g.measureText(m).width > tw - 20) m = m.slice(0, -2); if (m !== CK.msg) m += "…"; g.fillText(m, cx, 16); g.textAlign = "left"; }
+    const my = VH - 34;   /* at the foot of the view, clear of the orbs along the top (0.8.89) */ g.fillStyle = "rgba(8,14,28,.8)"; g.fillRect(cx - tw / 2, my, tw, 24); g.strokeStyle = "rgba(255,207,90,.4)"; g.strokeRect(cx - tw / 2 + .5, my + .5, tw - 1, 23); g.fillStyle = "#ffcf5a";
+    let m = CK.msg; while (m.length > 10 && g.measureText(m).width > tw - 20) m = m.slice(0, -2); if (m !== CK.msg) m += "…"; g.fillText(m, cx, my + 6); g.textAlign = "left"; }
   ckConsole(g, W, H, VH, cons, font); }
 // X-Wing's two scopes (0.8.87, Nick): the front one shows every panel ahead of the ship, the rear one every panel behind it.
 // A dot's distance from the middle is how far it lies off the nose (or the tail): the middle is dead ahead (or dead behind), the rim is square to your side.
@@ -2626,7 +2626,7 @@ function ckScope3(g, x, y, R, front, font){ g.save(); g.fillStyle = "rgba(8,18,4
   for (const f_ of [.33, .66]) { g.beginPath(); g.arc(x, y, R * f_, 0, 6.2832); g.stroke(); } g.beginPath(); g.moveTo(x - R, y); g.lineTo(x + R, y); g.moveTo(x, y - R); g.lineTo(x, y + R); g.stroke();
   const lk = (CK.items[CK.lock] || {}).i; let cnt = 0;
   for (const it of CK.items) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z), d = Math.hypot(xc, yc, zc) || 1; if (front ? zc < 0 : zc >= 0) continue; cnt++;
-    const ang = Math.acos(Math.max(-1, Math.min(1, zc / d))), off = front ? ang : Math.PI - ang, rr = Math.min(1, off / (Math.PI / 2)) * R * .94, h = Math.hypot(xc, yc) || 1;
+    const ang = Math.acos(Math.max(-1, Math.min(1, zc / d))), off = front ? ang : Math.PI - ang, rr = Math.sqrt(Math.min(1, off / (Math.PI / 2))) * R * .94,   /* square root: notes a few degrees apart near the nose still spread out */ h = Math.hypot(xc, yc) || 1;
     const px = x + xc / h * rr, py = y + yc / h * rr, on = it.i === lk; g.globalAlpha = ckShows(it) ? 1 : .2; g.fillStyle = on ? "#ffcf5a" : ckCol(N[it.i].level);
     g.beginPath(); g.arc(px, py, on ? 3.6 : 2, 0, 6.2832); g.fill(); if (on) { g.strokeStyle = "#ffcf5a"; g.beginPath(); g.arc(px, py, 6.5, 0, 6.2832); g.stroke(); } }
   g.globalAlpha = 1; g.fillStyle = "rgba(160,200,255,.9)"; g.beginPath(); if (front) { g.moveTo(x, y - 4); g.lineTo(x - 3, y + 3); g.lineTo(x + 3, y + 3); } else { g.moveTo(x, y + 4); g.lineTo(x - 3, y - 3); g.lineTo(x + 3, y - 3); } g.closePath(); g.fill();
