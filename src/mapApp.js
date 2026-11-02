@@ -4018,10 +4018,11 @@ function edRect(kind){ const vw = W - sideW();
   const fw = R - L, cw = clampN(fw*.42, 360, 640), y = Math.round(H*.33); return { x: Math.round(L + (fw - cw)/2), y, w: cw, h: H - y - 12 }; }
 function makeEd(kind){
   const el = doc.createElement("div"); el.className = "ivm-card ivm-card-" + kind; el.hidden = true; root.after(el);
-  const hd = el.createDiv({ cls: "cardhd" }), t = hd.createSpan({ cls: "cardt" }), ob = hd.createEl("button", { cls: "cardbtn", text: "Open in editor", attr: { type: "button" } }), xb = hd.createEl("button", { cls: "cardbtn cardx", text: "×", attr: { type: "button", "aria-description": "Close" } });
+  const hd = el.createDiv({ cls: "cardhd" }), t = hd.createSpan({ cls: "cardt" }), ob = hd.createEl("button", { cls: "cardbtn cardopen", attr: { type: "button", "aria-label": "Open in editor" } }), xb = hd.createEl("button", { cls: "cardbtn cardx", text: "×", attr: { type: "button", "aria-description": "Close" } });
   // the strip under the name (0.8.38, Nick): level, score, links in and out, then what sits above and below it and its up and related links;
   // a click on one opens its list in place, and a note in the list opens like a click on the map
   const strip = el.createDiv({ cls: "cardstrip" }), drop = el.createDiv({ cls: "carddrop" }); drop.hidden = true;
+  setIcon(ob, "square-arrow-out-up-right");   // an icon since 0.8.51 (Nick: less weight, more room for the name)
   const body = el.createDiv({ cls: "cardbody" });
   for (const ty of ["pointerdown", "wheel", "click"]) el.addEventListener(ty, e => e.stopPropagation());
   // the side editors tuck away to a tab on their edge, like the legend and the note panel; the note stays open in them

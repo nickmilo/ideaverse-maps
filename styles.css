@@ -1435,3 +1435,4 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .ivm-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .ivm-card .carddrop .sddet[hidden]{display:none}
 .ivm-card .carddrop .sddet[hidden] + .sdem{margin-top:4px;padding-top:0;border-top:0}
+.ivm-card .cardopen svg{width:14px;height:14px}
