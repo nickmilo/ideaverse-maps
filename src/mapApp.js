@@ -4066,7 +4066,8 @@ function stripLists(i){ const d = N[i], L = { above: [], below: [], up: [], rela
   for (const j of new Set([...out[i], ...inn[i]])) { if (!vis[j] || j === i) continue; const kk = EKIND.get(i*n + j);
     if (kk === 1) L.up.push(j); else if (kk === 4) L.related.push(j); else if (kk === 5) continue; else (N[j].level > d.level || (N[j].level === d.level && upOf(i, j)) ? L.above : L.below).push(j); }
   for (const k_ of Object.keys(L)) L[k_].sort((a, b) => N[b].level - N[a].level || N[b].score - N[a].score); return L; }
-function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.drop.hidden = true; return; } const d = N[i], L = stripLists(i); o.strip.empty();
+function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.drop.hidden = true; return; } const d = N[i], L = stripLists(i), st0 = o.drop.scrollTop; o.strip.empty();
+  win.requestAnimationFrame(() => { if (!o.drop.hidden) o.drop.scrollTop = st0; });   // the list keeps its place when it's rebuilt
   const lv = o.strip.createSpan({ cls: "slv", text: "L" + d.level }); lv.setCssProps({ "--slc": d.level >= 3 ? GRAD[d.level][0] : d.level === 2 ? css.l2 : css.l1 }); lv.setAttribute("aria-description", LV[d.level] ? LV[d.level].name : "");
   const chip = (key, label, cls) => { const b = o.strip.createEl("button", { cls: "schip " + cls + (o.open_ === key ? " on" : ""), text: label, attr: { type: "button", "aria-expanded": String(o.open_ === key) } });
     b.onclick = e => { e.stopPropagation(); o.open_ = o.open_ === key ? "" : key; fillStrip(o, i); }; };
@@ -4078,8 +4079,8 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   const rk = scoreRank(i); chip("score", rk ? `#${rk.toLocaleString()}` : d.score.toFixed(1), "spill sscore");
   o.drop.empty();
   if (o.open_ === "score") { o.drop.hidden = false; o.drop.createDiv({ cls: "sdh", text: `#${rk.toLocaleString()} IN ${d.archive ? "THE ARCHIVE" : "THE IDEAVERSE"} · SCORE ${f2(d.score)}` });
-    // with "above" or "below" open, the score's details fold away so the list has the room (0.8.51, Nick)
-    const det = o.drop.createDiv({ cls: "sddet" }); det.hidden = !!o.sub_;
+    // the score's details stay put when "above" or "below" opens: the list grows below them and the whole list scrolls, from where you were (0.8.55, Nick)
+    const det = o.drop.createDiv({ cls: "sddet" });
     const g = det.createDiv({ cls: "sdnums" }); for (const [v, t_] of [[d.body_in, "linked from"], [d.body_out, "links to"], [d.up_in || 0, "link up to it"], [d.score.toFixed(1), "link score"]]) { const c_ = g.createDiv(); c_.createEl("b", { text: String(v) }); c_.createSpan({ text: t_ }); }
     det.createDiv({ cls: "sdwhy", text: `Level ${d.level}: ${levelRule(i)}` });
     // how the score adds up, as in the note panel's Why box: each part, its count, its weight and what it adds
@@ -4095,7 +4096,7 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
       if (o.sub_ && L[o.sub_] && L[o.sub_].length) { const rows = o.drop.createDiv({ cls: "sdl sdsub" });
         for (const j of L[o.sub_]) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
           r.onclick = e => { e.stopPropagation(); if (e.shiftKey) TABNEW = true; if (Platform.isMacOS ? e.metaKey : e.ctrlKey) void EDS.right.open(j); else select(j); }; }
-        win.requestAnimationFrame(() => { o.drop.scrollTop = Math.max(0, em.offsetTop - 6); }); } }   // bring the opened list into view
+      } }
     return; }
   const list = o.open_ ? L[o.open_] || [] : []; o.drop.hidden = !list.length; if (!list.length) { o.open_ = ""; return; }
   o.drop.createDiv({ cls: "sdh", text: `${o.open_.toUpperCase()} · ${list.length}` }); const rows = o.drop.createDiv({ cls: "sdl" });
