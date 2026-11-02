@@ -3466,6 +3466,7 @@ function render(){
   if (emoView()) drawEmojis(lit, dim);
   if (chartOn()) drawChart();
   drawMini();   // Starfield's overview map, bottom right
+  drawContrails();
   drawLive();
   for (const o of Object.values(EDS)) o.place(); placeOrbs();
   drawPreviews();
@@ -3904,6 +3905,40 @@ cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
     tx -= dx * (e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }
   const f = Math.min(1.35, Math.max(.74, Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)))); zoomAt(e.offsetX, e.offsetY, f); }, {passive:false});
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
+// ---------- Contrails (0.8.56, Nick): a breadcrumb trail you can see, subtle ----------
+// Each jump from one note to the next draws itself along a gentle arc (a small rocket can fly it: Display → Contrails → Rocket), leaving a vapor trail: a bright thin core inside a soft
+// cloud that widens, breaks into puffs and fades as it ages. The last 10 jumps stay; older ones are fainter. Display → Contrails.
+let CTRON = pref("iv-ctr", false) === true, CTRRK = pref("iv-ctrrk", false) === true; const CTR = [], CTR_FLY = 1300, CTR_LIFE = 90000;   // CTRRK: a small rocket flies each new leg (Nick: a mini-mini switch, off)
+function ctrHop(a, b){ if (!CTRON || a === b) return; CTR.push({ a, b, t: performance.now(), s: hash(N[a].path + N[b].path, 7) }); if (CTR.length > 10) CTR.shift(); draw(); }
+function drawContrails(){ if (!CTRON || !CTR.length) return; const now = performance.now(); let busy = false;
+  const dark = (() => { const h = String(css.bg || "#fff").replace("#", ""); if (h.length < 6) return view === "stars"; const v = parseInt(h.slice(0, 2), 16) * .3 + parseInt(h.slice(2, 4), 16) * .59 + parseInt(h.slice(4, 6), 16) * .11; return v < 110; })();
+  const rgb = dark ? "235,240,255" : "120,128,160";
+  ctx.save(); ctx.lineCap = "round";
+  CTR.forEach((c, q) => { const { a, b } = c; if (!VV(a) || !VV(b)) return; const age = now - c.t; if (age > CTR_LIFE) return;
+    const x1 = sx(X[a]), y1 = sy(Y[a]), x2 = sx(X[b]), y2 = sy(Y[b]), dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy); if (len < 4) return;
+    const bend = (c.s - .5) * .5 + .18, cx = (x1 + x2) / 2 - dy * bend, cy = (y1 + y2) / 2 + dx * bend;   // a gentle arc, its own for each hop
+    const pt = u => { const m = 1 - u; return [m*m*x1 + 2*m*u*cx + u*u*x2, m*m*y1 + 2*m*u*cy + u*u*y2]; };
+    const fly = Math.min(1, age / CTR_FLY), e = 1 - Math.pow(1 - fly, 3), old = (CTR.length - 1 - q) / 10, fade = (1 - old * .75) * (1 - age / CTR_LIFE);
+    if (fly < 1) busy = true;
+    const steps = Math.max(8, Math.round(len / 6)), upto = Math.max(1, Math.round(steps * e));
+    // the cloud: wide and soft, spreading as it ages; then the bright core, thinning
+    const spread = Math.min(1, age / 20000);
+    for (const [w, al] of [[10 + 14 * spread, .05], [4 + 6 * spread, .08]]) { ctx.strokeStyle = `rgba(${rgb},${al * fade})`; ctx.lineWidth = w; ctx.beginPath(); for (let k_ = 0; k_ <= upto; k_++) { const [px, py] = pt(k_ / steps); k_ ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); }
+    ctx.strokeStyle = `rgba(${rgb},${.32 * fade * (1 - spread * .7)})`; ctx.lineWidth = 1.4; ctx.beginPath(); for (let k_ = 0; k_ <= upto; k_++) { const [px, py] = pt(k_ / steps); k_ ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke();
+    // puffs: small clouds that drift off the line and grow as they dissipate
+    const np = Math.round(len / 26); for (let k_ = 1; k_ < np; k_++) { const u = k_ / np; if (u > e) break; const [px, py] = pt(u), h_ = hash(N[a].path, 100 + k_), drift = spread * 9 * (h_ - .5);
+      ctx.fillStyle = `rgba(${rgb},${.06 * fade})`; ctx.beginPath(); ctx.arc(px - dy / len * drift, py + dx / len * drift, 2 + 5 * spread * h_, 0, 6.2832); ctx.fill(); }
+    // the rocket, nose along the arc, while it flies (only with its switch on)
+    if (fly < 1 && CTRRK) { const [px, py] = pt(e), [qx, qy] = pt(Math.max(0, e - .02)), ang = Math.atan2(py - qy, px - qx);
+      ctx.save(); ctx.translate(px, py); ctx.rotate(ang); ctx.globalAlpha = Math.min(1, (1 - fly) * 4);
+      ctx.fillStyle = `rgba(255,${150 + Math.round(60 * Math.random())},80,.85)`; ctx.beginPath(); ctx.moveTo(-5, -1.6); ctx.lineTo(-9 - 3 * Math.random(), 0); ctx.lineTo(-5, 1.6); ctx.closePath(); ctx.fill();   // flame
+      ctx.fillStyle = dark ? "#f4f6ff" : "#3b4160"; ctx.beginPath(); ctx.ellipse(0, 0, 5.5, 2.2, 0, 0, 6.2832); ctx.fill();   // body
+      ctx.beginPath(); ctx.moveTo(4.5, -1.6); ctx.quadraticCurveTo(8.5, 0, 4.5, 1.6); ctx.closePath(); ctx.fill();   // nose
+      ctx.beginPath(); ctx.moveTo(-3, -1.8); ctx.lineTo(-5.6, -4.2); ctx.lineTo(-5.2, -1.4); ctx.closePath(); ctx.moveTo(-3, 1.8); ctx.lineTo(-5.6, 4.2); ctx.lineTo(-5.2, 1.4); ctx.closePath(); ctx.fill();   // fins
+      ctx.fillStyle = dark ? "#7fd3e6" : "#8ec5ff"; ctx.beginPath(); ctx.arc(1.4, 0, .9, 0, 6.2832); ctx.fill();   // window
+      ctx.restore(); } });
+  ctx.restore(); if (busy) draw(); }
+
 // Hover labels (0.8.50, Nick: match the orbs' small label, not Obsidian's tooltip). Obsidian draws its own tooltip for anything with an
 // aria-label, so the toolbar's and zoom buttons' labels move to data-tip (and a hidden span, for screen readers) and one small label of ours shows
 // on hover. To go back to Obsidian's tooltips, set HTIP to false.
@@ -4222,6 +4257,7 @@ function select(i, fromTrail){
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
   if (rec && i >= 0 && rec.notes[rec.notes.length - 1] !== N[i].path) { rec.notes.push(N[i].path); syncRec(); }   // recording a tour
+  if (i >= 0 && sel >= 0 && sel !== i) ctrHop(sel, i);
   if (!fromTrail && i >= 0 && sel >= 0 && sel !== i) { trail.push(sel); if (trail.length > TRAIL_MAX) trail.shift(); }
   sel = i;
   if (i < 0) { if (!drawer.hidden) { drawer.hidden = true; resize(); } syncDtab(); renderTrail(); draw(); return; }
@@ -5939,6 +5975,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); g.hidden = !EDITM; if (EDITM && sel >= 0) void openMain(sel); else closeEds(); syncOrbs(); draw(); }; }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
+  // Contrails (0.8.56, Nick): your path from note to note as a vapor trail behind a small airplane
+  { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = CTRON; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Contrails" });
+    const l2 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = CTRRK; l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Rocket" }); l2.hidden = !CTRON;
+    c2.onchange = () => { CTRRK = c2.checked; save("iv-ctrrk", CTRRK); };
+    cb.onchange = () => { CTRON = cb.checked; save("iv-ctr", CTRON); l2.hidden = !CTRON; if (!CTRON) CTR.length = 0; draw(); }; }
   // Show the way home (Kevin Bacon): from the note you're on, the fewest links back to Home, or to a note you choose
   const bcSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Kevin Bacon: from the note you're on, light up the fewest links back to Home (or a note you choose)" } }); const bcCb = bcSw.createEl("input", { type: "checkbox" }); bcSw.createEl("i", { cls: "sw" }); bcSw.createSpan({ text: "Show the way home" });
   const bcTo = DI.p.createDiv({ cls: "bacto" }); bcTo.createSpan({ cls: "btl", text: "To" }); const bcName = bcTo.createEl("button", { cls: "bcname", attr: { type: "button", "aria-label": "Choose the note to find the way to" } });
