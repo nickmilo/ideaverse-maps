@@ -2168,9 +2168,9 @@ const ARENA_LEG = "Arena: a ring of slots you fill with notes, a workspace of yo
 const KPAL = ["#f2c230", "#d98e04", "#c8312b", "#a0233f", "#5b3a8a", "#1f4e9c", "#3aa0c8", "#3a8f5a", "#1b1b1b", "#f2ede1", "#e6a0b0", "#e46b2a"];
 let KDN = [24, 48, 96, 192].includes(+pref("iv-kdn", 48)) ? +pref("iv-kdn", 48) : 48, KSC = pref("iv-ksc", "top") === "links" ? "links" : "top"; const KD = { ids: [], c: -1, T: 200 };
 // Composition (0.8.63, after Composition VIII, 1923): one map note and its links as a painting of circles, triangles, arcs, checkerboards and lines
-let KSTY = pref("iv-ksty", "squares") === "comp" ? "comp" : "squares", KNAMES = pref("iv-knames", false) === true; /* KNAMES: every shape named (0.8.64, Nick) */ const KC = { c: -1, ids: [], sz: new Map(), kind: new Map() };
+let KFOCUS = -1, KSTY = pref("iv-ksty", "squares") === "comp" ? "comp" : "squares", KNAMES = pref("iv-knames", false) === true; /* KNAMES: every shape named (0.8.64, Nick) */ const KC = { c: -1, ids: [], sz: new Map(), kind: new Map() };
 function layoutComp(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
-  let c = -1; try { c = sel; } catch (_) { /* not ready */ } if (c < 0 || !vis[c]) { c = -1; for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i] && N[i].is_map && (c < 0 || N[i].score > N[c].score)) c = i; }
+  let c = -1; try { c = KFOCUS >= 0 && vis[KFOCUS] ? KFOCUS : sel; } catch (_) { /* not ready */ } if (c < 0 || !vis[c]) { c = -1; for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i] && N[i].is_map && (c < 0 || N[i].score > N[c].score)) c = i; }
   KC.c = c; KC.ids = []; KC.sz.clear(); KC.kind.clear(); if (c < 0) { expBox = { x0: -800, y0: -500, x1: 800, y1: 500 }; return; }
   const nb = [...new Set([...out[c], ...inn[c]])].filter(j => j !== c && vis[j] && !ARCH[j]).sort((a, b) => N[b].score - N[a].score).slice(0, 60);
   EHID[c] = 0; EX[c] = -760; EY[c] = -420; KC.sz.set(c, 150 + Math.min(10, N[c].score) * 6); KC.kind.set(c, "sun");
@@ -2189,8 +2189,9 @@ function layoutComp(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] 
   expBox = { x0: x0 - 60, y0: y0 - 60, x1: x1 + 60, y1: y1 + 60 }; }
 function compPick(x, y){ let best = -1, bd = 1e9; for (const i of [KC.c, ...KC.ids]) { if (i < 0 || !VV(i)) continue; const d = Math.hypot(x - EX[i], y - EY[i]), r = Math.max(14, KC.sz.get(i) || 20); if (d < r && d / r < bd) { bd = d / r; best = i; } } return best; }
 const KCP = { paper: "#efe6cf", ink: "#151515", yellow: "#efc22e", red: "#c8312b", blue: "#2f5d9e", sky: "#8fb8d8", purple: "#5b3a8a", pink: "#e3a5b4", orange: "#e46b2a", green: "#4f8a5b" };
-function compDraw(lit){ const c = KC.c; if (c < 0) return; const P = KCP, cols = [P.yellow, P.red, P.blue, P.sky, P.purple, P.pink, P.orange, P.green];
-  const all = [c, ...KC.ids].filter(i => VV(i)); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const i of all) { const r = KC.sz.get(i); x0 = Math.min(x0, EX[i] - r); x1 = Math.max(x1, EX[i] + r); y0 = Math.min(y0, EY[i] - r); y1 = Math.max(y1, EY[i] + r); }
+function compDraw(lit){ const KX = i => EX[i] + (kOff(i) ? kOff(i).x : 0), KY = i => EY[i] + (kOff(i) ? kOff(i).y : 0);   // the dragged shape and its neighbours, offset
+  const c = KC.c; if (c < 0) return; const P = KCP, cols = [P.yellow, P.red, P.blue, P.sky, P.purple, P.pink, P.orange, P.green];
+  const all = [c, ...KC.ids].filter(i => VV(i)); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const i of all) { const r = KC.sz.get(i); x0 = Math.min(x0, KX(i) - r); x1 = Math.max(x1, KX(i) + r); y0 = Math.min(y0, KY(i) - r); y1 = Math.max(y1, KY(i) + r); }
   ctx.save();
   // the canvas: warm paper with soft washes of colour, as the painting's ground
   const bx = sx(x0 - 80), by = sy(y0 - 80), bw = (x1 - x0 + 160) * k, bh = (y1 - y0 + 160) * k;
@@ -2201,13 +2202,13 @@ function compDraw(lit){ const c = KC.c; if (c < 0) return; const P = KCP, cols =
   const dim = i => lit && sel >= 0 && !lit.has(i) ? .3 : 1;
   // the lines: each link a straight black line from the map note, an up or related link an arc, links among the others thin coloured lines
   ctx.lineCap = "round";
-  for (const j of KC.ids) { if (!VV(j)) continue; const kk = EKIND.get(c*n + j) ?? EKIND.get(j*n + c), x = sx(EX[j]), y = sy(EY[j]), cx = sx(EX[c]), cy = sy(EY[c]);
+  for (const j of KC.ids) { if (!VV(j)) continue; const kk = EKIND.get(c*n + j) ?? EKIND.get(j*n + c), x = sx(KX(j)), y = sy(KY(j)), cx = sx(KX(c)), cy = sy(KY(c));
     ctx.globalAlpha = .75 * dim(j); ctx.strokeStyle = P.ink; ctx.lineWidth = Math.max(.6, (kk === 1 ? 2.2 : 1.2) * Math.min(1.6, k * 2));
     ctx.beginPath(); ctx.moveTo(cx, cy); if (kk === 1 || kk === 4) { const mx = (cx + x) / 2, my = (cy + y) / 2, d = Math.hypot(x - cx, y - cy); ctx.quadraticCurveTo(mx - (y - cy) / d * d * .25, my + (x - cx) / d * d * .25, x, y); } else ctx.lineTo(x, y); ctx.stroke(); }
   const set = new Set(KC.ids); for (const [a, b] of E) { if (!set.has(a) || !set.has(b) || a >= b || !VV(a) || !VV(b)) continue; ctx.globalAlpha = .55 * Math.min(dim(a), dim(b)); ctx.strokeStyle = cols[Math.floor(hash(N[a].path + N[b].path, 7) * cols.length)]; ctx.lineWidth = Math.max(.5, k * 1.6);
-    ctx.beginPath(); ctx.moveTo(sx(EX[a]), sy(EY[a])); ctx.lineTo(sx(EX[b]), sy(EY[b])); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(sx(KX(a)), sy(KY(a))); ctx.lineTo(sx(KX(b)), sy(KY(b))); ctx.stroke(); }
   // the shapes
-  const shape = i => { const kind = KC.kind.get(i), r = KC.sz.get(i) * k, x = sx(EX[i]), y = sy(EY[i]), h = hash(N[i].path, 83), h2 = hash(N[i].path, 84), col = cols[Math.floor(h * cols.length)], col2 = cols[(Math.floor(h * cols.length) + 3) % cols.length];
+  const shape = i => { const kind = KC.kind.get(i), r = KC.sz.get(i) * k, x = sx(KX(i)), y = sy(KY(i)), h = hash(N[i].path, 83), h2 = hash(N[i].path, 84), col = cols[Math.floor(h * cols.length)], col2 = cols[(Math.floor(h * cols.length) + 3) % cols.length];
     ctx.globalAlpha = dim(i);
     if (kind === "sun") { const g = ctx.createRadialGradient(x, y, r * .7, x, y, r * 1.55); g.addColorStop(0, "rgba(91,58,138,.75)"); g.addColorStop(.5, "rgba(227,165,180,.35)"); g.addColorStop(1, "rgba(227,165,180,0)");
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 1.55, 0, 6.2832); ctx.fill(); ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill(); ctx.strokeStyle = P.purple; ctx.lineWidth = Math.max(2, r * .1); ctx.stroke(); return; }
@@ -2221,16 +2222,16 @@ function compDraw(lit){ const c = KC.c; if (c < 0) return; const P = KCP, cols =
     if (kind === "check") { const nC = 4, s_ = r * 1.5 / nC, ox = x - r * .75, oy = y - r * .75; ctx.save(); ctx.translate(x, y); ctx.rotate((h2 - .5) * .6); ctx.translate(-x, -y);
       for (let p = 0; p < nC; p++) for (let q = 0; q < nC; q++) { ctx.fillStyle = (p + q) % 2 ? P.ink : (hash(N[i].path, 85 + p * 4 + q) < .35 ? col : P.paper); ctx.fillRect(ox + p * s_, oy + q * s_, s_ + .5, s_ + .5); } ctx.restore(); return; }
     ctx.fillStyle = h < .5 ? P.ink : col; ctx.beginPath(); ctx.arc(x, y, Math.max(2, r * .5), 0, 6.2832); ctx.fill(); };
-  for (const j of [...KC.ids].reverse()) if (VV(j)) shape(j); shape(c);
+  for (const j of [...KC.ids].reverse()) if (VV(j) && !(KDRAG && KDRAG.i === j)) shape(j); shape(c); if (KDRAG && KDRAG.i !== c && VV(KDRAG.i) && KC.ids.includes(KDRAG.i)) shape(KDRAG.i);   // the dragged shape on top
   // names, small, for the map note, the note you're on and the bigger shapes
   ctx.globalAlpha = 1; ctx.textAlign = "center"; ctx.textBaseline = "top";
   const taken = [];
   for (const i of [c, ...KC.ids]) { if (!VV(i)) continue; const r = KC.sz.get(i) * k; if (!(KNAMES || i === c || i === sel || r > 34)) continue; const big = i === c;
     ctx.font = `${big || i === sel ? 700 : 500} ${big ? Math.max(12, Math.min(18, 24 * k)) : Math.max(10, Math.min(13, 18 * k))}px ${css.body}`;
     let t = N[i].title; while (t.length > 4 && ctx.measureText(t).width > Math.max(110, r * 2.4)) t = t.slice(0, -2); if (t !== N[i].title) t += "…";
-    const ty = sy(EY[i]) + r * (KC.kind.get(i) === "tri" ? 1.25 : KC.kind.get(i) === "sun" ? 1.62 : 1.08) + 4, tw = ctx.measureText(t).width, bx_ = [sx(EX[i]) - tw / 2, ty, tw, 14];
+    const ty = sy(KY(i)) + r * (KC.kind.get(i) === "tri" ? 1.25 : KC.kind.get(i) === "sun" ? 1.62 : 1.08) + 4, tw = ctx.measureText(t).width, bx_ = [sx(KX(i)) - tw / 2, ty, tw, 14];
     if (KNAMES && !big && i !== sel && taken.some(q => bx_[0] < q[0] + q[2] && bx_[0] + bx_[2] > q[0] && bx_[1] < q[1] + q[3] && bx_[1] + bx_[3] > q[1])) continue; taken.push(bx_);   // names never sit on each other
-    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(239,230,207,.85)"; ctx.strokeText(t, sx(EX[i]), ty); ctx.fillStyle = P.ink; ctx.fillText(t, sx(EX[i]), ty); }
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(239,230,207,.85)"; ctx.strokeText(t, sx(KX(i)), ty); ctx.fillStyle = P.ink; ctx.fillText(t, sx(KX(i)), ty); }
   ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 // Composition's key (0.8.65, Nick): a small drawing of each mark, then what it is
 function kLegend(host_){ const P = KCP, box = host_.createDiv({ cls: "lghi kleg" }); box.createDiv({ text: "Composition key", attr: { style: "color:var(--ink)" } });
@@ -2250,7 +2251,7 @@ function kLegend(host_){ const P = KCP, box = host_.createDiv({ cls: "lghi kleg"
   row("two of its notes linked to each other", g => { g.strokeStyle = P.orange; g.globalAlpha = .7; g.lineWidth = 1; g.beginPath(); g.moveTo(3, 10); g.lineTo(27, 10); g.stroke(); g.globalAlpha = 1; circ(g, 3, 10, 2, P.blue); circ(g, 27, 10, 2, P.pink); });
   box.createDiv({ text: "Bigger shape = higher link score. Closer to the map = higher rank among its links.", attr: { style: "white-space:normal;opacity:.85;margin-top:3px" } }); }
 function layoutKandinsky(){ if (KSTY === "comp") { layoutComp(); return; } for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
-  let ids = []; KD.c = -1; let sl = -1; try { sl = sel; } catch (_) { /* the first layout runs before the picked note exists */ }
+  let ids = []; KD.c = -1; let sl = -1; try { sl = KFOCUS >= 0 && vis[KFOCUS] ? KFOCUS : sel; } catch (_) { /* the first layout runs before the picked note exists */ }
   if (KSC === "links" && sl >= 0 && vis[sl]) { const sel = sl; KD.c = sel; ids = [sel, ...[...new Set([...out[sel], ...inn[sel]])].filter(j => j !== sel && vis[j] && !ARCH[j]).sort((a, b) => N[b].score - N[a].score)].slice(0, KDN); }
   else { for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i]) ids.push(i); ids.sort((a, b) => N[b].score - N[a].score); ids = ids.slice(0, KDN); }
   KD.ids = ids; const cols = Math.max(1, Math.ceil(Math.sqrt(ids.length * 1.33))), T = KD.T, G = 6;
@@ -2261,7 +2262,7 @@ const KTOP = { "Atlas": 5, "Calendar": 7, "Efforts": 2, "x": 4, "+": 0 };
 EXP.kandinsky = {
   layout: layoutKandinsky, pick: (x, y) => KSTY === "comp" ? compPick(x, y) : rectPick(x, y), ownLabels: true,
   notes(lit){ if (KSTY === "comp") { compDraw(lit); return; } const T = KD.T;
-    for (const i of KD.ids) { if (!VV(i)) continue; const x = sx(RX[i]), y = sy(RY[i]), w = T * k; if (x > W || y > H || x + w < 0 || y + w < 0) continue; const d = N[i], p_ = d.path;
+    for (const i of (KDRAG ? KD.ids.filter(q => q !== KDRAG.i).concat(KD.ids.includes(KDRAG.i) ? [KDRAG.i] : []) : KD.ids)) { if (!VV(i)) continue; const ko = kOff(i), x = sx(RX[i] + (ko ? ko.x : 0)), y = sy(RY[i] + (ko ? ko.y : 0)), w = T * k; if (x > W || y > H || x + w < 0 || y + w < 0) continue; const d = N[i], p_ = d.path;
       ctx.globalAlpha = lit && !lit.has(i) && sel >= 0 ? .28 : 1;
       // the tile: its top folder's colour (a few set ones, the rest by name), a little dusty
       const top = p_.split("/")[0], bg = KPAL[KTOP[top] != null ? KTOP[top] : Math.floor(hash(top, 41) * KPAL.length)];
@@ -2282,7 +2283,7 @@ EXP.kandinsky = {
       "What a shape means: its family comes from the note's level (haloed circles for hubs and maps of maps, a disc or ring for a map, a triangle, half-circle, arc or checkerboard for a linked note, a dot for an unlinked one). Its size is its link score. How close it sits to the map is its rank among the map's links, highest closest.",
       "What doesn't mean anything yet: which of the Level 2 shapes a note gets, each shape's colour, and which direction it lies from the map. They're chosen from the note's name, so they stay put, but they don't say anything about the note.",
       "The lines: a black line from the map to each link, straight for a link in the text, curved for one in an up or related property (thicker for up). Thin coloured lines join two shapes that link to each other.",
-      "Pick another note to paint it instead. ⚙ → Show note names names every shape; Squares switches back to the tiles."
+      "Double-click a shape (or search for any note) to paint it instead; a single click opens it in the editor. Drag a shape and let go, and it springs home. ⚙ → Show note names names every shape; Squares switches back to the tiles."
     ] : undefined; },
   get legend(){ return KSTY === "comp" ? "Kandinsky · Composition: one map and its links as a painting, after Composition VIII (1923)." : KLEG; },
 };
@@ -4033,6 +4034,32 @@ function pick(px, py){
 // ---------- interaction ----------
 const tip = $("#tip"); tip.addClass("ivm-tip"); doc.body.appendChild(tip);
 let drag = null, moved = false; const pts = new Map();
+// Kandinsky: drag a tile or shape and let go, and it springs back to its place; its linked neighbours lean after it a little (0.8.68, Nick)
+const KOFF = new Map(); let KDRAG = null, kRaf = 0;
+// double-click a shape or tile: it becomes the centre of Kandinsky (Composition, and Squares' Picked + links); a single click opens it in the editor
+cv.addEventListener("dblclick", e => { if (view !== "kandinsky") return; const i = EXP.kandinsky.pick(wx(e.offsetX), wy(e.offsetY)); if (i < 0) return; e.preventDefault(); e.stopPropagation();
+  KFOCUS = i; if (KSTY !== "comp" && KSC !== "links") { KSC = "links"; save("iv-ksc", KSC); } KOFF.clear(); morph(true, () => fitTarget()); });
+const kOff = i => KOFF.get(i) || null;
+function kTick(){ kRaf = 0; let busy = false;
+  for (const [i, o] of KOFF) { if (KDRAG && KDRAG.i === i) { busy = true; continue; }
+    const tx_ = KDRAG && KDRAG.nb.has(i) ? KDRAG.ox * .18 * KDRAG.nb.get(i) : 0, ty_ = KDRAG && KDRAG.nb.has(i) ? KDRAG.oy * .18 * KDRAG.nb.get(i) : 0;   // neighbours follow a fifth of the way
+    o.vx = (o.vx + (tx_ - o.x) * .16) * .8; o.vy = (o.vy + (ty_ - o.y) * .16) * .8; o.x += o.vx; o.y += o.vy;
+    if (Math.abs(o.x - tx_) + Math.abs(o.y - ty_) + Math.abs(o.vx) + Math.abs(o.vy) < .05 && !tx_ && !ty_) KOFF.delete(i); else busy = true; }
+  draw(); if (busy) kRaf = RAF(kTick); }
+const kWake = () => { if (!kRaf) kRaf = RAF(kTick); };
+cv.addEventListener("pointerdown", e => { if (view !== "kandinsky" || e.button !== 0 || e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+  const i = EXP.kandinsky.pick(wx(e.offsetX), wy(e.offsetY)); if (i < 0) return;
+  e.stopImmediatePropagation(); cv.setPointerCapture(e.pointerId); const o0 = kOff(i);
+  const nb = new Map(); for (const j of new Set([...out[i], ...inn[i]])) if (j !== i && VV(j)) nb.set(j, .6 + .4 * hash(N[j].path, 88));
+  KDRAG = { i, x0: e.offsetX, y0: e.offsetY, ox: o0 ? o0.x : 0, oy: o0 ? o0.y : 0, bx: o0 ? o0.x : 0, by: o0 ? o0.y : 0, moved: false, nb };
+  for (const j of [i, ...nb.keys()]) if (!KOFF.has(j)) KOFF.set(j, { x: 0, y: 0, vx: 0, vy: 0 }); }, true);
+cv.addEventListener("pointermove", e => { if (!KDRAG) return; e.stopImmediatePropagation(); const dx = (e.offsetX - KDRAG.x0) / k, dy = (e.offsetY - KDRAG.y0) / k;
+  if (!KDRAG.moved && Math.hypot(dx * k, dy * k) < 4) return; KDRAG.moved = true; KDRAG.ox = KDRAG.bx + dx; KDRAG.oy = KDRAG.by + dy;
+  const o = KOFF.get(KDRAG.i); o.x = KDRAG.ox; o.y = KDRAG.oy; o.vx = o.vy = 0; cv.classList.add("drag"); tip.hidden = true; kWake(); }, true);
+const kEnd = e => { if (!KDRAG) return; e.stopImmediatePropagation(); const d = KDRAG; KDRAG = null; cv.classList.remove("drag");
+  if (!d.moved) { if (d.i === sel) select(-1); else select(d.i); draw(); return; }   // a click without a drag picks the note
+  kWake(); };   // let go: it springs home, overshooting a little
+cv.addEventListener("pointerup", kEnd, true); cv.addEventListener("pointercancel", kEnd, true);
 cv.addEventListener("pointerdown", e => { lastDown = [e.offsetX, e.offsetY]; GPH.drag = null;
   if (GRV() && !IDV() && e.button === 0 && !e.shiftKey && GPH.F) { const i = pick(e.offsetX, e.offsetY), j = i >= 0 ? GPH.loc[i] : -1; if (j >= 0 && GPH.deg[j] > 0) GPH.drag = { i, j }; } driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, cyaw: csYaw, cpitch: csPitch, gyaw: g3Yaw, gpitch: g3Pitch, orbit: (s3dOn() || domeOn() || sphOn() || geo3On()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
 cv.addEventListener("contextmenu", e => e.preventDefault());   // right-drag pans (as in Miro); no menu on the map
@@ -4466,8 +4493,8 @@ function select(i, fromTrail){
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
   if (view === "compass" && !LIVEQ) win.setTimeout(cmpSync, 0);
   if (view === "arena" && !LIVEQ) win.setTimeout(arenaSync, 0);
-  if (view === "kandinsky" && KSTY === "comp" && !LIVEQ) win.setTimeout(() => { if (!dead && view === "kandinsky" && KSTY === "comp" && sel >= 0 && sel !== KC.c && !KC.ids.includes(sel)) morph(true, () => fitTarget()); }, 0);   // a note outside the painting becomes its centre
-  if (view === "kandinsky" && KSC === "links" && KSTY !== "comp" && !LIVEQ) win.setTimeout(() => { if (!dead && view === "kandinsky" && sel !== KD.c) morph(true, () => fitTarget()); }, 0);
+  if (view === "kandinsky" && KSTY === "comp" && !LIVEQ) win.setTimeout(() => { if (!dead && view === "kandinsky" && KSTY === "comp" && sel >= 0 && sel !== KC.c && !KC.ids.includes(sel) && (KFOCUS = sel, true)) morph(true, () => fitTarget()); }, 0);   // a note outside the painting becomes its centre
+  if (view === "kandinsky" && KSC === "links" && KSTY !== "comp" && !LIVEQ) win.setTimeout(() => { if (!dead && view === "kandinsky" && sel >= 0 && sel !== KD.c && !KD.ids.includes(sel) && (KFOCUS = sel, true)) morph(true, () => fitTarget()); }, 0);
   if (!LIVEQ && (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden || EDS.left.col && EDS.left.path)))) win.setTimeout(() => { void openMain(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
