@@ -3,7 +3,7 @@
 import { Notice, Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 
-export const VIEWS_ON = ["kandinsky", "arena", "compass", "emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
+export const VIEWS_ON = ["cockpit", "kandinsky", "arena", "compass", "emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -1118,7 +1118,7 @@ function morph(animate, cam){
   RAF(step);
 }
 let camBusy = 0;
-function setView(v){ win.setTimeout(() => { if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
+function setView(v){ win.setTimeout(() => { ckView(); if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
@@ -2263,6 +2263,198 @@ EXP.kandinsky = {
       "Double-click a shape (or search for any note) to paint it instead; a single click opens it in the editor. Drag a shape and let go, and it springs home. ⚙ → Show note names names every shape."
     ]; },
   legend: "Kandinsky: one note and its links as a painting, after Composition VIII (1923).",
+};
+
+// ---------- Cockpit (0.8.78): one note as a cockpit; its links hang ahead as panels and you fly into one to make it the cockpit ----------
+// After Nick's X-Wing (1993) mockup: "actually fly through our notes… almost like a game, but not a game", built no further than needed.
+// Space: links in on the left, links out on the right, two-way links ahead; what the note links up to above the horizon, what sits below it beneath;
+// the strongest links (relevance from this note) nearest. F shows only links in, R only links out (Nick's swap). No S·T·I·R gauges yet (Nick: don't calculate them yet).
+const CK = { on: false, c: -1, items: [], lock: -1, sug: -1, P: [0, 0, 0], yaw: 0, pitch: 0, v: 0, keys: new Set(), only: "", t0: 0, warp: 0, auto: false, roll: 0, el: null, cv: null, g: null, w: 0, h: 0, stars: [], last: 0, drag: null, msg: "" };
+const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
+function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
+function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.P = [0, 0, 0]; CK.yaw = 0; CK.pitch = 0; CK.v = 0; CK.auto = false; CK.t0 = win.performance.now(); if (c < 0) return;
+  const L = stripLists(c), ins = new Set(L.in), outs = new Set(L.out), ups = new Set(L.up), rels = new Set(L.related), abv = new Set(L.above), blw = new Set(L.below);
+  let rel = null; try { rel = relFrom(c); } catch (_) { rel = null; }
+  const ids = [...new Set([...L.in, ...L.out])].filter(j => j !== c && vis[j]);
+  const rv = j => rel ? rel[j] : N[j].score / 1e3;
+  ids.sort((a, b) => rv(b) - rv(a) || N[b].score - N[a].score);
+  const shown = ids.slice(0, 40);
+  /* the closest relative it doesn't yet link up or related to: the note to suggest */
+  if (rel) { let best = -1; for (let j = 0; j < n; j++) { if (j === c || !vis[j] || ups.has(j) || rels.has(j)) continue; if (best < 0 || rel[j] > rel[best]) best = j; } CK.sug = best; }
+  if (CK.sug >= 0 && !shown.includes(CK.sug)) shown.splice(Math.min(3, shown.length), 0, CK.sug);
+  shown.forEach((j, q) => { const p = N[j].path, ja = hash(p, 811), jb = hash(p, 977), inn_ = ins.has(j), out_ = outs.has(j);
+    const side = inn_ && out_ ? 0 : inn_ ? -1 : out_ ? 1 : 0;
+    const tx = side === 0 ? (ja - .5) * .5 : side * (.16 + .44 * ja);
+    const up_ = ups.has(j) || abv.has(j), dn = blw.has(j);
+    const ty = up_ ? -(.1 + .26 * jb) : dn ? (.1 + .26 * jb) : (jb - .5) * .16;
+    const z = 430 + q * 105 + ja * 40;
+    CK.items.push({ i: j, x: tx * z, y: ty * z, z, side, inn: inn_, out: out_, up: ups.has(j), rel: rels.has(j), none: !inn_ && !out_, sx: 0, sy: 0, sw: 0, sh: 0, zc: 0 }); });
+  CK.lock = CK.items.findIndex(it => it.i === CK.sug); if (CK.lock < 0 && CK.items.length) CK.lock = 0;
+  CK.msg = CK.sug >= 0 ? `Closest relative not in its up or related: ${N[CK.sug].title}${CK.items.find(it => it.i === CK.sug && it.none) ? " (no link yet)" : ""}. Locked on. Space flies you there.` : "Every close relative is already up or related.";
+}
+function ckFwd(){ const cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch); return [sy_ * cp, sp, cy * cp]; }
+function ckCam(x, y, z){ const dx = x - CK.P[0], dy = y - CK.P[1], dz = z - CK.P[2], cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);
+  const xc = cy * dx - sy_ * dz, z1 = sy_ * dx + cy * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1; return [xc, yc, zc]; }
+function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); CK.warp = 1; } }
+function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.createElement("div"); el.className = "ivm-cockpit"; el.hidden = true; m.appendChild(el);
+  const c_ = doc.createElement("canvas"); el.appendChild(c_); CK.el = el; CK.cv = c_; CK.g = c_.getContext("2d");
+  const bar = el.createDiv({ cls: "ckbtns" });
+  const back = bar.createEl("button", { text: "Back", attr: { type: "button", "aria-label": "Fly back to the note before (B)" } }); back.onclick = e => { e.stopPropagation(); ckBack(); };
+  const ej = bar.createEl("button", { cls: "ckeject", text: "Eject", attr: { type: "button", "aria-label": "Unpin the editor's note" } }); ej.onclick = e => { e.stopPropagation(); try { if (TABS[TCUR] && TABS[TCUR].pin) tabPin(); } catch (_) { /* no editor */ } };
+  CK.ej = ej;
+  for (let q = 0; q < 420; q++) CK.stars.push([hash("s" + q, 3) * 4000 - 2000, hash("s" + q, 5) * 4000 - 2000, hash("s" + q, 7) * 4000 - 2000, .3 + hash("s" + q, 9) * .7]);
+  c_.addEventListener("pointerdown", e => { if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false }; c_.setPointerCapture(e.pointerId); });
+  c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); c_.classList.toggle("hot", h_ >= 0); return; }
+    const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) > 4) d.moved = true; d.x = e.clientX; d.y = e.clientY;
+    if (d.moved) { CK.auto = false; CK.yaw += dx * .0032; CK.pitch = Math.max(-1.2, Math.min(1.2, CK.pitch + dy * .0032)); CK.roll += dx * .004; } });
+  c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return; const h_ = ckHit(e.offsetX, e.offsetY);
+    if (h_ < 0) return; if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
+  c_.addEventListener("dblclick", e => { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) { CK.lock = h_; CK.auto = true; } });
+  c_.addEventListener("wheel", e => { e.preventDefault(); CK.auto = false; CK.v = Math.max(-500, Math.min(1500, CK.v - e.deltaY * 2.2)); }, { passive: false });
+  on(doc, "keydown", e => { if (!CK.on || dead || !host.isActive()) return; const a = doc.activeElement; if (a && a !== doc.body && (a.closest && (a.closest(".ivm-card") || a.closest("input,textarea,[contenteditable]")) || /INPUT|TEXTAREA/.test(a.tagName))) return; if (a && a !== doc.body && !root.contains(a)) return;
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; let used = true;
+    if (["w", "s", "a", "d", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "q", "e"].includes(k)) { CK.keys.add(k); if (k === "w" || k === "s" || k === "ArrowUp" || k === "ArrowDown") CK.auto = false; }
+    else if (k === "f") CK.only = CK.only === "in" ? "" : "in";
+    else if (k === "r") CK.only = CK.only === "out" ? "" : "out";
+    else if (k === " " || k === "Enter") { if (CK.lock >= 0) CK.auto = true; }
+    else if (k === "Tab") { const L_ = ckOrder(); if (L_.length) { const p_ = L_.indexOf(CK.lock); CK.lock = L_[(p_ + (e.shiftKey ? L_.length - 1 : 1)) % L_.length]; CK.auto = false; } }
+    else if (k === "b" || k === "Backspace") ckBack();
+    else if (k === "Escape") { CK.auto = false; CK.v = 0; }
+    else used = false;
+    if (used) { e.preventDefault(); e.stopImmediatePropagation(); } }, { capture: true });
+  on(doc, "keyup", e => { const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; CK.keys.delete(k); }, { capture: true });
+  on(win, "blur", () => CK.keys.clear());
+}
+function ckOrder(){ return CK.items.map((it, q) => q).filter(q => ckShows(CK.items[q])).sort((a, b) => { const A = CK.items[a], B = CK.items[b]; return (A.zc > 0 ? 0 : 1) - (B.zc > 0 ? 0 : 1) || A.sx - B.sx; }); }
+function ckShows(it){ return !CK.only || (CK.only === "in" ? it.inn : it.out); }
+function ckBack(){ if (!trail.length) return; const p = trail.pop(); if (p != null && p >= 0) select(p, true); }
+function ckHit(x, y){ let b = -1, bz = 1e9; CK.items.forEach((it, q) => { if (it.zc <= 1 || !ckShows(it)) return; if (x >= it.sx - it.sw / 2 && x <= it.sx + it.sw / 2 && y >= it.sy - it.sh / 2 && y <= it.sy + it.sh / 2 && it.zc < bz) { b = q; bz = it.zc; } }); return b; }
+win.setTimeout(() => { if (!dead) ckView(); }, 0);
+function ckView(){ ckEl(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
+  if (want) { CK.c = -2; ckSync(); CK.last = win.performance.now(); RAF(ckTick); } }
+function ckArrive(q){ const it = CK.items[q]; if (!it) return; CK.auto = false; CK.v = 0; const j = it.i; if (vis[j]) select(j); win.setTimeout(ckSync, 0); }
+function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK.last) / 1000); CK.last = t; RAF(ckTick);
+  const K = CK.keys, turn = 1.3 * dt;
+  if (K.has("a") || K.has("ArrowLeft")) { CK.yaw -= turn; CK.roll -= turn * 1.2; CK.auto = false; }
+  if (K.has("d") || K.has("ArrowRight")) { CK.yaw += turn; CK.roll += turn * 1.2; CK.auto = false; }
+  if (K.has("q")) { CK.pitch = Math.max(-1.2, CK.pitch - turn); CK.auto = false; }
+  if (K.has("e")) { CK.pitch = Math.min(1.2, CK.pitch + turn); CK.auto = false; }
+  if (K.has("w") || K.has("ArrowUp")) CK.v = Math.min(1100, CK.v + 800 * dt);
+  else if (K.has("s") || K.has("ArrowDown")) CK.v = Math.max(-400, CK.v - 800 * dt);
+  else if (!CK.auto) CK.v *= Math.pow(.25, dt);
+  CK.roll *= Math.pow(.08, dt);
+  const it = CK.items[CK.lock];
+  if (CK.auto && it) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z), ay = Math.atan2(xc, zc), ap = Math.atan2(yc, Math.hypot(xc, zc)), s_ = Math.min(1, dt * 3.2);
+    CK.yaw += ay * s_; CK.pitch = Math.max(-1.2, Math.min(1.2, CK.pitch + ap * s_)); CK.roll += ay * s_ * .8;
+    const dist = Math.hypot(xc, yc, zc); CK.v += (Math.min(1500, 160 + dist * 1.4) - CK.v) * Math.min(1, dt * 2.5); }
+  const f = ckFwd(); CK.P[0] += f[0] * CK.v * dt; CK.P[1] += f[1] * CK.v * dt; CK.P[2] += f[2] * CK.v * dt;
+  if (CK.warp > 0) CK.warp = Math.max(0, CK.warp - dt * 1.6);
+  /* fly into a panel (near it and roughly ahead) to make it the cockpit */
+  for (let q = 0; q < CK.items.length; q++) { const o = CK.items[q]; if (!ckShows(o) || (CK.auto && q !== CK.lock)) continue;   /* on autopilot only the locked panel catches you */ const [xc, yc, zc] = ckCam(o.x, o.y, o.z); if (zc > -10 && zc < 60 && Math.abs(xc) < 70 && Math.abs(yc) < 30) { ckArrive(q); return; } }
+  ckDraw(); }
+function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect(), dpr = win.devicePixelRatio || 1, W = Math.max(1, r.width), H = Math.max(1, r.height);
+  if (CK.w !== W || CK.h !== H) { CK.w = W; CK.h = H; c_.width = W * dpr; c_.height = H * dpr; }
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = "#04060d"; g.fillRect(0, 0, W, H);
+  const cons = Math.min(150, H * .26), VH = H - cons, cx = W / 2, cy = VH / 2, F = Math.min(W, VH) * .95, font = css.body || "sans-serif";
+  /* stars: wrap round the ship; streaks when moving */
+  g.save(); g.translate(cx, cy); g.rotate(CK.roll * .25); g.translate(-cx, -cy); const fw = ckFwd(), sp = Math.abs(CK.v);
+  for (const s of CK.stars) { let x = s[0] - CK.P[0], y = s[1] - CK.P[1], z = s[2] - CK.P[2]; x = ((x % 4000) + 6000) % 4000 - 2000; y = ((y % 4000) + 6000) % 4000 - 2000; z = ((z % 4000) + 6000) % 4000 - 2000;
+    const [xc, yc, zc] = ckCam(CK.P[0] + x, CK.P[1] + y, CK.P[2] + z); if (zc < 20) continue; const px = cx + F * xc / zc, py = cy + F * yc / zc; if (px < 0 || px > W || py < 0 || py > VH) continue;
+    g.globalAlpha = s[3] * Math.min(1, 900 / zc); g.fillStyle = "#cfe0ff";
+    if (sp > 120) { const L_ = Math.min(.5, sp / 3000) * 1; const [x2, y2, z2] = ckCam(CK.P[0] + x - fw[0] * sp * L_ * .3, CK.P[1] + y - fw[1] * sp * L_ * .3, CK.P[2] + z - fw[2] * sp * L_ * .3);
+      if (z2 > 20) { g.strokeStyle = "#cfe0ff"; g.lineWidth = .8; g.beginPath(); g.moveTo(px, py); g.lineTo(cx + F * x2 / z2, cy + F * y2 / z2); g.stroke(); continue; } }
+    g.fillRect(px, py, 1.2, 1.2); }
+  g.globalAlpha = 1;
+  /* the horizon: a faint line through the middle, tilting with the turn */
+  { const [, yh] = ckCam(CK.P[0] + fw[0] * 1000, CK.P[1], CK.P[2] + fw[2] * 1000), hy = cy + F * (yh) / 1000; g.strokeStyle = "rgba(120,170,255,.16)"; g.lineWidth = 1; g.setLineDash([2, 6]); g.beginPath(); g.moveTo(0, hy); g.lineTo(W, hy); g.stroke(); g.setLineDash([]); }
+  g.restore();
+  /* panels, far first */
+  const wz = CK.warp > 0 ? CK.warp * CK.warp * 2600 : 0;
+  for (const it of CK.items) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z + wz); it.zc = zc; if (zc <= 8) { it.sw = 0; continue; } it.sx = cx + F * xc / zc; it.sy = cy + F * yc / zc; it.sw = F * 112 / zc; it.sh = F * 34 / zc; }
+  const order = CK.items.map((it, q) => q).filter(q => CK.items[q].zc > 8).sort((a, b) => CK.items[b].zc - CK.items[a].zc);
+  for (const q of order) { const it = CK.items[q], d = N[it.i], col = ckCol(d.level), sw = it.sw, sh = it.sh, x0 = it.sx - sw / 2, y0 = it.sy - sh / 2; if (x0 > W || x0 + sw < 0 || y0 > VH || y0 + sh < 0) continue;
+    const fade = Math.max(.12, Math.min(1, 2600 / it.zc - .2)) * (ckShows(it) ? 1 : .08) * (1 - CK.warp * .7);
+    g.globalAlpha = fade; g.fillStyle = "rgba(10,16,30,.86)"; g.fillRect(x0, y0, sw, sh);
+    g.strokeStyle = col; g.lineWidth = Math.max(.6, Math.min(2.2, sw / 90)); if (it.none) g.setLineDash([4, 3]); g.strokeRect(x0, y0, sw, sh); g.setLineDash([]);
+    if (it.inn && it.out && sw > 30) { g.globalAlpha = fade * .5; g.strokeRect(x0 + 3, y0 + 3, sw - 6, sh - 6); g.globalAlpha = fade; }
+    g.fillStyle = col; g.fillRect(x0, y0, Math.max(1.5, sw * .035), sh);
+    if (sw > 34) { const fs = Math.max(7, Math.min(22, sh * .36)); g.font = `600 ${fs}px ${font}`; g.fillStyle = "#e9efff"; g.textBaseline = "middle";
+      let tx = d.title; const mw = sw * .86; if (g.measureText(tx).width > mw) { while (tx.length > 2 && g.measureText(tx + "…").width > mw) tx = tx.slice(0, -1); tx += "…"; }
+      g.fillText(tx, x0 + sw * .07, it.sy - (sw > 90 ? sh * .12 : 0));
+      if (sw > 90) { g.font = `500 ${fs * .62}px ${font}`; g.fillStyle = "rgba(200,215,240,.7)"; g.fillText(`L${d.level} · ${it.none ? "not linked yet" : it.inn && it.out ? "both ways" : it.inn ? "links in" : "links out"}${it.up ? " · up" : it.rel ? " · related" : ""}`, x0 + sw * .07, it.sy + sh * .26); } } }
+  g.globalAlpha = 1;
+  /* reticle on the locked panel, or an arrow at the edge pointing to it */
+  const lk = CK.items[CK.lock];
+  if (lk) { const col = "#ffcf5a"; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1.6;
+    if (lk.zc > 8 && lk.sx > 0 && lk.sx < W && lk.sy > 0 && lk.sy < VH) { const w2 = lk.sw / 2 + 6, h2 = lk.sh / 2 + 6, cl = Math.max(6, Math.min(16, lk.sw * .12));
+      for (const [sx_, sy_] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.beginPath(); g.moveTo(lk.sx + sx_ * w2, lk.sy + sy_ * h2 - sy_ * cl); g.lineTo(lk.sx + sx_ * w2, lk.sy + sy_ * h2); g.lineTo(lk.sx + sx_ * w2 - sx_ * cl, lk.sy + sy_ * h2); g.stroke(); }
+      const [xc, yc, zc] = ckCam(lk.x, lk.y, lk.z), dist = Math.hypot(xc, yc, zc); g.font = `600 10px ${font}`; g.textBaseline = "top"; g.fillText(`${CK.auto ? "AUTOPILOT · " : ""}${dist > 999 ? (dist / 1000).toFixed(1) + "k" : Math.round(dist)}`, lk.sx - w2, lk.sy + h2 + 4); }
+    else { const [xc, yc] = ckCam(lk.x, lk.y, lk.z), a = Math.atan2(yc, xc), ex = cx + Math.cos(a) * Math.min(cx - 30, (VH / 2) - 30) * 1.0, ey = cy + Math.sin(a) * ((VH / 2) - 30);
+      g.save(); g.translate(ex, ey); g.rotate(a); g.beginPath(); g.moveTo(12, 0); g.lineTo(-6, -7); g.lineTo(-6, 7); g.closePath(); g.fill(); g.restore(); } }
+  /* attitude ring: L1–L5 round the centre, the note's level lit */
+  { const d = CK.c >= 0 ? N[CK.c] : null, R = Math.min(70, VH * .14); g.save(); g.translate(cx, cy); g.rotate(CK.roll * .5);
+    g.strokeStyle = "rgba(140,190,255,.35)"; g.lineWidth = 1; g.beginPath(); g.arc(0, 0, R, Math.PI * .15, Math.PI * .85); g.stroke(); g.beginPath(); g.arc(0, 0, R, Math.PI * 1.15, Math.PI * 1.85); g.stroke();
+    g.beginPath(); g.moveTo(-R - 14, 0); g.lineTo(-R + 6, 0); g.moveTo(R - 6, 0); g.lineTo(R + 14, 0); g.moveTo(0, -5); g.lineTo(0, 5); g.moveTo(-5, 0); g.lineTo(5, 0); g.stroke();
+    g.font = `600 9px ${font}`; g.textAlign = "center"; g.textBaseline = "middle";
+    for (let lv = 1; lv <= 5; lv++) { const a = Math.PI * (1.2 + (lv - 1) * .15), x = Math.cos(a) * (R + 12), y = Math.sin(a) * (R + 12), lit = d && d.level === lv; g.fillStyle = lit ? ckCol(lv) : "rgba(140,170,210,.4)"; g.fillText("L" + lv, x, y); if (lit) { g.beginPath(); g.arc(Math.cos(a) * R, Math.sin(a) * R, 3, 0, 6.2832); g.fill(); } }
+    g.restore(); g.textAlign = "left"; }
+  /* the message line */
+  if (CK.msg) { g.font = `500 12px ${font}`; g.textAlign = "center"; g.textBaseline = "top"; const tw = Math.min(W - 40, g.measureText(CK.msg).width + 24);
+    g.fillStyle = "rgba(8,14,28,.8)"; g.fillRect(cx - tw / 2, 10, tw, 24); g.strokeStyle = "rgba(255,207,90,.4)"; g.strokeRect(cx - tw / 2 + .5, 10.5, tw - 1, 23); g.fillStyle = "#ffcf5a";
+    let m = CK.msg; while (m.length > 10 && g.measureText(m).width > tw - 20) m = m.slice(0, -2); if (m !== CK.msg) m += "…"; g.fillText(m, cx, 16); g.textAlign = "left"; }
+  ckConsole(g, W, H, VH, cons, font); }
+function ckScope(g, x, y, R, label, key, ids, act, font){ g.save(); g.fillStyle = "rgba(10,30,24,.9)"; g.beginPath(); g.arc(x, y, R, 0, 6.2832); g.fill();
+  g.strokeStyle = act ? "#7dffb0" : "rgba(110,220,160,.45)"; g.lineWidth = act ? 2 : 1; g.stroke(); g.lineWidth = 1; g.strokeStyle = "rgba(110,220,160,.22)";
+  for (const f_ of [.33, .66]) { g.beginPath(); g.arc(x, y, R * f_, 0, 6.2832); g.stroke(); } g.beginPath(); g.moveTo(x - R, y); g.lineTo(x + R, y); g.moveTo(x, y - R); g.lineTo(x, y + R); g.stroke();
+  const sw = (win.performance.now() / 1400) % 6.2832; const gr = g.createConicGradient ? g.createConicGradient(sw - .6, x, y) : null;
+  if (gr) { gr.addColorStop(0, "rgba(110,255,170,0)"); gr.addColorStop(.095, "rgba(110,255,170,.22)"); gr.addColorStop(.1, "rgba(110,255,170,0)"); g.fillStyle = gr; g.beginPath(); g.arc(x, y, R, 0, 6.2832); g.fill(); }
+  ids.forEach((j, q) => { const a = hash(N[j].path, 211) * 6.2832, rr = R * (.15 + .8 * Math.min(1, q / Math.max(8, ids.length))); g.fillStyle = ckCol(N[j].level); g.beginPath(); g.arc(x + Math.cos(a) * rr, y + Math.sin(a) * rr, j === (CK.items[CK.lock] || {}).i ? 3.4 : 1.8, 0, 6.2832); g.fill(); });
+  g.font = `600 9.5px ${font}`; g.fillStyle = act ? "#7dffb0" : "rgba(150,230,185,.8)"; g.textAlign = "center"; g.textBaseline = "top"; g.fillText(`${label} ${ids.length} · ${key}`, x, y + R + 4); g.restore(); g.textAlign = "left"; }
+function ckNext(d){ const mm = d.is_map && d.maps_linked >= L4_MAPS;
+  if (d.level >= 5) return "Top level";
+  if (d.level === 4) return `L5: top ${S.top} by score`;
+  if (d.level === 3) return d.is_map && !mm ? `L4: link ${L4_MAPS - (d.maps_linked || 0)} more maps or +${f2(Math.max(0, CUT.l4 - d.score))} score` : `L4 at +${f2(Math.max(0, CUT.l4 - d.score))} score`;
+  if (d.level === 2) return `L3 at +${f2(Math.max(0, CUT.l3 - d.score))} score (or make it a map)`;
+  return "L2: link it to anything"; }
+function ckConsole(g, W, H, VH, cons, font){ const c = CK.c; g.fillStyle = "#0a0f1c"; g.fillRect(0, VH, W, cons); g.strokeStyle = "rgba(120,170,255,.3)"; g.beginPath(); g.moveTo(0, VH + .5); g.lineTo(W, VH + .5); g.stroke();
+  /* the canopy's frame: two struts from the console up into the view */
+  g.fillStyle = "#0a0f1c"; g.beginPath(); g.moveTo(0, VH); g.lineTo(W * .12, VH); g.lineTo(0, VH - cons * .9); g.closePath(); g.fill(); g.beginPath(); g.moveTo(W, VH); g.lineTo(W * .88, VH); g.lineTo(W, VH - cons * .9); g.closePath(); g.fill();
+  if (c < 0) return; const d = N[c], L = stripLists(c), R = Math.min(cons * .36, 54), sy_ = VH + cons * .44;
+  ckScope(g, Math.max(R + 18, W * .16), sy_, R, "IN", "F", L.in, CK.only === "in", font);
+  ckScope(g, Math.min(W - R - 18, W * .84), sy_, R, "OUT", "R", L.out, CK.only === "out", font);
+  /* the centre display */
+  const bw = Math.min(W * .46, 520), bx = W / 2 - bw / 2, by = VH + 10, bh = cons - 20; g.fillStyle = "rgba(14,24,44,.95)"; g.fillRect(bx, by, bw, bh); g.strokeStyle = "rgba(120,170,255,.35)"; g.strokeRect(bx + .5, by + .5, bw - 1, bh - 1);
+  const col = ckCol(d.level); g.fillStyle = col; g.fillRect(bx, by, 3, bh); g.textBaseline = "top";
+  const tx = bx + 14; let t = d.title; g.font = `700 ${Math.min(17, bh * .17)}px ${font}`; g.fillStyle = "#eef3ff"; while (t.length > 3 && g.measureText(t).width > bw - 28) t = t.slice(0, -2); if (t !== d.title) t += "…"; g.fillText(t, tx, by + 9);
+  const lh = Math.min(16, bh * .15); g.font = `500 ${Math.min(12, bh * .12)}px ${font}`;
+  const row = (y, parts) => { let x = tx; for (const [s_, c_] of parts) { g.fillStyle = c_ || "rgba(205,218,240,.85)"; g.fillText(s_, x, y); x += g.measureText(s_).width; } };
+  const y1 = by + 12 + lh * 1.5; row(y1, [["L" + d.level, col], [`  ·  #${RANK[c].toLocaleString()}  ·  score ${f2(d.score)}`]]);
+  row(y1 + lh, [[`in ${L.in.length}  ·  out ${L.out.length}  ·  up ${L.up.length}  ·  related ${L.related.length}`]]);
+  row(y1 + lh * 2, [["Next  ", "rgba(255,207,90,.9)"], [ckNext(d)]]);
+  /* age clock and links-this-year speed, at the display's right */
+  const t0 = TV[c], gx = bx + bw - 34, gy = by + bh - 32;
+  if (bh > 70) { const yrs = isNaN(t0) ? null : (Date.now() - t0) / 31557600000; g.strokeStyle = "rgba(140,190,255,.5)"; g.beginPath(); g.arc(gx, gy, 18, 0, 6.2832); g.stroke();
+    if (yrs != null) { const a = -Math.PI / 2 + (yrs % 1) * 6.2832, a2 = -Math.PI / 2 + Math.min(1, yrs / 12) * 6.2832; g.strokeStyle = "#8fc3ff"; g.lineWidth = 2; g.beginPath(); g.arc(gx, gy, 18, -Math.PI / 2, a2); g.stroke(); g.lineWidth = 1; g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx + Math.cos(a) * 13, gy + Math.sin(a) * 13); g.stroke(); }
+    g.font = `600 9px ${font}`; g.fillStyle = "rgba(205,218,240,.8)"; g.textAlign = "center"; g.fillText(yrs == null ? "no date" : yrs < 1 ? Math.round(yrs * 12) + " mo" : yrs.toFixed(1) + " yrs", gx, gy + 21);
+    const yr = new Date().getUTCFullYear(); let ny = 0; for (const j of new Set([...L.in, ...L.out])) if (!isNaN(TV[j]) && new Date(TV[j]).getUTCFullYear() === yr) ny++;
+    const sx = gx - 54; g.strokeStyle = "rgba(140,190,255,.5)"; g.beginPath(); g.arc(sx, gy, 18, Math.PI * .75, Math.PI * 2.25); g.stroke();
+    const fr = Math.min(1, ny / 20), a3 = Math.PI * .75 + fr * Math.PI * 1.5; g.strokeStyle = "#ffcf5a"; g.lineWidth = 2; g.beginPath(); g.moveTo(sx, gy); g.lineTo(sx + Math.cos(a3) * 14, gy + Math.sin(a3) * 14); g.stroke(); g.lineWidth = 1;
+    g.fillText(`${ny} this yr`, sx, gy + 21); g.textAlign = "left"; }
+  /* throttle: the ship's own speed */
+  { const tx_ = bx - 16, th = bh - 10, fr = Math.max(-.33, Math.min(1, CK.v / 1500)); g.strokeStyle = "rgba(140,190,255,.4)"; g.strokeRect(tx_ - 4.5, by + 5.5, 8, th); g.fillStyle = fr >= 0 ? "#8fc3ff" : "#ff8f8f";
+    const z0 = by + 5 + th * .75; if (fr >= 0) g.fillRect(tx_ - 3, z0 - fr * th * .75, 5, fr * th * .75); else g.fillRect(tx_ - 3, z0, 5, -fr * th * .75); }
+  if (CK.ej) { let pin = false; try { pin = !!(TABS[TCUR] && TABS[TCUR].pin); } catch (_) { pin = false; } CK.ej.hidden = !pin; } }
+EXP.cockpit = {
+  layout(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; EX[i] = EY[i] = 0; } },
+  notes(){}, pick: () => -1, ownLabels: true,
+  get about(){ return [
+      "The note you pick is the cockpit. Its links hang ahead of you as panels: links in on the left, links out on the right, links both ways straight ahead. What it links up to sits above the horizon, what sits below it beneath. The strongest links (by relevance from this note) are nearest.",
+      "Fly: W or ↑ forward, S or ↓ back, A D or ← → to turn, Q E to look up and down, or drag to steer and scroll to fly. Fly into a panel and that note becomes the cockpit.",
+      "Click a panel to lock on; click it again, double-click, or press Space to fly there on autopilot. Tab moves the lock. B flies back.",
+      "F shows only the links in, R only the links out (press again for both). The scopes count them.",
+      "The message line names the closest relative it doesn't yet link up or related to; it starts locked on. The centre display: level, rank, score, links, and what the next level takes. The left dial is links made this year, the right one its age. Eject unpins the editor."
+    ]; },
+  legend: "Cockpit: fly through a note's links. Fly into a panel to make it the cockpit.",
 };
 
 // ---------- Posters: a targeted dataset (a base's view, a filter) laid out by its own properties ----------
@@ -4469,6 +4661,7 @@ function select(i, fromTrail){
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
   if (view === "compass" && !LIVEQ) win.setTimeout(cmpSync, 0);
   if (view === "arena" && !LIVEQ) win.setTimeout(arenaSync, 0);
+  if (view === "cockpit" && !LIVEQ) win.setTimeout(ckSync, 0);
   if (view === "kandinsky" && KSTY === "comp" && !LIVEQ) win.setTimeout(() => { if (!dead && view === "kandinsky" && KSTY === "comp" && sel >= 0 && sel !== KC.c && !KC.ids.includes(sel) && (KFOCUS = sel, true)) morph(true, () => fitTarget()); }, 0);   // a note outside the painting becomes its centre
   if (!LIVEQ && (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden || EDS.left.col && EDS.left.path)))) win.setTimeout(() => { void openMain(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
@@ -5313,7 +5506,7 @@ if (host.onLinks) host.onLinks((p_, list) => liveLinks(p_, list));
 
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
-const VIEW_NAME = {kandinsky:"Kandinsky", arena:"Arena", compass:"Compass", posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {cockpit:"Cockpit", kandinsky:"Kandinsky", arena:"Arena", compass:"Compass", posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
@@ -5879,7 +6072,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       const ga = doc.createElement("button"); ga.className = "chip"; ga.id = "goarena"; ga.textContent = "Arena"; ga.setAttribute("aria-label", "A ring of slots you fill with notes, their links crossing the middle");
       gc.after(ga); ga.onclick = () => { closePops(); driftStop(); setView("arena"); };
       const gk = doc.createElement("button"); gk.className = "chip"; gk.id = "gokandinsky"; gk.textContent = "Kandinsky"; gk.setAttribute("aria-label", "One note and its links as a painting, after Kandinsky's Composition VIII");
-      ga.after(gk); gk.onclick = () => { closePops(); driftStop(); setView("kandinsky"); }; }
+      ga.after(gk); gk.onclick = () => { closePops(); driftStop(); setView("kandinsky"); };
+      const gp = doc.createElement("button"); gp.className = "chip"; gp.id = "gocockpit"; gp.textContent = "Cockpit"; gp.setAttribute("aria-label", "Fly through a note's links from its cockpit");
+      gk.after(gp); gp.onclick = () => { closePops(); driftStop(); setView("cockpit"); }; }
     // Mosaic: every note a tile, after Treemap
     const gm = doc.createElement("button"); gm.className = "chip"; gm.id = "gomosaic"; gm.textContent = "Mosaic"; gm.setAttribute("aria-label", "Every note a tile, set like stones: Level 5 at the heart, each level a frame around it");
     $("#gotreemap").after(gm); gm.onclick = () => { closePops(); driftStop(); setView("mosaic"); };
@@ -5968,7 +6163,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       sel_.onchange = () => { PSC()[key] = sel_.value; if (key === "height" && sel_.value) PSC().lastHeight = sel_.value; save(PK(key), sel_.value); morph(true, () => fitTarget()); legend(); };
       const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
-  const VN = () => ({ kandinsky: "Kandinsky", arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
+  const VN = () => ({ cockpit: "Cockpit", kandinsky: "Kandinsky", arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
     chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
     shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars", "sense"]);
@@ -6390,10 +6585,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     sync(); new MutationObserver(sync).observe(seg, { attributes: true, subtree: true, attributeFilter: ["aria-pressed"] });
     opener(TH); seg.addEventListener("click", e => { if (e.target.closest("button")) closePops(); }); }
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
-  const ARR_OFF = new Set(["kandinsky", "arena", "compass", "ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
+  const ARR_OFF = new Set(["cockpit", "kandinsky", "arena", "compass", "ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   // a narrow map: the main tabs that don't fit fold into More (from the right: Sensemakers, then Starfield, then Ideaverse), which becomes More maps, with them at the top
   // a small Lucide icon before each map's name in the maps menu
-  const MICON = { gokandinsky: "target", goarena: "circle-dashed", gocompass: "navigation", emergence: "layers", ideaverse: "orbit", stars: "sparkles", sense: "compass", gogravity: "circle-dot", gograph: "gem", gochord: "aperture", gocso: "sun", gocsi: "zap",
+  const MICON = { gocockpit: "gauge", gokandinsky: "target", goarena: "circle-dashed", gocompass: "navigation", emergence: "layers", ideaverse: "orbit", stars: "sparkles", sense: "compass", gogravity: "circle-dot", gograph: "gem", gochord: "aperture", gocso: "sun", gocsi: "zap",
     gotreemap: "layout-dashboard", gomosaic: "layout-grid", goshelf: "library", gobuilder: "table-2", golincal: "calendar-range", goposters: "image", gopeople: "users",
     gogeosquare: "square", gogeohex: "hexagon", gogeomandala: "flower", gogeoocta: "diamond", gogeoshells: "globe", gospiral: "rotate-cw", golifeline: "activity",
     goplflat: "map", gopltable: "table", goplglobe: "earth", gotree: "tree-deciduous", goskyline: "building-2" };
@@ -6452,7 +6647,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         // Nick's order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Tesla, Corona, Chord, Base Builder (the quick keys follow it)
         for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
         // Compass, Arena and Kandinsky wait under Experimental → Unfinished for now (Nick, 0.8.67)
-        { let at = MP.querySelector("#goskyline"); for (const id of ["gocompass", "goarena", "gokandinsky"]) { const el = MP.querySelector("#" + id); if (el && at) { at.after(el); at = el; } } }
+        { let at = MP.querySelector("#goskyline"); for (const id of ["gocompass", "goarena", "gokandinsky", "gocockpit"]) { const el = MP.querySelector("#" + id); if (el && at) { at.after(el); at = el; } } }
         for (const v of ["gravity", "graph", "treemap", "mosaic", "shelf", "tesla", "corona", "chord"]) { const g_ = vgrid.querySelector(`[data-vg="${v}"]`); if (g_) vgrid.appendChild(g_); } const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
     // the quick keys in list order; two are pinned wherever their maps sit (Nick): Linear Calendar is always 0, Base Builder always \
     const QK = [..."123456789-=[]"], QPIN = { golincal: "0", gobuilder: "\\" };

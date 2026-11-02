@@ -1452,3 +1452,13 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 /* the one-line hover label in the body font, like the editor's strip (0.8.73, Nick: the monospace took too much room) */
 .ivm-tip .tline{font:500 11px var(--body);letter-spacing:-.01em}
 .ivm-tip.ivm-tip{max-width:min(380px,92vw)}
+/* Cockpit (0.8.78) */
+.ivm .ivm-cockpit{position:absolute;inset:0;z-index:2;background:#04060d}
+.ivm .ivm-cockpit[hidden]{display:none}
+.ivm .ivm-cockpit canvas,.ivm div main.has-drawer .ivm-cockpit canvas{width:100%;height:100%;cursor:crosshair}
+.ivm .ivm-cockpit canvas.hot{cursor:pointer}
+@container ivm (min-width:761px){.ivm div main.has-drawer .ivm-cockpit{right:var(--pw,420px)}}
+.ivm .ivm-cockpit .ckbtns{position:absolute;top:44px;right:14px;display:flex;gap:6px}
+.ivm .ivm-cockpit .ckbtns button{font:600 11px var(--body);letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:4px;background:rgba(10,16,30,.85);color:#cfe0ff;border:1px solid rgba(120,170,255,.4);box-shadow:none;cursor:pointer}
+.ivm .ivm-cockpit .ckbtns button.ckeject{color:#ffb0a0;border-color:rgba(255,140,120,.55)}
+.ivm .ivm-cockpit .ckbtns button[hidden]{display:none}
