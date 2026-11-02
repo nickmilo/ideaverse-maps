@@ -2458,7 +2458,7 @@ function ckSF(){ layoutStars(); build3D(); if (CKSF.ver === starVer && CKSF.P) r
 const CKX_DEF = { names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
-const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"]];
+const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"]];
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2550,6 +2550,14 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
         let nm = N[j].title; if (nm.length > 22) nm = nm.slice(0, 21) + "…"; const right = Math.cos(a_) >= 0; g.textAlign = right ? "left" : "right"; g.textBaseline = "middle"; g.fillStyle = HUDc(behind ? .5 : .85);
         g.fillText(nm.toUpperCase() + (behind ? " ↺" : ""), px + (right ? 10 : -10), py); CK.posts.push([px, py, j]); }
       g.textAlign = "left"; g.textBaseline = "alphabetic"; g.globalAlpha = 1; }
+    // the time dial (0.8.100): just inside the cockpit note's ring, its first linked year at 12 o'clock running clockwise to today; a tick for every month with linked notes, longer for busier months; ▼ marks today
+    if (rc && CKX.dial) { const nb = [...new Set([...out[ck], ...inn[ck]])].map(j => TVD[j]).filter(v => v > 0); if (nb.length) { const t0 = Math.min(...nb), t1 = Date.now(), span = Math.max(1, t1 - t0), mon = new Map();
+        for (const v of nb) { const d = new Date(v), key = d.getUTCFullYear() * 12 + d.getUTCMonth(); mon.set(key, (mon.get(key) || 0) + 1); }
+        const Rd = rc[2] * .72, mx = Math.max(...mon.values()); g.strokeStyle = HUDc(.8); g.lineWidth = 1.4;
+        for (const [key, c_] of mon) { const tv = Date.UTC(Math.floor(key / 12), key % 12, 15), a_ = -Math.PI / 2 + (tv - t0) / span * 6.0, L = 3 + 9 * Math.sqrt(c_ / mx);
+          g.beginPath(); g.moveTo(rc[0] + Math.cos(a_) * Rd, rc[1] + Math.sin(a_) * Rd); g.lineTo(rc[0] + Math.cos(a_) * (Rd - L), rc[1] + Math.sin(a_) * (Rd - L)); g.stroke(); }
+        const aN = -Math.PI / 2 + 6.0; g.fillStyle = "#ffcf5a"; g.save(); g.translate(rc[0] + Math.cos(aN) * (Rd + 6), rc[1] + Math.sin(aN) * (Rd + 6)); g.rotate(aN + Math.PI / 2); g.beginPath(); g.moveTo(0, 4); g.lineTo(-4, -3); g.lineTo(4, -3); g.closePath(); g.fill(); g.restore();
+        g.font = `500 9px ${css.mono || font}`; g.fillStyle = HUDc(.7); g.textAlign = "center"; g.fillText(String(new Date(t0).getUTCFullYear()), rc[0], rc[1] - Rd + 18); g.textAlign = "left"; } }
     if (rc && chxSF("read")) { const nb = new Set([...out[ck], ...inn[ck]]), CY = new Date().getUTCFullYear(), y0 = Date.UTC(CY, 0, 1); let first = Infinity, yr = 0;
       for (const j of nb) { const tv = TVD[j]; if (!(tv > 0)) continue; if (tv < first) first = tv; if (tv >= y0) yr++; }
       const Ls = [`L${N[ck].level} · SCORE ${N[ck].score.toFixed(N[ck].score < 10 ? 1 : 0)}`, `IN ${N[ck].body_in} · OUT ${N[ck].body_out}`, `${isFinite(first) ? "SINCE " + new Date(first).getUTCFullYear() : "NO DATES"} · +${yr} ${CY}`];
