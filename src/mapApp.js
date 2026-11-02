@@ -2511,13 +2511,22 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   // the notes as stars: batched by colour, nearer ones bigger; maps and hubs with a glow
   const bins = new Map(), bright = [], ck = CK.c, lk = new Set(CK.items.map(it => it.i));
   const cyw = Math.cos(CK.yaw), syw = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch), [X0, Y0, Z0] = CK.P;
+  /* the star under the pointer (0.8.98, Nick): only when the pointer has rested, the ship isn't racing and nothing else is under it; within 9 px */
+  const hm = CK.mouse && !CK.drag && !CK.auto && Math.abs(CK.v) < 500 && win.performance.now() - CK.mouseT > 140 && CK.hovS < 0 && !CK.mouseOnPanel ? CK.mouse : null; let hb = 81, hi = -1, hp = null;
   for (let i = 0; i < n; i++) { if (!vis[i]) continue; const dx = P[3 * i] - X0, dy = P[3 * i + 1] - Y0, dz = P[3 * i + 2] - Z0, xc = cyw * dx - syw * dz, z1 = syw * dx + cyw * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1;
     if (zc < 6) continue; const px = cx + F * xc / zc, py = cy + F * yc / zc; if (px < -20 || px > W + 20 || py < -20 || py > VH + 20) continue;
+    if (hm) { const dd = (px - hm[0]) ** 2 + (py - hm[1]) ** 2; if (dd < hb) { hb = dd; hi = i; hp = [px, py]; } }
     const lv = N[i].level, r = Math.max(.5, Math.min(lv >= 4 ? 9 : 5, (lv >= 5 ? 26 : lv === 4 ? 18 : lv === 3 ? 12 : lv === 2 ? 7 : 5) * F / zc / 9));
     if (lv >= 3 || i === ck || lk.has(i)) { bright.push([i, px, py, r, zc]); continue; } const key = SC[i]; (bins.get(key) || bins.set(key, []).get(key)).push(px, py, r); }
   for (const [key, a] of bins) { g.fillStyle = SPAL[key]; g.globalAlpha = .8; g.beginPath(); for (let q = 0; q < a.length; q += 3) { const r = a[q + 2]; if (r < 1.2) g.rect(a[q] - r, a[q + 1] - r, 2 * r, 2 * r); else { g.moveTo(a[q] + r, a[q + 1]); g.arc(a[q], a[q + 1], r, 0, 6.2832); } } g.fill(); }
   for (const [i, px, py, r] of bright) { const col = SPAL[SC[i]], s = r * 6; g.globalAlpha = .45; g.drawImage(sprite(col), px - s / 2, py - s / 2, s, s); g.globalAlpha = 1; g.fillStyle = i === ck ? "#ffffff" : col; g.beginPath(); g.arc(px, py, Math.max(1, r * .7), 0, 6.2832); g.fill(); }
   g.globalCompositeOperation = "source-over";
+  CK.starHov = hi >= 0 && hi !== ck ? hi : -1;
+  if (CK.starHov >= 0) { const d = N[hi], col = ckCol(d.level); let tt = d.title; g.font = `600 11.5px ${font}`; while (tt.length > 4 && g.measureText(tt).width > 260) tt = tt.slice(0, -2); if (tt !== d.title) tt += "…";
+    const sub = `L${d.level} · ${CK.inL.includes(hi) || CK.outL.includes(hi) ? "linked" : "not linked"} · click to lock`, w1 = g.measureText(tt).width; g.font = `500 9.5px ${font}`; const w2 = g.measureText(sub).width, bw = Math.max(w1, w2) + 22, bx = Math.min(W - bw - 6, hp[0] + 14), by = Math.max(6, hp[1] - 34);
+    g.globalAlpha = 1; g.strokeStyle = col; g.lineWidth = 1.2; g.beginPath(); g.arc(hp[0], hp[1], 7, 0, 6.2832); g.stroke();
+    g.fillStyle = "rgba(4,6,14,.88)"; g.beginPath(); g.roundRect(bx, by, bw, 32, 5); g.fill(); g.fillStyle = col; g.beginPath(); g.arc(bx + 9, by + 11, 3, 0, 6.2832); g.fill();
+    g.textBaseline = "middle"; g.fillStyle = "#eef3ff"; g.font = `600 11.5px ${font}`; g.fillText(tt, bx + 16, by + 11); g.fillStyle = "rgba(190,205,230,.75)"; g.font = `500 9.5px ${font}`; g.fillText(sub, bx + 16, by + 24); g.textBaseline = "alphabetic"; }
   // Star Chart (0.8.93), when it's on in Starfield's ⚙: lines between hubs, rings round the hubs ahead (a dial of twelve ticks; the cockpit note's ring brighter),
   // turning orbits with a moon, and the readout card beside the cockpit note
   { const HUDc = a_ => `rgba(127,231,255,${a_})`, pj = i => pr(P[3 * i], P[3 * i + 1], P[3 * i + 2]);
@@ -2587,12 +2596,12 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
   CK.ej = ej;
   for (let q = 0; q < 420; q++) CK.stars.push([hash("s" + q, 3) * 4000 - 2000, hash("s" + q, 5) * 4000 - 2000, hash("s" + q, 7) * 4000 - 2000, .3 + hash("s" + q, 9) * .7]);
   c_.addEventListener("pointerdown", e => { if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false }; c_.setPointerCapture(e.pointerId); });
-  c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); CK.hovS = ckSideHit(e.offsetX, e.offsetY); c_.classList.toggle("hot", h_ >= 0 || CK.hovS >= 0); return; }
+  c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); CK.hovS = ckSideHit(e.offsetX, e.offsetY); CK.mouseOnPanel = h_ >= 0; CK.mouse = [e.offsetX, e.offsetY]; CK.mouseT = win.performance.now(); c_.classList.toggle("hot", h_ >= 0 || CK.hovS >= 0 || (CK.starHov || -1) >= 0); return; }
     const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) > 4) d.moved = true; d.x = e.clientX; d.y = e.clientY;
     if (d.moved) { CK.auto = false; CK.yaw += dx * .0032 * ckUp(); CK.pitch += dy * .0032; CK.roll += dx * .004; } });
-  c_.addEventListener("pointerleave", () => { CK.hovS = -1; });
+  c_.addEventListener("pointerleave", () => { CK.hovS = -1; CK.mouse = null; CK.starHov = -1; });
   c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return; { const sj = ckSideHit(e.offsetX, e.offsetY); if (sj >= 0) { const was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } } const h_ = ckHit(e.offsetX, e.offsetY);
-    if (h_ < 0) return; if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
+    if (h_ < 0) { if (CKW === "sf" && CK.starHov >= 0) { const sj = CK.starHov, was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; } return; } if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
   c_.addEventListener("dblclick", e => { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) { CK.lock = h_; CK.auto = true; } });
   /* trackpad (Nick): two fingers steer, a pinch flies; a mouse wheel (no sideways scroll) still flies */
   c_.addEventListener("wheel", e => { e.preventDefault(); CK.auto = false; const mouse = e.deltaMode === 1 || (!e.deltaX && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
@@ -2616,7 +2625,9 @@ function ckOrder(){ return CK.items.map((it, q) => q).filter(q => ckShows(CK.ite
 function ckShows(it){ return !CK.only || (CK.only === "in" ? it.inn : it.out); }
 function ckBack(){ if (!trail.length) return; const p = trail.pop(); if (p != null && p >= 0) select(p, true); }
 function ckSideHit(x, y){ for (const [hx, hy, hw, hh, j] of CK.side) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; }
-function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0) { const inn_ = CK.inL.includes(j), out_ = CK.outL.includes(j), side = inn_ && out_ ? 0 : inn_ ? -1 : 1, z = 900 + hash(N[j].path, 5) * 300, tx = side * .3;
+function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0 && CKW === "sf") { const P = ckSF().P, inn_ = CK.inL.includes(j), out_ = CK.outL.includes(j);
+    CK.items.push({ i: j, x: P[3 * j], y: P[3 * j + 1], z: P[3 * j + 2], side: inn_ && out_ ? 0 : inn_ ? -1 : 1, inn: inn_, out: out_, up: false, rel: false, none: !inn_ && !out_, sx: 0, sy: 0, sw: 0, sh: 0, zc: 0 }); q = CK.items.length - 1; }
+  if (q < 0) { const inn_ = CK.inL.includes(j), out_ = CK.outL.includes(j), side = inn_ && out_ ? 0 : inn_ ? -1 : 1, z = 900 + hash(N[j].path, 5) * 300, tx = side * .3;
     const [xc, yc] = [CK.P[0], CK.P[1]]; CK.items.push({ i: j, x: xc + tx * z, y: yc, z: CK.P[2] + z, side, inn: inn_, out: out_, up: false, rel: false, none: false, sx: 0, sy: 0, sw: 0, sh: 0, zc: 0 }); q = CK.items.length - 1; }
   CK.lock = q; CK.auto = false; }
 function ckHit(x, y){ let b = -1, bz = 1e9; CK.items.forEach((it, q) => { if (it.zc <= 1 || !ckShows(it)) return; if (x >= it.sx - it.sw / 2 && x <= it.sx + it.sw / 2 && y >= it.sy - it.sh / 2 && y <= it.sy + it.sh / 2 && it.zc < bz) { b = q; bz = it.zc; } }); return b; }
