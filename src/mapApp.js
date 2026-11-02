@@ -2232,6 +2232,23 @@ function compDraw(lit){ const c = KC.c; if (c < 0) return; const P = KCP, cols =
     if (KNAMES && !big && i !== sel && taken.some(q => bx_[0] < q[0] + q[2] && bx_[0] + bx_[2] > q[0] && bx_[1] < q[1] + q[3] && bx_[1] + bx_[3] > q[1])) continue; taken.push(bx_);   // names never sit on each other
     ctx.lineWidth = 3; ctx.strokeStyle = "rgba(239,230,207,.85)"; ctx.strokeText(t, sx(EX[i]), ty); ctx.fillStyle = P.ink; ctx.fillText(t, sx(EX[i]), ty); }
   ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
+// Composition's key (0.8.65, Nick): a small drawing of each mark, then what it is
+function kLegend(host_){ const P = KCP, box = host_.createDiv({ cls: "lghi kleg" }); box.createDiv({ text: "Composition key", attr: { style: "color:var(--ink)" } });
+  const row = (label, draw) => { const r = box.createDiv({ cls: "klrow" }), cv_ = r.createEl("canvas", { cls: "klic" }), dpr = win.devicePixelRatio || 1; cv_.width = 30 * dpr; cv_.height = 20 * dpr;
+    const g = cv_.getContext("2d"); g.scale(dpr, dpr); g.fillStyle = P.paper; g.fillRect(0, 0, 30, 20); g.lineCap = "round"; draw(g); r.createSpan({ text: label }); };
+  const circ = (g, x, y, r, f, s_, w) => { g.beginPath(); g.arc(x, y, r, 0, 6.2832); if (f) { g.fillStyle = f; g.fill(); } if (s_) { g.strokeStyle = s_; g.lineWidth = w || 1; g.stroke(); } };
+  row("the map (the note you picked)", g => { const gr = g.createRadialGradient(15, 10, 5, 15, 10, 10); gr.addColorStop(0, "rgba(91,58,138,.8)"); gr.addColorStop(1, "rgba(227,165,180,0)"); circ(g, 15, 10, 10, gr); circ(g, 15, 10, 6, P.ink, P.purple, 1.5); });
+  row("hub or map of maps (Level 4–5)", g => { const gr = g.createRadialGradient(15, 10, 4, 15, 10, 9); gr.addColorStop(0, P.orange); gr.addColorStop(1, "rgba(0,0,0,0)"); circ(g, 15, 10, 9, gr); circ(g, 15, 10, 5.5, P.sky, P.ink, .8); });
+  row("map (Level 3): a disc or a ring", g => { circ(g, 9, 10, 5.5, P.red, P.ink, .8); circ(g, 22, 10, 4.5, null, P.purple, 2); circ(g, 22, 10, 1.3, P.ink); });
+  row("linked note (Level 2): one of these", g => { g.fillStyle = P.green; g.beginPath(); g.moveTo(2, 15); g.lineTo(8, 4); g.lineTo(11, 15); g.closePath(); g.fill();
+    g.fillStyle = P.yellow; g.beginPath(); g.arc(16, 11, 4, Math.PI, 0); g.closePath(); g.fill();
+    for (let p_ = 0; p_ < 3; p_++) for (let q = 0; q < 3; q++) { g.fillStyle = (p_ + q) % 2 ? P.ink : P.paper; g.fillRect(21 + p_ * 2.6, 6 + q * 2.6, 2.6, 2.6); } });
+  row("unlinked note (Level 1)", g => { circ(g, 10, 10, 2.5, P.ink); circ(g, 19, 11, 2, P.pink); });
+  row("link in the text", g => { g.strokeStyle = P.ink; g.lineWidth = 1; g.beginPath(); g.moveTo(2, 15); g.lineTo(28, 5); g.stroke(); });
+  row("up link (thicker, curved)", g => { g.strokeStyle = P.ink; g.lineWidth = 2; g.beginPath(); g.moveTo(2, 16); g.quadraticCurveTo(10, 0, 28, 6); g.stroke(); });
+  row("related link (curved)", g => { g.strokeStyle = P.ink; g.lineWidth = 1; g.beginPath(); g.moveTo(2, 16); g.quadraticCurveTo(10, 0, 28, 6); g.stroke(); });
+  row("two of its notes linked to each other", g => { g.strokeStyle = P.orange; g.globalAlpha = .7; g.lineWidth = 1; g.beginPath(); g.moveTo(3, 10); g.lineTo(27, 10); g.stroke(); g.globalAlpha = 1; circ(g, 3, 10, 2, P.blue); circ(g, 27, 10, 2, P.pink); });
+  box.createDiv({ text: "Bigger shape = higher link score. Closer to the map = higher rank among its links.", attr: { style: "white-space:normal;opacity:.85;margin-top:3px" } }); }
 function layoutKandinsky(){ if (KSTY === "comp") { layoutComp(); return; } for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
   let ids = []; KD.c = -1; let sl = -1; try { sl = sel; } catch (_) { /* the first layout runs before the picked note exists */ }
   if (KSC === "links" && sl >= 0 && vis[sl]) { const sel = sl; KD.c = sel; ids = [sel, ...[...new Set([...out[sel], ...inn[sel]])].filter(j => j !== sel && vis[j] && !ARCH[j]).sort((a, b) => N[b].score - N[a].score)].slice(0, KDN); }
@@ -2260,7 +2277,14 @@ EXP.kandinsky = {
       if (w > 90 || (KNAMES && w > 34)) { ctx.font = `600 ${Math.max(8, Math.min(12, w * .065))}px ${css.body}`; ctx.textBaseline = "bottom"; let t = d.title; while (t.length > 4 && ctx.measureText(t).width > w - 12) t = t.slice(0, -2); if (t !== d.title) t += "…";
         ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.strokeText(t, x + 6, y + w - 5); ctx.fillStyle = "#fbf8f0"; ctx.fillText(t, x + 6, y + w - 5); ctx.textBaseline = "alphabetic"; } }
     ctx.globalAlpha = 1; },
-  get legend(){ return KSTY === "comp" ? "Kandinsky · Composition: one map and its links as a painting, after Composition VIII (1923). The map is the great dark circle with its halo; its links are the shapes: haloed circles for hubs and maps of maps, discs and rings for maps, triangles, half-circles, arcs and checkerboards for linked notes, dots for the rest, bigger for a higher score. Black lines run from the map to each (an arc for an up or related link); thin coloured lines join the shapes that link to each other. Pick a note outside the painting to paint it instead." : KLEG; },
+  get about(){ return KSTY === "comp" ? [
+      "The note you pick becomes the map: the great dark circle at the upper left. Its links, up to 60 of them (the highest scoring), become the shapes.",
+      "What a shape means: its family comes from the note's level (haloed circles for hubs and maps of maps, a disc or ring for a map, a triangle, half-circle, arc or checkerboard for a linked note, a dot for an unlinked one). Its size is its link score. How close it sits to the map is its rank among the map's links, highest closest.",
+      "What doesn't mean anything yet: which of the Level 2 shapes a note gets, each shape's colour, and which direction it lies from the map. They're chosen from the note's name, so they stay put, but they don't say anything about the note.",
+      "The lines: a black line from the map to each link, straight for a link in the text, curved for one in an up or related property (thicker for up). Thin coloured lines join two shapes that link to each other.",
+      "Pick another note to paint it instead. ⚙ → Show note names names every shape; Squares switches back to the tiles."
+    ] : undefined; },
+  get legend(){ return KSTY === "comp" ? "Kandinsky · Composition: one map and its links as a painting, after Composition VIII (1923)." : KLEG; },
 };
 const KLEG = "Kandinsky: your notes as squares of concentric circles, after his 1913 colour study. A tile's colour is its top folder; it holds one circle more than its level (an unlinked note two, a hub six), bigger for a higher score, the innermost in the level's colour. ⚙: your top notes by rank (left to right, then down) or the note you picked with its links.";
 
@@ -5196,6 +5220,7 @@ function legend(){
   if (expOn() && EXP[view].legend) $("#legend").createDiv({ text: EXP[view].legend, attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
   if (view === "shelf" && shelfHi.length) { const box = $("#legend").createDiv({ cls: "lghi" }); box.createDiv({ text: "Lit up (Efforts panel)", attr: { style: "color:var(--ink)" } });
     shelfHi.forEach((p, j) => { const i = N.findIndex(d => d.path === p); if (i < 0) return; const row = box.createDiv(); row.createEl("i", { attr: { style: `background:${HI_COL[j % HI_COL.length]}` } }); row.appendText(N[i].title); }); }
+  if (view === "kandinsky" && KSTY === "comp") kLegend($("#legend"));   // Composition's key: each shape drawn small, with what it means
   if (view === "planet") { const box = $("#legend").createDiv({ cls: "lghi" }); box.createDiv({ text: "Colors: the domain each note settles in", attr: { style: "color:var(--ink)" } });   // what the planet's colors mean
     const cnt = {}; for (const g of PLANET.groups) cnt[g.dk] = (cnt[g.dk] || 0) + g.ids.filter(i => vis[i]).length;
     const rows = Object.entries(PD).map(([dk, d]) => [d.col, d.name, cnt[dk] || 0]); if (globeOn()) rows.push([CR_COL, "The Creator's Continent", CREATOR.groups.reduce((t, g) => t + g.ids.length, 0)]);
