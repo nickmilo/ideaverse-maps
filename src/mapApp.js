@@ -2485,7 +2485,10 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
   c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return; { const sj = ckSideHit(e.offsetX, e.offsetY); if (sj >= 0) { const was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } } const h_ = ckHit(e.offsetX, e.offsetY);
     if (h_ < 0) return; if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
   c_.addEventListener("dblclick", e => { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) { CK.lock = h_; CK.auto = true; } });
-  c_.addEventListener("wheel", e => { e.preventDefault(); CK.auto = false; CK.v = Math.max(-500, Math.min(1500, CK.v - e.deltaY * 2.2)); }, { passive: false });
+  /* trackpad (Nick): two fingers steer, a pinch flies; a mouse wheel (no sideways scroll) still flies */
+  c_.addEventListener("wheel", e => { e.preventDefault(); CK.auto = false; const mouse = e.deltaMode === 1 || (!e.deltaX && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
+    if (e.ctrlKey || mouse) CK.v = Math.max(-500, Math.min(1500, CK.v - e.deltaY * (e.ctrlKey ? 9 : 2.2)));
+    else { CK.yaw += e.deltaX * .0024; CK.pitch = Math.max(-1.2, Math.min(1.2, CK.pitch + e.deltaY * .0024)); CK.roll += e.deltaX * .002; } }, { passive: false });
   on(doc, "keydown", e => { if (!CK.on || dead || !host.isActive()) return; const a = doc.activeElement; if (a && a !== doc.body && (a.closest && (a.closest(".ivm-card") || a.closest("input,textarea,[contenteditable]")) || /INPUT|TEXTAREA/.test(a.tagName))) return; if (a && a !== doc.body && !root.contains(a)) return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; let used = true;
     if (["w", "s", "a", "d", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "q", "e"].includes(k)) { CK.keys.add(k); if (k === "w" || k === "s" || k === "ArrowUp" || k === "ArrowDown") CK.auto = false; }
@@ -2652,7 +2655,7 @@ EXP.cockpit = {
   notes(){}, pick: () => -1, ownLabels: true,
   get about(){ return [
       "The note you pick is the cockpit. Its links hang ahead of you as panels: links in on the left, links out on the right, links both ways straight ahead. What it links up to sits above the horizon, what sits below it beneath. The strongest links (by relevance from this note) are nearest.",
-      "Fly: W or ↑ forward, S or ↓ back, A D or ← → to turn, Q E to look up and down. Or drag to steer and scroll to fly. Fly into a panel and that note becomes the cockpit.",
+      "Fly: W or ↑ forward, S or ↓ back, A D or ← → to turn, Q E to look up and down. On a trackpad, two fingers steer and a pinch flies; or drag to steer. A mouse wheel flies. Fly into a panel and that note becomes the cockpit.",
       "Click a panel to lock on; click it again, double-click, or press Space to fly there on autopilot. Tab moves the lock. B flies back.",
       "F shows only the links in, R only the links out (press again for both). The scopes count them.",
       "The message line names the closest relative it doesn't yet link up or related to; it starts locked on. The centre display: level, rank, score, links, and what the next level takes. The left dial is links made this year, the right one its age. Eject unpins the editor."
@@ -6434,6 +6437,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const fa = mo.createDiv({ cls: "mosec emoany ckany" }); fa.hidden = true;
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKFRAME; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Cockpit frame" });
       c_.onchange = () => { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); }; }
+    { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
+      for (const [k_, v_] of [["W S  ↑ ↓", "forward, back"], ["A D  ← →", "turn"], ["Q E", "look up, down"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["F  R", "only links in, only links out"], ["Esc", "stop"]]) {
+        const r_ = box.createDiv({ cls: "ckkey" }); r_.createEl("kbd", { text: k_ }); r_.createSpan({ text: v_ }); } }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "cockpit"; }; }
   // Compass: Relevance
   { const fa = mo.createDiv({ cls: "mosec emoany cmpany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "mini lcemo" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Relevance: pull related notes toward the centre" });
