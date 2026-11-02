@@ -10,5 +10,8 @@ module.exports = async ({ page, sleep, shot }) => {
   const m = () => app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map;
   console.log('LYT Book Home at', JSON.stringify(await page.evaluate(() => { const f = app.vault.getFiles().find(f => f.basename === 'LYT Book Home'); return f ? app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map._at(f.path) : null; })));
   await page.mouse.wheel(0, -600); await sleep(800); await page.mouse.move(1200, 200); await page.mouse.wheel(0, -900); await sleep(1500); await page.mouse.move(5, 900); await shot('mos-rank-top');
+  await page.evaluate(() => document.querySelector('.ivm .foldany input').click()); await sleep(1500); await page.mouse.move(5, 900); await shot('mos-rank-folders');
+  await page.evaluate(() => document.querySelector('.ivm #gotreemap').click()); await sleep(8000); console.log('view', await page.evaluate(() => app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map._view())); await page.mouse.move(5, 900); await shot('treemap-levels');
+  await page.evaluate(() => document.querySelector('.ivm .foldany input').click()); await sleep(3000); await page.mouse.move(5, 900); await page.mouse.move(800, 500); await sleep(1000); await shot('treemap-folders'); console.log('foldc', await page.evaluate(() => JSON.stringify(app.plugins.plugins['ideaverse-maps'].data.state['iv-foldc'])));
   console.log('errors:', errs.join(' | ') || 'none');
 };

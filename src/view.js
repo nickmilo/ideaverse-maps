@@ -1,5 +1,5 @@
 import { BaseQ, NeedThis, Unsupported } from "./baseq.js";
-import { Component, FuzzySuggestModal, ItemView, MarkdownRenderer, TFile, TFolder, normalizePath } from "obsidian";
+import { Component, FuzzySuggestModal, ItemView, MarkdownRenderer, MarkdownView, TFile, TFolder, normalizePath } from "obsidian";
 
 /** Pick a folder in the vault, or type a new one (resolves null if closed without choosing). */
 const SAVED_NAME = "Maps of the Ideaverse - saved views.json";
@@ -182,10 +182,19 @@ export async function mountInto(owner, el, opts) {
         W0.openLinkText = function (linktext, sourcePath, newLeaf, ...rest) { const cd = plugin.cardDown;
           if (cd && performance.now() - cd.t < 1500 && cd.el.isConnected) { plugin.cardDown = null;
             const f = app.metadataCache.getFirstLinkpathDest(String(linktext).split("#")[0].split("|")[0], sourcePath || "");
-            if (f instanceof TFile && cd.cb(f.path, !!newLeaf)) return Promise.resolve(); }
+            if (f instanceof TFile && cd.cb(f.path, newLeaf ? "side" : cd.shift ? "tab" : "plain")) return Promise.resolve(); }
           return orig.call(this, linktext, sourcePath, newLeaf, ...rest); };
         plugin.register(() => { W0.openLinkText = orig; }); }
-      split.containerEl.addEventListener("pointerdown", () => { if (cardLinkCb) plugin.cardDown = { t: performance.now(), el: split.containerEl, cb: cardLinkCb }; }, true);
+      split.containerEl.addEventListener("pointerdown", e => { if (cardLinkCb) plugin.cardDown = { t: performance.now(), el: split.containerEl, cb: cardLinkCb, shift: e.shiftKey }; }, true);
+      // Shift-click on a link (0.8.28): a new tab in the map. The editor would only extend its selection, so the click is taken here
+      const linkAt = e => { const t = e.target instanceof Element ? e.target : null; if (!t || !leaf || !(leaf.view instanceof MarkdownView)) return null;
+        const a = t.closest("[data-href]"); if (a) return a.getAttribute("data-href");
+        const s = t.closest(".cm-hmd-internal-link"); if (!s) return null; const cm = leaf.view.editor && leaf.view.editor.cm, f = leaf.view.file; if (!cm || !f) return null;
+        let pos; try { pos = cm.posAtDOM(s); } catch (_) { return null; } const c = app.metadataCache.getFileCache(f);
+        const l = c && (c.links || []).find(x => x.position.start.offset <= pos && pos <= x.position.end.offset); return l ? l.link : null; };
+      for (const ty of ["mousedown", "click"]) split.containerEl.addEventListener(ty, e => { if (!e.shiftKey || !cardLinkCb || e.metaKey || e.ctrlKey) return; const l = linkAt(e); if (!l) return;
+        e.preventDefault(); e.stopPropagation(); if (ty !== "click") return; const sp = leaf.view.file ? leaf.view.file.path : "";
+        const f = app.metadataCache.getFirstLinkpathDest(String(l).split("#")[0].split("|")[0], sp); if (f instanceof TFile) cardLinkCb(f.path, "tab"); }, true);
       return { el: split.containerEl,
         open: async path => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return false;
           if (!leaf) leaf = W.createLeafInParent(split, 0);

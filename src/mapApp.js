@@ -1117,7 +1117,7 @@ function morph(animate, cam){
   RAF(step);
 }
 let camBusy = 0;
-function setView(v){ win.setTimeout(() => { if (typeof syncFZ === "function") syncFZ(); if (EDS) void openMain(sel); }, 0);
+function setView(v){ win.setTimeout(() => { if (typeof syncFZ === "function") syncFZ(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
@@ -2487,7 +2487,7 @@ function layoutMosaic2(){
       const last = k_ >= items.length && sw < S_ * .6, f = last ? 1 : S_ / sw, hh = h; let x = S_ / 2;
       for (const it of row) { const w = it.v / hh * f; x -= w; set(it, x, y, w, hh); }
       MOSR.push({ y, h: hh, r0: rk + 1, r1: rk + row.length, xl: x }); rk += row.length; y += hh; }
-    expBox = { x0: -S_ / 2 - 20, y0: -S_ * .4 - 30, x1: S_ / 2 + 60, y1: y + 20 }; return; }
+    expBox = { x0: -S_ / 2 - 20, y0: -S_ * .4 - 30, x1: S_ / 2 + 110, y1: y + 20 }; return; }
   if (MOS === "scatter") {
     // in no order, laid like a brick wall: each row as tall as it needs to be to fill the width; a tile is wider the higher its score
     const items = ids.map(i => ({ i, a: .8 + 1.8 * Math.sqrt(Math.pow(Math.max(0, N[i].score), 1.35) * .35 / 3), r: hash(N[i].path, 97) })).sort((p, q) => p.r - q.r);
@@ -2512,7 +2512,7 @@ function layoutMosaic2(){
 function rankGuides(){ const ms = [1, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000]; let next = 0, lastY = -1e9;
   ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.font = `600 11px ${css.mono || css.body}`;
   for (const r of MOSR) { while (next < ms.length && ms[next] < r.r0) next++; if (next >= ms.length) break; if (ms[next] > r.r1) continue;
-    const y = sy(r.y + r.h / 2), x = sx((expBox.x1 - expBox.x0 - 80) / 2) + 8; next++; if (y - lastY < 14 || y < -20 || y > H + 20) continue; lastY = y;
+    const y = sy(r.y + r.h / 2), x = sx((expBox.x1 - expBox.x0 - 130) / 2) + 8; next++; if (y - lastY < 14 || y < -20 || y > H + 20) continue; lastY = y;
     ctx.fillStyle = css.muted; ctx.globalAlpha = .9; ctx.fillText("#" + ms[next - 1].toLocaleString(), x, y); }
   ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 EXP.mosaic = {
@@ -2534,7 +2534,7 @@ EXP.mosaic = {
     // each level's frame, a faint outline; the level names and counts live in the legend
     for (const f of MOSF) { const x = sx(-f.s / 2), y = sy(-f.s / 2), w = f.s * k; if (w < 30) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .9; ctx.lineWidth = 1; ctx.strokeRect(x - 2, y - 2, w + 4, w + 4); }
     ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; },
-  legend: "Mosaic: every note a tile, set like stones. Emergence (the default) puts Level 5 at the heart and each level in a square frame around the one above it (the levels and counts above, from the middle out), out to the unlinked notes at the edge; inside a frame, a folder's notes sit together as a patch of color. Scattered sets the same tiles in no order. Ranked lays every note out by rank, from the bottom left, left to right and row by row, up to #1 at the top right; the numbers at the left mark where a row reaches #10, #100, #1,000. A tile's size is its link score; maps and hubs wear their level colors. Click the Mosaic tab to switch.",
+  legend: "Mosaic: every note a tile, set like stones. Emergence (the default) puts Level 5 at the heart and each level in a square frame around the one above it (the levels and counts above, from the middle out), out to the unlinked notes at the edge; inside a frame, a folder's notes sit together as a patch of color. Scattered sets the same tiles in no order. Ranked lays every note out by rank, from the bottom left, left to right and row by row, up to #1 at the top right; the numbers at the right mark where a row reaches #10, #100, #1,000. A tile's size is its link score; maps and hubs wear their level colors. Click the Mosaic tab to switch.",
 };
 
 // ---------- Graph: our take on Obsidian's graph view ----------
@@ -3339,7 +3339,7 @@ function render(){
   if (chartOn()) drawChart();
   drawMini();   // Starfield's overview map, bottom right
   drawLive();
-  for (const o of Object.values(EDS)) o.place();
+  for (const o of Object.values(EDS)) o.place(); placeOrbs();
   drawPreviews();
 
   orbWake();   // Star Chart's turning orbits run on their own layer (starts or stops it)
@@ -3757,7 +3757,8 @@ const end = e => { pts.delete(e.pointerId);
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
     { const h = chartPostAt(e.offsetX, e.offsetY); if (h >= 0) { if (focus >= 0 || focusArmed) navTo(h); else { select(h); if (!S3D) flyTo(h, true); } drag = null; return; } }   // in Focus, the signpost's note becomes the focus, with all its links   // Star Chart: a signpost takes you to its hub
-  if (i >= 0 && edOn() && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { void EDS.right.open(i); drag = null; return; }   // Edit mode: ⌘-click opens the note as a support note, in the right-hand editor
+  if (i >= 0 && edOn() && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { void EDS.right.open(i); drag = null; return; }
+  if (i >= 0 && edOn() && e.shiftKey) { TABNEW = true; select(i); drag = null; return; }   // Shift-click: a new tab (an orb)   // Edit mode: ⌘-click opens the note as a support note, in the right-hand editor
   if (i >= 0 && host.openNote && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (Platform.isMobile || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); else if (i >= 0) nudgeTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
@@ -3867,8 +3868,11 @@ function makeEd(kind){
   // the side editors tuck away to a tab on their edge, like the legend and the note panel; the note stays open in them
   const side = kind !== "center", cb = side ? hd.createEl("button", { cls: "cardbtn cardcol", text: kind === "left" ? "‹" : "›", attr: { type: "button", "aria-label": "Tuck away", title: "Tuck away" } }) : null;
   if (cb) hd.insertBefore(cb, ob);
+  // the main editor can be pinned (0.8.28): then a note you pick opens as the support note, and the pinned note stays (Nick's Mapping Method)
+  const pb = kind !== "right" ? hd.createEl("button", { cls: "cardbtn cardpin", attr: { type: "button", "aria-label": "Pin this note", title: "Pin this note" } }) : null;
+  if (pb) { setIcon(pb, "pin"); hd.insertBefore(pb, cb || ob); pb.onclick = () => tabPin(); }
   const tab = side ? $("#main").createEl("button", { cls: "dtab edtab edtab-" + kind, attr: { "aria-label": "Show the editor", title: "Show the editor" } }) : null; if (tab) tab.hidden = true;
-  const o = { kind, el, ed: null, path: null, key: "", col: side && pref("iv-edcol-" + kind, false) === true,
+  const o = { kind, el, ed: null, path: null, key: "", pb, col: side && pref("iv-edcol-" + kind, false) === true,
     tabSync(){ if (!tab) return; const on = o.col && !!o.path; tab.hidden = !on; if (!on) return; const nm = t.textContent || "";
       tab.setText((kind === "left" ? "›  " : "‹  ") + (nm.length > 40 ? nm.slice(0, 39) + "…" : nm)); if (kind === "right") tab.style.right = sideW() + "px"; },
     collapse(c){ o.col = c; save("iv-edcol-" + kind, c); if (o.path) { el.hidden = c; o.key = ""; o.place(); } o.tabSync(); edFree(); if (!c && o.ed) { o.ed.resize(); } draw(); },
@@ -3886,14 +3890,60 @@ const edMain = () => EDLEFT ? EDS.left : EDS.center;
 function edFree(){ EDLW = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 0; for (const o of Object.values(EDS)) { o.key = ""; o.place(); } }
 function closeEds(){ for (const o of Object.values(EDS)) o.close(); }
 async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(); EDS.left.close(); if (!edOn()) EDS.right.close(); return; }
-  const m = edMain(); (m === EDS.left ? EDS.center : EDS.left).close(); const p = m.open(i);
+  const m = edMain(); (m === EDS.left ? EDS.center : EDS.left).close();
+  const tp = TABS[TCUR], pj = tp && tp.pin && tp.path !== N[i].path ? PIDX.get(tp.path) : null;
+  if (pj != null) { const p0 = m.open(pj); void EDS.right.open(i); syncOrbs(); await p0; return; }   // pinned: the main editor keeps its note, the one you picked opens beside it
+  const p = m.open(i);
   if (m === EDS.center) { const r = edRect("center"); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k }); }   // the note above the card, in the top third
   else { const L = EDS.left.col ? 0 : edRect("left").x + edRect("left").w, R = EDS.right.el.hidden ? W - sideW() : edRect("right").x; animateTo({ k, tx: (L + R)/2 - X[i]*k, ty: H/2 - Y[i]*k }); }   // the note in the free middle
   await p; }
 // a link clicked inside a card: the map picks that note (the main editor follows); ⌘-click (or a modifier Obsidian reads as "new tab") opens it as the support note.
 // A note that isn't on the map right now (filtered out, or not mapped) opens in Obsidian as usual
-if (host.onCardLink) host.onCardLink((path, side) => { const i = PIDX.get(path); if (i == null || !vis[i] || !edOn() || dead) return false;
-  if (side) void EDS.right.open(i); else select(i); draw(); return true; });
+// Shift-click opens it as a new tab (an orb); while the main editor is pinned, a plain click opens it as the support note
+if (host.onCardLink) host.onCardLink((path, mode) => { const i = PIDX.get(path); if (i == null || !vis[i] || !edOn() || dead) return false;
+  if (mode === "side" || mode === true) void EDS.right.open(i); else { if (mode === "tab") TABNEW = true; select(i); } draw(); return true; });
+
+// ---------- tabs, shown as orbs (0.8.28, Nick) ----------
+// Obsidian's tab model, in the map: each tab is a note for the main editor; the orb you're on is the note in it. A plain click replaces
+// the current tab's note (unless it's pinned: then the note opens as the support note); Shift-click, on the map or on a link in an editor,
+// opens a new tab. The orbs sit along the top of the map; hover one for its name; Display → Edit mode → Show orbs (tabs), Show orb names.
+let TABS = (() => { const t = pref("iv-tabs", null); return Array.isArray(t) ? t.filter(x => x && typeof x.path === "string").map(x => ({ path: x.path, pin: !!x.pin })) : []; })();
+let TCUR = Math.min(Math.max(0, pref("iv-tabcur", 0) | 0), Math.max(0, TABS.length - 1)), TABNEW = false;
+let ORBS = pref("iv-orbs", true) !== false, ORBN = pref("iv-orbn", false) === true;
+const tabsSave = () => { save("iv-tabs", TABS); save("iv-tabcur", TCUR); };
+function tabTake(i){ const p = N[i].path, nw = TABNEW; TABNEW = false; const cur = TABS[TCUR];
+  if (!cur) { TABS.push({ path: p }); TCUR = TABS.length - 1; }
+  else if (cur.path === p) return syncOrbs();
+  else { const ex = TABS.findIndex(t => t.path === p);
+    if (ex >= 0) TCUR = ex;   // already open in a tab: go to it
+    else if (nw) { TABS.splice(TCUR + 1, 0, { path: p }); TCUR++; }
+    else if (cur.pin) return syncOrbs();   // pinned: openMain shows it as the support note
+    else TABS[TCUR] = { path: p }; }
+  tabsSave(); syncOrbs(); }
+function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
+  TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); }
+function tabGo(j){ const t = TABS[j]; if (!t) return; const i = PIDX.get(t.path); if (i == null) return;
+  if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
+  TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }
+function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j === TCUR; if (j < TCUR) TCUR--;
+  TCUR = Math.max(0, Math.min(TCUR, TABS.length - 1)); tabsSave();
+  if (was) { if (TABS[TCUR]) tabGo(TCUR); else { EDS.center.close(); EDS.left.close(); } } syncOrbs(); }
+const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true;
+let orbKey = "";
+function syncOrbs(){ for (const o of [EDS.center, EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
+  const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); if (!on) { orbKey = ""; return; }
+  const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
+    TABS.forEach((t, j) => { const i = PIDX.get(t.path), nm = i != null ? N[i].title : t.path.replace(/^.*\//, "").replace(/\.md$/, ""), lv = i != null ? N[i].level : 1;
+      const b = orbBar.createEl("button", { cls: "ivm-orb" + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""), attr: { type: "button", "aria-label": nm, "data-name": nm } });
+      b.setCssProps({ "--o0": lv >= 3 ? GRAD[lv][0] : lv === 2 ? css.l2 : css.l1, "--o1": lv >= 3 ? GRAD[lv][1] : lv === 2 ? css.l2 : css.l1 });
+      b.createSpan({ cls: "orbd" }); if (t.pin) setIcon(b.createSpan({ cls: "orbp" }), "pin");
+      const x = b.createSpan({ cls: "orbx", text: "×", attr: { role: "button", "aria-label": "Close tab" } });
+      x.onclick = e => { e.stopPropagation(); tabClose(j); }; b.onauxclick = e => { if (e.button === 1) { e.preventDefault(); tabClose(j); } };
+      if (ORBN) b.createSpan({ cls: "orbn", text: nm });
+      b.onclick = e => { e.stopPropagation(); tabGo(j); }; }); }
+  placeOrbs(); }
+function placeOrbs(){ if (orbBar.hidden) return; const L = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 12, R = (!EDS.right.el.hidden ? edRect("right").x : W - sideW()) - 12;
+  orbBar.style.left = Math.round(L) + "px"; orbBar.style.width = Math.max(40, Math.round(R - L)) + "px"; }
 // Starfield: a small read-only preview of each galaxy's hub note, above it
 const pvLayer = doc.createElement("div"); pvLayer.className = "ivm-pvl"; root.after(pvLayer); const HPV = new Map();
 function drawPreviews(){ const on = EDITM && HUBPV && view === "stars" && !S3D_ON() && !!host.preview && W > 0;
@@ -3906,6 +3956,7 @@ function drawPreviews(){ const on = EDITM && HUBPV && view === "stars" && !S3D_O
     edLook(e); const w = 210, h = 128; e.style.left = Math.round(ox + g.x - w/2) + "px"; e.style.top = Math.round(oy + g.y - h - 22) + "px"; }
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
 function select(i, fromTrail){
+  if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
   if (!LIVEQ && (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden || EDS.left.col && EDS.left.path)))) win.setTimeout(() => { void openMain(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
@@ -5592,8 +5643,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const sw = (txt, get, set) => { const l_ = g.createEl("label", { cls: "mini lcemo eosw" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = get(); l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: txt }); c_.onchange = () => set(c_.checked); };
     sw("Open the editor on the left side", () => EDLEFT, v => { EDLEFT = v; save("iv-edleft", v); if (sel >= 0) void openMain(sel); });
     sw("Hub previews (Starfield)", () => HUBPV, v => { HUBPV = v; save("iv-hubpv", v); draw(); });
-    g.createDiv({ cls: "eonote", text: "⌘-click a note to open it as a support note on the right." });
-    cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); g.hidden = !EDITM; if (EDITM && sel >= 0) void openMain(sel); else closeEds(); draw(); }; }
+    sw("Show orbs (tabs)", () => ORBS, v => { ORBS = v; save("iv-orbs", v); const n_ = g.querySelector(".orbnsw"); if (n_) n_.hidden = !v; syncOrbs(); });
+    sw("Show orb names", () => ORBN, v => { ORBN = v; save("iv-orbn", v); syncOrbs(); }); { const ls = g.querySelectorAll(".eosw"); const l_ = ls[ls.length - 1]; l_.classList.add("orbnsw", "sub"); l_.hidden = !ORBS; }
+    g.createDiv({ cls: "eonote", text: "⌘-click a note to open it as a support note on the right. Shift-click opens it in a new tab (an orb). Pin the editor to keep its note: what you pick then opens as the support note." });
+    cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); g.hidden = !EDITM; if (EDITM && sel >= 0) void openMain(sel); else closeEds(); syncOrbs(); draw(); }; }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
   // Show the way home (Kevin Bacon): from the note you're on, the fewest links back to Home, or to a note you choose

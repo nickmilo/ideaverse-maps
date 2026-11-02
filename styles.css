@@ -1335,3 +1335,27 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .dlist .editopts .eosw input:checked + .sw::after{left:13px;background:var(--bg)}
 .ivm .dlist .editopts .eonote{font:400 11px var(--font-interface,inherit);color:var(--muted);opacity:.8}
 .ivm .dlist .eorow .eov{font:500 11px var(--mono);min-width:34px}
+/* tabs as orbs (0.8.28): along the top of the map, between the editors */
+.ivm .ivm-orbs{position:absolute;top:10px;z-index:4;display:flex;justify-content:center;flex-wrap:wrap;gap:8px;pointer-events:none}
+.ivm .ivm-orbs[hidden]{display:none}
+.ivm .ivm-orbs.named{gap:26px;padding-bottom:70px}
+.ivm .ivm-orb{pointer-events:auto;position:relative;width:20px;height:20px;padding:0;border:0;border-radius:50%;background:none;box-shadow:none;cursor:pointer;flex:none}
+.ivm .ivm-orb .orbd{position:absolute;inset:2px;border-radius:50%;background:linear-gradient(135deg,var(--o0),var(--o1));box-shadow:0 0 0 1.5px var(--bg),0 1px 6px rgba(0,0,0,.35);transition:transform .12s}
+.ivm .ivm-orb:hover .orbd{transform:scale(1.18)}
+.ivm .ivm-orb.cur .orbd{box-shadow:0 0 0 1.5px var(--bg),0 0 0 3.5px var(--ink),0 1px 8px rgba(0,0,0,.4)}
+.ivm .ivm-orb .orbp{position:absolute;right:-6px;bottom:-5px;width:12px;height:12px;border-radius:50%;background:var(--bg);color:var(--ink);display:flex;align-items:center;justify-content:center}
+.ivm .ivm-orb .orbp svg{width:8px;height:8px}
+.ivm .ivm-orb .orbx{position:absolute;right:-7px;top:-7px;width:13px;height:13px;border-radius:50%;background:var(--bg);color:var(--ink);font:600 10px/13px var(--body);text-align:center;opacity:0;transition:opacity .12s;border:1px solid var(--line)}
+.ivm .ivm-orb:hover .orbx{opacity:1}
+.ivm .ivm-orb::after{content:attr(data-name);position:absolute;left:50%;top:calc(100% + 6px);transform:translateX(-50%);white-space:nowrap;font:600 11.5px var(--body);color:var(--ink);background:color-mix(in srgb,var(--bg) 92%,transparent);border:1px solid var(--line);border-radius:6px;padding:3px 7px;opacity:0;pointer-events:none;transition:opacity .12s;z-index:2}
+.ivm .ivm-orb:hover::after{opacity:1}
+.ivm .ivm-orbs.named .ivm-orb::after{display:none}
+.ivm .ivm-orb .orbn{position:absolute;left:10px;top:24px;transform:rotate(32deg);transform-origin:0 0;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;font:500 11px var(--body);color:var(--ink);text-shadow:0 0 3px var(--bg),0 0 3px var(--bg)}
+.ivm .ivm-orb.cur .orbn{font-weight:700}
+.ivm-card .cardpin svg{width:13px;height:13px}
+.ivm-card .cardpin[aria-pressed="true"]{color:var(--interactive-accent)}
+.ivm-card.pinned .cardhd{box-shadow:inset 0 -2px 0 var(--interactive-accent)}
+.ivm .editopts .eosw.sub{padding-left:22px}
+.ivm .editopts .eosw[hidden]{display:none}
+.ivm .ivm-orbs.sky .ivm-orb.cur .orbd{box-shadow:0 0 0 1.5px #0b0d1a,0 0 0 3.5px #f2f0e6,0 1px 8px rgba(0,0,0,.4)}
+.ivm .ivm-orbs.sky .ivm-orb .orbn{color:#eef0f8;text-shadow:0 0 3px #05060d,0 0 3px #05060d}
