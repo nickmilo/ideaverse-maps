@@ -2025,7 +2025,8 @@ function layoutCompass(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[
   let x0 = -200, x1 = 200, y0 = -200, y1 = 200;
   ids.forEach((j, q) => { EHID[j] = 0; EX[j] = P[q*2]; EY[j] = P[q*2+1]; x0 = Math.min(x0, EX[j]); x1 = Math.max(x1, EX[j]); y0 = Math.min(y0, EY[j]); y1 = Math.max(y1, EY[j]); });
   CMP.R = Math.max(-x0, x1, -y0, y1); expBox = { x0: x0 - 90, y0: y0 - 70, x1: x1 + 160, y1: y1 + 60 };
-  CMP.pv = (rel ? ids.slice() : [...ids].sort((p, q) => N[q].score - N[p].score)).slice(0, 24); }
+  // previews go to the most related notes first, Relevance on or off (Nick: "especially the most relevant ones need to be displayed")
+  { const rv = rel || relFrom(a); CMP.pv = [...ids].sort((p, q) => rv[q] - rv[p]).slice(0, 80); } }
 function cmpSync(){ if (view !== "compass" || dead) return; if (cmpCenter() !== CMP.c) morph(true, () => fitTarget()); }
 EXP.compass = {
   layout: layoutCompass,
@@ -4031,7 +4032,7 @@ function renderTrail(){
 let EDITM = pref("iv-editm", false) === true, EDLEFT = pref("iv-edleft", false) === true, HUBPV = pref("iv-hubpv", false) === true;
 // how many mini previews: Starfield's biggest hubs and Compass's closest notes. 0.8.48 (Nick): Fewer, Natural or Max, never a free number,
 // and one governor for both maps: a preview only shows where it covers no other preview, the note you're on, the orbs, the editors or the edges
-const PVL = { off: 0, fewer: 3, natural: 6, max: 12 };
+const PVL = { off: 0, fewer: 3, natural: 6, max: 12 }, PVL_C = { off: 0, fewer: 5, natural: 10, max: 18 };   // Compass shows more: previews are its point (Nick, 0.8.57)
 let PVLV = (() => { const v = pref("iv-pvl", null); if (v && v in PVL) return v; const o = pref("iv-pvn", null); if (o == null) return "natural"; return o <= 0 ? "off" : o <= 3 ? "fewer" : o <= 7 ? "natural" : "max"; })();
 const PVN_ = () => PVL[PVLV];
 const CARDMAPS = new Set(["stars", "emergence", "spacetime", "compass", "arena"]);
@@ -4230,24 +4231,38 @@ function placeOrbs(){ if (orbBar.hidden) return; const L = !EDS.left.el.hidden ?
   orbBar.style.left = Math.round(L) + "px"; orbBar.style.width = Math.max(40, Math.round(R - L)) + "px"; }
 // Starfield: a small read-only preview of each galaxy's hub note, above it
 const pvLayer = doc.createElement("div"); pvLayer.className = "ivm-pvl"; root.after(pvLayer); const HPV = new Map();
-function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap = PVN_(), on = cap > 0 && (cmp || (EDITM && view === "stars" && !S3D_ON())) && !!host.preview && W > 0;
+function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap = cmp ? PVL_C[PVLV] : PVN_(), on = cap > 0 && (cmp || (EDITM && view === "stars" && !S3D_ON())) && !!host.preview && W > 0;
   if (!on) { if (pvLayer.childElementCount) { pvLayer.empty(); HPV.clear(); } return; }
   const c = cv.getBoundingClientRect(), pr = pvLayer.getBoundingClientRect(), ox = c.left - pr.left, oy = c.top - pr.top, want = new Set();
   const L_ = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w : 0, R_ = !EDS.right.el.hidden ? edRect("right").x : W - sideW();
   const top_ = orbBar.hidden ? 8 : orbBar.getBoundingClientRect().bottom - c.top + (ORBN ? 70 : 8);   // below the orbs (and their names)
-  const hit = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1], taken = [], pw = 210, ph = 128, pad = 10;
+  const hit = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1], taken = [], pad = 6;
+  // Compass's previews are smaller the more it shows, so more fit (0.8.57); Starfield keeps the full size
+  const [pw, ph] = cmp ? ({ fewer: [210, 128], natural: [190, 112], max: [172, 100] })[PVLV] || [190, 112] : [210, 128];
   // what a preview must never cover: the centre (Compass), the note you're on and its name, the overview map and the zoom buttons
   if (cmp) taken.push([sx(0) - 110, sy(0) - 26, 220, 52]);
   if (sel >= 0 && VV(sel)) taken.push([sx(X[sel]) - 130, sy(Y[sel]) - 34, 260, 68]);
   taken.push([R_ - 230, H - 190, 230, 190]);
   const cands = cmp ? CMP.pv.filter(i => VV(i) && i !== CMP.c)
     : BODIES.filter(b => b.kind === "gal" && b.core != null && vis[b.core] && b.core !== sel && b.r * k >= ({ fewer: 75, natural: 55, max: 38 })[PVLV]).sort((a, b) => b.r - a.r).map(b => b.core);
+  ctx.font = `500 12px ${css.body}`;
   const gals = [];
-  for (const i of cands) { if (gals.length >= cap) break; const x = sx(X[i]), y = sy(Y[i]), r = [x - pw/2 - pad, y - ph - 22 - pad, pw + 2*pad, ph + 2*pad];
-    if (r[0] < L_ + 4 || r[0] + r[2] > R_ - 4 || r[1] < top_ || y > H - 10 || taken.some(t => hit(r, t))) continue; taken.push(r); gals.push({ i, x, y }); }
+  for (const i of cands) { if (gals.length >= cap) break; const x = sx(X[i]), y = sy(Y[i]);
+    // Compass tries four spots round its note (above, below, then beside it, clear of its name); Starfield keeps to above its hub
+    const nw = ctx.measureText(N[i].title).width + 16, rank = gals.length;
+    let spots = cmp ? [[x - pw/2, y - ph - 16], [x - pw/2, y + 14], [x + nw, y - ph/2], [x - pw - 12, y - ph/2], [x + 10, y - ph - 12], [x - pw - 10, y - ph - 12], [x + 10, y + 12], [x - pw - 10, y + 12]] : [[x - pw/2, y - ph - 22]];
+    // the most related (the first six placed) may also sit further out, joined to their note by a thin line, so a crowded middle can't crowd them out
+    if (cmp && rank < 6) for (const f of [1.6, 2.4]) spots = spots.concat([[x - pw/2, y - ph*f - 16], [x - pw/2, y + ph*(f - 1) + 14], [x + nw + pw*(f - 1), y - ph/2], [x - pw*f - 12, y - ph/2]]);
+    for (const [px, py] of spots) { const r = [px - pad, py - pad, pw + 2*pad, ph + 2*pad];
+      if (r[0] < L_ + 4 || r[0] + r[2] > R_ - 4 || r[1] < top_ || r[1] + r[3] > H - 4 || taken.some(t => hit(r, t))) continue;
+      taken.push(r); gals.push({ i, px, py, x, y }); break; } }
+  // a thin line from a preview set apart to its note
+  if (cmp) { ctx.save(); ctx.strokeStyle = css.muted; ctx.globalAlpha = .45; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+    for (const g of gals) { const qx = Math.max(g.px, Math.min(g.px + pw, g.x)), qy = Math.max(g.py, Math.min(g.py + ph, g.y)); if (Math.hypot(qx - g.x, qy - g.y) < 30) continue; ctx.beginPath(); ctx.moveTo(g.x, g.y); ctx.lineTo(qx, qy); ctx.stroke(); }
+    ctx.restore(); }
   for (const g of gals) { const p = N[g.i].path; want.add(p); let e = HPV.get(p);
     if (!e) { e = pvLayer.createDiv({ cls: "ivm-card ivm-pv" }); e.createDiv({ cls: "pvt", text: N[g.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); HPV.set(p, e); }
-    edLook(e); e.style.left = Math.round(ox + g.x - pw/2) + "px"; e.style.top = Math.round(oy + g.y - ph - 22) + "px"; }
+    edLook(e); e.setCssProps({ "--pvw": pw + "px", "--pvh": ph + "px" }); e.style.left = Math.round(ox + g.px) + "px"; e.style.top = Math.round(oy + g.py) + "px"; }
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
 function select(i, fromTrail){
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);

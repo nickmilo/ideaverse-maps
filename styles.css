@@ -1317,7 +1317,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card.ivm-card-left,.ivm-card.ivm-card-right{border-radius:10px}
 /* Starfield's hub previews: small, read-only, the editors' look */
 .ivm-pvl{position:absolute;inset:0;pointer-events:none;z-index:2}
-.ivm-card.ivm-pv{width:210px;height:128px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.3);padding:6px 9px;display:block;font-size:9.5px;line-height:1.35}
+.ivm-card.ivm-pv{width:var(--pvw,210px);height:var(--pvh,128px);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.3);padding:6px 9px;display:block;font-size:9.5px;line-height:1.35}
 .ivm-card.ivm-pv .pvt{font-weight:700;font-size:10.5px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-normal)}
 .ivm-card.ivm-pv .pvb{height:96px;overflow:hidden;color:var(--text-muted);mask-image:linear-gradient(to bottom,#000 70%,transparent)}
 .ivm-card.ivm-pv .pvb :is(h1,h2,h3,h4,h5,h6){font-size:10.5px;margin:2px 0}
