@@ -4006,10 +4006,12 @@ function makeEd(kind){
   const side = kind !== "center", cb = side ? hd.createEl("button", { cls: "cardbtn cardcol", text: kind === "left" ? "‹" : "›", attr: { type: "button", "aria-label": "Tuck away", title: "Tuck away" } }) : null;
   if (cb) hd.insertBefore(cb, ob);
   // the main editor can be pinned (0.8.28): then a note you pick opens as the support note, and the pinned note stays (Nick's Mapping Method)
+  // back and forward through the notes this editor has shown (0.8.45, Nick: the trail works too, but that's a leap)
+  const nav = kind !== "right" ? [["arrow-left", "Back", -1], ["arrow-right", "Forward", 1]].map(([ic, lb, d_]) => { const b_ = doc.createElement("button"); b_.className = "cardbtn cardnav"; b_.type = "button"; b_.setAttribute("aria-label", lb); setIcon(b_, ic); hd.insertBefore(b_, t); b_.onclick = e => { e.stopPropagation(); histGo(d_); }; return b_; }) : null;
   const pb = kind !== "right" ? hd.createEl("button", { cls: "cardbtn cardpin", attr: { type: "button", "aria-label": "Pin this note", title: "Pin this note" } }) : null;
   if (pb) { setIcon(pb, "pin"); hd.insertBefore(pb, cb || ob); pb.onclick = () => tabPin(); }
   const tab = side ? $("#main").createEl("button", { cls: "dtab edtab edtab-" + kind, attr: { "aria-label": "Show the editor", title: "Show the editor" } }) : null; if (tab) tab.hidden = true;
-  const o = { kind, el, strip, drop, open_: "", ed: null, path: null, key: "", pb, col: side && pref("iv-edcol-" + kind, false) === true,
+  const o = { kind, el, nav, strip, drop, open_: "", ed: null, path: null, key: "", pb, col: side && pref("iv-edcol-" + kind, false) === true,
     tabSync(){ if (!tab) return; const on = o.col && !!o.path; tab.hidden = !on; if (!on) return; const nm = t.textContent || "";
       tab.setText((kind === "left" ? "›  " : "‹  ") + (nm.length > 40 ? nm.slice(0, 39) + "…" : nm)); if (kind === "right") tab.style.right = sideW() + "px"; },
     collapse(c){ o.col = c; save("iv-edcol-" + kind, c); if (o.path) { el.hidden = c; o.key = ""; o.place(); } o.tabSync(); edFree(); if (!c && o.ed) { o.ed.resize(); } draw(); },
@@ -4062,6 +4064,12 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   o.drop.createDiv({ cls: "sdh", text: `${o.open_.toUpperCase()} · ${list.length}` }); const rows = o.drop.createDiv({ cls: "sdl" });
   for (const j of list) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
     r.onclick = e => { e.stopPropagation(); if (e.shiftKey) TABNEW = true; if (Platform.isMacOS ? e.metaKey : e.ctrlKey) void EDS.right.open(j); else select(j); }; } }
+// the main editor's history: back and forward move through it without adding to it; a pinned editor keeps its note, so they wait
+let HIST = [], HPOS = -1, HNAV = false;
+function syncNav(){ let pin = false; try { pin = !!(TABS[TCUR] && TABS[TCUR].pin); } catch (_) { /* not ready yet */ }
+  for (const o of [EDS.center, EDS.left]) if (o && o.nav) { o.nav[0].disabled = pin || HPOS <= 0; o.nav[1].disabled = pin || HPOS >= HIST.length - 1; } }
+function histGo(d_){ const q = HPOS + d_; if (q < 0 || q >= HIST.length) return; const i = PIDX.get(HIST[q]); if (i == null) return;
+  if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map.`); return; } HPOS = q; HNAV = true; select(i); syncNav(); }
 function edFree(){ EDLW = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 0; for (const o of Object.values(EDS)) { o.key = ""; o.place(); } }
 function panBack(){ if (PANAUTO && EDS.center.el.hidden && EDS.left.el.hidden) { PANAUTO = false; setCollapsed(false, true); } }   // the note panel returns when the main editor closes
 function closeEds(){ for (const o of Object.values(EDS)) o.close(); panBack(); }
@@ -4070,6 +4078,8 @@ async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(
   if (m.el.hidden && !m.col && !drawerCollapsed) { PANAUTO = true; setCollapsed(true, true); }   // the editor shows the note: the note panel tucks away (its tab brings it back)
   const tp = TABS[TCUR], pj = tp && tp.pin && tp.path !== N[i].path ? PIDX.get(tp.path) : null;
   if (pj != null) { const p0 = m.open(pj); void EDS.right.open(i); syncOrbs(); if (view === "compass" || view === "arena") refitSoon(); await p0; return; }   // pinned: the main editor keeps its note, the one you picked opens beside it
+  if (HNAV) HNAV = false; else if (HIST[HPOS] !== N[i].path) { HIST = HIST.slice(0, HPOS + 1); HIST.push(N[i].path); if (HIST.length > 100) HIST.shift(); HPOS = HIST.length - 1; }
+  syncNav();
   const p = m.open(i);
   if (view === "compass" || view === "arena") refitSoon();   // they frame themselves between the editors, once any move has finished   // Compass frames itself, clear of the editors
   else if (m === EDS.center) { const r = edRect("center"); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k }); }   // the note above the card, in the top third
@@ -4099,7 +4109,7 @@ function tabTake(i){ const p = N[i].path, nw = TABNEW; TABNEW = false; const cur
     else TABS[TCUR] = { path: p }; }
   tabsSave(); syncOrbs(); }
 function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
-  TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); arenaSync(); }
+  TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); arenaSync(); syncNav(); }
 function tabGo(j){ const t = TABS[j]; if (!t) return; const i = PIDX.get(t.path); if (i == null) return;
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
   TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }

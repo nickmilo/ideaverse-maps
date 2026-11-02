@@ -1416,3 +1416,9 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .arnany .arnrow input[type=range]{flex:1;height:4px}
 .ivm .arnany .arnrow .eov{font:600 12px var(--mono);min-width:20px;text-align:right}
 .ivm .arnany .chip{display:block;width:100%;margin:4px 0;font-size:12px}
+/* the main editor's back and forward (0.8.45): subtle, before the name */
+.ivm-card .cardnav{border:0;background:none;box-shadow:none;padding:2px 3px;height:auto;color:var(--text-muted);opacity:.75}
+.ivm-card .cardnav svg{width:14px;height:14px}
+.ivm-card .cardnav:hover:not(:disabled){opacity:1;color:var(--text-normal)}
+.ivm-card .cardnav:disabled{opacity:.25;cursor:default}
+.ivm-card .cardnav + .cardnav{margin-right:4px}
