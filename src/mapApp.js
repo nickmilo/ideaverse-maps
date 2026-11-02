@@ -2514,10 +2514,17 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   if (ck >= 0) { const pc = pr(P[3 * ck], P[3 * ck + 1], P[3 * ck + 2]); g.lineWidth = 1;
     for (const it of CK.items) { const pi = pr(it.x, it.y, it.z); const a = pc || null; if (!pi || !a) continue; g.globalAlpha = ckShows(it) ? .22 : .05; g.strokeStyle = ckCol(N[it.i].level); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(pi[0], pi[1]); g.stroke(); }
     if (pc) { g.globalAlpha = .9; g.strokeStyle = "#ffffff"; g.beginPath(); g.arc(pc[0], pc[1], 9, 0, 6.2832); g.stroke(); g.font = `600 11px ${font}`; g.fillStyle = "#ffffff"; g.textAlign = "center"; g.fillText(N[ck].title, pc[0], pc[1] - 14); g.textAlign = "left"; } }
-  // galaxy names, faint, for galaxies ahead
-  g.font = `500 10px ${css.mono || font}`; g.textAlign = "center";
-  for (const B of sf.B) { const b = B.b; if (!b.name || b.kind === "home") continue; const p0 = pr(B.x, B.y, B.z); if (!p0) continue; const d = p0[2]; if (d < B.r * .6 || (b.kind === "dwarf" && d > B.r * 7)) continue;   /* small galaxies name themselves only up close */
-    g.globalAlpha = Math.max(.15, Math.min(.7, 9000 / d)); g.fillStyle = b.hue || "#9fb0ff"; g.fillText(String(b.name).toUpperCase(), p0[0], p0[1] - Math.min(80, F * B.r * .4 / d)); }
+  // galaxy names as Starfield writes them (0.8.91): spaced capitals with a dark outline, the count beneath in the galaxy's hue, under each galaxy; nearer names first, never on top of each other
+  { const hasLS = "letterSpacing" in g, taken = CK.side.map(q => [q[0] - 6, q[1], q[2] + 30, q[3]]), lab = [];   /* the side names keep their room */
+    for (const B of sf.B) { const b = B.b; if (!b.name || b.kind === "home") continue; const p0 = pr(B.x, B.y, B.z); if (!p0) continue; const d = p0[2]; if (d < B.r * .6 || (b.kind === "dwarf" && d > B.r * 7)) continue; lab.push([B, p0, d]); }
+    lab.sort((a, b) => a[2] - b[2]); g.textAlign = "center"; g.textBaseline = "top";
+    for (const [B, p0, d] of lab) { const b = B.b, rr = F * B.r / d, y = p0[1] + Math.min(140, rr * .55) + 8; if (p0[0] < -200 || p0[0] > W + 200 || y < -20 || y > VH + 20) continue;
+      const nm = (b.name.length > 34 ? b.name.slice(0, 33) + "…" : b.name).toUpperCase(); g.font = `600 ${b.kind === "dwarf" ? 9.5 : 11}px ${css.mono || font}`; if (hasLS) g.letterSpacing = "2px";
+      const tw = g.measureText(nm).width + 8, box = [p0[0] - tw / 2, y - 2, tw, 30]; if (taken.some(q => box[0] < q[0] + q[2] && box[0] + box[2] > q[0] && box[1] < q[1] + q[3] && box[1] + box[3] > q[1])) { if (hasLS) g.letterSpacing = "0px"; continue; } taken.push(box);
+      g.globalAlpha = Math.max(.25, Math.min(1, 14000 / d)); g.lineWidth = 4; g.strokeStyle = "rgba(3,4,10,.85)"; g.strokeText(nm, p0[0], y); g.fillStyle = b.kind === "gal" ? "rgba(236,240,255,.92)" : "rgba(200,208,235,.75)"; g.fillText(nm, p0[0], y);
+      if (hasLS) g.letterSpacing = "0px"; g.font = `500 9.5px ${css.mono || font}`; g.fillStyle = b.hue || "#9fb0ff"; const m_ = (b.members || []).length;
+      const sub = b.kind === "neb" ? `${m_.toLocaleString()} unlinked` : b.kind === "old" ? `${m_.toLocaleString()} notes` : `${m_.toLocaleString()} stars`; g.strokeText(sub, p0[0], y + 15); g.fillText(sub, p0[0], y + 15); }
+    g.textBaseline = "alphabetic"; }
   g.restore(); g.globalAlpha = 1; g.textAlign = "left"; }
 function ckFwd(){ const cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch); return [sy_ * cp, sp, cy * cp]; }
 function ckCam(x, y, z){ const dx = x - CK.P[0], dy = y - CK.P[1], dz = z - CK.P[2], cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);
