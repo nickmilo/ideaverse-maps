@@ -11,7 +11,7 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.mouse.move(800, 400); await sleep(800); await shot('ck-pace');
   await page.keyboard.down('w'); await sleep(900); await page.keyboard.up('w'); await sleep(200); await shot('ck-forward');
   await page.keyboard.press('f'); await sleep(400); await shot('ck-inonly'); await page.keyboard.press('f');
-  await page.keyboard.press('Tab'); await sleep(200); await page.keyboard.press(' '); await sleep(1200); await shot('ck-auto');
+  await page.keyboard.press('Tab'); await sleep(200); await page.keyboard.press(' '); for (let q = 0; q < 8; q++) { await sleep(250); await shot('ck-hy' + q); }
   await sleep(5000); await shot('ck-arrived');
   console.log('sel after', await page.evaluate(() => { const m = app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map; return m._sel ? m._sel() : document.querySelector('.ivm').dataset.view; }));
   await page.keyboard.press('b'); await sleep(2000); await shot('ck-back');

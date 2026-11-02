@@ -2420,6 +2420,7 @@ EXP.kandinsky = {
 // Space: links in on the left, links out on the right, two-way links ahead; what the note links up to above the horizon, what sits below it beneath;
 // the strongest links (relevance from this note) nearest. F shows only links in, R only links out (Nick's swap). No S·T·I·R gauges yet (Nick: don't calculate them yet).
 const CK = { on: false, c: -1, items: [], lock: -1, sug: -1, P: [0, 0, 0], yaw: 0, pitch: 0, v: 0, keys: new Set(), only: "", t0: 0, warp: 0, auto: false, roll: 0, el: null, cv: null, g: null, w: 0, h: 0, stars: [], last: 0, drag: null, msg: "" };
+let CKFRAME = pref("iv-ckframe", false) === true;
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
 function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.P = [0, 0, 0]; CK.yaw = 0; CK.pitch = 0; CK.v = 0; CK.auto = false; CK.t0 = win.performance.now(); if (c < 0) return;
@@ -2518,6 +2519,12 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   /* the horizon: a faint line through the middle, tilting with the turn */
   { const [, yh] = ckCam(CK.P[0] + fw[0] * 1000, CK.P[1], CK.P[2] + fw[2] * 1000), hy = cy + F * (yh) / 1000; g.strokeStyle = "rgba(120,170,255,.16)"; g.lineWidth = 1; g.setLineDash([2, 6]); g.beginPath(); g.moveTo(0, hy); g.lineTo(W, hy); g.stroke(); g.setLineDash([]); }
   g.restore();
+  /* hyperspace: when you speed into a note (autopilot, or the jump on arrival), thin streaks rush out from the middle */
+  { const I = Math.max(CK.warp, CK.auto ? Math.min(1, CK.v / 900) : Math.min(1, Math.max(0, (CK.v - 500) / 700)) * .6); if (I > .02) { const tt = win.performance.now() / 1000, Rm = Math.hypot(W, VH) * .6;
+      g.save(); g.lineCap = "round"; for (let q = 0; q < 140; q++) { const a = hash("hy" + q, 13) * 6.2832, sp_ = .5 + hash("hy" + q, 17), f = (hash("hy" + q, 19) + tt * sp_ * (.35 + I * 1.2)) % 1, r0 = 20 + f * f * Rm, len = (10 + f * 190) * I;
+        g.globalAlpha = I * .5 * Math.min(1, f * 3) * (1 - f * .4); g.strokeStyle = q % 7 === 0 ? "#ffe9b0" : "#d6e6ff"; g.lineWidth = .6 + f * 1.1;
+        g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len)); g.stroke(); }
+      g.restore(); g.globalAlpha = 1; } }
   /* panels, far first */
   const wz = CK.warp > 0 ? CK.warp * CK.warp * 2600 : 0;
   for (const it of CK.items) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z + wz); it.zc = zc; if (zc <= 8) { it.sw = 0; continue; } it.sx = cx + F * xc / zc; it.sy = cy + F * yc / zc; it.sw = F * 112 / zc; it.sh = F * 34 / zc; }
@@ -2552,6 +2559,10 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   if (CK.msg) { g.font = `500 12px ${font}`; g.textAlign = "center"; g.textBaseline = "top"; const tw = Math.min(W - 40, g.measureText(CK.msg).width + 24);
     g.fillStyle = "rgba(8,14,28,.8)"; g.fillRect(cx - tw / 2, 10, tw, 24); g.strokeStyle = "rgba(255,207,90,.4)"; g.strokeRect(cx - tw / 2 + .5, 10.5, tw - 1, 23); g.fillStyle = "#ffcf5a";
     let m = CK.msg; while (m.length > 10 && g.measureText(m).width > tw - 20) m = m.slice(0, -2); if (m !== CK.msg) m += "…"; g.fillText(m, cx, 16); g.textAlign = "left"; }
+  if (CKFRAME) { /* the canopy's struts, as in the mockup: two bars from the console's corners up and out */ const sw_ = Math.max(6, W * .011);
+    for (const s_ of [-1, 1]) { const x0 = W / 2 + s_ * W * .2, x1 = W / 2 + s_ * W * .48, y1 = VH * .02, gr = g.createLinearGradient(x0 - sw_, 0, x0 + sw_, 0);
+      gr.addColorStop(0, "#5c6474"); gr.addColorStop(.5, "#c9ced8"); gr.addColorStop(1, "#5c6474"); g.strokeStyle = gr; g.lineWidth = sw_; g.lineCap = "butt"; g.beginPath(); g.moveTo(x0, VH); g.lineTo(x1, y1); g.stroke();
+      g.strokeStyle = "rgba(0,0,0,.35)"; g.lineWidth = 1; g.beginPath(); g.moveTo(x0 + s_ * sw_ / 2, VH); g.lineTo(x1 + s_ * sw_ / 2, y1); g.stroke(); } }
   ckConsole(g, W, H, VH, cons, font); }
 function ckScope(g, x, y, R, label, key, ids, act, font){ g.save(); g.fillStyle = "rgba(10,30,24,.9)"; g.beginPath(); g.arc(x, y, R, 0, 6.2832); g.fill();
   g.strokeStyle = act ? "#7dffb0" : "rgba(110,220,160,.45)"; g.lineWidth = act ? 2 : 1; g.stroke(); g.lineWidth = 1; g.strokeStyle = "rgba(110,220,160,.22)";
@@ -6362,11 +6373,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const fa = mo.createDiv({ cls: "mosec emoany arnany" }); fa.hidden = true;
     { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "Style" }); const seg = sr.createDiv({ cls: "seg" });
       for (const [v, t_] of [["ring", "Ring"], ["board", "Board"], ["henge", "Standing stones"], ["plan", "Stonehenge"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(ARSTY === v) } });
-        b.onclick = e => { e.stopPropagation(); ARSTY = v; save("iv-arsty", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (view === "arena") { morph(true, () => fitTarget()); legend(); } }; } }
+        b.onclick = e => { e.stopPropagation(); ARSTY = v; save("iv-arsty", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (view === "arena") { morph(true, () => fitTarget()); legend(); FUI.emoany(); } }; } }
     const r = fa.createEl("label", { cls: "eorow arnrow" }); r.createSpan({ cls: "eol", text: "Slots" });
     const sl_ = r.createEl("input", { type: "range", attr: { min: "8", max: "20", step: "1", "aria-label": "Slots" } }); const v_ = r.createSpan({ cls: "eov" });
     const btn = fa.createEl("button", { cls: "chip", text: "Fill the empty slots from your tabs", attr: { type: "button" } }); const clr = fa.createEl("button", { cls: "chip", text: "Empty the ring", attr: { type: "button" } });
-    const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "arena"; sl_.value = String(ARN); v_.setText(String(ARN)); };
+    const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "arena"; sl_.value = String(ARN); v_.setText(String(ARN)); r.hidden = btn.hidden = clr.hidden = ARSTY === "plan"; };   /* Stonehenge has its own fixed stones */
     sl_.oninput = () => { ARN = +sl_.value; v_.setText(String(ARN)); save("iv-arn", ARN); arenaSlots(); save("iv-arena", ARENA); if (view === "arena") morph(true); };
     btn.onclick = e => { e.stopPropagation(); const sl = arenaSlots(); for (const t of TABS) if (t && t.path && !sl.includes(t.path)) { const k_ = sl.indexOf(null); if (k_ < 0) break; sl[k_] = t.path; } save("iv-arena", ARENA); if (view === "arena") morph(true); };
     clr.onclick = e => { e.stopPropagation(); ARENA = []; arenaSlots(); for (let q = 0; q < ARENA.length; q++) ARENA[q] = null; save("iv-arena", ARENA); if (view === "arena") morph(true); }; }
@@ -6377,6 +6388,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = KNAMES; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Show note names" });
       c_.onchange = () => { KNAMES = c_.checked; save("iv-knames", KNAMES); draw(); }; }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "kandinsky"; }; }
+  // Cockpit: the canopy's frame (Nick: the structure bars from the mockup)
+  { const fa = mo.createDiv({ cls: "mosec emoany ckany" }); fa.hidden = true;
+    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKFRAME; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Cockpit frame" });
+      c_.onchange = () => { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); }; }
+    const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "cockpit"; }; }
   // Compass: Relevance
   { const fa = mo.createDiv({ cls: "mosec emoany cmpany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "mini lcemo" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Relevance: pull related notes toward the centre" });
     const r2 = fa.createEl("label", { cls: "mini lcemo sub" }); const cb2 = r2.createEl("input", { type: "checkbox" }); r2.createEl("i", { cls: "sw" }); r2.createSpan({ text: "Push less related links outward (trial)" });
@@ -6836,7 +6852,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
           sw_.append(cb, i_, t); row.after(sw_); cb.onchange = () => { (cb.checked ? bs[1] : bs[0]).click(); tightenMO(); }; }
         row.classList.add("tgone"); sw_.querySelector("input").checked = bs[1].getAttribute("aria-pressed") === "true"; sw_.hidden = row.hidden; }); };
     const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop", "#senseemo"]) $(id).hidden = id !== v_; if (view === "sense") $("#senseemo").hidden = false; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
-      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); FUI.emoany(); moL.hidden = !l || !v_; moNone.hidden = true; tightenMO(); return !!(l || v_ || emoGen() || view === "compass" || view === "arena" || view === "kandinsky"); };
+      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); FUI.emoany(); moL.hidden = !l || !v_; moNone.hidden = true; tightenMO(); return !!(l || v_ || emoGen() || view === "compass" || view === "arena" || view === "kandinsky" || view === "cockpit"); };
     // no hover hints in the maps menu (Nick): a map's description stays for screen readers only
     const quiet = () => MP.querySelectorAll("[aria-label], [title]").forEach(el => { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("title"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); });
     const openMaps = () => { quiet(); closePops("#vmorepop"); if (typeof closeColl === "function") closeColl(); MP.hidden = false; MB.setAttribute("aria-expanded", "true");
@@ -6850,7 +6866,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     POPS.push(["#mapsetbtn", "#mapopts", ".mapsetms"]);
     const openSet = () => { closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!fillMO()) return; mo.setAttribute("aria-description", VN() + " settings"); mo.hidden = false; ST.setAttribute("aria-expanded", "true"); if (!moL.hidden && $("#laygrp").getBoundingClientRect().height < 4) moL.hidden = true; };
     ST.onclick = e => { e.stopPropagation(); if (!mo.hidden) closePops(); else openSet(); };
-    { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay() || emoGen() || view === "compass" || view === "arena" || view === "kandinsky" || view === "mosaic" || view === "treemap"); }; }   // Compass's Relevance and the folder colors live in the gear too
+    { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay() || emoGen() || view === "compass" || view === "arena" || view === "kandinsky" || view === "cockpit" || view === "mosaic" || view === "treemap"); }; }   // Compass's Relevance and the folder colors live in the gear too
     MB.onclick = e => { e.stopPropagation(); if (!MP.hidden) closePops(); else openMaps(); };
     // the one menu that stays open after you pick: hop from map to map (a click anywhere else, or Escape, still closes it)
     MP.addEventListener("click", e => { const c_ = e.target.closest(".chip"); if (!c_ || !MP.contains(c_) || MP.hidden) return; const st = MP.scrollTop;
