@@ -2448,17 +2448,24 @@ let CKFRAME = pref("iv-ckframe", false) === true;
 // every note at its place in 3D Starfield, the galaxies as glowing disks and clouds in their own colours, the links as panels where those notes really are.
 let CKW = pref("iv-ckw", "links") === "sf" ? "sf" : "links";
 const CKSF = { ver: -1, P: null, sc: 1, B: [] };
-function ckSF(){ layoutStars(); build3D(); if (CKSF.ver === starVer && CKSF.P) return CKSF; const P = new Float32Array(3 * n), sc = 40000 / Math.max(1, SPAN3);
-  for (let i = 0; i < n; i++) { const bi = BOD[i], lx = L3[3 * i], ly = L3[3 * i + 1], lz = L3[3 * i + 2]; let x, y, z;
+function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), turn = CKX.turn;
+  if (CKSF.ver === starVer && CKSF.P && (!turn || now - (CKSF.tc || 0) < 30)) return CKSF; CKSF.tc = now;
+  const P = CKSF.ver === starVer && CKSF.P ? CKSF.P : new Float32Array(3 * n), sc = 40000 / Math.max(1, SPAN3), ts = now / 1000;
+  /* turning galaxies (0.8.101): each disk turns slowly in its own plane, about one turn in four to eight minutes */
+  const ang = bi => turn && B3[bi] && B3[bi].flat ? ts * (.013 + hash(String(bi), 77) * .013) : 0;
+  for (let i = 0; i < n; i++) { const bi = BOD[i]; let lx = L3[3 * i], ly = L3[3 * i + 1]; const lz = L3[3 * i + 2]; let x, y, z;
+    if (turn && bi >= 0) { const a_ = ang(bi); if (a_) { const ca = Math.cos(a_), sa = Math.sin(a_), rx = lx * ca - ly * sa; ly = lx * sa + ly * ca; lx = rx; } }
     if (bi >= 0) { const B = B3[bi], M = B.M; x = BODIES[bi].x + M[0][0] * lx + M[0][1] * ly + M[0][2] * lz; y = BODIES[bi].y + M[1][0] * lx + M[1][1] * ly + M[1][2] * lz; z = B.z + M[2][0] * lx + M[2][1] * ly + M[2][2] * lz; }
     else { x = lx; y = ly; z = lz; } P[3 * i] = x * sc; P[3 * i + 1] = y * sc; P[3 * i + 2] = z * sc; }
   CKSF.B = B3.map(B => { const b = B.b, M = B.M; return { b, x: b.x * sc, y: b.y * sc, z: B.z * sc, r: (b.r || 200) * sc, flat: B.flat, u: [M[0][0], M[1][0], M[2][0]], v: [M[0][1], M[1][1], M[2][1]] }; });
-  CKSF.ver = starVer; CKSF.P = P; CKSF.sc = sc; return CKSF; }
+  CKSF.ver = starVer; CKSF.P = P; CKSF.sc = sc;
+  if (turn && CKW === "sf") for (const it of CK.items) { it.x = P[3 * it.i]; it.y = P[3 * it.i + 1]; it.z = P[3 * it.i + 2]; }   /* the panels ride along with their stars */
+  return CKSF; }
 // the Starfield world's layers, each a mini switch in the Cockpit's ⚙ (0.8.96, Nick: "add as mini-toggles for me to play with")
 const CKX_DEF = { names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
-const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"]];
+const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"]];
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
