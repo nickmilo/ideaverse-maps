@@ -2458,7 +2458,7 @@ function ckSF(){ layoutStars(); build3D(); if (CKSF.ver === starVer && CKSF.P) r
 const CKX_DEF = { names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
-const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"]];
+const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"]];
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2541,6 +2541,15 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
         return [p_[0], p_[1], R]; };
     for (let i = 0; i < n; i++) if (i !== ck && N[i].level === 5 && vis[i]) ring(i, false);
     const rc = ck >= 0 ? ring(ck, true) : null;
+    // signposts (0.8.99): round the cockpit note's ring, a marker pointing toward each Level 4–5 hub it links to, wherever it is (behind you too); named, and a click locks on
+    CK.posts = [];
+    if (rc && CKX.posts) { const hubs = [...new Set([...out[ck], ...inn[ck]])].filter(j => j !== ck && vis[j] && N[j].level >= 4).sort((a, b) => N[b].score - N[a].score).slice(0, 14);
+      g.font = `500 9.5px ${css.mono || font}`; const R3 = rc[2] + 20;
+      for (const j of hubs) { const [xc, yc, zc] = ckCam(P[3 * j], P[3 * j + 1], P[3 * j + 2]), a_ = Math.atan2(yc, xc), px = rc[0] + Math.cos(a_) * R3, py = rc[1] + Math.sin(a_) * R3, behind = zc < 0;
+        g.globalAlpha = behind ? .55 : .95; g.fillStyle = N[j].level === 5 ? "#ffd27a" : HUDc(.95); g.save(); g.translate(px, py); g.rotate(a_); g.beginPath(); g.moveTo(7, 0); g.lineTo(0, -4); g.lineTo(-3, 0); g.lineTo(0, 4); g.closePath(); g.fill(); g.restore();
+        let nm = N[j].title; if (nm.length > 22) nm = nm.slice(0, 21) + "…"; const right = Math.cos(a_) >= 0; g.textAlign = right ? "left" : "right"; g.textBaseline = "middle"; g.fillStyle = HUDc(behind ? .5 : .85);
+        g.fillText(nm.toUpperCase() + (behind ? " ↺" : ""), px + (right ? 10 : -10), py); CK.posts.push([px, py, j]); }
+      g.textAlign = "left"; g.textBaseline = "alphabetic"; g.globalAlpha = 1; }
     if (rc && chxSF("read")) { const nb = new Set([...out[ck], ...inn[ck]]), CY = new Date().getUTCFullYear(), y0 = Date.UTC(CY, 0, 1); let first = Infinity, yr = 0;
       for (const j of nb) { const tv = TVD[j]; if (!(tv > 0)) continue; if (tv < first) first = tv; if (tv >= y0) yr++; }
       const Ls = [`L${N[ck].level} · SCORE ${N[ck].score.toFixed(N[ck].score < 10 ? 1 : 0)}`, `IN ${N[ck].body_in} · OUT ${N[ck].body_out}`, `${isFinite(first) ? "SINCE " + new Date(first).getUTCFullYear() : "NO DATES"} · +${yr} ${CY}`];
@@ -2601,6 +2610,7 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
     if (d.moved) { CK.auto = false; CK.yaw += dx * .0032 * ckUp(); CK.pitch += dy * .0032; CK.roll += dx * .004; } });
   c_.addEventListener("pointerleave", () => { CK.hovS = -1; CK.mouse = null; CK.starHov = -1; });
   c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return; { const sj = ckSideHit(e.offsetX, e.offsetY); if (sj >= 0) { const was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } } const h_ = ckHit(e.offsetX, e.offsetY);
+    if (h_ < 0 && CKW === "sf") { const p_ = (CK.posts || []).find(q => Math.hypot(q[0] - e.offsetX, q[1] - e.offsetY) < 12); if (p_) { const was = (CK.items[CK.lock] || {}).i === p_[2]; ckLockNote(p_[2]); if (was) CK.auto = true; return; } }
     if (h_ < 0) { if (CKW === "sf" && CK.starHov >= 0) { const sj = CK.starHov, was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; } return; } if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
   c_.addEventListener("dblclick", e => { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) { CK.lock = h_; CK.auto = true; } });
   /* trackpad (Nick): two fingers steer, a pinch flies; a mouse wheel (no sideways scroll) still flies */
