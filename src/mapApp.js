@@ -2020,7 +2020,7 @@ function layoutCompass(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[
   let x0 = -200, x1 = 200, y0 = -200, y1 = 200;
   ids.forEach((j, q) => { EHID[j] = 0; EX[j] = P[q*2]; EY[j] = P[q*2+1]; x0 = Math.min(x0, EX[j]); x1 = Math.max(x1, EX[j]); y0 = Math.min(y0, EY[j]); y1 = Math.max(y1, EY[j]); });
   CMP.R = Math.max(-x0, x1, -y0, y1); expBox = { x0: x0 - 90, y0: y0 - 70, x1: x1 + 160, y1: y1 + 60 };
-  CMP.pv = (rel ? ids.slice() : [...ids].sort((p, q) => N[q].score - N[p].score)).slice(0, 6); }
+  CMP.pv = (rel ? ids.slice() : [...ids].sort((p, q) => N[q].score - N[p].score)).slice(0, 24); }
 function cmpSync(){ if (view !== "compass" || dead) return; if (cmpCenter() !== CMP.c) morph(true, () => fitTarget()); }
 EXP.compass = {
   layout: layoutCompass,
@@ -3961,6 +3961,8 @@ function renderTrail(){
 // Three editors, each a real Obsidian editor (host.editCard): the main one, in a card under the picked note (the centre) or on the left side;
 // and a support note on the right for any note you ⌘-click. One theme and one opacity for all three. Starfield first, Emergence as the stress test.
 let EDITM = pref("iv-editm", false) === true, EDLEFT = pref("iv-edleft", false) === true, HUBPV = pref("iv-hubpv", false) === true;
+// how many mini previews (0.8.42, Nick: a slider from fewer to more): Starfield's hubs and Compass's closest notes; 0 shows none
+let PVN = (() => { const v = pref("iv-pvn", null); return v == null ? (HUBPV ? 6 : 4) : Math.max(0, Math.min(12, v | 0)); })();
 const CARDMAPS = new Set(["stars", "emergence", "spacetime", "compass", "arena"]);
 const edOn = () => EDITM && CARDMAPS.has(view) && !!host.editCard && !isPhone() && !S3D_ON();
 let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84;   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
@@ -4130,14 +4132,14 @@ function placeOrbs(){ if (orbBar.hidden) return; const L = !EDS.left.el.hidden ?
   orbBar.style.left = Math.round(L) + "px"; orbBar.style.width = Math.max(40, Math.round(R - L)) + "px"; }
 // Starfield: a small read-only preview of each galaxy's hub note, above it
 const pvLayer = doc.createElement("div"); pvLayer.className = "ivm-pvl"; root.after(pvLayer); const HPV = new Map();
-function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), on = (cmp || (EDITM && HUBPV && view === "stars" && !S3D_ON())) && !!host.preview && W > 0;
+function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), on = PVN > 0 && (cmp || (EDITM && view === "stars" && !S3D_ON())) && !!host.preview && W > 0;
   if (!on) { if (pvLayer.childElementCount) { pvLayer.empty(); HPV.clear(); } return; }
   const c = cv.getBoundingClientRect(), pr = pvLayer.getBoundingClientRect(), ox = c.left - pr.left, oy = c.top - pr.top, want = new Set();
   const L_ = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w : 0, R_ = !EDS.right.el.hidden ? edRect("right").x : W - sideW();
   const gals = cmp ? (() => { const ok = [], cx = sx(0), cy = sy(0), hit = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1], taken = [[cx - 110, cy - 26, 220, 52]];
     for (const i of CMP.pv) { if (!VV(i) || i === CMP.c) continue; const x = sx(X[i]), y = sy(Y[i]), r = [x - 105, y - 150, 210, 128 + 10];   // above its note, never over another preview or the centre
-      if (x < L_ + 110 || x > R_ - 110 || y < 160 || y > H - 10 || taken.some(t => hit(r, t))) continue; taken.push(r); ok.push({ i, x, y }); } return ok; })() : BODIES.filter(b => b.kind === "gal" && b.core != null && vis[b.core] && b.core !== sel).map(b => ({ b, i: b.core, rr: b.r*k, x: sx(X[b.core]), y: sy(Y[b.core]) }))
-    .filter(g => g.rr >= 55 && g.x > 60 && g.x < W - sideW() - 60 && g.y > 120 && g.y < H - 20).sort((a, b) => b.rr - a.rr).slice(0, 10);
+      if (ok.length >= PVN) break; if (x < L_ + 110 || x > R_ - 110 || y < 160 || y > H - 10 || taken.some(t => hit(r, t))) continue; taken.push(r); ok.push({ i, x, y }); } return ok; })() : BODIES.filter(b => b.kind === "gal" && b.core != null && vis[b.core] && b.core !== sel).map(b => ({ b, i: b.core, rr: b.r*k, x: sx(X[b.core]), y: sy(Y[b.core]) }))
+    .filter(g => g.rr >= 55 && g.x > 60 && g.x < W - sideW() - 60 && g.y > 120 && g.y < H - 20).sort((a, b) => b.rr - a.rr).slice(0, PVN);
   for (const g of gals) { const p = N[g.i].path; want.add(p); let e = HPV.get(p);
     if (!e) { e = pvLayer.createDiv({ cls: "ivm-card ivm-pv" }); e.createDiv({ cls: "pvt", text: N[g.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); HPV.set(p, e); }
     edLook(e); const w = 210, h = 128; e.style.left = Math.round(ox + g.x - w/2) + "px"; e.style.top = Math.round(oy + g.y - h - 22) + "px"; }
@@ -5856,10 +5858,12 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     sl.oninput = () => { CARDOP = +sl.value; ov.setText(CARDOP + "%"); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
     const sw = (txt, get, set) => { const l_ = g.createEl("label", { cls: "mini lcemo eosw" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = get(); l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: txt }); c_.onchange = () => set(c_.checked); };
     sw("Open the editor on the left side", () => EDLEFT, v => { EDLEFT = v; save("iv-edleft", v); if (sel >= 0) void openMain(sel); });
-    sw("Hub previews (Starfield)", () => HUBPV, v => { HUBPV = v; save("iv-hubpv", v); draw(); });
+    { const r_ = g.createEl("label", { cls: "eorow" }); r_.createSpan({ cls: "eol", text: "Previews" }); const pl = r_.createEl("input", { type: "range", attr: { min: "0", max: "12", step: "1", "aria-label": "Previews: fewer to more" } }); pl.value = String(PVN);
+      const pv_ = r_.createSpan({ cls: "eov" }); const say = () => pv_.setText(PVN ? String(PVN) : "off"); say();
+      pl.oninput = () => { PVN = +pl.value; say(); draw(); }; pl.onchange = () => save("iv-pvn", PVN); pl.onclick = e => e.stopPropagation(); }
     sw("Show orbs (tabs)", () => ORBS, v => { ORBS = v; save("iv-orbs", v); const n_ = g.querySelector(".orbnsw"); if (n_) n_.hidden = !v; syncOrbs(); });
     sw("Show orb names", () => ORBN, v => { ORBN = v; save("iv-orbn", v); syncOrbs(); }); { const ls = g.querySelectorAll(".eosw"); const l_ = ls[ls.length - 1]; l_.classList.add("orbnsw", "sub"); l_.hidden = !ORBS; }
-    g.createDiv({ cls: "eonote", text: "⌘-click a note to open it as a support note on the right. Shift-click opens it in a new tab (an orb). Pin the editor to keep its note: what you pick then opens as the support note." });
+    g.createDiv({ cls: "eonote", text: "Previews: small read-only glimpses of notes, in Starfield (its biggest hubs) and Compass (the closest notes). ⌘-click a note to open it as a support note on the right. Shift-click opens it in a new tab (an orb). Pin the editor to keep its note: what you pick then opens as the support note." });
     cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); g.hidden = !EDITM; if (EDITM && sel >= 0) void openMain(sel); else closeEds(); syncOrbs(); draw(); }; }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
