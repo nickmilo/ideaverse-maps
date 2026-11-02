@@ -2442,7 +2442,7 @@ EXP.kandinsky = {
 // After Nick's X-Wing (1993) mockup: "actually fly through our notes… almost like a game, but not a game", built no further than needed.
 // Space: links in on the left, links out on the right, two-way links ahead; what the note links up to above the horizon, what sits below it beneath;
 // the strongest links (relevance from this note) nearest. F shows only links in, R only links out (Nick's swap). No S·T·I·R gauges yet (Nick: don't calculate them yet).
-const CK = { inL: [], outL: [], side: [], on: false, c: -1, items: [], lock: -1, sug: -1, P: [0, 0, 0], yaw: 0, pitch: 0, v: 0, keys: new Set(), only: "", t0: 0, warp: 0, auto: false, roll: 0, el: null, cv: null, g: null, w: 0, h: 0, stars: [], last: 0, drag: null, msg: "" };
+const CK = { hovS: -1, hv: new Map(), inL: [], outL: [], side: [], on: false, c: -1, items: [], lock: -1, sug: -1, P: [0, 0, 0], yaw: 0, pitch: 0, v: 0, keys: new Set(), only: "", t0: 0, warp: 0, auto: false, roll: 0, el: null, cv: null, g: null, w: 0, h: 0, stars: [], last: 0, drag: null, msg: "" };
 let CKFRAME = pref("iv-ckframe", false) === true;
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2479,9 +2479,10 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
   CK.ej = ej;
   for (let q = 0; q < 420; q++) CK.stars.push([hash("s" + q, 3) * 4000 - 2000, hash("s" + q, 5) * 4000 - 2000, hash("s" + q, 7) * 4000 - 2000, .3 + hash("s" + q, 9) * .7]);
   c_.addEventListener("pointerdown", e => { if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false }; c_.setPointerCapture(e.pointerId); });
-  c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); c_.classList.toggle("hot", h_ >= 0 || ckSideHit(e.offsetX, e.offsetY) >= 0); return; }
+  c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); CK.hovS = ckSideHit(e.offsetX, e.offsetY); c_.classList.toggle("hot", h_ >= 0 || CK.hovS >= 0); return; }
     const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) > 4) d.moved = true; d.x = e.clientX; d.y = e.clientY;
     if (d.moved) { CK.auto = false; CK.yaw += dx * .0032; CK.pitch = Math.max(-1.2, Math.min(1.2, CK.pitch + dy * .0032)); CK.roll += dx * .004; } });
+  c_.addEventListener("pointerleave", () => { CK.hovS = -1; });
   c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return; { const sj = ckSideHit(e.offsetX, e.offsetY); if (sj >= 0) { const was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } } const h_ = ckHit(e.offsetX, e.offsetY);
     if (h_ < 0) return; if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
   c_.addEventListener("dblclick", e => { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) { CK.lock = h_; CK.auto = true; } });
@@ -2564,6 +2565,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
     const fade = Math.max(.12, Math.min(1, 2600 / it.zc - .2)) * (ckShows(it) ? 1 : .08) * (1 - CK.warp * .7);
     g.globalAlpha = fade; g.fillStyle = "rgba(10,16,30,.86)"; g.fillRect(x0, y0, sw, sh);
     g.strokeStyle = col; g.lineWidth = Math.max(.6, Math.min(2.2, sw / 90)); if (it.none) g.setLineDash([4, 3]); g.strokeRect(x0, y0, sw, sh); g.setLineDash([]);
+    { const hv = CK.hv.get(it.i) || 0; if (hv > .02) { g.save(); g.globalAlpha = hv * .9; g.strokeStyle = "#ffffff"; g.lineWidth = 1.5; g.strokeRect(x0 - 4, y0 - 4, sw + 8, sh + 8); g.restore(); g.globalAlpha = Math.max(fade, hv); } }
     if (it.inn && it.out && sw > 30) { g.globalAlpha = fade * .5; g.strokeRect(x0 + 3, y0 + 3, sw - 6, sh - 6); g.globalAlpha = fade; }
     g.fillStyle = col; g.fillRect(x0, y0, Math.max(1.5, sw * .035), sh);
     if (sw > 34) { const fs = Math.max(7, Math.min(22, sh * .36)); g.font = `600 ${fs}px ${font}`; g.fillStyle = "#e9efff"; g.textBaseline = "middle";
@@ -2580,13 +2582,21 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   for (const [s, list, lab] of [[-1, CK.inL, "IN · F"], [1, CK.outL, "OUT · R"]]) { const n_ = list.length; if (!n_) continue; const cap = n_ > 22 ? 20 : n_, rows = cap + (n_ > cap ? 1 : 0), Rx = W * .5, Ry = VH * .62, lh = Math.min(15.5, (VH - 90) / (rows + 1));
     const dim = CK.only && CK.only !== (s < 0 ? "in" : "out"); g.save(); g.font = `500 11px ${font}`; g.textBaseline = "middle";
     const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [cx + s * Rx * Math.sqrt(Math.max(0, 1 - u * u)) - s * 34, y, Math.asin(Math.max(-1, Math.min(1, u))) * .3]; };
-    for (let r = 0; r < rows; r++) { const [x, y, tl] = at(r), more = r === cap, j = more ? -1 : list[r]; g.save(); g.translate(x, y); g.rotate(s < 0 ? -tl : tl); g.textAlign = s < 0 ? "left" : "right";
-      g.globalAlpha = (dim ? .18 : .62) * (j >= 0 && j === lockI ? 1.5 : 1);
+    /* hover (Nick: "a dynamic feel"): the name under the pointer eases in toward the middle and grows, its neighbours make way, and a tether runs to its panel */
+    const rH = CK.hovS >= 0 ? list.indexOf(CK.hovS) : -1, tH = rH >= 0 && rH < cap ? (CK.hv.get(CK.hovS) || 0) : 0;
+    for (let r = 0; r < rows; r++) { const [x0_, y, tl] = at(r), more = r === cap, j = more ? -1 : list[r];
+      let tv = 0; if (j >= 0) { const tgt = j === CK.hovS ? 1 : 0; tv = (CK.hv.get(j) || 0); tv += (tgt - tv) * .2; if (tv < .01 && !tgt) CK.hv.delete(j); else CK.hv.set(j, tv); }
+      const nb = rH >= 0 && r !== rH ? Math.max(0, 1 - Math.abs(r - rH) / 3) * tH : 0, x = x0_ - s * (16 * tv + 5 * nb), ym = y + (rH >= 0 && r !== rH ? Math.sign(r - rH) * nb * 3 : 0);
+      g.save(); g.translate(x, ym); g.rotate((s < 0 ? -tl : tl) * (1 - tv)); g.scale(1 + .24 * tv, 1 + .24 * tv); g.textAlign = s < 0 ? "left" : "right";
+      g.globalAlpha = Math.min(1, (dim ? .18 : .62 + .38 * tv) * (j >= 0 && j === lockI ? 1.5 : 1));
+      if (tv > .02 && j >= 0) { const w_ = g.measureText(N[j].title.slice(0, 40)).width + 26; g.save(); g.globalAlpha = .16 * tv; g.fillStyle = ckCol(N[j].level); g.fillRect(s < 0 ? 0 : -w_, -8, w_, 16); g.restore(); }
       if (more) { g.fillStyle = "#8fa3bf"; g.fillText(`+${n_ - cap} more`, s < 0 ? 13 : -13, 0); g.restore(); continue; }
       g.fillStyle = ckCol(N[j].level); g.beginPath(); g.arc(s < 0 ? 6 : -6, 0, 2.2, 0, 6.2832); g.fill();
       let tt = N[j].title; while (g.measureText(tt).width > 165 && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…";
-      g.fillStyle = j === lockI ? "#ffcf5a" : "#c9d6ea"; g.fillText(tt, s < 0 ? 13 : -13, 0); const tw = g.measureText(tt).width + 16; g.restore();
-      CK.side.push([s < 0 ? x : x - tw, y - lh / 2, tw, lh, j]); }
+      g.fillStyle = j === lockI ? "#ffcf5a" : tv > .3 ? "#ffffff" : "#c9d6ea"; g.fillText(tt, s < 0 ? 13 : -13, 0); const tw = g.measureText(tt).width + 16; g.restore();
+      CK.side.push([s < 0 ? x0_ : x0_ - tw, y - lh / 2, tw, lh, j]);
+      if (tv > .05) { const it = CK.items.find(o => o.i === j); if (it && it.zc > 8 && it.sw > 0) { g.save(); g.globalAlpha = .55 * tv; g.strokeStyle = ckCol(N[j].level); g.lineWidth = 1; g.setLineDash([3, 4]); g.lineDashOffset = -win.performance.now() / 40;
+          g.beginPath(); g.moveTo(x + (s < 0 ? tw * (1 + .24 * tv) : -tw * (1 + .24 * tv)), ym); g.lineTo(it.sx + (s < 0 ? -it.sw / 2 : it.sw / 2), it.sy); g.stroke(); g.restore(); } } }
     const [hx, hy] = at(-1.3); g.globalAlpha = dim ? .25 : .55; g.font = `600 9.5px ${font}`; g.fillStyle = "#7dffb0"; g.textAlign = s < 0 ? "left" : "right"; g.fillText(`${lab} · ${n_}`, hx + (s < 0 ? 4 : -4), hy); g.restore(); }
   g.textAlign = "left";
   /* reticle on the locked panel, or an arrow at the edge pointing to it */
