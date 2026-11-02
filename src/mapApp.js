@@ -3,7 +3,7 @@
 import { Notice, Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 
-export const VIEWS_ON = ["compass", "emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
+export const VIEWS_ON = ["arena", "compass", "emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -23,6 +23,7 @@ let placeAnitab = () => {};   // set by the Animations dock (below)
 let fDots = () => {}; const FUI = {}; let ANCHOR_T = 0, CAPFIT = false, syncTB = () => {}, toggleMapOpts = () => {}, lastDown = null;   // lastDown: where the last press landed on the map   // set by the toolbar (below): labels, counts and which buttons show
 
 const N = D.nodes, E = D.edges, n = N.length;
+const PIDX = new Map(N.map((d,i) => [d.path, i]));   // a note's index by path (up top since 0.8.41: maps that open first, like Arena, need it)
 const LEVELS = [
   {lv:5, name:"Home & hubs"}, {lv:4, name:"Maps of maps"}, {lv:3, name:"Maps of content"},
   {lv:2, name:"Linked notes"}, {lv:1, name:"Unlinked notes"}];
@@ -2039,6 +2040,52 @@ EXP.compass = {
   legend: "Compass: one note at the centre (the one in the editor; pin it to keep it there). What it links up to sits above it, the notes that link up to it below; otherwise higher levels above and lower below. Time runs left to right, earlier to later. ⚙ → Relevance pulls the notes most related to the centre toward it, like radar, each keeping its direction; the closest get small previews in Edit mode.",
 };
 
+// ---------- Arena (0.8.41, Nick): a ring of slots you fill with notes, a workspace of your own ----------
+// 8 to 20 slots round a circle (⚙). Click an empty slot to put a note in it; Option-click (Alt-click) a slot to empty it. The links between
+// the ring's notes cross the middle as curves, as in Chord. The note pinned in the editor sits at the centre. The ring is saved; it starts
+// from your tabs (the orbs) the first time.
+let ARN = Math.max(8, Math.min(20, pref("iv-arn", 12) | 0)), ARENA = (() => { const a = pref("iv-arena", null); return Array.isArray(a) ? a : null; })();
+const ARR = 900, ARC0 = { c: -1 };
+function arenaSlots(){ if (!ARENA) { ARENA = []; try { for (const t of TABS) if (t && t.path) ARENA.push(t.path); } catch (_) { /* tabs not ready yet */ } }
+  while (ARENA.length < ARN) ARENA.push(null); if (ARENA.length > ARN) { const kept = ARENA.filter(Boolean); ARENA = ARENA.slice(0, ARN); for (const p_ of kept) if (!ARENA.includes(p_)) { const k_ = ARENA.indexOf(null); if (k_ >= 0) ARENA[k_] = p_; } }
+  return ARENA; }
+const arenaAt = q => { const a = -Math.PI / 2 + q * 2 * Math.PI / ARN; return [Math.cos(a) * ARR, Math.sin(a) * ARR]; };
+function layoutArena(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; } const sl = arenaSlots();
+  sl.forEach((p_, q) => { const i = p_ != null ? PIDX.get(p_) : null; if (i == null || !vis[i]) return; const [x, y] = arenaAt(q); EHID[i] = 0; EX[i] = x; EY[i] = y; });
+  // the centre: the note pinned in the editor, else the note you picked when it isn't on the ring
+  let c = -1; try { const t = TABS[TCUR]; if (edOn() && t && t.pin && PIDX.has(t.path)) c = PIDX.get(t.path); else if (sel >= 0 && vis[sel] && EHID[sel]) c = sel; } catch (_) { /* not ready yet */ }
+  ARC0.c = c; if (c >= 0 && vis[c] && EHID[c]) { EHID[c] = 0; EX[c] = 0; EY[c] = 0; }
+  expBox = { x0: -ARR - 260, y0: -ARR - 120, x1: ARR + 260, y1: ARR + 120 }; }
+function arenaSlotAt(px, py){ const sl = arenaSlots(); let best = -1, bd = 1e9; for (let q = 0; q < sl.length; q++) { const [x, y] = arenaAt(q), d = Math.hypot(sx(x) - px, sy(y) - py); if (d < bd) { bd = d; best = q; } } return bd <= Math.max(18, 60 * k) ? best : -1; }
+async function arenaFill(q){ if (!host.pickNote) return; const sl = arenaSlots(), have = new Set(sl.filter(Boolean)), items = [];
+  for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i] && !have.has(N[i].path)) items.push({ path: N[i].path, title: N[i].title, s: N[i].score }); items.sort((a, b) => b.s - a.s);
+  const p_ = await host.pickNote(items); if (!p_ || dead) return; sl[q] = p_; save("iv-arena", ARENA); morph(true, () => fitTarget()); const i = PIDX.get(p_); if (i != null && edOn()) win.setTimeout(() => { if (!dead) select(i); }, 800); }   // the ring stays framed; in Edit mode the note opens in the editor
+function arenaSync(){ if (view !== "arena" || dead) return; const was = ARC0.c; let want = -1;
+  try { const t = TABS[TCUR]; const onRing = i => arenaSlots().includes(N[i].path); if (edOn() && t && t.pin && PIDX.has(t.path)) want = PIDX.get(t.path); else if (sel >= 0 && vis[sel] && !onRing(sel)) want = sel; } catch (_) { return; }
+  if (want !== was) morph(true, () => fitTarget()); refitSoon(); }
+// Compass and Arena: frame the map between the editors once the map has stopped moving (a move started earlier would otherwise win)
+function refitSoon(){ const v0 = view; let tries = 0; const go = () => { if (dead || view !== v0) return; if (morphing && tries++ < 20) { win.setTimeout(go, 120); return; } animateTo(fitTarget()); }; win.setTimeout(go, 120); }
+function arenaClear(q){ const sl = arenaSlots(); if (!sl[q]) return; sl[q] = null; save("iv-arena", ARENA); morph(true, () => fitTarget()); }
+EXP.arena = {
+  layout: layoutArena,
+  guides(){ const sl = arenaSlots(), cx = sx(0), cy = sy(0); ctx.save();
+    ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.globalAlpha = .7; ctx.beginPath(); ctx.arc(cx, cy, ARR * k, 0, 6.2832); ctx.stroke();
+    // empty slots: a dashed ring with a plus, to fill
+    ctx.setLineDash([3, 4]); ctx.globalAlpha = .85; ctx.font = `500 ${Math.max(11, Math.min(18, 26 * k))}px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    sl.forEach((p_, q) => { const i = p_ != null ? PIDX.get(p_) : null; if (i != null && vis[i]) return; const [x, y] = arenaAt(q), r = Math.max(10, 34 * k);
+      ctx.fillStyle = css.bg; ctx.beginPath(); ctx.arc(sx(x), sy(y), r, 0, 6.2832); ctx.fill(); ctx.strokeStyle = css.muted; ctx.stroke(); ctx.fillStyle = css.muted; ctx.fillText("+", sx(x), sy(y) + 1); });
+    ctx.setLineDash([]);
+    // the links between the ring's notes cross the middle as curves, in their link colors (as Chord draws them)
+    const on = sl.map(p_ => p_ != null ? PIDX.get(p_) : null).filter(i => i != null && vis[i]); if (ARC0.c >= 0 && !on.includes(ARC0.c)) on.push(ARC0.c); const set = new Set(on);
+    ctx.lineWidth = 2; for (const [a, b] of E) { if (!set.has(a) || !set.has(b) || a === b) continue; const hl = sel >= 0 && (a === sel || b === sel);
+      ctx.globalAlpha = sel >= 0 ? (hl ? .9 : .18) : .6; ctx.strokeStyle = edgeColor(a, b, upOf(a, b));
+      const x1 = sx(X[a]), y1 = sy(Y[a]), x2 = sx(X[b]), y2 = sy(Y[b]), mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx + (mx - cx) * .25, cy + (my - cy) * .25, x2, y2); ctx.stroke(); }
+    ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
+  mustLabel: () => arenaSlots().map(p_ => p_ != null ? PIDX.get(p_) : null).filter(i => i != null).concat(ARC0.c >= 0 ? [ARC0.c] : []),
+  legend: "Arena: a ring of slots you fill with notes, a workspace of your own. Click an empty slot (+) to put a note in it; Option-click (Alt-click) a slot to empty it. The links between the ring's notes cross the middle, as in Chord. Pin a note in the editor to set it at the centre. ⚙ sets how many slots (8 to 20).",
+};
+
 // ---------- Posters: a targeted dataset (a base's view, a filter) laid out by its own properties ----------
 // Across: a date or number property (year, rating, created…). Lanes: a category (genre, status, a base's own groups).
 // Size: a number (your rank). Each note is a card, and when the note has an image property (a poster, a cover),
@@ -3128,7 +3175,7 @@ function leftCol(){ if (isPhone()) return 0; if (EDLW) return EDLW; const c = cv
   return Math.min(r, 400); }
 function fitTarget0(){ const pad = 56;
   if (globeOn()) { const lc = leftCol(), vw = W - sideW() - lc; return {k: .44*Math.min(vw, H)/(CS_R*1.08), tx: lc + vw/2, ty: H/2}; }
-  if (expOn()) { const lc = leftCol(), vw = W - sideW() - lc - (view === "compass" && EDS && !EDS.right.el.hidden ? W - sideW() - edRect("right").x : 0), b = expBox, bw = b.x1 - b.x0, bh = b.y1 - b.y0, kk = Math.min((vw - pad)/bw, (H - pad)/bh);   // beside the bars' column
+  if (expOn()) { const lc = leftCol(), vw = W - sideW() - lc - ((view === "compass" || view === "arena") && EDS && !EDS.right.el.hidden ? W - sideW() - edRect("right").x : 0), b = expBox, bw = b.x1 - b.x0, bh = b.y1 - b.y0, kk = Math.min((vw - pad)/bw, (H - pad)/bh);   // beside the bars' column
     return {k: kk, tx: lc + vw/2 - (b.x0 + bw/2)*kk, ty: H/2 - (b.y0 + bh/2)*kk}; }
   if (csphOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: .4*Math.min(vw, H)/(CS_R*1.08), tx: vw/2, ty: H/2}; }
   if (domeOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: Math.max(vw, H*1.2)/2/(DF_*Math.tan(52*Math.PI/180)), tx: vw/2, ty: H/2}; }   // about a 104° view
@@ -3823,6 +3870,8 @@ cv.addEventListener("pointermove", e => {
 // a click on a note: on a phone it flies to the note; on a computer the map stays put (even in a narrow pane), sliding only if the note would be hidden
 const end = e => { pts.delete(e.pointerId);
   if (GPH.drag) { const g = GPH.drag; GPH.drag = null; if (moved) { GPH.F.free(g.j); GPH.F.heat(0); GPH.wake(); cv.classList.remove("drag"); drag = null; return; } }
+  if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "arena") { const q = arenaSlotAt(e.offsetX, e.offsetY), sl = arenaSlots();   // Arena: fill an empty slot, or empty one (Option-click)
+    if (q >= 0 && (e.altKey || !sl[q] || PIDX.get(sl[q]) == null || !vis[PIDX.get(sl[q])])) { cv.classList.remove("drag"); drag = null; if (e.altKey) arenaClear(q); else void arenaFill(q); return; } }
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
@@ -3912,7 +3961,7 @@ function renderTrail(){
 // Three editors, each a real Obsidian editor (host.editCard): the main one, in a card under the picked note (the centre) or on the left side;
 // and a support note on the right for any note you ⌘-click. One theme and one opacity for all three. Starfield first, Emergence as the stress test.
 let EDITM = pref("iv-editm", false) === true, EDLEFT = pref("iv-edleft", false) === true, HUBPV = pref("iv-hubpv", false) === true;
-const CARDMAPS = new Set(["stars", "emergence", "spacetime", "compass"]);
+const CARDMAPS = new Set(["stars", "emergence", "spacetime", "compass", "arena"]);
 const edOn = () => EDITM && CARDMAPS.has(view) && !!host.editCard && !isPhone() && !S3D_ON();
 let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84;   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
 // Editor theme → Map: Obsidian works out its colors once, on the page body (--background-primary: var(--color-base-00)…), so a dark or light
@@ -3999,9 +4048,9 @@ async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(
   const m = edMain(); (m === EDS.left ? EDS.center : EDS.left).close();
   if (m.el.hidden && !m.col && !drawerCollapsed) { PANAUTO = true; setCollapsed(true, true); }   // the editor shows the note: the note panel tucks away (its tab brings it back)
   const tp = TABS[TCUR], pj = tp && tp.pin && tp.path !== N[i].path ? PIDX.get(tp.path) : null;
-  if (pj != null) { const p0 = m.open(pj); void EDS.right.open(i); syncOrbs(); if (view === "compass") win.setTimeout(() => { if (!dead && view === "compass" && !morphing) animateTo(fitTarget()); }, 300); await p0; return; }   // pinned: the main editor keeps its note, the one you picked opens beside it
+  if (pj != null) { const p0 = m.open(pj); void EDS.right.open(i); syncOrbs(); if (view === "compass" || view === "arena") refitSoon(); await p0; return; }   // pinned: the main editor keeps its note, the one you picked opens beside it
   const p = m.open(i);
-  if (view === "compass") win.setTimeout(() => { if (!dead && view === "compass" && !morphing) animateTo(fitTarget()); }, 850);   // Compass frames itself, clear of the editors
+  if (view === "compass" || view === "arena") refitSoon();   // they frame themselves between the editors, once any move has finished   // Compass frames itself, clear of the editors
   else if (m === EDS.center) { const r = edRect("center"); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k }); }   // the note above the card, in the top third
   else { const L = EDS.left.col ? 0 : edRect("left").x + edRect("left").w, R = EDS.right.el.hidden ? W - sideW() : edRect("right").x; animateTo({ k, tx: (L + R)/2 - X[i]*k, ty: H/2 - Y[i]*k }); }   // the note in the free middle
   await p; }
@@ -4029,7 +4078,7 @@ function tabTake(i){ const p = N[i].path, nw = TABNEW; TABNEW = false; const cur
     else TABS[TCUR] = { path: p }; }
   tabsSave(); syncOrbs(); }
 function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
-  TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); }
+  TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); arenaSync(); }
 function tabGo(j){ const t = TABS[j]; if (!t) return; const i = PIDX.get(t.path); if (i == null) return;
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
   TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }
@@ -4086,6 +4135,7 @@ function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), on =
 function select(i, fromTrail){
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
   if (view === "compass" && !LIVEQ) win.setTimeout(cmpSync, 0);
+  if (view === "arena" && !LIVEQ) win.setTimeout(arenaSync, 0);
   if (!LIVEQ && (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden || EDS.left.col && EDS.left.path)))) win.setTimeout(() => { void openMain(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
@@ -4618,7 +4668,7 @@ let focusArmed = false;
 function navTo(j, fromTrail){
   if (j < 0) { select(-1); return; }
   if (focus >= 0 || focusArmed) { focusArmed = false; setFocus(j, fromTrail); }
-  else { select(j, fromTrail); flyTo(j); }
+  else { select(j, fromTrail); if (view !== "arena" && view !== "compass") flyTo(j); }   // Arena and Compass frame themselves round the picked note
 }
 // Starfield in Focus (0.8.8, Nick): the note centred, zoomed so its galaxy's hub sits just inside the edge (a hub itself: its galaxy fills the view)
 // Focus zoom (0.8.10, Nick: keep both, Normal the default): Normal frames every focused note; Close-Up (Starfield) frames the note with its hub.
@@ -4927,8 +4977,7 @@ if (host.onLinks) host.onLinks((p_, list) => liveLinks(p_, list));
 
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
-const PIDX = new Map(N.map((d,i) => [d.path, i]));
-const VIEW_NAME = {compass:"Compass", posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {arena:"Arena", compass:"Compass", posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
@@ -5490,7 +5539,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     $("#gochord").before(gg); gg.onclick = () => { closePops(); driftStop(); setView("graph"); };
     // Compass (0.8.32): one note at the centre, after Chord
     { const gc = doc.createElement("button"); gc.className = "chip"; gc.id = "gocompass"; gc.textContent = "Compass"; gc.setAttribute("aria-label", "One note at the centre: above it what it links up to, below what links up to it, time left to right");
-      $("#gochord").after(gc); gc.onclick = () => { closePops(); driftStop(); setView("compass"); }; }
+      $("#gochord").after(gc); gc.onclick = () => { closePops(); driftStop(); setView("compass"); };
+      const ga = doc.createElement("button"); ga.className = "chip"; ga.id = "goarena"; ga.textContent = "Arena"; ga.setAttribute("aria-label", "A ring of slots you fill with notes, their links crossing the middle");
+      gc.after(ga); ga.onclick = () => { closePops(); driftStop(); setView("arena"); }; }
     // Mosaic: every note a tile, after Treemap
     const gm = doc.createElement("button"); gm.className = "chip"; gm.id = "gomosaic"; gm.textContent = "Mosaic"; gm.setAttribute("aria-label", "Every note a tile, set like stones: Level 5 at the heart, each level a frame around it");
     $("#gotreemap").after(gm); gm.onclick = () => { closePops(); driftStop(); setView("mosaic"); };
@@ -5579,7 +5630,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       sel_.onchange = () => { PSC()[key] = sel_.value; if (key === "height" && sel_.value) PSC().lastHeight = sel_.value; save(PK(key), sel_.value); morph(true, () => fitTarget()); legend(); };
       const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
-  const VN = () => ({ compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
+  const VN = () => ({ arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
     chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
     shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars", "sense"]);
@@ -5613,6 +5664,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const ea = mo.createDiv({ cls: "mosec emoany", attr: { id: "emoany" } }); ea.hidden = true; const r = ea.createEl("label", { cls: "mini lcemo emosw" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
     const st = ea.createDiv({ cls: "pn lcemost" }); const sync_ = () => { cb.checked = emoOn(view); }; { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); sync_(); }; } FUI.emoany = () => { sync_(); st.setText(""); ea.hidden = !emoGen(); };
     cb.onchange = async () => { setEmoOn(view, cb.checked); st.setText(""); if (cb.checked && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
+  // Arena: how many slots, and start again from the tabs
+  { const fa = mo.createDiv({ cls: "mosec emoany arnany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "eorow arnrow" }); r.createSpan({ cls: "eol", text: "Slots" });
+    const sl_ = r.createEl("input", { type: "range", attr: { min: "8", max: "20", step: "1", "aria-label": "Slots" } }); const v_ = r.createSpan({ cls: "eov" });
+    const btn = fa.createEl("button", { cls: "chip", text: "Fill the empty slots from your tabs", attr: { type: "button" } }); const clr = fa.createEl("button", { cls: "chip", text: "Empty the ring", attr: { type: "button" } });
+    const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "arena"; sl_.value = String(ARN); v_.setText(String(ARN)); };
+    sl_.oninput = () => { ARN = +sl_.value; v_.setText(String(ARN)); save("iv-arn", ARN); arenaSlots(); save("iv-arena", ARENA); if (view === "arena") morph(true); };
+    btn.onclick = e => { e.stopPropagation(); const sl = arenaSlots(); for (const t of TABS) if (t && t.path && !sl.includes(t.path)) { const k_ = sl.indexOf(null); if (k_ < 0) break; sl[k_] = t.path; } save("iv-arena", ARENA); if (view === "arena") morph(true); };
+    clr.onclick = e => { e.stopPropagation(); ARENA = []; arenaSlots(); for (let q = 0; q < ARENA.length; q++) ARENA[q] = null; save("iv-arena", ARENA); if (view === "arena") morph(true); }; }
   // Compass: Relevance
   { const fa = mo.createDiv({ cls: "mosec emoany cmpany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "mini lcemo" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Relevance: pull related notes toward the centre" });
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "compass"; cb.checked = CMPREL; };
@@ -5973,10 +6032,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     sync(); new MutationObserver(sync).observe(seg, { attributes: true, subtree: true, attributeFilter: ["aria-pressed"] });
     opener(TH); seg.addEventListener("click", e => { if (e.target.closest("button")) closePops(); }); }
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
-  const ARR_OFF = new Set(["compass", "ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
+  const ARR_OFF = new Set(["arena", "compass", "ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   // a narrow map: the main tabs that don't fit fold into More (from the right: Sensemakers, then Starfield, then Ideaverse), which becomes More maps, with them at the top
   // a small Lucide icon before each map's name in the maps menu
-  const MICON = { gocompass: "navigation", emergence: "layers", ideaverse: "orbit", stars: "sparkles", sense: "compass", gogravity: "circle-dot", gograph: "gem", gochord: "aperture", gocso: "sun", gocsi: "zap",
+  const MICON = { goarena: "circle-dashed", gocompass: "navigation", emergence: "layers", ideaverse: "orbit", stars: "sparkles", sense: "compass", gogravity: "circle-dot", gograph: "gem", gochord: "aperture", gocso: "sun", gocsi: "zap",
     gotreemap: "layout-dashboard", gomosaic: "layout-grid", goshelf: "library", gobuilder: "table-2", golincal: "calendar-range", goposters: "image", gopeople: "users",
     gogeosquare: "square", gogeohex: "hexagon", gogeomandala: "flower", gogeoocta: "diamond", gogeoshells: "globe", gospiral: "rotate-cw", golifeline: "activity",
     goplflat: "map", gopltable: "table", goplglobe: "earth", gotree: "tree-deciduous", goskyline: "building-2" };
@@ -6033,7 +6092,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const t0 = MP.querySelector(":scope > .pt"); if (t0) t0.after(Object.assign(doc.createElement("div"), { className: "vfold vfold0" }));
     { const ex = MP.querySelector(":scope > details"); if (ex) { const exd = Object.assign(doc.createElement("div"), { className: "vfold" }); ex.before(exd);
         // Nick's order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Tesla, Corona, Chord, Base Builder (the quick keys follow it)
-        for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gocompass", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
+        for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gocompass", "goarena", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
         for (const v of ["gravity", "graph", "treemap", "mosaic", "shelf", "tesla", "corona", "chord"]) { const g_ = vgrid.querySelector(`[data-vg="${v}"]`); if (g_) vgrid.appendChild(g_); } const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
     // the quick keys in list order; two are pinned wherever their maps sit (Nick): Linear Calendar is always 0, Base Builder always \
     const QK = [..."123456789-=[]"], QPIN = { golincal: "0", gobuilder: "\\" };
@@ -6060,7 +6119,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
           sw_.append(cb, i_, t); row.after(sw_); cb.onchange = () => { (cb.checked ? bs[1] : bs[0]).click(); tightenMO(); }; }
         row.classList.add("tgone"); sw_.querySelector("input").checked = bs[1].getAttribute("aria-pressed") === "true"; sw_.hidden = row.hidden; }); };
     const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop", "#senseemo"]) $(id).hidden = id !== v_; if (view === "sense") $("#senseemo").hidden = false; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
-      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); FUI.emoany(); moL.hidden = !l || !v_; moNone.hidden = true; tightenMO(); return !!(l || v_ || emoGen() || view === "compass"); };
+      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); FUI.emoany(); moL.hidden = !l || !v_; moNone.hidden = true; tightenMO(); return !!(l || v_ || emoGen() || view === "compass" || view === "arena"); };
     // no hover hints in the maps menu (Nick): a map's description stays for screen readers only
     const quiet = () => MP.querySelectorAll("[aria-label], [title]").forEach(el => { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("title"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); });
     const openMaps = () => { quiet(); closePops("#vmorepop"); if (typeof closeColl === "function") closeColl(); MP.hidden = false; MB.setAttribute("aria-expanded", "true");
@@ -6074,7 +6133,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     POPS.push(["#mapsetbtn", "#mapopts", ".mapsetms"]);
     const openSet = () => { closePops("#mapopts"); if (typeof closeColl === "function") closeColl(); if (!fillMO()) return; mo.setAttribute("aria-description", VN() + " settings"); mo.hidden = false; ST.setAttribute("aria-expanded", "true"); if (!moL.hidden && $("#laygrp").getBoundingClientRect().height < 4) moL.hidden = true; };
     ST.onclick = e => { e.stopPropagation(); if (!mo.hidden) closePops(); else openSet(); };
-    { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay() || emoGen() || view === "compass" || view === "mosaic" || view === "treemap"); }; }   // Compass's Relevance and the folder colors live in the gear too
+    { const s0 = syncTB; syncTB = () => { s0(); const t_ = VN() + " settings"; ST.title = t_; ST.setAttribute("aria-label", t_); STW.hidden = !(variants() || hasLay() || emoGen() || view === "compass" || view === "arena" || view === "mosaic" || view === "treemap"); }; }   // Compass's Relevance and the folder colors live in the gear too
     MB.onclick = e => { e.stopPropagation(); if (!MP.hidden) closePops(); else openMaps(); };
     // the one menu that stays open after you pick: hop from map to map (a click anywhere else, or Escape, still closes it)
     MP.addEventListener("click", e => { const c_ = e.target.closest(".chip"); if (!c_ || !MP.contains(c_) || MP.hidden) return; const st = MP.scrollTop;
@@ -6166,6 +6225,8 @@ return {
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
   _kt(){ return [k, tx, ty]; },
   _view(){ return view; },
+  _arenaEmpty(){ const sl = arenaSlots(), q = sl.findIndex(p_ => p_ == null); if (q < 0) return null; const [x, y] = arenaAt(q); return [sx(x), sy(y)]; },
+  _arenaList(){ return arenaSlots().map(p_ => p_ ? p_.replace(/^.*\//, '') : '-').join(', '); },
   _note(path){ const i = PIDX.get(path); return i == null ? null : { sel: sel === i, level: N[i].level, in: N[i].body_in, out: N[i].body_out, score: N[i].score }; },
   _graph(){ return { mlive: morphing, rms: GPH.x ? Math.round(Math.sqrt([...GPH.x].reduce((t, v, i) => t + v * v + GPH.y[i] * GPH.y[i], 0) / GPH.x.length)) : 0, st: GPH.stepMs, dr: GPH.drawMs, mo: GPH.morph, it: GPH.it, its: GPH.its, key: GPH.key }; },
   setBaseInfo(info){ const sig = info ? JSON.stringify([info.sort, info.order, info.cols, info.groups ? [...info.groups].join() : ""]) : ""; if (sig === baseSig) return;

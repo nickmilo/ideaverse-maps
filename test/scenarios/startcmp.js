@@ -1,4 +1,4 @@
-// the map opening straight on Compass, with tabs saved (Nick's blank map on 0.8.33)
+// the map opening straight on a map (Compass, Arena), with tabs saved (Nick's blank map on 0.8.33)
 module.exports = async ({ page, sleep, shot }) => {
   const errs = []; page.on('pageerror', e => errs.push(e.message));
   await page.evaluate(() => app.emulateMobile(false)); await sleep(2500);
