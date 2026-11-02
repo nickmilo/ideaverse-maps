@@ -3579,9 +3579,15 @@ function sphFace(i){   // a globe turns the note to face you instead of zooming 
     csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); if (t < 1) RAF(step); else { sphTurning = false; buildGrid(); csKeep(); draw(); } };
   sphTurning = true; RAF(step); }
 // a click on a flat map: the note drifts a little of the way toward the middle (no zoom), once the note panel has made its room
+// the free stretch of the map, left to right: clear of the left editor, the support note and the note panel (0.8.79; Nick: the note didn't centre beside the left editor)
+let FLYT = 0;
+function freeLR(){ let L = 0, R = W - (isPhone() ? 0 : sideW()); if (isPhone()) return [L, R];
+  try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) L = edRect("left").x + edRect("left").w + 8; if (EDS && !EDS.right.el.hidden && !EDS.right.col) R = Math.min(R, edRect("right").x - 8); } catch (_) { /* editors not made yet */ }
+  if (R - L < 160) { L = 0; R = W - (isPhone() ? 0 : sideW()); } return [L, R]; }
 function nudgeTo(i){ if (domeOn() || sphOn() || globeOn() || geo3On() || csphOn() || view === "chord" || (view === "stars" && S3D)) return; const id_ = i;
-  win.setTimeout(() => { if (sel !== id_ || morphing) return; const phone = isPhone(), vw = W - (phone ? 0 : sideW()), px_ = sx(X[i]), py_ = sy(Y[i]); if (!isFinite(px_) || !isFinite(py_)) return;
-    const f = .3, dx = (vw/2 - px_)*f, dy = (H/2 - py_)*f; if (Math.hypot(dx, dy) < 8) return; animateTo({ k, tx: tx + dx, ty: ty + dy }); }, 80); }
+  if (edOn() && edCam()) return;   /* the main editor frames the note itself (openMain) */
+  win.setTimeout(() => { if (sel !== id_ || morphing) return; const phone = isPhone(), [fl, fr] = freeLR(), px_ = sx(X[i]), py_ = sy(Y[i]); if (!isFinite(px_) || !isFinite(py_)) return;
+    const f = .3, dx = ((fl + fr)/2 - px_)*f, dy = (H/2 - py_)*f; if (Math.hypot(dx, dy) < 8) return; animateTo({ k, tx: tx + dx, ty: ty + dy }); }, 80); }
 function flyTo(i, noOut){   // noOut: from a click on the map, which never zooms out (it would lose where you were); it centers the note instead
   if (sphOn()) { sphFace(i); return; }
   if (view === "stars" && lastDown) {   // Starfield: a click on a galaxy's name glides into that galaxy and frames it
@@ -3590,11 +3596,14 @@ function flyTo(i, noOut){   // noOut: from a click on the map, which never zooms
       const R = b.r*(S3D && B3[b.id] ? B3[b.id].s : 1), kk = Math.min(6, Math.max(.3, Math.min(vw, vh)*.42/Math.max(R, 20)));
       animateTo({k: kk, tx: lc + vw/2 - bx_*kk, ty: vh/2 - by_*kk}); return; } }
   if (domeOn()) { domeYaw = DTH[i]; domePitch = Math.max(domeSphere() ? -1.45 : -.2, Math.min(1.45, DPH[i] - .08)); domeKeep(); const kk = k; morph(true, () => ({k: kk, tx: (W - (isPhone() ? 0 : sideW()))/2, ty: H/2})); return; }   // in a dome: turn to face it
-  const phone = isPhone(), dw = phone ? 0 : sideW(), lc = !phone && (view === "sense" || view === "stars") ? 400 : 0, vw = W - dw - lc, vh = phone ? H*.48 : H, pad = phone ? 36 : 70;   // Sensemaking keeps its bars in a left column
+  const phone = isPhone(), [fl, fr] = freeLR(), lc = Math.max(fl, !phone && (view === "sense" || view === "stars") ? 400 : 0), vw = fr - lc, vh = phone ? H*.48 : H, pad = phone ? 36 : 70; FLYT = fl > 0 ? performance.now() : 0;   // Sensemaking keeps its bars in a left column
   let x0 = X[i], x1 = X[i], y0 = Y[i], y1 = Y[i];
   for (const j of [...out[i], ...inn[i]]) { x0 = Math.min(x0, X[j]); x1 = Math.max(x1, X[j]); y0 = Math.min(y0, Y[j]); y1 = Math.max(y1, Y[j]); }
   const kk = Math.min(4, Math.max(phone ? .1 : .3, Math.min((vw - pad*2) / Math.max(x1-x0, 1), (vh - pad*2) / Math.max(y1-y0, 1))));
   if (noOut && kk < k) { animateTo({k, tx: lc + vw/2 - X[i]*k, ty: vh/2 - Y[i]*k}); return; }
+  if (edOn() && edCam() && fl > 0) {   /* with the left editor open: the note itself in the middle of the free space, zoomed so its links fit round it */
+    const hx = Math.max(X[i] - x0, x1 - X[i], 1), hy = Math.max(Y[i] - y0, y1 - Y[i], 1), k2 = Math.min(4, Math.max(.3, Math.min((vw/2 - pad) / hx, (vh/2 - pad) / hy)));
+    animateTo({k: k2, tx: lc + vw/2 - X[i]*k2, ty: vh/2 - Y[i]*k2}); return; }
   animateTo({k:kk, tx:lc + vw/2 - (x0+x1)/2*kk, ty:vh/2 - (y0+y1)/2*kk}); }
 
 // note panel width: draggable on desktop, remembered per browser
@@ -4554,7 +4563,7 @@ async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(
   if (view === "compass" || view === "arena") refitSoon();   // they frame themselves between the editors, once any move has finished   // Compass frames itself, clear of the editors
   else if (!edCam()) { /* a globe or 3D map keeps its own camera */ }
   else if (m === EDS.center) { const r = edRect("center"); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k }); }   // the note above the card, in the top third
-  else { const L = EDS.left.col ? 0 : edRect("left").x + edRect("left").w, R = EDS.right.el.hidden ? W - sideW() : edRect("right").x; animateTo({ k, tx: (L + R)/2 - X[i]*k, ty: H/2 - Y[i]*k }); }   // the note in the free middle
+  else if (performance.now() - FLYT > 700) { const L = EDS.left.col ? 0 : edRect("left").x + edRect("left").w, R = EDS.right.el.hidden ? W - sideW() : edRect("right").x; animateTo({ k, tx: (L + R)/2 - X[i]*k, ty: H/2 - Y[i]*k }); }   /* a fly-to that just ran already framed it in the free space */   // the note in the free middle
   await p; }
 // a link clicked inside a card: the map picks that note (the main editor follows); ⌘-click (or a modifier Obsidian reads as "new tab") opens it as the support note.
 // A note that isn't on the map right now (filtered out, or not mapped) opens in Obsidian as usual
