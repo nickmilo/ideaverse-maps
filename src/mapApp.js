@@ -4021,7 +4021,7 @@ function makeEd(kind){
 let LIVEQ = false;   // the map reacting as you write refreshes the note panel quietly: no camera move, no editor reload
 let EDS = null; EDS = { center: makeEd("center"), left: makeEd("left"), right: makeEd("right") };
 const edMain = () => EDLEFT ? EDS.left : EDS.center;
-function stripLists(i){ const d = N[i], L = { above: [], below: [], up: [], related: [] };
+function stripLists(i){ const d = N[i], L = { above: [], below: [], up: [], related: [], out: [...new Set(out[i])].filter(j => j !== i && vis[j]), in: [...new Set(inn[i])].filter(j => j !== i && vis[j]) };
   for (const j of new Set([...out[i], ...inn[i]])) { if (!vis[j] || j === i) continue; const kk = EKIND.get(i*n + j);
     if (kk === 1) L.up.push(j); else if (kk === 4) L.related.push(j); else if (kk === 5) continue; else (N[j].level > d.level || (N[j].level === d.level && upOf(i, j)) ? L.above : L.below).push(j); }
   for (const k_ of Object.keys(L)) L[k_].sort((a, b) => N[b].level - N[a].level || N[b].score - N[a].score); return L; }
@@ -4029,14 +4029,24 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   const lv = o.strip.createSpan({ cls: "slv", text: "L" + d.level }); lv.setCssProps({ "--slc": d.level >= 3 ? GRAD[d.level][0] : d.level === 2 ? css.l2 : css.l1 }); lv.setAttribute("aria-description", LV[d.level] ? LV[d.level].name : "");
   const chip = (key, label, cls) => { const b = o.strip.createEl("button", { cls: "schip " + cls + (o.open_ === key ? " on" : ""), text: label, attr: { type: "button", "aria-expanded": String(o.open_ === key) } });
     b.onclick = e => { e.stopPropagation(); o.open_ = o.open_ === key ? "" : key; fillStrip(o, i); }; };
-  // Nick's order (0.8.40): level, up, related, above, below, then the score; the score's pill opens the numbers and why
+  // Nick's order (0.8.42): level, up, related | out, in | above, below, then the rank; the rank's pill opens the score, how it adds up, and why
+  const bar = () => o.strip.createSpan({ cls: "sbar" });
   if (L.up.length) chip("up", `${L.up.length} up`, "spill"); if (L.related.length) chip("related", `${L.related.length} related`, "spill");
-  if (L.above.length) chip("above", `↑ ${L.above.length} above`, "sab"); if (L.below.length) chip("below", `↓ ${L.below.length} below`, "sbe");
-  chip("score", d.score.toFixed(d.score < 10 ? 1 : 0), "spill sscore");
+  bar(); chip("out", `${d.body_out} out`, "spill"); chip("in", `${d.body_in} in`, "spill");
+  if (L.above.length || L.below.length) bar();
+  if (L.above.length) chip("above", `${L.above.length} above`, "sab"); if (L.below.length) chip("below", `${L.below.length} below`, "sbe");
+  const rk = scoreRank(i); chip("score", rk ? `#${rk.toLocaleString()}` : d.score.toFixed(1), "spill sscore");
   o.drop.empty();
-  if (o.open_ === "score") { o.drop.hidden = false; o.drop.createDiv({ cls: "sdh", text: `SCORE · ${f2(d.score)}` });
+  if (o.open_ === "score") { o.drop.hidden = false; o.drop.createDiv({ cls: "sdh", text: `#${rk.toLocaleString()} IN ${d.archive ? "THE ARCHIVE" : "THE IDEAVERSE"} · SCORE ${f2(d.score)}` });
     const g = o.drop.createDiv({ cls: "sdnums" }); for (const [v, t_] of [[d.body_in, "linked from"], [d.body_out, "links to"], [d.up_in || 0, "link up to it"], [d.score.toFixed(1), "link score"]]) { const c_ = g.createDiv(); c_.createEl("b", { text: String(v) }); c_.createSpan({ text: t_ }); }
-    o.drop.createDiv({ cls: "sdwhy", text: `Level ${d.level}: ${levelRule(i)}` }); return; }
+    o.drop.createDiv({ cls: "sdwhy", text: `Level ${d.level}: ${levelRule(i)}` });
+    // how the score adds up, as in the note panel's Why box: each part, its count, its weight and what it adds
+    if (d.s) { const [a, b, u, c] = d.s, w = S.w, rows = [["Links in", a, w.in, w.in*LN(a)], ["Links out", b, w.out, w.out*LN(b)], ["Links both in and out", a && b ? `${a} in · ${b} out` : "—", w.both, w.both*Math.sqrt(LN(a)*LN(b))]];
+      if (!d.archive) rows.push(["Notes that link up to this note", u, w.up, w.up*LN(u)], ["Notes in its collection", c, w.coll, w.coll*LN(c)]);
+      const t = o.drop.createDiv({ cls: "sdtab" }); for (const h of ["", "count", "weight", "adds"]) t.createSpan({ cls: "sdth", text: h });
+      for (const [l, ct, wt, ad] of rows) { const z = !ad; t.createSpan({ cls: "sdtl" + (z ? " z" : ""), text: l }); t.createSpan({ cls: "sdtn" + (z ? " z" : ""), text: String(ct) }); t.createSpan({ cls: "sdtn" + (z ? " z" : ""), text: "×" + (+wt).toFixed(2) }); t.createSpan({ cls: "sdtn" + (z ? " z" : ""), text: f2(ad) }); }
+      t.createSpan({ cls: "sdtl sdtt", text: "Score" }); t.createSpan(); t.createSpan(); t.createSpan({ cls: "sdtn sdtt", text: f2(d.score) }); }
+    return; }
   const list = o.open_ ? L[o.open_] || [] : []; o.drop.hidden = !list.length; if (!list.length) { o.open_ = ""; return; }
   o.drop.createDiv({ cls: "sdh", text: `${o.open_.toUpperCase()} · ${list.length}` }); const rows = o.drop.createDiv({ cls: "sdl" });
   for (const j of list) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
