@@ -1383,7 +1383,9 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card .cardstrip .schip:hover,.ivm-card .cardstrip .schip.on{border-color:var(--interactive-accent);color:var(--text-normal)}
 .ivm-card .cardstrip .sab::first-letter{color:#e8538a}
 .ivm-card .cardstrip .sbe::first-letter{color:#3fb98f}
-.ivm-card .carddrop{margin:6px 10px 4px;border:1px solid var(--background-modifier-border);border-radius:8px;background:color-mix(in srgb,var(--background-secondary) 90%,transparent);padding:6px 4px 6px 10px;flex:none;max-height:40%;display:flex;flex-direction:column}
+.ivm-card .carddrop{margin:6px 10px 4px;border:1px solid var(--background-modifier-border);border-radius:8px;background:color-mix(in srgb,var(--background-secondary) 90%,transparent);padding:6px 4px 6px 10px;flex:none;max-height:55%;display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain}
+/* 0.8.49: the whole list scrolls (the rank's list with an Emergence list open ran past its bottom); a short list still scrolls on its own */
+.ivm-card .carddrop .sdl{flex:none}
 .ivm-card .carddrop[hidden]{display:none}
 .ivm-card .carddrop .sdh{font:600 10px var(--font-monospace);letter-spacing:.1em;color:var(--text-muted);margin:0 0 4px}
 .ivm-card .carddrop .sdl{overflow-y:auto;padding-right:6px}
@@ -1426,4 +1428,4 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card .carddrop .sdem .sdh{margin:0 4px 0 0}
 .ivm-card .carddrop .sdem .schip{appearance:none;background:none;box-shadow:none;margin:0;height:auto;font-family:inherit;cursor:pointer;font-size:11px;line-height:1;padding:3px 8px;border:1px solid var(--background-modifier-border);border-radius:10px;color:var(--text-muted)}
 .ivm-card .carddrop .sdem .schip:hover,.ivm-card .carddrop .sdem .schip.on{border-color:var(--interactive-accent);color:var(--text-normal)}
-.ivm-card .carddrop .sdsub{max-height:180px;margin-top:4px}
+.ivm-card .carddrop .sdsub{margin-top:4px}

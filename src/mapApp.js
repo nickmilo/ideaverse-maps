@@ -4067,7 +4067,8 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
         b.onclick = e => { e.stopPropagation(); o.sub_ = o.sub_ === key ? "" : key; fillStrip(o, i); }; }
       if (o.sub_ && L[o.sub_] && L[o.sub_].length) { const rows = o.drop.createDiv({ cls: "sdl sdsub" });
         for (const j of L[o.sub_]) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
-          r.onclick = e => { e.stopPropagation(); if (e.shiftKey) TABNEW = true; if (Platform.isMacOS ? e.metaKey : e.ctrlKey) void EDS.right.open(j); else select(j); }; } } }
+          r.onclick = e => { e.stopPropagation(); if (e.shiftKey) TABNEW = true; if (Platform.isMacOS ? e.metaKey : e.ctrlKey) void EDS.right.open(j); else select(j); }; }
+        win.requestAnimationFrame(() => { o.drop.scrollTop = Math.max(0, em.offsetTop - 6); }); } }   // bring the opened list into view
     return; }
   const list = o.open_ ? L[o.open_] || [] : []; o.drop.hidden = !list.length; if (!list.length) { o.open_ = ""; return; }
   o.drop.createDiv({ cls: "sdh", text: `${o.open_.toUpperCase()} · ${list.length}` }); const rows = o.drop.createDiv({ cls: "sdl" });
