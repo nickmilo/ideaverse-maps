@@ -3978,14 +3978,17 @@ function stripLists(i){ const d = N[i], L = { above: [], below: [], up: [], rela
   for (const k_ of Object.keys(L)) L[k_].sort((a, b) => N[b].level - N[a].level || N[b].score - N[a].score); return L; }
 function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.drop.hidden = true; return; } const d = N[i], L = stripLists(i); o.strip.empty();
   const lv = o.strip.createSpan({ cls: "slv", text: "L" + d.level }); lv.setCssProps({ "--slc": d.level >= 3 ? GRAD[d.level][0] : d.level === 2 ? css.l2 : css.l1 }); lv.setAttribute("aria-description", LV[d.level] ? LV[d.level].name : "");
-  const dot = () => o.strip.createSpan({ cls: "ssep", text: "·" });
-  dot(); o.strip.createSpan({ text: "score " + d.score.toFixed(d.score < 10 ? 1 : 0) }); dot(); o.strip.createSpan({ text: `${d.body_in} in, ${d.body_out} out` });
   const chip = (key, label, cls) => { const b = o.strip.createEl("button", { cls: "schip " + cls + (o.open_ === key ? " on" : ""), text: label, attr: { type: "button", "aria-expanded": String(o.open_ === key) } });
     b.onclick = e => { e.stopPropagation(); o.open_ = o.open_ === key ? "" : key; fillStrip(o, i); }; };
-  if (L.above.length || L.below.length) dot();
-  if (L.above.length) chip("above", `↑ ${L.above.length} above`, "sab"); if (L.below.length) chip("below", `↓ ${L.below.length} below`, "sbe");
+  // Nick's order (0.8.40): level, up, related, above, below, then the score; the score's pill opens the numbers and why
   if (L.up.length) chip("up", `${L.up.length} up`, "spill"); if (L.related.length) chip("related", `${L.related.length} related`, "spill");
-  const list = o.open_ ? L[o.open_] || [] : []; o.drop.empty(); o.drop.hidden = !list.length; if (!list.length) { o.open_ = ""; return; }
+  if (L.above.length) chip("above", `↑ ${L.above.length} above`, "sab"); if (L.below.length) chip("below", `↓ ${L.below.length} below`, "sbe");
+  chip("score", d.score.toFixed(d.score < 10 ? 1 : 0), "spill sscore");
+  o.drop.empty();
+  if (o.open_ === "score") { o.drop.hidden = false; o.drop.createDiv({ cls: "sdh", text: `SCORE · ${f2(d.score)}` });
+    const g = o.drop.createDiv({ cls: "sdnums" }); for (const [v, t_] of [[d.body_in, "linked from"], [d.body_out, "links to"], [d.up_in || 0, "link up to it"], [d.score.toFixed(1), "link score"]]) { const c_ = g.createDiv(); c_.createEl("b", { text: String(v) }); c_.createSpan({ text: t_ }); }
+    o.drop.createDiv({ cls: "sdwhy", text: `Level ${d.level}: ${levelRule(i)}` }); return; }
+  const list = o.open_ ? L[o.open_] || [] : []; o.drop.hidden = !list.length; if (!list.length) { o.open_ = ""; return; }
   o.drop.createDiv({ cls: "sdh", text: `${o.open_.toUpperCase()} · ${list.length}` }); const rows = o.drop.createDiv({ cls: "sdl" });
   for (const j of list) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
     r.onclick = e => { e.stopPropagation(); if (e.shiftKey) TABNEW = true; if (Platform.isMacOS ? e.metaKey : e.ctrlKey) void EDS.right.open(j); else select(j); }; } }
@@ -5336,12 +5339,8 @@ function mapWhy(d){
   return "it's mostly links (10+ links out, half its lines carry links)";
 }
 function scoreRank(i){ return RANK[i] || 0; }
-function whyBox(i){
-  const d = N[i]; if (!d.s) return "";
-  const [a, b, u, c] = d.s, w = S.w, ar = !!d.archive;
-  const rows = [["Links in", a, w.in, w.in*LN(a)], ["Links out", b, w.out, w.out*LN(b)],
-    ["Links both in and out", a && b ? `${a} in · ${b} out` : "—", w.both, w.both*Math.sqrt(LN(a)*LN(b)), a && b ? `√(ln(1+${a}) × ln(1+${b})) = √(${f2(LN(a))} × ${f2(LN(b))}) = ${f2(Math.sqrt(LN(a)*LN(b)))}, then × weight` : "zero unless it has links in AND out"]];
-  if (!ar) rows.push(["Notes that link up to this note", u, w.up, w.up*LN(u)], ["Notes in its collection", c, w.coll, w.coll*LN(c)]);
+// why a note has its level, in a sentence (the note panel's Why box and the editor strip's score list share it)
+function levelRule(i){ const d = N[i], ar = !!d.archive;
   const mm = d.is_map && d.maps_linked >= L4_MAPS;
   let rule;
   if (d.level === 5) rule = d.home ? "It's one of your home notes." : `It's among the top ${S.top} by score.`;
@@ -5352,6 +5351,14 @@ function whyBox(i){
   if (ar && d.level >= 2) rule += " (Archive notes are scored on their own links only.)";
   const where = ar ? "the archive" : "the ideaverse";   // always say where its score ranks
   rule += ` (#${scoreRank(i).toLocaleString()} in ${where})`;
+  return rule; }
+function whyBox(i){
+  const d = N[i]; if (!d.s) return "";
+  const [a, b, u, c] = d.s, w = S.w, ar = !!d.archive;
+  const rows = [["Links in", a, w.in, w.in*LN(a)], ["Links out", b, w.out, w.out*LN(b)],
+    ["Links both in and out", a && b ? `${a} in · ${b} out` : "—", w.both, w.both*Math.sqrt(LN(a)*LN(b)), a && b ? `√(ln(1+${a}) × ln(1+${b})) = √(${f2(LN(a))} × ${f2(LN(b))}) = ${f2(Math.sqrt(LN(a)*LN(b)))}, then × weight` : "zero unless it has links in AND out"]];
+  if (!ar) rows.push(["Notes that link up to this note", u, w.up, w.up*LN(u)], ["Notes in its collection", c, w.coll, w.coll*LN(c)]);
+  const rule = levelRule(i);
   const open = pref("iv-why2", false) ? " open" : "";
   let sense = "";
   if (view === "sense") { const z = senseWhy(i);

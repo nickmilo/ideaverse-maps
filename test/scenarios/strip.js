@@ -10,7 +10,7 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.locator('.ivm #q').fill('Pace Layers'); await sleep(700); await page.keyboard.press('Enter'); await sleep(4000); await page.evaluate(() => document.activeElement && document.activeElement.blur());
   console.log('strip', await page.evaluate(() => document.querySelector('.ivm-card-left .cardstrip').textContent), '| panel hidden', await page.evaluate(() => document.querySelector('.ivm #drawer').hidden));
   await page.mouse.move(5, 900); await shot('strip');
-  await page.locator('.ivm-card-left .sbe').click(); await sleep(600); await shot('strip-below');
+  await page.locator('.ivm-card-left .sscore').click(); await sleep(600); await shot('strip-score'); console.log('score drop', await page.evaluate(() => document.querySelector('.ivm-card-left .carddrop').textContent.slice(0, 200))); await page.locator('.ivm-card-left .sbe').click(); await sleep(600); await shot('strip-below');
   console.log('rows', await page.evaluate(() => document.querySelectorAll('.ivm-card-left .sdr').length));
   await page.locator('.ivm-card-left .sdr').nth(1).click(); await sleep(3500); console.log('after row click', await page.evaluate(() => document.querySelector('.ivm-card-left .cardt').textContent), await page.evaluate(() => document.querySelector('.ivm-card-left .cardstrip').textContent));
   await page.locator('.ivm-card-left .cardx').click(); await sleep(1500); console.log('closed editor; panel hidden', await page.evaluate(() => document.querySelector('.ivm #drawer').hidden));
