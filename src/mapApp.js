@@ -3,7 +3,7 @@
 import { Notice, Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 
-export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
+export const VIEWS_ON = ["compass", "emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
 export function mountMap(root, D, host) {
 "use strict";
@@ -1972,6 +1972,70 @@ EXP.lifeline = {
   legend: "Lifeline: your whole ideaverse on one line, left to right. Each note stands on it like a mark on a seismograph: the higher its level, the taller its stem (hubs tallest). Unlinked notes hang just below the line. The gold dot is today.",
 };
 
+// ---------- Compass (0.8.32, Nick): a local map around one note ----------
+// The note in the main editor (the pinned one, or the one you picked) sits at the centre. What it links up to sits above it, the notes
+// that link up to it below; otherwise the higher level goes above and the lower below. Time runs left (earlier) to right (later), on a
+// log scale so last week and ten years ago both have room. Relevance (in the gear) pulls the notes most related to the centre toward it,
+// like radar, keeping each one's direction: relevance is a walk from the centre note along links that keeps coming home (personalized
+// PageRank), with up and related links weighted double, tempered so hubs don't win just for being big.
+let CMPREL = pref("iv-cmprel", false) === true; const CMP = { c: -1, ids: [], pv: [], rel: null, R: 0 };
+let RADJ = null;
+function radj(){ if (RADJ) return RADJ; const nb = Array.from({length:n}, () => []), wt = Array.from({length:n}, () => []), sw = new Float64Array(n);
+  const wOf = t => t === 1 || t === 4 ? 2 : t === 5 ? .6 : t === 2 ? .5 : 1;
+  for (const [a, b, t] of E) { if (t === 3 || ARCH[a] || ARCH[b] || a === b) continue; const w = wOf(t); nb[a].push(b); wt[a].push(w); nb[b].push(a); wt[b].push(w); sw[a] += w; sw[b] += w; }
+  return (RADJ = { nb, wt, sw }); }
+function relFrom(a){ const { nb, wt, sw } = radj(), al = .2; let x = new Float64Array(n), y = new Float64Array(n); x[a] = 1;
+  for (let it = 0; it < 24; it++) { y.fill(0); y[a] = al;
+    for (let i = 0; i < n; i++) { const v = x[i]; if (!v || !sw[i]) continue; const f = (1 - al) * v / sw[i], L = nb[i], Wt = wt[i]; for (let q = 0; q < L.length; q++) y[L[q]] += f * Wt[q]; }
+    [x, y] = [y, x]; }
+  for (let i = 0; i < n; i++) x[i] = x[i] / Math.sqrt(sw[i] + 1);   // tempered by how linked a note is
+  return x; }
+function cmpCenter(){ const t = TABS[TCUR]; if (edOn() && t && t.pin && PIDX.has(t.path) && vis[PIDX.get(t.path)]) return PIDX.get(t.path);
+  if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
+function layoutCompass(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
+  const a = cmpCenter(); CMP.c = a; CMP.ids = []; CMP.pv = []; if (a < 0) { expBox = { x0: -400, y0: -300, x1: 400, y1: 300 }; return; }
+  EHID[a] = 0; EX[a] = EY[a] = 0;
+  const nb = new Set([...out[a], ...inn[a]].filter(j => j !== a && vis[j] && !ARCH[j]));
+  let ids, rel = null;
+  if (CMPREL) { rel = relFrom(a); const all = []; for (let i = 0; i < n; i++) if (i !== a && vis[i] && !ARCH[i] && rel[i] > 0) all.push(i); all.sort((p, q) => rel[q] - rel[p]);
+    const top = new Set(all.slice(0, 120)); for (const j of [...nb].sort((p, q) => rel[q] - rel[p]).slice(0, 80)) top.add(j); ids = [...top].sort((p, q) => rel[q] - rel[p]); }
+  else ids = [...nb].sort((p, q) => N[q].score - N[p].score).slice(0, 250);
+  CMP.rel = rel; CMP.ids = ids; const m = ids.length, P = new Float64Array(m * 2);
+  ids.forEach((j, q) => { const ka = EKIND.get(a*n + j), kb = EKIND.get(j*n + a), dl = N[j].level - N[a].level;
+    const up = ka === 1 ? 1 : kb === 1 ? -1 : dl > 0 ? 1 : dl < 0 ? -1 : 0, h1 = hash(N[j].path, 11), h2 = hash(N[j].path, 13);
+    let y = up === 0 ? (h1 - .5) * 150 : -up * (170 + (Math.max(1, Math.abs(dl)) - 1) * 130 + h2 * 110);
+    const dd = (TV[j] - TV[a]) / DAY; let x = isFinite(dd) ? Math.sign(dd) * Math.log1p(Math.abs(dd) / 20) * 170 : (h2 - .5) * 260;
+    if (rel) { const qn = q / Math.max(1, m - 1), th = Math.atan2(y || (h1 - .5), x || (h2 - .5)), r = 150 + Math.pow(qn, .55) * 950; x = Math.cos(th) * r; y = Math.sin(th) * r; }
+    P[q*2] = x; P[q*2+1] = y; });
+  // a little room for each note: push apart any that sit closer than a dot and its name need, and off the centre
+  for (let it = 0; it < 40; it++) for (let p = 0; p < m; p++) { let px = P[p*2], py = P[p*2+1];
+    const dc = Math.hypot(px, py); if (dc < 90) { const f = (90 - dc) / (dc || 1); px += px * f; py += py * f; }
+    for (let q = p + 1; q < m; q++) { const dx = P[q*2] - px, dy = P[q*2+1] - py, d2 = dx*dx + dy*dy; if (d2 > 2900) continue; const d = Math.sqrt(d2) || .01, f = (Math.sqrt(2900) - d) / d * .5;
+      px -= dx * f * .5; py -= dy * f * .25; P[q*2] += dx * f * .5; P[q*2+1] += dy * f * .25; }
+    P[p*2] = px; P[p*2+1] = py; }
+  let x0 = -200, x1 = 200, y0 = -200, y1 = 200;
+  ids.forEach((j, q) => { EHID[j] = 0; EX[j] = P[q*2]; EY[j] = P[q*2+1]; x0 = Math.min(x0, EX[j]); x1 = Math.max(x1, EX[j]); y0 = Math.min(y0, EY[j]); y1 = Math.max(y1, EY[j]); });
+  CMP.R = Math.max(-x0, x1, -y0, y1); expBox = { x0: x0 - 90, y0: y0 - 70, x1: x1 + 160, y1: y1 + 60 };
+  CMP.pv = (rel ? ids.slice() : [...ids].sort((p, q) => N[q].score - N[p].score)).slice(0, 6); }
+function cmpSync(){ if (view !== "compass" || dead) return; if (cmpCenter() !== CMP.c) morph(true, () => fitTarget()); }
+EXP.compass = {
+  layout: layoutCompass,
+  guides(){ const a = CMP.c; if (a < 0) return; const cx = sx(0), cy = sy(0);
+    ctx.save(); ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.setLineDash([3, 5]); ctx.globalAlpha = .9;
+    ctx.beginPath(); ctx.moveTo(sx(expBox.x0), cy); ctx.lineTo(sx(expBox.x1), cy); ctx.moveTo(cx, sy(expBox.y0)); ctx.lineTo(cx, sy(expBox.y1)); ctx.stroke(); ctx.setLineDash([]);
+    if (CMP.rel) for (const r of [300, 600, 900]) { ctx.globalAlpha = .5; ctx.beginPath(); ctx.arc(cx, cy, r * k, 0, 6.2832); ctx.stroke(); }   // radar rings: closer is more related
+    ctx.globalAlpha = .75; ctx.fillStyle = css.muted; ctx.font = `600 10.5px ${css.mono}`; ctx.textBaseline = "middle";
+    ctx.textAlign = "center"; ctx.fillText("ABOVE ↑", cx, sy(expBox.y0) + 12); ctx.fillText("BELOW ↓", cx, sy(expBox.y1) - 12);
+    ctx.textAlign = "left"; ctx.fillText("← EARLIER", sx(expBox.x0) + 6, cy - 10); ctx.textAlign = "right"; ctx.fillText("LATER →", sx(expBox.x1) - 6, cy - 10);
+    // every note here, joined to the centre in its link color
+    ctx.lineWidth = 1.2; for (const j of CMP.ids) { if (!VV(j)) continue; const lk = EKIND.has(a*n + j) || EKIND.has(j*n + a); if (!lk) continue; ctx.globalAlpha = .4; ctx.strokeStyle = edgeColor(EKIND.has(a*n + j) ? a : j, EKIND.has(a*n + j) ? j : a, upOf(a, j));
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); }
+    ctx.globalAlpha = 1; ctx.strokeStyle = css.accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sx(X[a]), sy(Y[a]), rad(a) + 7, 0, 6.2832); ctx.stroke();
+    ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
+  mustLabel: () => [CMP.c, ...CMP.ids.slice(0, 24)].filter(i => i >= 0),
+  legend: "Compass: one note at the centre (the one in the editor; pin it to keep it there). What it links up to sits above it, the notes that link up to it below; otherwise higher levels above and lower below. Time runs left to right, earlier to later. ⚙ → Relevance pulls the notes most related to the centre toward it, like radar, each keeping its direction; the closest get small previews in Edit mode.",
+};
+
 // ---------- Posters: a targeted dataset (a base's view, a filter) laid out by its own properties ----------
 // Across: a date or number property (year, rating, created…). Lanes: a category (genre, status, a base's own groups).
 // Size: a number (your rank). Each note is a card, and when the note has an image property (a poster, a cover),
@@ -3061,7 +3125,7 @@ function leftCol(){ if (isPhone()) return 0; if (EDLW) return EDLW; const c = cv
   return Math.min(r, 400); }
 function fitTarget0(){ const pad = 56;
   if (globeOn()) { const lc = leftCol(), vw = W - sideW() - lc; return {k: .44*Math.min(vw, H)/(CS_R*1.08), tx: lc + vw/2, ty: H/2}; }
-  if (expOn()) { const lc = leftCol(), vw = W - sideW() - lc, b = expBox, bw = b.x1 - b.x0, bh = b.y1 - b.y0, kk = Math.min((vw - pad)/bw, (H - pad)/bh);   // beside the bars' column
+  if (expOn()) { const lc = leftCol(), vw = W - sideW() - lc - (view === "compass" && EDS && !EDS.right.el.hidden ? W - sideW() - edRect("right").x : 0), b = expBox, bw = b.x1 - b.x0, bh = b.y1 - b.y0, kk = Math.min((vw - pad)/bw, (H - pad)/bh);   // beside the bars' column
     return {k: kk, tx: lc + vw/2 - (b.x0 + bw/2)*kk, ty: H/2 - (b.y0 + bh/2)*kk}; }
   if (csphOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: .4*Math.min(vw, H)/(CS_R*1.08), tx: vw/2, ty: H/2}; }
   if (domeOn()) { const vw = W - (isPhone() ? 0 : sideW()); return {k: Math.max(vw, H*1.2)/2/(DF_*Math.tan(52*Math.PI/180)), tx: vw/2, ty: H/2}; }   // about a 104° view
@@ -3844,7 +3908,7 @@ function renderTrail(){
 // Three editors, each a real Obsidian editor (host.editCard): the main one, in a card under the picked note (the centre) or on the left side;
 // and a support note on the right for any note you ⌘-click. One theme and one opacity for all three. Starfield first, Emergence as the stress test.
 let EDITM = pref("iv-editm", false) === true, EDLEFT = pref("iv-edleft", false) === true, HUBPV = pref("iv-hubpv", false) === true;
-const CARDMAPS = new Set(["stars", "emergence", "spacetime"]);
+const CARDMAPS = new Set(["stars", "emergence", "spacetime", "compass"]);
 const edOn = () => EDITM && CARDMAPS.has(view) && !!host.editCard && !isPhone() && !S3D_ON();
 let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84;   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
 // Editor theme → Map: Obsidian works out its colors once, on the page body (--background-primary: var(--color-base-00)…), so a dark or light
@@ -3906,9 +3970,10 @@ function closeEds(){ for (const o of Object.values(EDS)) o.close(); }
 async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(); EDS.left.close(); if (!edOn()) EDS.right.close(); return; }
   const m = edMain(); (m === EDS.left ? EDS.center : EDS.left).close();
   const tp = TABS[TCUR], pj = tp && tp.pin && tp.path !== N[i].path ? PIDX.get(tp.path) : null;
-  if (pj != null) { const p0 = m.open(pj); void EDS.right.open(i); syncOrbs(); await p0; return; }   // pinned: the main editor keeps its note, the one you picked opens beside it
+  if (pj != null) { const p0 = m.open(pj); void EDS.right.open(i); syncOrbs(); if (view === "compass") win.setTimeout(() => { if (!dead && view === "compass" && !morphing) animateTo(fitTarget()); }, 300); await p0; return; }   // pinned: the main editor keeps its note, the one you picked opens beside it
   const p = m.open(i);
-  if (m === EDS.center) { const r = edRect("center"); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k }); }   // the note above the card, in the top third
+  if (view === "compass") win.setTimeout(() => { if (!dead && view === "compass" && !morphing) animateTo(fitTarget()); }, 850);   // Compass frames itself, clear of the editors
+  else if (m === EDS.center) { const r = edRect("center"); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k }); }   // the note above the card, in the top third
   else { const L = EDS.left.col ? 0 : edRect("left").x + edRect("left").w, R = EDS.right.el.hidden ? W - sideW() : edRect("right").x; animateTo({ k, tx: (L + R)/2 - X[i]*k, ty: H/2 - Y[i]*k }); }   // the note in the free middle
   await p; }
 // a link clicked inside a card: the map picks that note (the main editor follows); ⌘-click (or a modifier Obsidian reads as "new tab") opens it as the support note.
@@ -3935,7 +4000,7 @@ function tabTake(i){ const p = N[i].path, nw = TABNEW; TABNEW = false; const cur
     else TABS[TCUR] = { path: p }; }
   tabsSave(); syncOrbs(); }
 function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
-  TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); }
+  TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); }
 function tabGo(j){ const t = TABS[j]; if (!t) return; const i = PIDX.get(t.path); if (i == null) return;
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
   TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }
@@ -3960,10 +4025,13 @@ function placeOrbs(){ if (orbBar.hidden) return; const L = !EDS.left.el.hidden ?
   orbBar.style.left = Math.round(L) + "px"; orbBar.style.width = Math.max(40, Math.round(R - L)) + "px"; }
 // Starfield: a small read-only preview of each galaxy's hub note, above it
 const pvLayer = doc.createElement("div"); pvLayer.className = "ivm-pvl"; root.after(pvLayer); const HPV = new Map();
-function drawPreviews(){ const on = EDITM && HUBPV && view === "stars" && !S3D_ON() && !!host.preview && W > 0;
+function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), on = (cmp || (EDITM && HUBPV && view === "stars" && !S3D_ON())) && !!host.preview && W > 0;
   if (!on) { if (pvLayer.childElementCount) { pvLayer.empty(); HPV.clear(); } return; }
   const c = cv.getBoundingClientRect(), pr = pvLayer.getBoundingClientRect(), ox = c.left - pr.left, oy = c.top - pr.top, want = new Set();
-  const gals = BODIES.filter(b => b.kind === "gal" && b.core != null && vis[b.core] && b.core !== sel).map(b => ({ b, i: b.core, rr: b.r*k, x: sx(X[b.core]), y: sy(Y[b.core]) }))
+  const L_ = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w : 0, R_ = !EDS.right.el.hidden ? edRect("right").x : W - sideW();
+  const gals = cmp ? (() => { const ok = [], cx = sx(0), cy = sy(0), hit = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1], taken = [[cx - 110, cy - 26, 220, 52]];
+    for (const i of CMP.pv) { if (!VV(i) || i === CMP.c) continue; const x = sx(X[i]), y = sy(Y[i]), r = [x - 105, y - 150, 210, 128 + 10];   // above its note, never over another preview or the centre
+      if (x < L_ + 110 || x > R_ - 110 || y < 160 || y > H - 10 || taken.some(t => hit(r, t))) continue; taken.push(r); ok.push({ i, x, y }); } return ok; })() : BODIES.filter(b => b.kind === "gal" && b.core != null && vis[b.core] && b.core !== sel).map(b => ({ b, i: b.core, rr: b.r*k, x: sx(X[b.core]), y: sy(Y[b.core]) }))
     .filter(g => g.rr >= 55 && g.x > 60 && g.x < W - sideW() - 60 && g.y > 120 && g.y < H - 20).sort((a, b) => b.rr - a.rr).slice(0, 10);
   for (const g of gals) { const p = N[g.i].path; want.add(p); let e = HPV.get(p);
     if (!e) { e = pvLayer.createDiv({ cls: "ivm-card ivm-pv" }); e.createDiv({ cls: "pvt", text: N[g.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); HPV.set(p, e); }
@@ -3971,6 +4039,7 @@ function drawPreviews(){ const on = EDITM && HUBPV && view === "stars" && !S3D_O
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
 function select(i, fromTrail){
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
+  if (view === "compass" && !LIVEQ) win.setTimeout(cmpSync, 0);
   if (!LIVEQ && (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden || EDS.left.col && EDS.left.path)))) win.setTimeout(() => { void openMain(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
@@ -4782,7 +4851,7 @@ function liveLinks(path, list){ const i = PIDX.get(path); if (i == null || ARCH[
   d.lk = !!(d.body_in || d.body_out || d.coll_in || (d.s && d.s[3]));
   for (const j of nk.keys()) if (!ok.has(j)) LIVE.links.push({ a: i, b: j, t0: now, add: true });
   for (const j of ok.keys()) if (!nk.has(j)) LIVE.links.push({ a: i, b: j, t0: now, add: false });
-  starsDirty = true; glowKey = "";
+  starsDirty = true; glowKey = ""; RADJ = null;
   // the camera holds still: the note you're on (or the one you wrote in) keeps its spot on screen while the map moves around it (0.8.24; Nick saw a zoom stutter)
   const keep = sel >= 0 ? sel : i, kp = k, px = sx(X[keep]), py = sy(Y[keep]), fixed = sphOn() || geo3On() || s3dOn() || domeOn();
   relayout(true, true, fixed ? undefined : (tX, tY) => ({ k: kp, tx: px - tX[keep]*kp, ty: py - tY[keep]*kp }));
@@ -4812,7 +4881,7 @@ if (host.onLinks) host.onLinks((p_, list) => liveLinks(p_, list));
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
 const PIDX = new Map(N.map((d,i) => [d.path, i]));
-const VIEW_NAME = {posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {compass:"Compass", posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
@@ -5368,6 +5437,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       const b = doc.createElement("button"); b.className = "chip"; b.id = id; b.textContent = label; b.setAttribute("aria-label", tip); $("#gochord").before(b); b.onclick = () => { closePops(); driftStop(); setView(v); }; }
     { const co = $("#gocso"); if (co) co.textContent = "Corona"; const te = $("#gocsi"); if (te) { te.textContent = "Tesla"; te.hidden = false; te.classList.remove("gone"); } }
     $("#gochord").before(gg); gg.onclick = () => { closePops(); driftStop(); setView("graph"); };
+    // Compass (0.8.32): one note at the centre, after Chord
+    { const gc = doc.createElement("button"); gc.className = "chip"; gc.id = "gocompass"; gc.textContent = "Compass"; gc.setAttribute("aria-label", "One note at the centre: above it what it links up to, below what links up to it, time left to right");
+      $("#gochord").after(gc); gc.onclick = () => { closePops(); driftStop(); setView("compass"); }; }
     // Mosaic: every note a tile, after Treemap
     const gm = doc.createElement("button"); gm.className = "chip"; gm.id = "gomosaic"; gm.textContent = "Mosaic"; gm.setAttribute("aria-label", "Every note a tile, set like stones: Level 5 at the heart, each level a frame around it");
     $("#gotreemap").after(gm); gm.onclick = () => { closePops(); driftStop(); setView("mosaic"); };
@@ -5456,7 +5528,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       sel_.onchange = () => { PSC()[key] = sel_.value; if (key === "height" && sel_.value) PSC().lastHeight = sel_.value; save(PK(key), sel_.value); morph(true, () => fitTarget()); legend(); };
       const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
-  const VN = () => ({ emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
+  const VN = () => ({ compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
     chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
     shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars", "sense"]);
@@ -5490,6 +5562,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const ea = mo.createDiv({ cls: "mosec emoany", attr: { id: "emoany" } }); ea.hidden = true; const r = ea.createEl("label", { cls: "mini lcemo emosw" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
     const st = ea.createDiv({ cls: "pn lcemost" }); const sync_ = () => { cb.checked = emoOn(view); }; { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); sync_(); }; } FUI.emoany = () => { sync_(); st.setText(""); ea.hidden = !emoGen(); };
     cb.onchange = async () => { setEmoOn(view, cb.checked); st.setText(""); if (cb.checked && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
+  // Compass: Relevance
+  { const fa = mo.createDiv({ cls: "mosec emoany cmpany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "mini lcemo" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Relevance: pull related notes toward the centre" });
+    const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "compass"; cb.checked = CMPREL; };
+    cb.onchange = () => { CMPREL = cb.checked; save("iv-cmprel", CMPREL); if (view === "compass") morph(true, () => fitTarget()); }; }
   // Mosaic and Treemap: color every note by its folder
   { const fa = mo.createDiv({ cls: "mosec emoany foldany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "mini lcemo" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Color every note by its folder" });
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = !(view === "mosaic" || view === "treemap"); cb.checked = FCOL(); };
@@ -5846,10 +5922,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     sync(); new MutationObserver(sync).observe(seg, { attributes: true, subtree: true, attributeFilter: ["aria-pressed"] });
     opener(TH); seg.addEventListener("click", e => { if (e.target.closest("button")) closePops(); }); }
   const hc = root.querySelector("header .hcol"); if (hc) right.appendChild(hc);
-  const ARR_OFF = new Set(["ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
+  const ARR_OFF = new Set(["compass", "ideaverse", "people", "mosaic", "graph", "posters", "builder", "spacetime", "sense", "arc", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "lincal", "spiral", "lifeline", "planet"]);
   // a narrow map: the main tabs that don't fit fold into More (from the right: Sensemakers, then Starfield, then Ideaverse), which becomes More maps, with them at the top
   // a small Lucide icon before each map's name in the maps menu
-  const MICON = { emergence: "layers", ideaverse: "orbit", stars: "sparkles", sense: "compass", gogravity: "circle-dot", gograph: "gem", gochord: "aperture", gocso: "sun", gocsi: "zap",
+  const MICON = { gocompass: "navigation", emergence: "layers", ideaverse: "orbit", stars: "sparkles", sense: "compass", gogravity: "circle-dot", gograph: "gem", gochord: "aperture", gocso: "sun", gocsi: "zap",
     gotreemap: "layout-dashboard", gomosaic: "layout-grid", goshelf: "library", gobuilder: "table-2", golincal: "calendar-range", goposters: "image", gopeople: "users",
     gogeosquare: "square", gogeohex: "hexagon", gogeomandala: "flower", gogeoocta: "diamond", gogeoshells: "globe", gospiral: "rotate-cw", golifeline: "activity",
     goplflat: "map", gopltable: "table", goplglobe: "earth", gotree: "tree-deciduous", goskyline: "building-2" };
@@ -5906,7 +5982,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const t0 = MP.querySelector(":scope > .pt"); if (t0) t0.after(Object.assign(doc.createElement("div"), { className: "vfold vfold0" }));
     { const ex = MP.querySelector(":scope > details"); if (ex) { const exd = Object.assign(doc.createElement("div"), { className: "vfold" }); ex.before(exd);
         // Nick's order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Tesla, Corona, Chord, Base Builder (the quick keys follow it)
-        for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
+        for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gocompass", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
         for (const v of ["gravity", "graph", "treemap", "mosaic", "shelf", "tesla", "corona", "chord"]) { const g_ = vgrid.querySelector(`[data-vg="${v}"]`); if (g_) vgrid.appendChild(g_); } const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
     // the quick keys in list order; two are pinned wherever their maps sit (Nick): Linear Calendar is always 0, Base Builder always \
     const QK = [..."123456789-=[]"], QPIN = { golincal: "0", gobuilder: "\\" };
@@ -5933,7 +6009,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
           sw_.append(cb, i_, t); row.after(sw_); cb.onchange = () => { (cb.checked ? bs[1] : bs[0]).click(); tightenMO(); }; }
         row.classList.add("tgone"); sw_.querySelector("input").checked = bs[1].getAttribute("aria-pressed") === "true"; sw_.hidden = row.hidden; }); };
     const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop", "#senseemo"]) $(id).hidden = id !== v_; if (view === "sense") $("#senseemo").hidden = false; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
-      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); FUI.emoany(); moL.hidden = !l || !v_; moNone.hidden = true; tightenMO(); return !!(l || v_ || emoGen()); };
+      syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); FUI.emoany(); moL.hidden = !l || !v_; moNone.hidden = true; tightenMO(); return !!(l || v_ || emoGen() || view === "compass"); };
     // no hover hints in the maps menu (Nick): a map's description stays for screen readers only
     const quiet = () => MP.querySelectorAll("[aria-label], [title]").forEach(el => { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("title"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); });
     const openMaps = () => { quiet(); closePops("#vmorepop"); if (typeof closeColl === "function") closeColl(); MP.hidden = false; MB.setAttribute("aria-expanded", "true");
