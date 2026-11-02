@@ -1990,8 +1990,11 @@ function relFrom(a){ const { nb, wt, sw } = radj(), al = .2; let x = new Float64
     [x, y] = [y, x]; }
   for (let i = 0; i < n; i++) x[i] = x[i] / Math.sqrt(sw[i] + 1);   // tempered by how linked a note is
   return x; }
-function cmpCenter(){ const t = TABS[TCUR]; if (edOn() && t && t.pin && PIDX.has(t.path) && vis[PIDX.get(t.path)]) return PIDX.get(t.path);
-  if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
+// the centre: the pinned main-editor note, else the picked note, else the top-scored note. The map's first layout runs before the tabs and
+// the picked note exist (Nick's blank map on 0.8.33, opening on Compass), so those are read carefully
+function cmpCenter(){ let t = null, ed = false, sl = -1; try { t = TABS[TCUR]; ed = edOn(); sl = sel; } catch (_) { /* not ready yet */ }
+  if (ed && t && t.pin && PIDX.has(t.path) && vis[PIDX.get(t.path)]) return PIDX.get(t.path);
+  if (sl >= 0 && vis[sl]) return sl; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
 function layoutCompass(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
   const a = cmpCenter(); CMP.c = a; CMP.ids = []; CMP.pv = []; if (a < 0) { expBox = { x0: -400, y0: -300, x1: 400, y1: 300 }; return; }
   EHID[a] = 0; EX[a] = EY[a] = 0;
@@ -4007,7 +4010,7 @@ function tabGo(j){ const t = TABS[j]; if (!t) return; const i = PIDX.get(t.path)
 function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j === TCUR; if (j < TCUR) TCUR--;
   TCUR = Math.max(0, Math.min(TCUR, TABS.length - 1)); tabsSave();
   if (was) { if (TABS[TCUR]) tabGo(TCUR); else { EDS.center.close(); EDS.left.close(); } } syncOrbs(); }
-const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true;
+const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; win.setTimeout(() => { if (!dead) syncOrbs(); }, 0);   // saved tabs show from the start
 let orbKey = "", orbDragged = false;
 function syncOrbs(){ for (const o of [EDS.center, EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
   const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); if (!on) { orbKey = ""; return; }
@@ -4023,9 +4026,9 @@ function syncOrbs(){ for (const o of [EDS.center, EDS.left]) if (o.pb) { const o
       b.onclick = e => { e.stopPropagation(); if (orbDragged) { orbDragged = false; return; } tabGo(j); };
       // drag an orb left or right to reorder the tabs (0.8.34, Nick)
       b.addEventListener("pointerdown", e => { if (e.button !== 0 || (e.target instanceof Element && e.target.closest(".orbx"))) return; e.stopPropagation(); const x0 = e.clientX; let on = false;
-        const mv = ev => { const dx = ev.clientX - x0; if (!on && Math.abs(dx) < 5) return; if (!on) { on = true; b.classList.add("drag"); b.setPointerCapture(e.pointerId); } b.style.transform = `translateX(${dx}px)`; };
+        const mv = ev => { const dx = ev.clientX - x0; if (!on && Math.abs(dx) < 5) return; if (!on) { on = true; b.classList.add("drag"); b.setPointerCapture(e.pointerId); } b.setCssProps({ "--odx": dx + "px" }); };
         const upf = ev => { b.removeEventListener("pointermove", mv); b.removeEventListener("pointerup", upf); b.removeEventListener("pointercancel", upf); if (!on) return;
-          orbDragged = true; win.setTimeout(() => { orbDragged = false; }, 0); b.classList.remove("drag"); b.style.transform = "";
+          orbDragged = true; win.setTimeout(() => { orbDragged = false; }, 0); b.classList.remove("drag"); b.setCssProps({ "--odx": "0px" });
           const others = [...orbBar.querySelectorAll(".ivm-orb")].filter(o => o !== b), x = ev.clientX; let to = others.findIndex(o => { const r = o.getBoundingClientRect(); return x < r.left + r.width / 2; }); if (to < 0) to = others.length;
           if (to === j) { orbKey = ""; syncOrbs(); return; } const cur = TABS[TCUR], [t_] = TABS.splice(j, 1); TABS.splice(to, 0, t_); TCUR = Math.max(0, TABS.indexOf(cur)); tabsSave(); orbKey = ""; syncOrbs(); };
         b.addEventListener("pointermove", mv); b.addEventListener("pointerup", upf); b.addEventListener("pointercancel", upf); }); }); }
