@@ -2550,6 +2550,18 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
       if (hasLS) g.letterSpacing = "0px"; g.font = `500 9.5px ${css.mono || font}`; g.fillStyle = b.hue || "#9fb0ff"; const m_ = (b.members || []).length;
       const sub = b.kind === "neb" ? `${m_.toLocaleString()} unlinked` : b.kind === "old" ? `${m_.toLocaleString()} notes` : `${m_.toLocaleString()} stars`; g.strokeText(sub, p0[0], y + 15); g.fillText(sub, p0[0], y + 15); }
     g.textBaseline = "alphabetic"; }
+  // the overview map (0.8.94), when it's on in Starfield: the whole sky seen from above, where you are and which way you're heading
+  if (MINI) { const bw = 168, bh = 120, bx = W - bw - 14, by = 86;   /* under the Back button */ let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const B of sf.B) { x0 = Math.min(x0, B.x - B.r); x1 = Math.max(x1, B.x + B.r); y0 = Math.min(y0, B.y - B.r); y1 = Math.max(y1, B.y + B.r); }
+    const s_ = Math.min((bw - 12) / Math.max(1, x1 - x0), (bh - 12) / Math.max(1, y1 - y0)), mx = x => bx + 6 + (x - x0) * s_ + ((bw - 12) - (x1 - x0) * s_) / 2, my = y => by + 6 + (y - y0) * s_ + ((bh - 12) - (y1 - y0) * s_) / 2;
+    g.globalAlpha = 1; g.fillStyle = "rgba(4,5,12,.82)"; g.strokeStyle = "rgba(160,180,255,.28)"; g.beginPath(); g.roundRect(bx, by, bw, bh, 10); g.fill(); g.stroke();
+    g.save(); g.beginPath(); g.roundRect(bx, by, bw, bh, 10); g.clip(); g.globalCompositeOperation = "lighter";
+    for (const B of sf.B) { const r_ = Math.max(1.5, B.r * s_), gx = mx(B.x), gy = my(B.y), gr = g.createRadialGradient(gx, gy, 0, gx, gy, r_); gr.addColorStop(0, B.b.hue || "#9fb0ff"); gr.addColorStop(1, "rgba(0,0,0,0)"); g.globalAlpha = .55; g.fillStyle = gr; g.beginPath(); g.arc(gx, gy, r_, 0, 6.2832); g.fill(); }
+    g.globalCompositeOperation = "source-over"; g.globalAlpha = 1;
+    if (ck >= 0) { g.fillStyle = "#ffffff"; g.beginPath(); g.arc(mx(P[3 * ck]), my(P[3 * ck + 1]), 2.2, 0, 6.2832); g.fill(); }
+    const fw = ckFwd(), sxp = mx(CK.P[0]), syp = my(CK.P[1]), ha = Math.atan2(fw[1], fw[0]), hl = Math.hypot(fw[0], fw[1]);
+    g.fillStyle = "#ffcf5a"; g.save(); g.translate(Math.max(bx + 4, Math.min(bx + bw - 4, sxp)), Math.max(by + 4, Math.min(by + bh - 4, syp))); g.rotate(ha); g.globalAlpha = hl > .2 ? 1 : .6;
+    g.beginPath(); g.moveTo(7, 0); g.lineTo(-4, -4); g.lineTo(-2, 0); g.lineTo(-4, 4); g.closePath(); g.fill(); g.restore(); g.restore(); }
   g.restore(); g.globalAlpha = 1; g.textAlign = "left"; }
 function ckFwd(){ const cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch); return [sy_ * cp, sp, cy * cp]; }
 function ckCam(x, y, z){ const dx = x - CK.P[0], dy = y - CK.P[1], dz = z - CK.P[2], cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);
