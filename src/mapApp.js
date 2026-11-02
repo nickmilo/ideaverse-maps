@@ -4008,7 +4008,7 @@ function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j ===
   TCUR = Math.max(0, Math.min(TCUR, TABS.length - 1)); tabsSave();
   if (was) { if (TABS[TCUR]) tabGo(TCUR); else { EDS.center.close(); EDS.left.close(); } } syncOrbs(); }
 const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true;
-let orbKey = "";
+let orbKey = "", orbDragged = false;
 function syncOrbs(){ for (const o of [EDS.center, EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
   const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); if (!on) { orbKey = ""; return; }
   const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
@@ -4020,7 +4020,15 @@ function syncOrbs(){ for (const o of [EDS.center, EDS.left]) if (o.pb) { const o
       const x = b.createSpan({ cls: "orbx", text: "×", attr: { role: "button", "aria-description": "Close tab" } });
       x.onclick = e => { e.stopPropagation(); tabClose(j); }; b.onauxclick = e => { if (e.button === 1) { e.preventDefault(); tabClose(j); } };
       if (ORBN) b.createSpan({ cls: "orbn", text: nm });
-      b.onclick = e => { e.stopPropagation(); tabGo(j); }; }); }
+      b.onclick = e => { e.stopPropagation(); if (orbDragged) { orbDragged = false; return; } tabGo(j); };
+      // drag an orb left or right to reorder the tabs (0.8.34, Nick)
+      b.addEventListener("pointerdown", e => { if (e.button !== 0 || (e.target instanceof Element && e.target.closest(".orbx"))) return; e.stopPropagation(); const x0 = e.clientX; let on = false;
+        const mv = ev => { const dx = ev.clientX - x0; if (!on && Math.abs(dx) < 5) return; if (!on) { on = true; b.classList.add("drag"); b.setPointerCapture(e.pointerId); } b.style.transform = `translateX(${dx}px)`; };
+        const upf = ev => { b.removeEventListener("pointermove", mv); b.removeEventListener("pointerup", upf); b.removeEventListener("pointercancel", upf); if (!on) return;
+          orbDragged = true; win.setTimeout(() => { orbDragged = false; }, 0); b.classList.remove("drag"); b.style.transform = "";
+          const others = [...orbBar.querySelectorAll(".ivm-orb")].filter(o => o !== b), x = ev.clientX; let to = others.findIndex(o => { const r = o.getBoundingClientRect(); return x < r.left + r.width / 2; }); if (to < 0) to = others.length;
+          if (to === j) { orbKey = ""; syncOrbs(); return; } const cur = TABS[TCUR], [t_] = TABS.splice(j, 1); TABS.splice(to, 0, t_); TCUR = Math.max(0, TABS.indexOf(cur)); tabsSave(); orbKey = ""; syncOrbs(); };
+        b.addEventListener("pointermove", mv); b.addEventListener("pointerup", upf); b.addEventListener("pointercancel", upf); }); }); }
   placeOrbs(); }
 function placeOrbs(){ if (orbBar.hidden) return; const L = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 12, R = (!EDS.right.el.hidden ? edRect("right").x : W - sideW()) - 12;
   orbBar.style.left = Math.round(L) + "px"; orbBar.style.width = Math.max(40, Math.round(R - L)) + "px"; }
