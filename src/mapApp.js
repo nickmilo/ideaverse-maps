@@ -3908,22 +3908,23 @@ cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
 // ---------- Contrails (0.8.56, Nick): a breadcrumb trail you can see, subtle ----------
 // Each jump from one note to the next draws itself along a gentle arc (a small rocket can fly it: Display → Contrails → Rocket), leaving a vapor trail: a bright thin core inside a soft
-// cloud that widens, breaks into puffs and fades as it ages. The last 10 jumps stay; older ones are fainter. Display → Contrails.
-let CTRON = pref("iv-ctr", false) === true, CTRRK = pref("iv-ctrrk", false) === true; const CTR = [], CTR_FLY = 1300, CTR_LIFE = 90000;   // CTRRK: a small rocket flies each new leg (Nick: a mini-mini switch, off)
+// cloud that widens, breaks into puffs and fades a step with each jump after it. The last 10 jumps stay. Display → Contrails.
+let CTRON = pref("iv-ctr", false) === true, CTRRK = pref("iv-ctrrk", false) === true; const CTR = [], CTR_FLY = 1300;   // CTRRK: a small rocket flies each new leg (Nick: a mini-mini switch, off)
 function ctrHop(a, b){ if (!CTRON || a === b) return; CTR.push({ a, b, t: performance.now(), s: hash(N[a].path + N[b].path, 7) }); if (CTR.length > 10) CTR.shift(); draw(); }
 function drawContrails(){ if (!CTRON || !CTR.length) return; const now = performance.now(); let busy = false;
   const dark = (() => { const h = String(css.bg || "#fff").replace("#", ""); if (h.length < 6) return view === "stars"; const v = parseInt(h.slice(0, 2), 16) * .3 + parseInt(h.slice(2, 4), 16) * .59 + parseInt(h.slice(4, 6), 16) * .11; return v < 110; })();
   const rgb = dark ? "235,240,255" : "120,128,160";
   ctx.save(); ctx.lineCap = "round";
-  CTR.forEach((c, q) => { const { a, b } = c; if (!VV(a) || !VV(b)) return; const age = now - c.t; if (age > CTR_LIFE) return;
+  CTR.forEach((c, q) => { const { a, b } = c; if (!VV(a) || !VV(b)) return; const age = now - c.t;
     const x1 = sx(X[a]), y1 = sy(Y[a]), x2 = sx(X[b]), y2 = sy(Y[b]), dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy); if (len < 4) return;
     const bend = (c.s - .5) * .5 + .18, cx = (x1 + x2) / 2 - dy * bend, cy = (y1 + y2) / 2 + dx * bend;   // a gentle arc, its own for each hop
     const pt = u => { const m = 1 - u; return [m*m*x1 + 2*m*u*cx + u*u*x2, m*m*y1 + 2*m*u*cy + u*u*y2]; };
-    const fly = Math.min(1, age / CTR_FLY), e = 1 - Math.pow(1 - fly, 3), old = (CTR.length - 1 - q) / 10, fade = (1 - old * .75) * (1 - age / CTR_LIFE);
+    // each jump since fades it a step further and spreads its cloud (0.8.59, Nick: per jump, not over time)
+    const back = CTR.length - 1 - q, fly = Math.min(1, age / CTR_FLY), e = 1 - Math.pow(1 - fly, 3), fade = Math.pow(.68, back);
     if (fly < 1) busy = true;
     const steps = Math.max(8, Math.round(len / 6)), upto = Math.max(1, Math.round(steps * e));
     // the cloud: wide and soft, spreading as it ages; then the bright core, thinning
-    const spread = Math.min(1, age / 20000);
+    const spread = Math.min(1, back / 5);
     for (const [w, al] of [[10 + 14 * spread, .05], [4 + 6 * spread, .08]]) { ctx.strokeStyle = `rgba(${rgb},${al * fade})`; ctx.lineWidth = w; ctx.beginPath(); for (let k_ = 0; k_ <= upto; k_++) { const [px, py] = pt(k_ / steps); k_ ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); }
     ctx.strokeStyle = `rgba(${rgb},${.32 * fade * (1 - spread * .7)})`; ctx.lineWidth = 1.4; ctx.beginPath(); for (let k_ = 0; k_ <= upto; k_++) { const [px, py] = pt(k_ / steps); k_ ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke();
     // puffs: small clouds that drift off the line and grow as they dissipate
