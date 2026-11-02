@@ -2454,6 +2454,7 @@ function ckSF(){ layoutStars(); build3D(); if (CKSF.ver === starVer && CKSF.P) r
     else { x = lx; y = ly; z = lz; } P[3 * i] = x * sc; P[3 * i + 1] = y * sc; P[3 * i + 2] = z * sc; }
   CKSF.B = B3.map(B => { const b = B.b, M = B.M; return { b, x: b.x * sc, y: b.y * sc, z: B.z * sc, r: (b.r || 200) * sc, flat: B.flat, u: [M[0][0], M[1][0], M[2][0]], v: [M[0][1], M[1][1], M[2][1]] }; });
   CKSF.ver = starVer; CKSF.P = P; CKSF.sc = sc; return CKSF; }
+const chxSF = k_ => STCH && CHL[k_];   /* Star Chart's layers, as set in Starfield's ⚙ */
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2494,7 +2495,10 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   for (const B of sf.B) { const b = B.b, p0 = pr(B.x, B.y, B.z); const dist = Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]); if (!p0 && dist > B.r) continue;
     const lay = b.kind === "gal" ? [[1.15, b.hue, .3], [.65, b.hue, .26], [.3, "#fff1d6", .6], [.1, "#ffffff", .85]] : b.kind === "neb" ? [[1, b.hue, .22], [.55, b.hue, .14]] : b.kind === "dwarf" ? [[1.1, b.hue, .26], [.25, "#fff1d6", .35]] : [[1.05, b.hue || "#ffb380", .28], [.4, "#fff1d6", .4]];
     const near = Math.min(1, Math.max(.15, dist / (B.r * 3)));   /* inside a galaxy its glow thins so the stars stay clear */
-    for (const [f_, col, al] of lay) { const R = B.r * f_; let a = null, bb = null;
+    /* Starfield's own settings carry over (0.8.92): Galaxy glow (Clear keeps only a faint tint, no white cores), and Star Chart's folder gas */
+    const GM = { clear: .4, soft: .75, normal: 1, bright: 1.4 }[sGlow] || .75;
+    if (chxSF("gas") && (b.kind === "gal" || b.kind === "dwarf")) { const gc = NEBC[chartFolder(b)]; if (gc) lay.unshift([2.1, gc, .2]); }
+    for (const [f_, col0, al0] of lay) { if (CLEAR() && (col0 === "#fff1d6" || col0 === "#ffffff")) continue; const col = col0, al = Math.min(1, al0 * GM); const R = B.r * f_; let a = null, bb = null;
       if (B.flat && p0) { const pu = pr(B.x + B.u[0] * R, B.y + B.u[1] * R, B.z + B.u[2] * R), pv = pr(B.x + B.v[0] * R, B.y + B.v[1] * R, B.z + B.v[2] * R); if (pu && pv) { a = [pu[0] - p0[0], pu[1] - p0[1]]; bb = [pv[0] - p0[0], pv[1] - p0[1]]; } }
       if (!a) { if (!p0) continue; const rs = F * R / p0[2]; a = [rs, 0]; bb = [0, rs]; }
       if (Math.hypot(...a) + Math.hypot(...bb) > 9000) continue;
