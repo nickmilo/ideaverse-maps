@@ -2550,6 +2550,11 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
       if (hasLS) g.letterSpacing = "0px"; g.font = `500 9.5px ${css.mono || font}`; g.fillStyle = b.hue || "#9fb0ff"; const m_ = (b.members || []).length;
       const sub = b.kind === "neb" ? `${m_.toLocaleString()} unlinked` : b.kind === "old" ? `${m_.toLocaleString()} notes` : `${m_.toLocaleString()} stars`; g.strokeText(sub, p0[0], y + 15); g.fillText(sub, p0[0], y + 15); }
     g.textBaseline = "alphabetic"; }
+  // twinkle (0.8.95), when it's on in Starfield: now and then one star glints and fades
+  if (twOn) { const now = win.performance.now(); CK.tw = (CK.tw || []).filter(q => now - q.t0 < 1400); if (!CK.twN || now > CK.twN) { CK.twN = now + 900 + Math.random() * 2600; const j = Math.floor(Math.random() * n); if (vis[j] && N[j].level >= 2) CK.tw.push({ i: j, t0: now }); }
+    for (const q of CK.tw) { const p_ = pr(P[3 * q.i], P[3 * q.i + 1], P[3 * q.i + 2]); if (!p_) continue; const f_ = (now - q.t0) / 1400, a_ = Math.sin(f_ * Math.PI), L_ = 4 + 10 * a_;
+      g.globalAlpha = a_ * .9; g.strokeStyle = "#ffffff"; g.lineWidth = 1; g.beginPath(); g.moveTo(p_[0] - L_, p_[1]); g.lineTo(p_[0] + L_, p_[1]); g.moveTo(p_[0], p_[1] - L_); g.lineTo(p_[0], p_[1] + L_); g.stroke();
+      g.fillStyle = "#ffffff"; g.beginPath(); g.arc(p_[0], p_[1], 1.6 * a_ + .4, 0, 6.2832); g.fill(); } g.globalAlpha = 1; }
   // the overview map (0.8.94), when it's on in Starfield: the whole sky seen from above, where you are and which way you're heading
   if (MINI) { const bw = 168, bh = 120, bx = W - bw - 14, by = 86;   /* under the Back button */ let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const B of sf.B) { x0 = Math.min(x0, B.x - B.r); x1 = Math.max(x1, B.x + B.r); y0 = Math.min(y0, B.y - B.r); y1 = Math.max(y1, B.y + B.r); }
