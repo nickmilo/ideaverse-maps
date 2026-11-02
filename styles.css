@@ -1361,3 +1361,11 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .editopts .eosw[hidden]{display:none}
 .ivm .ivm-orbs.sky .ivm-orb.cur .orbd{box-shadow:0 0 0 1.5px #0b0d1a,0 0 0 3.5px #f2f0e6,0 1px 8px rgba(0,0,0,.4)}
 .ivm .ivm-orbs.sky .ivm-orb .orbn{color:#eef0f8;text-shadow:0 0 3px #05060d,0 0 3px #05060d}
+/* side editors: header click tucks away; the inner edge drags to resize (0.8.31) */
+.ivm-card .cardhd-tuck{cursor:pointer}
+.ivm-card .cardgrip{position:absolute;top:0;bottom:0;width:8px;z-index:2;cursor:ew-resize;touch-action:none}
+.ivm-card .cardgrip-left{right:0}
+.ivm-card .cardgrip-right{left:0}
+.ivm-card .cardgrip::after{content:"";position:absolute;top:50%;left:3px;width:2px;height:36px;margin-top:-18px;border-radius:2px;background:var(--interactive-accent);opacity:0;transition:opacity .15s}
+.ivm-card .cardgrip:hover::after,.ivm-card.resizing .cardgrip::after{opacity:.8}
+.ivm-card.resizing{user-select:none}

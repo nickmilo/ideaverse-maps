@@ -3858,9 +3858,12 @@ function edLook(el){ const th = root.dataset.theme, dark = th === "lyt" || th ==
   el.classList.toggle("theme-dark", m && dark); el.classList.toggle("theme-light", m && !dark);
   const bv = bodyVars(); el.setCssProps(Object.fromEntries(Object.keys(bv).map(nm => [nm, m ? bv[nm] : ""]))); el.setCssProps({ "--cardop": CARDOP + "%" }); }
 const clampN = (v, a, b) => Math.round(Math.max(a, Math.min(b, v)));
+// the side editors' widths can be dragged at their inner edge (0.8.31); otherwise a share of the map
+const EDW = (() => { const o = pref("iv-edw", null); return o && typeof o === "object" ? o : {}; })();
+const edW = (kind, def, lo, hi, vw) => clampN(EDW[kind] > 0 ? EDW[kind] : clampN(vw*def, lo, hi), 260, Math.max(260, vw*.7));
 function edRect(kind){ const vw = W - sideW();
-  if (kind === "left") { const w = clampN(vw*.34, 340, 560); return { x: 8, y: 8, w, h: H - 16 }; }
-  if (kind === "right") { const w = clampN(vw*.3, 320, 520); return { x: vw - w - 8, y: 8, w, h: H - 16 }; }
+  if (kind === "left") { const w = edW("left", .34, 340, 560, vw); return { x: 8, y: 8, w, h: H - 16 }; }
+  if (kind === "right") { const w = edW("right", .3, 320, 520, vw); return { x: vw - w - 8, y: 8, w, h: H - 16 }; }
   const R = EDS && !EDS.right.el.hidden ? edRect("right").x - 8 : vw, L = EDS && !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 8 : 0;   // the centre card sits between the side editors
   const fw = R - L, cw = clampN(fw*.42, 360, 640), y = Math.round(H*.33); return { x: Math.round(L + (fw - cw)/2), y, w: cw, h: H - y - 12 }; }
 function makeEd(kind){
@@ -3885,6 +3888,14 @@ function makeEd(kind){
     async open(i){ const p = N[i].path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
       const nw = o.path !== p; o.path = p; t.setText(N[i].title); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
       if (nw) { await o.ed.open(p); o.ed.resize(); } } };
+  // a side editor tucks away from anywhere on its header but its buttons, like the legend (0.8.31); its inner edge drags to resize
+  if (side) { hd.classList.add("cardhd-tuck"); hd.title = "Tuck away"; hd.addEventListener("click", e => { if (!(e.target instanceof Element) || e.target.closest("button")) return; o.collapse(true); });
+    const gr = el.createDiv({ cls: "cardgrip cardgrip-" + kind, attr: { "aria-label": "Drag to resize" } }); let drag_ = null;
+    gr.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); gr.setPointerCapture(e.pointerId); const r = el.getBoundingClientRect(); drag_ = { x0: e.clientX, w0: r.width }; el.classList.add("resizing"); });
+    gr.addEventListener("pointermove", e => { if (!drag_) return; const dx = e.clientX - drag_.x0; EDW[kind] = Math.round(drag_.w0 + (kind === "left" ? dx : -dx)); edFree(); draw(); });
+    const up = () => { if (!drag_) return; drag_ = null; el.classList.remove("resizing"); EDW[kind] = Math.round(edRect(kind).w); save("iv-edw", EDW); if (o.ed) o.ed.resize(); };
+    gr.addEventListener("pointerup", up); gr.addEventListener("pointercancel", up);
+    gr.addEventListener("dblclick", e => { e.stopPropagation(); delete EDW[kind]; save("iv-edw", EDW); edFree(); draw(); }); }   // double-click: back to the default width
   xb.onclick = () => o.close(); if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
   return o; }
 let LIVEQ = false;   // the map reacting as you write refreshes the note panel quietly: no camera move, no editor reload
