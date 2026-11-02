@@ -2064,7 +2064,8 @@ const arenaAt = q => { if (ARSTY === "board") return boardAt(q); const a = -Math
 function layoutArena(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; } const sl = arenaSlots();
   sl.forEach((p_, q) => { const i = p_ != null ? PIDX.get(p_) : null; if (i == null || !vis[i]) return; const [x, y] = arenaAt(q); EHID[i] = 0; EX[i] = x; EY[i] = y; });
   // the centre: the note pinned in the editor, else the note you picked when it isn't on the ring
-  let c = -1; try { const t = TABS[TCUR]; if (edOn() && t && t.pin && PIDX.has(t.path)) c = PIDX.get(t.path); else if (sel >= 0 && vis[sel] && EHID[sel]) c = sel; } catch (_) { /* not ready yet */ }
+  // (0.8.72) a pinned note already on the ring gives the centre to the note you picked
+  let c = -1; try { const t = TABS[TCUR], pc = edOn() && t && t.pin && PIDX.has(t.path) ? PIDX.get(t.path) : -1; if (pc >= 0 && vis[pc] && EHID[pc]) c = pc; else if (sel >= 0 && vis[sel] && EHID[sel]) c = sel; } catch (_) { /* not ready yet */ }
   const bTop = ARSTY === "board" ? -(Math.ceil(ARN / BCOLS()) / 2) * BCH - 330 : 0;   // on the board, the centre note heads it, above the grid
   ARC0.c = c; if (c >= 0 && vis[c] && EHID[c]) { EHID[c] = 0; EX[c] = 0; EY[c] = bTop; } else if (c >= 0) ARC0.c = -1;
   win.setTimeout(() => { if (!dead) syncArBtn(); }, 0);
@@ -2075,7 +2076,7 @@ async function arenaFill(q){ if (!host.pickNote) return; const sl = arenaSlots()
   for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i] && !have.has(N[i].path)) items.push({ path: N[i].path, title: N[i].title, s: N[i].score }); items.sort((a, b) => b.s - a.s);
   const p_ = await host.pickNote(items); if (!p_ || dead) return; sl[q] = p_; save("iv-arena", ARENA); morph(true, () => fitTarget()); const i = PIDX.get(p_); if (i != null && edOn()) win.setTimeout(() => { if (!dead) select(i); }, 800); }   // the ring stays framed; in Edit mode the note opens in the editor
 function arenaSync(){ if (view !== "arena" || dead) return; const was = ARC0.c; let want = -1;
-  try { const t = TABS[TCUR]; const onRing = i => arenaSlots().includes(N[i].path); if (edOn() && t && t.pin && PIDX.has(t.path)) want = PIDX.get(t.path); else if (sel >= 0 && vis[sel] && !onRing(sel)) want = sel; } catch (_) { return; }
+  try { const t = TABS[TCUR]; const onRing = i => arenaSlots().includes(N[i].path), pc = edOn() && t && t.pin && PIDX.has(t.path) ? PIDX.get(t.path) : -1; if (pc >= 0 && !onRing(pc)) want = pc; else if (sel >= 0 && vis[sel] && !onRing(sel)) want = sel; } catch (_) { return; }
   if (want !== was) morph(true, () => fitTarget()); refitSoon(); }
 // Compass and Arena: frame the map between the editors once the map has stopped moving (a move started earlier would otherwise win)
 function refitSoon(){ const v0 = view; let tries = 0; const go = () => { if (dead || view !== v0) return; if (morphing && tries++ < 20) { win.setTimeout(go, 120); return; } animateTo(fitTarget()); }; win.setTimeout(go, 120); }
