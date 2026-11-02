@@ -5,6 +5,8 @@ module.exports = async ({ page, sleep, shot }) => {
   console.log('rows', await page.evaluate(() => [...document.querySelectorAll('.ivm #vmorepop > .chip')].slice(0, 5).map(c => c.innerText.replace(/\s+/g, ' ').trim()).join(' | ')));
   console.log('sr in menu', await page.evaluate(() => document.querySelectorAll('.ivm #vmorepop .ivm-sr').length), 'labels kept', await page.evaluate(() => [...document.querySelectorAll('.ivm #vmorepop .chip[aria-label]')].length));
   const r = await page.evaluate(() => document.querySelector('.ivm #vmorepop').getBoundingClientRect().toJSON()); await page.screenshot({ path: process.env.SHOTS + '/mapsmenu.png', clip: { x: r.x, y: r.y, width: r.width, height: Math.min(r.height, 600) } });
+  console.log('unfinished', await page.evaluate(() => { const d = [...document.querySelectorAll('.ivm #vmorepop details')].find(x => /^Unfinished/.test(x.querySelector('summary').textContent)); return d ? [...d.querySelectorAll('.chip')].map(c => c.textContent.trim()).join(', ') : 'none'; }));
+  console.log('main list', await page.evaluate(() => [...document.querySelectorAll('.ivm #vmorepop > .chip')].map(c => c.textContent.trim().replace(/\s*\S$/, '')).join(', ')));
   console.log('html', await page.evaluate(() => [...document.querySelectorAll('.ivm #vmorepop > .chip')][1].outerHTML.slice(0, 600)));
   console.log('tip still on toolbar', await page.evaluate(() => document.querySelectorAll('.ivm header > * [data-tip], .ivm header [data-tip]').length));
 };
