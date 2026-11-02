@@ -3970,8 +3970,11 @@ function renderTrail(){
 // Three editors, each a real Obsidian editor (host.editCard): the main one, in a card under the picked note (the centre) or on the left side;
 // and a support note on the right for any note you ⌘-click. One theme and one opacity for all three. Starfield first, Emergence as the stress test.
 let EDITM = pref("iv-editm", false) === true, EDLEFT = pref("iv-edleft", false) === true, HUBPV = pref("iv-hubpv", false) === true;
-// how many mini previews (0.8.42, Nick: a slider from fewer to more): Starfield's hubs and Compass's closest notes; 0 shows none
-let PVN = (() => { const v = pref("iv-pvn", null); return v == null ? (HUBPV ? 6 : 4) : Math.max(0, Math.min(12, v | 0)); })();
+// how many mini previews: Starfield's biggest hubs and Compass's closest notes. 0.8.48 (Nick): Fewer, Natural or Max, never a free number,
+// and one governor for both maps: a preview only shows where it covers no other preview, the note you're on, the orbs, the editors or the edges
+const PVL = { off: 0, fewer: 3, natural: 6, max: 12 };
+let PVLV = (() => { const v = pref("iv-pvl", null); if (v && v in PVL) return v; const o = pref("iv-pvn", null); if (o == null) return "natural"; return o <= 0 ? "off" : o <= 3 ? "fewer" : o <= 7 ? "natural" : "max"; })();
+const PVN_ = () => PVL[PVLV];
 const CARDMAPS = new Set(["stars", "emergence", "spacetime", "compass", "arena"]);
 const edOn = () => EDITM && CARDMAPS.has(view) && !!host.editCard && !isPhone() && !S3D_ON();
 let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84;   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
@@ -4157,17 +4160,24 @@ function placeOrbs(){ if (orbBar.hidden) return; const L = !EDS.left.el.hidden ?
   orbBar.style.left = Math.round(L) + "px"; orbBar.style.width = Math.max(40, Math.round(R - L)) + "px"; }
 // Starfield: a small read-only preview of each galaxy's hub note, above it
 const pvLayer = doc.createElement("div"); pvLayer.className = "ivm-pvl"; root.after(pvLayer); const HPV = new Map();
-function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), on = PVN > 0 && (cmp || (EDITM && view === "stars" && !S3D_ON())) && !!host.preview && W > 0;
+function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap = PVN_(), on = cap > 0 && (cmp || (EDITM && view === "stars" && !S3D_ON())) && !!host.preview && W > 0;
   if (!on) { if (pvLayer.childElementCount) { pvLayer.empty(); HPV.clear(); } return; }
   const c = cv.getBoundingClientRect(), pr = pvLayer.getBoundingClientRect(), ox = c.left - pr.left, oy = c.top - pr.top, want = new Set();
   const L_ = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w : 0, R_ = !EDS.right.el.hidden ? edRect("right").x : W - sideW();
-  const gals = cmp ? (() => { const ok = [], cx = sx(0), cy = sy(0), hit = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1], taken = [[cx - 110, cy - 26, 220, 52]];
-    for (const i of CMP.pv) { if (!VV(i) || i === CMP.c) continue; const x = sx(X[i]), y = sy(Y[i]), r = [x - 105, y - 150, 210, 128 + 10];   // above its note, never over another preview or the centre
-      if (ok.length >= PVN) break; if (x < L_ + 110 || x > R_ - 110 || y < 160 || y > H - 10 || taken.some(t => hit(r, t))) continue; taken.push(r); ok.push({ i, x, y }); } return ok; })() : BODIES.filter(b => b.kind === "gal" && b.core != null && vis[b.core] && b.core !== sel).map(b => ({ b, i: b.core, rr: b.r*k, x: sx(X[b.core]), y: sy(Y[b.core]) }))
-    .filter(g => g.rr >= 55 && g.x > 60 && g.x < W - sideW() - 60 && g.y > 120 && g.y < H - 20).sort((a, b) => b.rr - a.rr).slice(0, PVN);
+  const top_ = orbBar.hidden ? 8 : orbBar.getBoundingClientRect().bottom - c.top + (ORBN ? 70 : 8);   // below the orbs (and their names)
+  const hit = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1], taken = [], pw = 210, ph = 128, pad = 10;
+  // what a preview must never cover: the centre (Compass), the note you're on and its name, the overview map and the zoom buttons
+  if (cmp) taken.push([sx(0) - 110, sy(0) - 26, 220, 52]);
+  if (sel >= 0 && VV(sel)) taken.push([sx(X[sel]) - 130, sy(Y[sel]) - 34, 260, 68]);
+  taken.push([R_ - 230, H - 190, 230, 190]);
+  const cands = cmp ? CMP.pv.filter(i => VV(i) && i !== CMP.c)
+    : BODIES.filter(b => b.kind === "gal" && b.core != null && vis[b.core] && b.core !== sel && b.r * k >= ({ fewer: 75, natural: 55, max: 38 })[PVLV]).sort((a, b) => b.r - a.r).map(b => b.core);
+  const gals = [];
+  for (const i of cands) { if (gals.length >= cap) break; const x = sx(X[i]), y = sy(Y[i]), r = [x - pw/2 - pad, y - ph - 22 - pad, pw + 2*pad, ph + 2*pad];
+    if (r[0] < L_ + 4 || r[0] + r[2] > R_ - 4 || r[1] < top_ || y > H - 10 || taken.some(t => hit(r, t))) continue; taken.push(r); gals.push({ i, x, y }); }
   for (const g of gals) { const p = N[g.i].path; want.add(p); let e = HPV.get(p);
     if (!e) { e = pvLayer.createDiv({ cls: "ivm-card ivm-pv" }); e.createDiv({ cls: "pvt", text: N[g.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); HPV.set(p, e); }
-    edLook(e); const w = 210, h = 128; e.style.left = Math.round(ox + g.x - w/2) + "px"; e.style.top = Math.round(oy + g.y - h - 22) + "px"; }
+    edLook(e); e.style.left = Math.round(ox + g.x - pw/2) + "px"; e.style.top = Math.round(oy + g.y - ph - 22) + "px"; }
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
 function select(i, fromTrail){
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
@@ -5883,9 +5893,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     sl.oninput = () => { CARDOP = +sl.value; ov.setText(CARDOP + "%"); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
     const sw = (txt, get, set) => { const l_ = g.createEl("label", { cls: "mini lcemo eosw" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = get(); l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: txt }); c_.onchange = () => set(c_.checked); };
     sw("Open the editor on the left side", () => EDLEFT, v => { EDLEFT = v; save("iv-edleft", v); if (sel >= 0) void openMain(sel); });
-    { const r_ = g.createEl("label", { cls: "eorow" }); r_.createSpan({ cls: "eol", text: "Previews" }); const pl = r_.createEl("input", { type: "range", attr: { min: "0", max: "12", step: "1", "aria-label": "Previews: fewer to more" } }); pl.value = String(PVN);
-      const pv_ = r_.createSpan({ cls: "eov" }); const say = () => pv_.setText(PVN ? String(PVN) : "off"); say();
-      pl.oninput = () => { PVN = +pl.value; say(); draw(); }; pl.onchange = () => save("iv-pvn", PVN); pl.onclick = e => e.stopPropagation(); }
+    { const r_ = g.createDiv({ cls: "eorow" }); r_.createSpan({ cls: "eol", text: "Previews" }); const seg = r_.createDiv({ cls: "seg" });
+      for (const [v, t_] of [["off", "Off"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(PVLV === v) } });
+        b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
     sw("Show orbs (tabs)", () => ORBS, v => { ORBS = v; save("iv-orbs", v); const n_ = g.querySelector(".orbnsw"); if (n_) n_.hidden = !v; syncOrbs(); });
     sw("Show orb names", () => ORBN, v => { ORBN = v; save("iv-orbn", v); syncOrbs(); }); { const ls = g.querySelectorAll(".eosw"); const l_ = ls[ls.length - 1]; l_.classList.add("orbnsw", "sub"); l_.hidden = !ORBS; }
     g.createDiv({ cls: "eonote", text: "Previews: small read-only glimpses of notes, in Starfield (its biggest hubs) and Compass (the closest notes). ⌘-click a note to open it as a support note on the right. Shift-click opens it in a new tab (an orb). Pin the editor to keep its note: what you pick then opens as the support note." });
