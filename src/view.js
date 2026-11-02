@@ -105,7 +105,7 @@ export async function mountInto(owner, el, opts) {
   // the map's data is changed in place by the map (levels during the time-lapse), so each view gets its own copy
   const D = structuredClone(graph);
   let cardLinkCb = null;   // Edit mode: where a link clicked in a card goes (set by the map)
-  const root = el.createDiv({ cls: "ivm" });
+  el.addClass("ivm-host"); const root = el.createDiv({ cls: "ivm" });
   buildUI(root, UI);
   const stale = root.querySelector("header").createEl("button", { cls: "chip ivm-stale", text: "↻ Notes changed · rescan" });
   stale.hidden = !plugin.dirty; stale.dataset.count = String(plugin.changed ? plugin.changed.size : 0);

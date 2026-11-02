@@ -1,6 +1,8 @@
 /* Maps of the Ideaverse: everything is scoped to the map's own view (.ivm) and its floating tooltip (.ivm-tip). */
 .workspace-leaf-content[data-type="ideaverse-maps"] .view-content{padding:0;overflow:hidden}
-.ivm{container-type:inline-size;container-name:ivm;position:relative;height:100%;width:100%;overflow:hidden;font-size:14px;line-height:1.35;-webkit-user-select:none;user-select:none}
+/* the container for @container ivm sits on the view (0.8.29): on .ivm itself it made the map one layer, so the toolbar's menus could never rise above the editor cards */
+.ivm-host{container-type:inline-size;container-name:ivm}
+.ivm{position:relative;height:100%;width:100%;overflow:hidden;font-size:14px;line-height:1.35;-webkit-user-select:none;user-select:none}
 .ivm input,.ivm textarea{-webkit-user-select:text;user-select:text}
 /* undo Obsidian's global button and input styling inside the map; the map's own rules (more specific) come after */
 .ivm button{background:none;box-shadow:none;border:0;height:auto;padding:0;margin:0;font:inherit;color:inherit;border-radius:0;cursor:pointer;line-height:inherit;letter-spacing:inherit;text-transform:none;display:inline-block;width:auto;min-height:0}
@@ -1299,7 +1301,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 
 /* Edit mode (experimental): the card under the picked note, holding a real Obsidian editor. It sits on the page, outside the map's styles,
    so the editor looks like Obsidian (or, with Editor theme → Map, like Obsidian in the map's dark or light) */
-.ivm-card{position:absolute;z-index:3;display:flex;flex-direction:column;background:color-mix(in srgb,var(--background-primary) var(--cardop,84%),transparent);color:var(--text-normal);border:1px solid var(--background-modifier-border);border-radius:12px;box-shadow:0 10px 32px rgba(0,0,0,.35);overflow:hidden;backdrop-filter:blur(2px)}
+.ivm-card{position:absolute;z-index:6;display:flex;flex-direction:column;background:color-mix(in srgb,var(--background-primary) var(--cardop,84%),transparent);color:var(--text-normal);border:1px solid var(--background-modifier-border);border-radius:12px;box-shadow:0 10px 32px rgba(0,0,0,.35);overflow:hidden;backdrop-filter:blur(2px)}
 .ivm-card[hidden]{display:none}
 .ivm-card .cardhd{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 14px;border-bottom:1px solid var(--background-modifier-border);flex:none}
 .ivm-card .cardt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:12.5px;color:var(--text-normal)}
@@ -1336,7 +1338,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .dlist .editopts .eonote{font:400 11px var(--font-interface,inherit);color:var(--muted);opacity:.8}
 .ivm .dlist .eorow .eov{font:500 11px var(--mono);min-width:34px}
 /* tabs as orbs (0.8.28): along the top of the map, between the editors */
-.ivm .ivm-orbs{position:absolute;top:10px;z-index:4;display:flex;justify-content:center;flex-wrap:wrap;gap:8px;pointer-events:none}
+.ivm .ivm-orbs{position:absolute;top:10px;z-index:7;display:flex;justify-content:center;flex-wrap:wrap;gap:8px;pointer-events:none}
 .ivm .ivm-orbs[hidden]{display:none}
 .ivm .ivm-orbs.named{gap:26px;padding-bottom:70px}
 .ivm .ivm-orb{pointer-events:auto;position:relative;width:20px;height:20px;padding:0;border:0;border-radius:50%;background:none;box-shadow:none;cursor:pointer;flex:none}
