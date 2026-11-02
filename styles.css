@@ -1447,3 +1447,5 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 /* Kandinsky Composition key (0.8.65) */
 .ivm .legend .kleg .klrow{display:flex;align-items:center;gap:8px;margin:2px 0;white-space:normal}
 .ivm .legend .kleg .klic{width:30px;height:20px;flex:none;border-radius:3px}
+.ivm-tip .tline{white-space:nowrap}
+.ivm-tip .tline b.tname{display:inline}
