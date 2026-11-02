@@ -4230,7 +4230,8 @@ const PVL = { off: 0, fewer: 3, natural: 6, max: 12 }, PVL_C = { off: 0, fewer: 
 let PVLV = (() => { const v = pref("iv-pvl", null); if (v && v in PVL) return v; const o = pref("iv-pvn", null); if (o == null) return "natural"; return o <= 0 ? "off" : o <= 3 ? "fewer" : o <= 7 ? "natural" : "max"; })();
 const PVN_ = () => PVL[PVLV];
 const CARDMAPS = new Set(["stars", "emergence", "spacetime", "compass", "arena"]);
-const edOn = () => EDITM && CARDMAPS.has(view) && !!host.editCard && !isPhone() && !S3D_ON();
+const edOn = () => EDITM && !!host.editCard && !isPhone();   // every map since 0.8.68 (Nick); maps you turn keep their camera (edCam)
+const edCam = () => !(S3D_ON() || sphOn() || domeOn() || geo3On() || csphOn() || (typeof globeOn === "function" && globeOn()));
 let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84;   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
 // Editor theme → Map: Obsidian works out its colors once, on the page body (--background-primary: var(--color-base-00)…), so a dark or light
 // class alone changes nothing; each editor re-declares those body colors itself, so they resolve with its own dark or light base colors
@@ -4356,6 +4357,7 @@ async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(
   syncNav();
   const p = m.open(i);
   if (view === "compass" || view === "arena") refitSoon();   // they frame themselves between the editors, once any move has finished   // Compass frames itself, clear of the editors
+  else if (!edCam()) { /* a globe or 3D map keeps its own camera */ }
   else if (m === EDS.center) { const r = edRect("center"); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k }); }   // the note above the card, in the top third
   else { const L = EDS.left.col ? 0 : edRect("left").x + edRect("left").w, R = EDS.right.el.hidden ? W - sideW() : edRect("right").x; animateTo({ k, tx: (L + R)/2 - X[i]*k, ty: H/2 - Y[i]*k }); }   // the note in the free middle
   await p; }
@@ -4386,6 +4388,8 @@ function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; T
   TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); arenaSync(); syncNav(); }
 function tabGo(j){ const t = TABS[j]; if (!t) return; const i = PIDX.get(t.path); if (i == null) return;
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
+  // pinned: the main editor keeps its note, and another orb's note opens as the support note (0.8.68, Nick). Unpin to switch tabs
+  if (j !== TCUR && TABS[TCUR] && TABS[TCUR].pin) { void EDS.right.open(i); return; }
   TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }
 function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j === TCUR; if (j < TCUR) TCUR--;
   TCUR = Math.max(0, Math.min(TCUR, TABS.length - 1)); tabsSave();
