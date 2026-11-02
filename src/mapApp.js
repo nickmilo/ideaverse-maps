@@ -4039,7 +4039,7 @@ function syncOrbs(){ for (const o of [EDS.center, EDS.left]) if (o.pb) { const o
   const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); if (!on) { orbKey = ""; return; }
   const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
     TABS.forEach((t, j) => { const i = PIDX.get(t.path), nm = i != null ? N[i].title : t.path.replace(/^.*\//, "").replace(/\.md$/, ""), lv = i != null ? N[i].level : 1;
-      const b = orbBar.createEl("button", { cls: "ivm-orb" + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""), attr: { type: "button", "data-name": nm } });   // no aria-label: Obsidian would add its own tooltip over ours (Nick, 0.8.33); the name is read from a hidden span
+      const b = orbBar.createEl("button", { cls: "ivm-orb" + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""), attr: { type: "button", "data-name": nm, "data-i": String(j) } });   // no aria-label: Obsidian would add its own tooltip over ours (Nick, 0.8.33); the name is read from a hidden span
       b.createSpan({ cls: "orbsr", text: nm });
       b.setCssProps({ "--o0": lv >= 3 ? GRAD[lv][0] : lv === 2 ? css.l2 : css.l1, "--o1": lv >= 3 ? GRAD[lv][1] : lv === 2 ? css.l2 : css.l1 });
       b.createSpan({ cls: "orbd" }); if (t.pin) setIcon(b.createSpan({ cls: "orbp" }), "pin");
@@ -4047,14 +4047,22 @@ function syncOrbs(){ for (const o of [EDS.center, EDS.left]) if (o.pb) { const o
       x.onclick = e => { e.stopPropagation(); tabClose(j); }; b.onauxclick = e => { if (e.button === 1) { e.preventDefault(); tabClose(j); } };
       if (ORBN) b.createSpan({ cls: "orbn", text: nm });
       b.onclick = e => { e.stopPropagation(); if (orbDragged) { orbDragged = false; return; } tabGo(j); };
-      // drag an orb left or right to reorder the tabs (0.8.34, Nick)
-      b.addEventListener("pointerdown", e => { if (e.button !== 0 || (e.target instanceof Element && e.target.closest(".orbx"))) return; e.stopPropagation(); const x0 = e.clientX; let on = false;
-        const mv = ev => { const dx = ev.clientX - x0; if (!on && Math.abs(dx) < 5) return; if (!on) { on = true; b.classList.add("drag"); b.setPointerCapture(e.pointerId); } b.setCssProps({ "--odx": dx + "px" }); };
-        const upf = ev => { b.removeEventListener("pointermove", mv); b.removeEventListener("pointerup", upf); b.removeEventListener("pointercancel", upf); if (!on) return;
+      // drag an orb left or right to reorder the tabs (0.8.36; 0.8.39 follows the pointer, and the others make way as you pass them)
+      b.addEventListener("pointerdown", e => { if (e.button !== 0 || (e.target instanceof Element && e.target.closest(".orbx"))) return; e.stopPropagation(); e.preventDefault();
+        const x0 = e.clientX; let on = false, base = 0;
+        const shift = () => { const r = b.getBoundingClientRect(); return r.left + r.width / 2; };
+        const mv = ev => { const dx = ev.clientX - x0; if (!on && Math.abs(dx) < 4) return; if (!on) { on = true; b.classList.add("drag"); base = shift(); }
+          // past the middle of a neighbour: swap places in the row, so the gap follows the pointer
+          const nx = b.nextElementSibling, pv = b.previousElementSibling, px = ev.clientX;
+          if (nx && nx.classList.contains("ivm-orb")) { const r = nx.getBoundingClientRect(); if (px > r.left + r.width / 2) orbBar.insertBefore(nx, b); }
+          if (pv && pv.classList.contains("ivm-orb")) { const r = pv.getBoundingClientRect(); if (px < r.left + r.width / 2) orbBar.insertBefore(b, pv); }
+          b.setCssProps({ "--odx": "0px" }); const c = shift(); b.setCssProps({ "--odx": (px - c) + "px" }); };
+        const upf = () => { win.removeEventListener("pointermove", mv, true); win.removeEventListener("pointerup", upf, true); win.removeEventListener("pointercancel", upf, true); if (!on) return;
           orbDragged = true; win.setTimeout(() => { orbDragged = false; }, 0); b.classList.remove("drag"); b.setCssProps({ "--odx": "0px" });
-          const others = [...orbBar.querySelectorAll(".ivm-orb")].filter(o => o !== b), x = ev.clientX; let to = others.findIndex(o => { const r = o.getBoundingClientRect(); return x < r.left + r.width / 2; }); if (to < 0) to = others.length;
-          if (to === j) { orbKey = ""; syncOrbs(); return; } const cur = TABS[TCUR], [t_] = TABS.splice(j, 1); TABS.splice(to, 0, t_); TCUR = Math.max(0, TABS.indexOf(cur)); tabsSave(); orbKey = ""; syncOrbs(); };
-        b.addEventListener("pointermove", mv); b.addEventListener("pointerup", upf); b.addEventListener("pointercancel", upf); }); }); }
+          const order = [...orbBar.querySelectorAll(".ivm-orb")].map(o => o.dataset.i == null ? -1 : +o.dataset.i), cur = TABS[TCUR];
+          if (order.every((v, q) => v === q)) { orbKey = ""; syncOrbs(); return; }
+          TABS = order.map(q => TABS[q]).filter(Boolean); TCUR = Math.max(0, TABS.indexOf(cur)); tabsSave(); orbKey = ""; syncOrbs(); };
+        win.addEventListener("pointermove", mv, true); win.addEventListener("pointerup", upf, true); win.addEventListener("pointercancel", upf, true); }); }); }
   placeOrbs(); }
 function placeOrbs(){ if (orbBar.hidden) return; const L = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 12, R = (!EDS.right.el.hidden ? edRect("right").x : W - sideW()) - 12;
   orbBar.style.left = Math.round(L) + "px"; orbBar.style.width = Math.max(40, Math.round(R - L)) + "px"; }

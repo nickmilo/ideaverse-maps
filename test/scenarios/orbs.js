@@ -32,7 +32,7 @@ module.exports = async ({ page, sleep, shot }) => {
   const names = () => page.evaluate(() => [...document.querySelectorAll('.ivm .ivm-orb')].map(o => o.dataset.name + (o.classList.contains('cur') ? '*' : '')).join(', '));
   console.log('7 before drag', await names());
   const r = await page.evaluate(() => [...document.querySelectorAll('.ivm .ivm-orb')].map(o => { const b = o.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; }));
-  if (r.length >= 3) { await page.mouse.move(r[0][0], r[0][1]); await page.mouse.down(); await page.mouse.move(r[0][0] + 20, r[0][1], { steps: 4 }); await page.mouse.move(r[2][0] + 15, r[2][1], { steps: 6 }); await page.mouse.up(); await sleep(800); }
+  if (r.length >= 3) { await page.mouse.move(r[0][0], r[0][1]); await page.mouse.down(); await page.mouse.move(r[0][0] + 20, r[0][1], { steps: 4 }); await page.mouse.move(r[1][0] + 6, r[1][1], { steps: 4 }); console.log('mid-drag', await names(), await page.evaluate(() => { const d = document.querySelector('.ivm .ivm-orb.drag'); return d ? getComputedStyle(d).transform : 'no drag'; })); await page.mouse.move(r[2][0] + 15, r[2][1], { steps: 6 }); await page.mouse.up(); await sleep(800); }
   console.log('8 after drag', await names(), '| left', await page.evaluate(() => (document.querySelector('.ivm-card-left:not([hidden]) .cardt') || {}).textContent));
   console.log('errors:', errs.join(' | ') || 'none');
 };
