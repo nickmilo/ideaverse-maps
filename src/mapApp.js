@@ -4139,7 +4139,8 @@ function drawContrails(){ if (!CTRON || !CTR.length) return; const now = perform
 const HTIP = true;
 if (HTIP) { const tipEl = root.createDiv({ cls: "ivm-htip" }); tipEl.hidden = true; let tT = 0;
   const SEL = "header button, header [role=button], header .chip, .zoom button";
-  const conv = el => { if (!(el instanceof HTMLElement) || !el.matches(SEL)) return; const l = el.getAttribute("aria-label") || el.getAttribute("title"); if (!l) return;
+  // only the toolbar's own buttons: the menus that drop from it (the maps menu's descriptions, the Display list…) keep their labels as they were (0.8.66)
+  const conv = el => { if (!(el instanceof HTMLElement) || !el.matches(SEL) || el.closest("#vmorepop, .mspop, .pop, [role=dialog], [id$=pop], .popover, #mapopts")) return; const l = el.getAttribute("aria-label") || el.getAttribute("title"); if (!l) return;
     el.removeAttribute("aria-label"); el.removeAttribute("title"); el.dataset.tip = l; let sr = el.querySelector(":scope > .ivm-sr"); if (!sr) sr = el.createSpan({ cls: "ivm-sr" }); if (sr.textContent !== l) sr.setText(l); };
   const all = () => root.querySelectorAll(SEL).forEach(conv); all();
   new MutationObserver(ms => { for (const m of ms) if (m.type === "attributes") conv(m.target); else for (const nd of m.addedNodes) if (nd instanceof HTMLElement) { conv(nd); nd.querySelectorAll && nd.querySelectorAll(SEL).forEach(conv); } })
@@ -6415,7 +6416,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     if (over()) { root.dataset.tbwrap = "1"; root.dataset.findmini = ""; root.dataset.vgoff = "1"; fold();
       if (tr) for (let q = MOV.length - 1; q >= 0 && over(); q--) tr.insertBefore(MOV[q], tr.firstChild); }
     $("#vmorepop").querySelectorAll(":scope > .vfoldb").forEach(x => x.remove()); vfold.hidden = false;
-    for (const b of MAIN) { const c = $("#vmorepop").createEl("button", { cls: "chip", text: b.textContent.replace(/\s*▾\s*$/, ""), attr: { type: "button" } }); if (tabV(view) === b.dataset.v) c.classList.add("on");
+    for (const b of MAIN) { const c = $("#vmorepop").createEl("button", { cls: "chip", text: [...b.childNodes].filter(nd => !(nd instanceof Element && nd.classList.contains("ivm-sr"))).map(nd => nd.textContent).join("").replace(/\s*▾\s*$/, "").trim(), attr: { type: "button" } });   // the tab's own name, not its hidden label (0.8.66) if (tabV(view) === b.dataset.v) c.classList.add("on");
       c.classList.add("vfoldb"); c.dataset.v = b.dataset.v; micon(c, MICON[b.dataset.v]); vfold.before(c);
       c.onclick = e => { e.stopPropagation(); closePops(); driftStop(); if (tabV(view) !== b.dataset.v) setView(b.dataset.v); syncTB(); }; } };
   // refit only when the toolbar's width or the map changes: refitting on every redraw let a borderline width flip back and forth
