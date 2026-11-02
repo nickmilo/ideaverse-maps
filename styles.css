@@ -1403,3 +1403,16 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card .carddrop .sdtn{font-family:var(--font-monospace);text-align:right;color:var(--text-muted)}
 .ivm-card .carddrop .z{opacity:.5}
 .ivm-card .carddrop .sdtt{font-weight:700;color:var(--text-normal);border-top:1px solid var(--background-modifier-border);padding-top:3px}
+/* Arena's ring button (0.8.44): a ring with a dot that moves out to it */
+.ivm .zoom button.arbtn{position:relative}
+.ivm .zoom button.arbtn::after{content:"";position:absolute;inset:0;margin:auto;width:13px;height:13px;border:1.5px dashed currentColor;border-radius:50%}
+.ivm .zoom button.arbtn::before{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;background:currentColor;border-radius:50%;transition:transform .2s}
+.ivm .zoom button.arbtn:not(:disabled):hover::before{transform:translate(4.6px,-4.6px)}
+.ivm .zoom button.arbtn:disabled{opacity:.35;cursor:default}
+.ivm .zoom button.arbtn[hidden]{display:none}
+/* Arena's gear: the Slots slider in the gear's own style */
+.ivm .arnany .arnrow{display:flex;align-items:center;gap:10px;font-size:12px;padding:2px 0 6px}
+.ivm .arnany .arnrow .eol{color:var(--muted);font:600 11px var(--mono)}
+.ivm .arnany .arnrow input[type=range]{flex:1;height:4px}
+.ivm .arnany .arnrow .eov{font:600 12px var(--mono);min-width:20px;text-align:right}
+.ivm .arnany .chip{display:block;width:100%;margin:4px 0;font-size:12px}

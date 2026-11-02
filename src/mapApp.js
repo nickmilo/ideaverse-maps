@@ -1118,7 +1118,7 @@ function morph(animate, cam){
   RAF(step);
 }
 let camBusy = 0;
-function setView(v){ win.setTimeout(() => { if (typeof syncFZ === "function") syncFZ(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
+function setView(v){ win.setTimeout(() => { if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
@@ -2054,7 +2054,8 @@ function layoutArena(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i]
   sl.forEach((p_, q) => { const i = p_ != null ? PIDX.get(p_) : null; if (i == null || !vis[i]) return; const [x, y] = arenaAt(q); EHID[i] = 0; EX[i] = x; EY[i] = y; });
   // the centre: the note pinned in the editor, else the note you picked when it isn't on the ring
   let c = -1; try { const t = TABS[TCUR]; if (edOn() && t && t.pin && PIDX.has(t.path)) c = PIDX.get(t.path); else if (sel >= 0 && vis[sel] && EHID[sel]) c = sel; } catch (_) { /* not ready yet */ }
-  ARC0.c = c; if (c >= 0 && vis[c] && EHID[c]) { EHID[c] = 0; EX[c] = 0; EY[c] = 0; }
+  ARC0.c = c; if (c >= 0 && vis[c] && EHID[c]) { EHID[c] = 0; EX[c] = 0; EY[c] = 0; } else if (c >= 0) ARC0.c = -1;
+  win.setTimeout(() => { if (!dead) syncArBtn(); }, 0);
   expBox = { x0: -ARR - 260, y0: -ARR - 120, x1: ARR + 260, y1: ARR + 120 }; }
 function arenaSlotAt(px, py){ const sl = arenaSlots(); let best = -1, bd = 1e9; for (let q = 0; q < sl.length; q++) { const [x, y] = arenaAt(q), d = Math.hypot(sx(x) - px, sy(y) - py); if (d < bd) { bd = d; best = q; } } return bd <= Math.max(18, 60 * k) ? best : -1; }
 async function arenaFill(q){ if (!host.pickNote) return; const sl = arenaSlots(), have = new Set(sl.filter(Boolean)), items = [];
@@ -2065,6 +2066,11 @@ function arenaSync(){ if (view !== "arena" || dead) return; const was = ARC0.c; 
   if (want !== was) morph(true, () => fitTarget()); refitSoon(); }
 // Compass and Arena: frame the map between the editors once the map has stopped moving (a move started earlier would otherwise win)
 function refitSoon(){ const v0 = view; let tries = 0; const go = () => { if (dead || view !== v0) return; if (morphing && tries++ < 20) { win.setTimeout(go, 120); return; } animateTo(fitTarget()); }; win.setTimeout(go, 120); }
+function arenaRing(){ const c = ARC0.c; if (view !== "arena" || c < 0) return; const sl = arenaSlots(); if (sl.includes(N[c].path)) return;
+  let q = sl.indexOf(null); if (q < 0) { if (ARN >= 20) { new Notice("The ring is full (20 slots). Empty a slot with Option-click."); return; } ARN++; save("iv-arn", ARN); arenaSlots(); q = sl.indexOf(null); if (q < 0) q = ARENA.indexOf(null); }
+  ARENA[q] = N[c].path; save("iv-arena", ARENA); morph(true, () => fitTarget()); syncArBtn(); }
+function syncArBtn(){ const b = root.querySelector("#arbtn"); if (!b) return; const on = view === "arena"; b.hidden = !on; if (!on) return; const c = ARC0.c, ok = c >= 0 && !arenaSlots().includes(N[c].path);
+  b.disabled = !ok; b.setAttribute("aria-description", ok ? `Put ${N[c].title} on the ring` : "Pick a note: it sits at the centre, and this puts it on the ring"); }
 function arenaClear(q){ const sl = arenaSlots(); if (!sl[q]) return; sl[q] = null; save("iv-arena", ARENA); morph(true, () => fitTarget()); }
 EXP.arena = {
   layout: layoutArena,
@@ -3893,6 +3899,9 @@ cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
     tx -= dx * (e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }
   const f = Math.min(1.35, Math.max(.74, Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)))); zoomAt(e.offsetX, e.offsetY, f); }, {passive:false});
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
+// Arena (0.8.44, Nick: "it's so nice, I think we need a special button for it"): put the note at the centre on the ring, in the next empty slot
+{ const b = doc.createElement("button"); b.id = "arbtn"; b.type = "button"; b.className = "arbtn"; b.hidden = true; b.setAttribute("aria-label", "Put the centre note on the ring"); $("#zfit").after(b);
+  b.onclick = e => { e.stopPropagation(); arenaRing(); }; }
 { const b = doc.createElement("button"); b.id = "fzbtn"; b.type = "button"; b.className = "fzbtn"; b.hidden = true; $("#zfit").after(b); b.onclick = e => { e.stopPropagation(); setFZ(!FZC); }; }
 $("#zin").onclick = () => zoomAt(W/2, H/2, 1.6); $("#zout").onclick = () => zoomAt(W/2, H/2, 1/1.6); $("#zfit").onclick = () => { if (globeOn()) { csYaw = 0; csPitch = 0; csKeep(); }   // the globe faces the Sea of Knowledge again
   if (sphOn()) { morph(true, () => fitTarget()); return; } if (domeOn()) { [domeYaw, domePitch] = view === "gravity" ? [0, .95] : [0, 0]; domeKeep(); morph(true, () => fitTarget()); return; }
