@@ -2167,7 +2167,69 @@ const ARENA_LEG = "Arena: a ring of slots you fill with notes, a workspace of yo
 // read left to right and down, or the note you picked with its links; 24, 48, 96 or 192 tiles.
 const KPAL = ["#f2c230", "#d98e04", "#c8312b", "#a0233f", "#5b3a8a", "#1f4e9c", "#3aa0c8", "#3a8f5a", "#1b1b1b", "#f2ede1", "#e6a0b0", "#e46b2a"];
 let KDN = [24, 48, 96, 192].includes(+pref("iv-kdn", 48)) ? +pref("iv-kdn", 48) : 48, KSC = pref("iv-ksc", "top") === "links" ? "links" : "top"; const KD = { ids: [], c: -1, T: 200 };
-function layoutKandinsky(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
+// Composition (0.8.63, after Composition VIII, 1923): one map note and its links as a painting of circles, triangles, arcs, checkerboards and lines
+let KSTY = pref("iv-ksty", "squares") === "comp" ? "comp" : "squares"; const KC = { c: -1, ids: [], sz: new Map(), kind: new Map() };
+function layoutComp(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
+  let c = -1; try { c = sel; } catch (_) { /* not ready */ } if (c < 0 || !vis[c]) { c = -1; for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i] && N[i].is_map && (c < 0 || N[i].score > N[c].score)) c = i; }
+  KC.c = c; KC.ids = []; KC.sz.clear(); KC.kind.clear(); if (c < 0) { expBox = { x0: -800, y0: -500, x1: 800, y1: 500 }; return; }
+  const nb = [...new Set([...out[c], ...inn[c]])].filter(j => j !== c && vis[j] && !ARCH[j]).sort((a, b) => N[b].score - N[a].score).slice(0, 60);
+  EHID[c] = 0; EX[c] = -760; EY[c] = -420; KC.sz.set(c, 150 + Math.min(10, N[c].score) * 6); KC.kind.set(c, "sun");
+  const P = nb.map((j, q) => { const lv = N[j].level, h = hash(N[j].path, 81), h2 = hash(N[j].path, 82);
+    const kind = lv >= 4 ? "halo" : lv === 3 ? (h < .5 ? "ring" : "disc") : lv === 2 ? ["tri", "half", "check", "disc", "tri", "arc"][Math.floor(h2 * 6)] : "dot";
+    const sz = kind === "dot" ? 10 + h * 8 : kind === "check" ? 50 + h * 40 : 30 + Math.min(10, Math.max(0, N[j].score)) * 9;
+    KC.sz.set(j, sz); KC.kind.set(j, kind);
+    // the shapes fan out down and to the right of the map, as the painting's do from its great circle at the upper left
+    const a = -.4 + hash(N[j].path, 86) * 2.2, r = 330 + Math.sqrt(q + 1) * 170 * (.65 + .7 * hash(N[j].path, 87)); return [j, -760 + Math.cos(a) * r * 1.35, -420 + Math.sin(a) * r * .95, sz]; });
+  // a little room for each shape
+  for (let it = 0; it < 60; it++) for (let p = 0; p < P.length; p++) { const A = P[p];
+    const dc = Math.hypot(A[1] - EX[c], A[2] - EY[c]), mc = KC.sz.get(c) + A[3] + 40; if (dc < mc) { const f = (mc - dc) / (dc || 1); A[1] += (A[1] - EX[c]) * f; A[2] += (A[2] - EY[c]) * f; }
+    for (let q = p + 1; q < P.length; q++) { const B = P[q], dx = B[1] - A[1], dy = B[2] - A[2], d = Math.hypot(dx, dy) || .01, m = (A[3] + B[3]) * .75 + 24; if (d >= m) continue; const f = (m - d) / d * .5; A[1] -= dx * f; A[2] -= dy * f; B[1] += dx * f; B[2] += dy * f; } }
+  let x0 = -900, x1 = 900, y0 = -560, y1 = 560;
+  for (const [j, x, y, sz] of P) { EHID[j] = 0; EX[j] = x; EY[j] = y; KC.ids.push(j); x0 = Math.min(x0, x - sz); x1 = Math.max(x1, x + sz); y0 = Math.min(y0, y - sz); y1 = Math.max(y1, y + sz); }
+  expBox = { x0: x0 - 60, y0: y0 - 60, x1: x1 + 60, y1: y1 + 60 }; }
+function compPick(x, y){ let best = -1, bd = 1e9; for (const i of [KC.c, ...KC.ids]) { if (i < 0 || !VV(i)) continue; const d = Math.hypot(x - EX[i], y - EY[i]), r = Math.max(14, KC.sz.get(i) || 20); if (d < r && d / r < bd) { bd = d / r; best = i; } } return best; }
+const KCP = { paper: "#efe6cf", ink: "#151515", yellow: "#efc22e", red: "#c8312b", blue: "#2f5d9e", sky: "#8fb8d8", purple: "#5b3a8a", pink: "#e3a5b4", orange: "#e46b2a", green: "#4f8a5b" };
+function compDraw(lit){ const c = KC.c; if (c < 0) return; const P = KCP, cols = [P.yellow, P.red, P.blue, P.sky, P.purple, P.pink, P.orange, P.green];
+  const all = [c, ...KC.ids].filter(i => VV(i)); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const i of all) { const r = KC.sz.get(i); x0 = Math.min(x0, EX[i] - r); x1 = Math.max(x1, EX[i] + r); y0 = Math.min(y0, EY[i] - r); y1 = Math.max(y1, EY[i] + r); }
+  ctx.save();
+  // the canvas: warm paper with soft washes of colour, as the painting's ground
+  const bx = sx(x0 - 80), by = sy(y0 - 80), bw = (x1 - x0 + 160) * k, bh = (y1 - y0 + 160) * k;
+  ctx.shadowColor = "rgba(0,0,0,.25)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8; ctx.fillStyle = P.paper; ctx.fillRect(bx, by, bw, bh); ctx.shadowColor = "transparent";
+  ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.clip();
+  for (let q = 0; q < 5; q++) { const h = hash(N[c].path, 90 + q), gx = bx + bw * h, gy = by + bh * hash(N[c].path, 95 + q), g = ctx.createRadialGradient(gx, gy, 0, gx, gy, bw * .35);
+    g.addColorStop(0, ["rgba(143,184,216,.35)", "rgba(227,165,180,.28)", "rgba(239,194,46,.22)", "rgba(79,138,91,.18)", "rgba(91,58,138,.15)"][q]); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(bx, by, bw, bh); }
+  const dim = i => lit && sel >= 0 && !lit.has(i) ? .3 : 1;
+  // the lines: each link a straight black line from the map note, an up or related link an arc, links among the others thin coloured lines
+  ctx.lineCap = "round";
+  for (const j of KC.ids) { if (!VV(j)) continue; const kk = EKIND.get(c*n + j) ?? EKIND.get(j*n + c), x = sx(EX[j]), y = sy(EY[j]), cx = sx(EX[c]), cy = sy(EY[c]);
+    ctx.globalAlpha = .75 * dim(j); ctx.strokeStyle = P.ink; ctx.lineWidth = Math.max(.6, (kk === 1 ? 2.2 : 1.2) * Math.min(1.6, k * 2));
+    ctx.beginPath(); ctx.moveTo(cx, cy); if (kk === 1 || kk === 4) { const mx = (cx + x) / 2, my = (cy + y) / 2, d = Math.hypot(x - cx, y - cy); ctx.quadraticCurveTo(mx - (y - cy) / d * d * .25, my + (x - cx) / d * d * .25, x, y); } else ctx.lineTo(x, y); ctx.stroke(); }
+  const set = new Set(KC.ids); for (const [a, b] of E) { if (!set.has(a) || !set.has(b) || a >= b || !VV(a) || !VV(b)) continue; ctx.globalAlpha = .55 * Math.min(dim(a), dim(b)); ctx.strokeStyle = cols[Math.floor(hash(N[a].path + N[b].path, 7) * cols.length)]; ctx.lineWidth = Math.max(.5, k * 1.6);
+    ctx.beginPath(); ctx.moveTo(sx(EX[a]), sy(EY[a])); ctx.lineTo(sx(EX[b]), sy(EY[b])); ctx.stroke(); }
+  // the shapes
+  const shape = i => { const kind = KC.kind.get(i), r = KC.sz.get(i) * k, x = sx(EX[i]), y = sy(EY[i]), h = hash(N[i].path, 83), h2 = hash(N[i].path, 84), col = cols[Math.floor(h * cols.length)], col2 = cols[(Math.floor(h * cols.length) + 3) % cols.length];
+    ctx.globalAlpha = dim(i);
+    if (kind === "sun") { const g = ctx.createRadialGradient(x, y, r * .7, x, y, r * 1.55); g.addColorStop(0, "rgba(91,58,138,.75)"); g.addColorStop(.5, "rgba(227,165,180,.35)"); g.addColorStop(1, "rgba(227,165,180,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 1.55, 0, 6.2832); ctx.fill(); ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill(); ctx.strokeStyle = P.purple; ctx.lineWidth = Math.max(2, r * .1); ctx.stroke(); return; }
+    if (kind === "halo") { const g = ctx.createRadialGradient(x, y, r * .8, x, y, r * 1.45); g.addColorStop(0, col2); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 1.45, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill(); ctx.strokeStyle = P.ink; ctx.lineWidth = Math.max(1, r * .05); ctx.stroke(); return; }
+    if (kind === "disc") { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill(); ctx.strokeStyle = P.ink; ctx.lineWidth = Math.max(.8, r * .04); ctx.stroke(); return; }
+    if (kind === "ring") { ctx.strokeStyle = col; ctx.lineWidth = Math.max(2, r * .22); ctx.beginPath(); ctx.arc(x, y, r * .85, 0, 6.2832); ctx.stroke(); ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(x, y, r * .2, 0, 6.2832); ctx.fill(); return; }
+    if (kind === "tri") { const a = h2 * 6.28; ctx.fillStyle = col; ctx.beginPath(); for (let q = 0; q < 3; q++) { const t = a + q * 2.094; q ? ctx.lineTo(x + Math.cos(t) * r * 1.2, y + Math.sin(t) * r * 1.2) : ctx.moveTo(x + Math.cos(t) * r * 1.2, y + Math.sin(t) * r * 1.2); } ctx.closePath(); ctx.fill(); ctx.strokeStyle = P.ink; ctx.lineWidth = Math.max(.8, r * .04); ctx.stroke(); return; }
+    if (kind === "half") { const a = h2 * 6.28; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, a, a + Math.PI); ctx.closePath(); ctx.fill(); ctx.strokeStyle = P.ink; ctx.lineWidth = Math.max(.8, r * .05); ctx.beginPath(); ctx.arc(x, y, r, a + Math.PI, a + Math.PI * 1.6); ctx.stroke(); return; }
+    if (kind === "arc") { const a = h2 * 6.28; ctx.strokeStyle = P.ink; ctx.lineWidth = Math.max(1.5, r * .12); ctx.beginPath(); ctx.arc(x, y, r, a, a + 2.4); ctx.stroke(); ctx.strokeStyle = col; ctx.lineWidth = Math.max(1, r * .07); ctx.beginPath(); ctx.arc(x, y, r * .72, a + .3, a + 2.1); ctx.stroke(); return; }
+    if (kind === "check") { const nC = 4, s_ = r * 1.5 / nC, ox = x - r * .75, oy = y - r * .75; ctx.save(); ctx.translate(x, y); ctx.rotate((h2 - .5) * .6); ctx.translate(-x, -y);
+      for (let p = 0; p < nC; p++) for (let q = 0; q < nC; q++) { ctx.fillStyle = (p + q) % 2 ? P.ink : (hash(N[i].path, 85 + p * 4 + q) < .35 ? col : P.paper); ctx.fillRect(ox + p * s_, oy + q * s_, s_ + .5, s_ + .5); } ctx.restore(); return; }
+    ctx.fillStyle = h < .5 ? P.ink : col; ctx.beginPath(); ctx.arc(x, y, Math.max(2, r * .5), 0, 6.2832); ctx.fill(); };
+  for (const j of [...KC.ids].reverse()) if (VV(j)) shape(j); shape(c);
+  // names, small, for the map note, the note you're on and the bigger shapes
+  ctx.globalAlpha = 1; ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (const i of [c, ...KC.ids]) { if (!VV(i)) continue; const r = KC.sz.get(i) * k; if (!(i === c || i === sel || r > 34)) continue; const big = i === c;
+    ctx.font = `${big || i === sel ? 700 : 500} ${big ? Math.max(12, Math.min(18, 24 * k)) : Math.max(10, Math.min(13, 18 * k))}px ${css.body}`;
+    let t = N[i].title; while (t.length > 4 && ctx.measureText(t).width > Math.max(110, r * 2.4)) t = t.slice(0, -2); if (t !== N[i].title) t += "…";
+    const ty = sy(EY[i]) + r * (KC.kind.get(i) === "tri" ? 1.25 : KC.kind.get(i) === "sun" ? 1.62 : 1.08) + 4; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(239,230,207,.85)"; ctx.strokeText(t, sx(EX[i]), ty); ctx.fillStyle = P.ink; ctx.fillText(t, sx(EX[i]), ty); }
+  ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
+function layoutKandinsky(){ if (KSTY === "comp") { layoutComp(); return; } for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
   let ids = []; KD.c = -1; let sl = -1; try { sl = sel; } catch (_) { /* the first layout runs before the picked note exists */ }
   if (KSC === "links" && sl >= 0 && vis[sl]) { const sel = sl; KD.c = sel; ids = [sel, ...[...new Set([...out[sel], ...inn[sel]])].filter(j => j !== sel && vis[j] && !ARCH[j]).sort((a, b) => N[b].score - N[a].score)].slice(0, KDN); }
   else { for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i]) ids.push(i); ids.sort((a, b) => N[b].score - N[a].score); ids = ids.slice(0, KDN); }
@@ -2177,8 +2239,8 @@ function layoutKandinsky(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = R
 function kCircle(cx, cy, r, ph){ ctx.beginPath(); for (let q = 0; q <= 48; q++) { const a = q / 48 * 6.2832, rr = r * (1 + .022 * Math.sin(3 * a + ph) + .014 * Math.sin(5 * a + ph * 1.7)); const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr; q ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.closePath(); }
 const KTOP = { "Atlas": 5, "Calendar": 7, "Efforts": 2, "x": 4, "+": 0 };
 EXP.kandinsky = {
-  layout: layoutKandinsky, pick: (x, y) => rectPick(x, y), ownLabels: true,
-  notes(lit){ const T = KD.T;
+  layout: layoutKandinsky, pick: (x, y) => KSTY === "comp" ? compPick(x, y) : rectPick(x, y), ownLabels: true,
+  notes(lit){ if (KSTY === "comp") { compDraw(lit); return; } const T = KD.T;
     for (const i of KD.ids) { if (!VV(i)) continue; const x = sx(RX[i]), y = sy(RY[i]), w = T * k; if (x > W || y > H || x + w < 0 || y + w < 0) continue; const d = N[i], p_ = d.path;
       ctx.globalAlpha = lit && !lit.has(i) && sel >= 0 ? .28 : 1;
       // the tile: its top folder's colour (a few set ones, the rest by name), a little dusty
@@ -2195,8 +2257,9 @@ EXP.kandinsky = {
       if (w > 90) { ctx.font = `600 ${Math.min(12, w * .065)}px ${css.body}`; ctx.textBaseline = "bottom"; let t = d.title; while (t.length > 4 && ctx.measureText(t).width > w - 12) t = t.slice(0, -2); if (t !== d.title) t += "…";
         ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.strokeText(t, x + 6, y + w - 5); ctx.fillStyle = "#fbf8f0"; ctx.fillText(t, x + 6, y + w - 5); ctx.textBaseline = "alphabetic"; } }
     ctx.globalAlpha = 1; },
-  legend: "Kandinsky: your notes as squares of concentric circles, after his 1913 colour study. A tile's colour is its top folder; it holds one circle more than its level (an unlinked note two, a hub six), bigger for a higher score, the innermost in the level's colour. ⚙: your top notes by rank (left to right, then down) or the note you picked with its links.",
+  get legend(){ return KSTY === "comp" ? "Kandinsky · Composition: one map and its links as a painting, after Composition VIII (1923). The map is the great dark circle with its halo; its links are the shapes: haloed circles for hubs and maps of maps, discs and rings for maps, triangles, half-circles, arcs and checkerboards for linked notes, dots for the rest, bigger for a higher score. Black lines run from the map to each (an arc for an up or related link); thin coloured lines join the shapes that link to each other. Pick a note outside the painting to paint it instead." : KLEG; },
 };
+const KLEG = "Kandinsky: your notes as squares of concentric circles, after his 1913 colour study. A tile's colour is its top folder; it holds one circle more than its level (an unlinked note two, a hub six), bigger for a higher score, the innermost in the level's colour. ⚙: your top notes by rank (left to right, then down) or the note you picked with its links.";
 
 // ---------- Posters: a targeted dataset (a base's view, a filter) laid out by its own properties ----------
 // Across: a date or number property (year, rating, created…). Lanes: a category (genre, status, a base's own groups).
@@ -4371,7 +4434,8 @@ function select(i, fromTrail){
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
   if (view === "compass" && !LIVEQ) win.setTimeout(cmpSync, 0);
   if (view === "arena" && !LIVEQ) win.setTimeout(arenaSync, 0);
-  if (view === "kandinsky" && KSC === "links" && !LIVEQ) win.setTimeout(() => { if (!dead && view === "kandinsky" && sel !== KD.c) morph(true, () => fitTarget()); }, 0);
+  if (view === "kandinsky" && KSTY === "comp" && !LIVEQ) win.setTimeout(() => { if (!dead && view === "kandinsky" && KSTY === "comp" && sel >= 0 && sel !== KC.c && !KC.ids.includes(sel)) morph(true, () => fitTarget()); }, 0);   // a note outside the painting becomes its centre
+  if (view === "kandinsky" && KSC === "links" && KSTY !== "comp" && !LIVEQ) win.setTimeout(() => { if (!dead && view === "kandinsky" && sel !== KD.c) morph(true, () => fitTarget()); }, 0);
   if (!LIVEQ && (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden || EDS.left.col && EDS.left.path)))) win.setTimeout(() => { void openMain(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
@@ -5919,6 +5983,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const fa = mo.createDiv({ cls: "mosec emoany kdany" }); fa.hidden = true;
     const segRow = (label, opts, get, set) => { const r_ = fa.createDiv({ cls: "eorow arnrow" }); r_.createSpan({ cls: "eol", text: label }); const seg = r_.createDiv({ cls: "seg" });
       for (const [v, t_] of opts) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(get() === v) } }); b.onclick = e => { e.stopPropagation(); set(v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (view === "kandinsky") morph(true, () => fitTarget()); }; } };
+    segRow("Style", [["squares", "Squares"], ["comp", "Composition"]], () => KSTY, v => { KSTY = v; save("iv-ksty", v); legend(); });
     segRow("Notes", [["top", "Top by rank"], ["links", "Picked + links"]], () => KSC, v => { KSC = v; save("iv-ksc", v); });
     segRow("Tiles", [[24, "24"], [48, "48"], [96, "96"], [192, "192"]], () => KDN, v => { KDN = v; save("iv-kdn", v); });
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "kandinsky"; }; }
