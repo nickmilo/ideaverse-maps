@@ -2215,19 +2215,42 @@ function hengePick(x, y){ const px = sx(x), py = sy(y); for (let q = HGHIT.lengt
 // sarsens 1–30, trilithon uprights 51–60, the Altar Stone 80, Station Stones 91–94, the Slaughter Stone 95, the Heel Stone 96.
 // Metres from the centre; +y runs out along the axis toward the Heel Stone (the midsummer sunrise), which faces you.
 const STN_SC = 40, STN_HV = .85;
-const STONES = (() => { const S = [], j = (id, s) => hash(id, s);
-  const ring = (n, r, a0, mk) => { for (let q = 0; q < n; q++) { const a = a0 + q * 2 * Math.PI / n; mk(q, Math.sin(a) * r, Math.cos(a) * r, a); } };
-  ring(30, 15.8, Math.PI / 30, (q, x, y, a) => S.push({ id: "s" + (q + 1), name: `Sarsen ${q + 1}`, x, y, a, w: 2.1, t: 1.1, h: 4.1 + (j("s" + q, 3) - .5) * .25, kind: "sarsen" }));
-  ring(60, 11.6, Math.PI / 60, (q, x, y, a) => S.push({ id: "b" + (q + 1), name: `Bluestone circle ${q + 1}`, x, y, a, w: .95 + j("b" + q, 4) * .3, t: .6, h: 1.7 + j("b" + q, 5) * .5, kind: "blue" }));
-  // the trilithon horseshoe, open to the axis: 51–52 and 59–60 nearest the entrance, the Great Trilithon (55–56) at the back
-  [[51, 75, 8.2, 6.0], [53, 128, 7.4, 6.5], [55, 180, 5.6, 7.3], [57, 232, 7.4, 6.5], [59, 285, 8.2, 6.0]].forEach(([p, deg, r, h], q) => { const a = deg * Math.PI / 180, cx = Math.sin(a) * r, cy = Math.cos(a) * r, tx = Math.cos(a), ty = -Math.sin(a);
-    for (const [s_, num] of [[-1, p], [1, p + 1]]) S.push({ id: "t" + num, name: `${q === 2 ? "Great Trilithon" : "Trilithon " + (q + 1)}, stone ${num}`, x: cx + s_ * 1.3 * tx, y: cy + s_ * 1.3 * ty, a, w: 2.2, t: 1.2, h: h + (j("t" + num, 6) - .5) * .2, kind: "tri", tri: q }); });
-  // the bluestone horseshoe inside them, rising toward the back
-  for (let q = 0; q < 19; q++) { const f = q / 18 * 2 - 1, a = Math.PI + f * 2.0, r = 4.3 + Math.abs(f) * 1.1; S.push({ id: "h" + (q + 1), name: `Bluestone horseshoe ${q + 1}`, x: Math.sin(a) * r, y: Math.cos(a) * r, a, w: .75, t: .5, h: 1.9 + (1 - Math.abs(f)) * .7, kind: "blue" }); }
-  S.push({ id: "a80", name: "Altar Stone (80)", x: 0, y: -2.6, a: 0, w: 4.9, t: 1.0, h: .5, kind: "lie" });
+const STLINT = [];   /* lintels still up: drawn across their two stones, not places of their own */
+const STONES = (() => { const S = [], j = (id, s) => hash(id, s), D = Math.PI / 180;
+  // as it stands today (0.8.84; Nick: "the current 2026 version, not the complete ancient version"): 17 sarsens standing, 8 fallen, 6 lintels up;
+  // three trilithons whole, the Great Trilithon and the north one each down to one upright; the bluestones that show above the turf; two Station Stones.
+  // Each stone keeps its Petrie number and its place; fallen stones lie where they fell, and every one of them can hold a note.
+  const pos = (a, r) => [Math.sin(a) * r, Math.cos(a) * r];
+  const lying = (id, name, x, y, a, len, wid, h, kind) => S.push({ id, name, x, y, a: 0, w: Math.max(wid, len * Math.abs(Math.cos(a))), t: Math.max(wid * .8, len * Math.abs(Math.sin(a)) * .9), h, kind: "lie", fell: kind || "sarsen" });
+  const UP = new Set([1, 2, 3, 4, 5, 6, 7, 10, 11, 16, 21, 22, 23, 27, 28, 29, 30]), DOWN = new Set([8, 9, 12, 14, 15, 19, 25, 26]);
+  for (let q = 1; q <= 30; q++) { const a = Math.PI / 30 + (q - 1) * 2 * Math.PI / 30, [x, y] = pos(a, 15.8), w = q === 11 ? 1.2 : 2.1;
+    if (UP.has(q)) S.push({ id: "s" + q, name: `Sarsen ${q}`, x, y, a, w, t: 1.1, h: (q === 11 ? 3.4 : 4.1) + (j("s" + q, 3) - .5) * .25, kind: "sarsen" });
+    else if (DOWN.has(q)) { const [fx, fy] = pos(a + (j("f" + q, 2) - .5) * .1, 15.8 + 2.7); lying("s" + q, `Sarsen ${q} (fallen)`, fx, fy, a, 3.6, 1.9, .7); } }
+  const LINT = [[29, 30], [30, 1], [1, 2], [4, 5], [6, 7], [21, 22]];   /* the six lintels still up: 130, 101, 102, 105, 107, 122 */
+  for (const [p1, p2] of LINT) STLINT.push({ id: "l1" + String(p2).padStart(2, "0"), name: `Lintel ${100 + p2}`, kind: "lintel", on: ["s" + p1, "s" + p2], x: 0, y: 0, a: 0, w: 0, t: 0, h: 0 });
+  for (const [p_, a0] of [[112, 11.5], [120, 19.5]]) { const a = Math.PI / 30 + (a0 - 1) * 2 * Math.PI / 30, [x, y] = pos(a, 15.8 + 4.2); lying("x" + p_, `Lintel ${p_} (fallen)`, x, y, a + Math.PI / 2, 3.2, 1.0, .8); }
+  // the trilithons: 51–52, 53–54 and 57–58 whole; 56 stands alone (55 and lintel 156 lie broken over the Altar Stone); 60 stands alone (59 and 160 broken on the ground)
+  const TRI = [[51, 75, 8.2, 6.0, "both"], [53, 128, 7.4, 6.5, "both"], [55, 180, 5.6, 7.3, "right"], [57, 232, 7.4, 6.5, "both"], [59, 285, 8.2, 6.0, "right"]];
+  TRI.forEach(([p, deg, r, h, keep], q) => { const a = deg * D, cx = Math.sin(a) * r, cy = Math.cos(a) * r, tx = Math.cos(a), ty = -Math.sin(a), nm = q === 2 ? "Great Trilithon" : "Trilithon " + (q + 1);
+    for (const [s_, num] of [[-1, p], [1, p + 1]]) { const x = cx + s_ * 1.3 * tx, y = cy + s_ * 1.3 * ty;
+      if (keep === "both" || s_ === 1) S.push({ id: "t" + num, name: `${nm}, stone ${num}`, x, y, a, w: 2.2, t: 1.2, h: h + (j("t" + num, 6) - .5) * .2 - (q === 2 ? .4 : 0), kind: "tri", tri: q });
+      else lying("t" + num, `${nm}, stone ${num} (fallen, broken)`, x * .55, y * .55, a, h, 2.2, 1.0); }
+    if (keep === "both") STLINT.push({ id: "l" + (p + 101), name: `Lintel ${p + 101}`, kind: "lintel", on: ["t" + p, "t" + (p + 1)], x: 0, y: 0, a: 0, w: 0, t: 0, h: 0 });
+    else lying("l" + (p + 101), `Lintel ${p + 101} (fallen)`, cx * .78 + tx * 1.4, cy * .78 + ty * 1.4, a + Math.PI / 2, 4.6, 1.1, .9); });
+  // bluestone circle: the stones that show (six standing, the rest leaning or down); 31–49 run clockwise from the entrance
+  const BUP = new Set([31, 33, 34, 46, 47, 49]), BDN = new Set([32, 35, 36, 38, 45]);
+  for (let p = 31; p <= 49; p++) { if (!BUP.has(p) && !BDN.has(p)) continue; const a = (12 + (p - 31) * 18.6) * D, [x, y] = pos(a, 11.6);
+    if (BUP.has(p)) S.push({ id: "b" + p, name: `Bluestone ${p}`, x, y, a, w: .95 + j("b" + p, 4) * .3, t: .6, h: 1.7 + j("b" + p, 5) * .5, kind: "blue" });
+    else { const [fx, fy] = pos(a, 12.4); lying("b" + p, `Bluestone ${p} (fallen)`, fx, fy, a, 1.9, .9, .5, "blue"); } }
+  // bluestone horseshoe: 14 of its 19 remain, rising toward the back
+  const HGONE = new Set([3, 8, 12, 15, 17]); let hp = 61;
+  for (let q = 0; q < 19; q++) { if (HGONE.has(q)) continue; const f = q / 18 * 2 - 1, a = Math.PI + f * 2.0, r = 4.3 + Math.abs(f) * 1.1, num = hp++;
+    S.push({ id: "h" + num, name: `Bluestone ${num}`, x: Math.sin(a) * r, y: Math.cos(a) * r, a, w: .75, t: .5, h: 1.9 + (1 - Math.abs(f)) * .7, kind: "blue" }); }
+  S.push({ id: "a80", name: "Altar Stone (80), under the fallen stones", x: .4, y: -2.6, a: 0, w: 4.9, t: 1.0, h: .45, kind: "lie", fell: "altar" });
   S.push({ id: "x95", name: "Slaughter Stone (95)", x: -1.8, y: 47, a: 0, w: 6.4, t: 2.1, h: .8, kind: "lie" });
   S.push({ id: "x96", name: "Heel Stone (96)", x: -2.6, y: 78, a: 0, w: 2.4, t: 2.2, h: 4.7, kind: "heel" });
-  [[91, -38.5, 16.5, 2.7], [92, 38.5, 16.5, .8], [93, 38.5, -16.5, 2.4], [94, -38.5, -16.5, .8]].forEach(([p, x, y, h]) => S.push({ id: "x" + p, name: `Station Stone (${p})`, x, y, a: 0, w: 1.3, t: .9, h, kind: "station" }));
+  S.push({ id: "x93", name: "Station Stone (93)", x: 38.5, y: -16.5, a: 0, w: 1.3, t: .9, h: 2.4, kind: "station" });
+  lying("x91", "Station Stone (91, fallen)", -38.5, 16.5, 1.1, 2.7, 1.3, .7, "blue");
   return S; })();
 const STNI = new Map(STONES.map((s, q) => [s.id, q]));
 let STN = (() => { const o = pref("iv-stones", null); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; })(), STHOV = -1;
@@ -2260,7 +2283,7 @@ function planNotes(lit){ const P = hgInk(), K = STN_SC * k; STHIT.length = 0; ct
   const triDone = new Set();
   for (const q of order) { const s = STONES[q], [x, y] = stAt(s), bx = sx(x), by = sy(y), i = stNote(s), lie = s.kind === "lie";
     const ca = Math.abs(Math.cos(s.a)), sa = Math.abs(Math.sin(s.a)), fw = (lie ? s.w : Math.max(s.t, s.w * ca + s.t * sa * .35)) * K, d = (lie ? s.t : Math.max(s.t * .6, s.w * sa * .6 + s.t * ca * .5)) * K, h = s.h * STN_HV * K;
-    const side = x > 0 ? -1 : 1, cols = s.kind === "blue" || s.kind === "station" ? P.blue : P.sars;
+    const side = x > 0 ? -1 : 1, cols = s.kind === "blue" || s.kind === "station" || s.fell === "blue" ? P.blue : s.fell === "altar" ? ["#8c9a7e", "#717f64", "#a9b79b"] : P.sars;
     ctx.globalAlpha = lit && sel >= 0 && i >= 0 && !lit.has(i) && i !== sel ? .55 : 1;
     // a stone that holds a note glows in its level's colour
     if (i >= 0) { const lv = N[i].level, gc = lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#5fb6a2" : "#9aa4b2", R = Math.max(fw, h) * .9 + 1.2 * K, gy = by - h * .5, g = ctx.createRadialGradient(bx, gy, 0, bx, gy, R);
@@ -2269,9 +2292,9 @@ function planNotes(lit){ const P = hgInk(), K = STN_SC * k; STHIT.length = 0; ct
     ctx.strokeStyle = i === sel && i >= 0 ? css.accent : q === STHOV ? P.ink : P.line; ctx.lineWidth = i === sel && i >= 0 ? Math.max(1.5, .1 * K) : q === STHOV ? Math.max(1, .07 * K) : Math.max(.3, .03 * K);
     ctx.beginPath(); ctx.moveTo(bx - fw / 2, by); top.forEach(([px, py]) => ctx.lineTo(px, py)); ctx.lineTo(bx + fw / 2, by); if (i === sel || q === STHOV) ctx.closePath(); ctx.stroke(); ctx.globalAlpha = 1;
     STHIT.push([bx - fw / 2, by - h - d * .55, fw + d * .35, h + d * .55 + 2, q]); tops.set(s.id, { x0: bx - fw / 2, x1: bx + fw / 2, by });
-    // lintels: the sarsen ring all round, and each trilithon's own
-    if (s.kind === "sarsen") { const n_ = +s.id.slice(1); for (const m of [n_ % 30 + 1, (n_ + 28) % 30 + 1]) { const B = tops.get("s" + m); if (B) lintel(tops.get(s.id), B, 4.1 * STN_HV * K); } }
-    if (s.kind === "tri") { const mate = STONES.find(o => o.kind === "tri" && o.tri === s.tri && o !== s), B = tops.get(mate.id); if (B && !triDone.has(s.tri)) { triDone.add(s.tri); lintel(tops.get(s.id), B, Math.min(s.h, mate.h) * STN_HV * K); } } }
+    // lintels still up rest on their two stones, drawn once both stand
+    for (const L of STLINT) { if (!L.on.includes(s.id) || triDone.has(L.id)) continue; const A = tops.get(L.on[0]), B = tops.get(L.on[1]); if (!A || !B) continue; triDone.add(L.id);
+      const sa = STONES[STNI.get(L.on[0])], sb = STONES[STNI.get(L.on[1])]; lintel(A, B, Math.min(sa.h, sb.h) * STN_HV * K); } }
   // names: every stone that holds a note, and the one under the pointer
   ctx.textAlign = "center"; ctx.textBaseline = "top";
   for (const q of order) { const s = STONES[q], i = stNote(s); if (i < 0 && q !== STHOV) continue; const [x, y] = stAt(s);
