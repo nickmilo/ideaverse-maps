@@ -4013,10 +4013,11 @@ function syncOrbs(){ for (const o of [EDS.center, EDS.left]) if (o.pb) { const o
   const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); if (!on) { orbKey = ""; return; }
   const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
     TABS.forEach((t, j) => { const i = PIDX.get(t.path), nm = i != null ? N[i].title : t.path.replace(/^.*\//, "").replace(/\.md$/, ""), lv = i != null ? N[i].level : 1;
-      const b = orbBar.createEl("button", { cls: "ivm-orb" + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""), attr: { type: "button", "aria-label": nm, "data-name": nm } });
+      const b = orbBar.createEl("button", { cls: "ivm-orb" + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""), attr: { type: "button", "data-name": nm } });   // no aria-label: Obsidian would add its own tooltip over ours (Nick, 0.8.33); the name is read from a hidden span
+      b.createSpan({ cls: "orbsr", text: nm });
       b.setCssProps({ "--o0": lv >= 3 ? GRAD[lv][0] : lv === 2 ? css.l2 : css.l1, "--o1": lv >= 3 ? GRAD[lv][1] : lv === 2 ? css.l2 : css.l1 });
       b.createSpan({ cls: "orbd" }); if (t.pin) setIcon(b.createSpan({ cls: "orbp" }), "pin");
-      const x = b.createSpan({ cls: "orbx", text: "×", attr: { role: "button", "aria-label": "Close tab" } });
+      const x = b.createSpan({ cls: "orbx", text: "×", attr: { role: "button", "aria-description": "Close tab" } });
       x.onclick = e => { e.stopPropagation(); tabClose(j); }; b.onauxclick = e => { if (e.button === 1) { e.preventDefault(); tabClose(j); } };
       if (ORBN) b.createSpan({ cls: "orbn", text: nm });
       b.onclick = e => { e.stopPropagation(); tabGo(j); }; }); }
