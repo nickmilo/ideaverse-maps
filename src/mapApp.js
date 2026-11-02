@@ -2056,11 +2056,11 @@ function arenaSlots(){ if (!ARENA) { ARENA = []; try { for (const t of TABS) if 
   while (ARENA.length < ARN) ARENA.push(null); if (ARENA.length > ARN) { const kept = ARENA.filter(Boolean); ARENA = ARENA.slice(0, ARN); for (const p_ of kept) if (!ARENA.includes(p_)) { const k_ = ARENA.indexOf(null); if (k_ >= 0) ARENA[k_] = p_; } }
   return ARENA; }
 // Board (0.8.61, experimental; after a shaped-canvas painting Nick saw): the same slots as framed squares on a shaped board, wired like a circuit
-let ARSTY = pref("iv-arsty", "ring") === "board" ? "board" : "ring";
+let ARSTY = (s_ => s_ === "board" || s_ === "henge" ? s_ : "ring")(pref("iv-arsty", "ring"));
 const BCOLS = () => Math.ceil(Math.sqrt(ARN * 1.4)), BCW = 560, BCH = 480;
 const boardAt = q => { const cols = BCOLS(), rows = Math.ceil(ARN / cols), r = Math.floor(q / cols), c = q % cols, h = hash("slot" + q, 3), h2 = hash("slot" + q, 5);
   return [(c - (cols - 1) / 2) * BCW + (h - .5) * 130, (r - (rows - 1) / 2) * BCH + (h2 - .5) * 110 + (c % 2) * 50]; };
-const arenaAt = q => { if (ARSTY === "board") return boardAt(q); const a = -Math.PI / 2 + q * 2 * Math.PI / ARN; return [Math.cos(a) * ARR, Math.sin(a) * ARR]; };
+const arenaAt = q => { if (ARSTY === "board") return boardAt(q); if (ARSTY === "henge") return hengeAt(q); const a = -Math.PI / 2 + q * 2 * Math.PI / ARN; return [Math.cos(a) * ARR, Math.sin(a) * ARR]; };
 function layoutArena(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; } const sl = arenaSlots();
   sl.forEach((p_, q) => { const i = p_ != null ? PIDX.get(p_) : null; if (i == null || !vis[i]) return; const [x, y] = arenaAt(q); EHID[i] = 0; EX[i] = x; EY[i] = y; });
   // the centre: the note pinned in the editor, else the note you picked when it isn't on the ring
@@ -2070,6 +2070,7 @@ function layoutArena(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i]
   ARC0.c = c; if (c >= 0 && vis[c] && EHID[c]) { EHID[c] = 0; EX[c] = 0; EY[c] = bTop; } else if (c >= 0) ARC0.c = -1;
   win.setTimeout(() => { if (!dead) syncArBtn(); }, 0);
   if (ARSTY === "board") { const cols = BCOLS(), rows = Math.ceil(ARN / cols); expBox = { x0: -cols * BCW / 2 - 160, y0: (ARC0.c >= 0 ? bTop - 260 : -rows * BCH / 2 - 160), x1: cols * BCW / 2 + 160, y1: rows * BCH / 2 + 200 }; }
+  else if (ARSTY === "henge") expBox = { x0: -ARR - 200, y0: -ARR * HGY - 420, x1: ARR + 200, y1: ARR * HGY + 140 };
   else expBox = { x0: -ARR - 260, y0: -ARR - 120, x1: ARR + 260, y1: ARR + 120 }; }
 function arenaSlotAt(px, py){ const sl = arenaSlots(); let best = -1, bd = 1e9; for (let q = 0; q < sl.length; q++) { const [x, y] = arenaAt(q), d = Math.hypot(sx(x) - px, sy(y) - py); if (d < bd) { bd = d; best = q; } } return bd <= Math.max(18, (ARSTY === "board" ? 110 : 60) * k) ? best : -1; }
 async function arenaFill(q){ if (!host.pickNote) return; const sl = arenaSlots(), have = new Set(sl.filter(Boolean)), items = [];
@@ -2138,12 +2139,82 @@ function boardNotes(lit){ const B = boardInk(), sl = arenaSlots(), lw = Math.max
   ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 function boardPick(x, y){ let best = -1, bd = 1e9; for (const p_ of arenaSlots().concat(ARC0.c >= 0 ? [N[ARC0.c].path] : [])) { const i = p_ != null ? PIDX.get(p_) : null; if (i == null || !VV(i)) continue;
     const h = bSide(i) / 2 + 50, d = Math.max(Math.abs(x - EX[i]), Math.abs(y - EY[i])); if (d < h && d < bd) { bd = d; best = i; } } return best; }
+// Stonehenge (0.8.81, Nick: "an epic three-quarter view from above of a stone circle"): the same slots as standing stones, seen from above and in front.
+// A stone's height is its level, its width (mass) its score; two neighbours that link carry a lintel across their tops; links across the circle are worn paths on the grass.
+// The centre note lies flat in the middle as the altar stone. Sarsens (warm grey) are maps and hubs (Level 3+); bluestones (blue-grey) are the rest.
+const HGY = .5;   /* how flat the circle looks: the ground seen from about 25° up */
+const hengeAt = q => { const a = Math.PI / 2 + q * 2 * Math.PI / ARN; return [Math.cos(a) * ARR, Math.sin(a) * ARR * HGY]; };
+const hgH = i => ([0, 120, 175, 250, 320, 390][N[i].level] || 120) * (.92 + hash(N[i].path, 61) * .16);
+const hgW = i => 62 + Math.min(130, Math.sqrt(Math.max(0, N[i].score)) * 34);
+function hgInk(){ const dark = /rgba\(0,0,0,\.6\)/.test(boardInk().shadow);   /* boardInk reads the theme's background: dark when its shadow is the dark one */
+  return dark ? { grass: "rgba(70,96,74,.42)", rim: "rgba(150,180,150,.25)", path: "rgba(200,190,150,.35)", shadow: "rgba(0,0,0,.35)", sars: ["#8f8a80", "#6f6a62", "#b4ae9f"], blue: ["#6f7c8a", "#56616d", "#93a0ad"], ink: "#e8e4da", line: "rgba(20,20,20,.55)" }
+              : { grass: "rgba(120,160,110,.28)", rim: "rgba(90,130,90,.3)", path: "rgba(150,125,80,.4)", shadow: "rgba(40,50,40,.18)", sars: ["#b9b2a3", "#9c9586", "#d9d3c4"], blue: ["#97a5b3", "#7d8a98", "#bcc7d2"], ink: "#3a3630", line: "rgba(40,36,30,.6)" }; }
+function hgOn(){ const sl = arenaSlots(), on = []; sl.forEach((p_, q) => { const i = p_ != null ? PIDX.get(p_) : null; if (i != null && vis[i] && VV(i)) on.push([i, q]); }); return on; }
+function hengeGuides(){ const P = hgInk(), sl = arenaSlots(); ctx.save();
+  // the ground: a grassy ellipse with a bank round it
+  const cx = sx(0), cy = sy(0), rx = (ARR + 230) * k, ry = (ARR + 230) * HGY * k;
+  ctx.fillStyle = P.grass; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, 6.2832); ctx.fill();
+  ctx.strokeStyle = P.rim; ctx.lineWidth = Math.max(1, 14 * k); ctx.beginPath(); ctx.ellipse(cx, cy, rx * 1.04, ry * 1.04, 0, 0, 6.2832); ctx.stroke();
+  // worn paths: links between stones that aren't neighbours, and from the altar
+  const on = hgOn(), set = new Set(on.map(o => o[0])), qOf = new Map(on.map(o => [o[0], o[1]])); if (ARC0.c >= 0 && VV(ARC0.c)) set.add(ARC0.c);
+  ctx.strokeStyle = P.path; ctx.lineCap = "round"; ctx.setLineDash([Math.max(2, 10 * k), Math.max(2, 8 * k)]);
+  for (const [a, b] of E) { if (a === b || !set.has(a) || !set.has(b)) continue; const qa = qOf.get(a), qb = qOf.get(b); if (qa != null && qb != null && (Math.abs(qa - qb) === 1 || Math.abs(qa - qb) === ARN - 1)) continue;
+    const hl = sel >= 0 && (a === sel || b === sel); ctx.globalAlpha = sel >= 0 ? (hl ? 1 : .35) : .8; ctx.lineWidth = Math.max(1, (hl ? 9 : 6) * k);
+    ctx.beginPath(); ctx.moveTo(sx(X[a]), sy(Y[a])); ctx.lineTo(sx(X[b]), sy(Y[b])); ctx.stroke(); }
+  ctx.setLineDash([]); ctx.globalAlpha = 1;
+  // shadows (morning sun from the left) and empty footprints
+  for (const [i] of on) { const w = hgW(i) * k, h = hgH(i) * k; ctx.fillStyle = P.shadow; ctx.beginPath(); ctx.moveTo(sx(X[i]) - w / 2, sy(Y[i])); ctx.lineTo(sx(X[i]) + w / 2, sy(Y[i])); ctx.lineTo(sx(X[i]) + w / 2 + h * .55, sy(Y[i]) - h * .12); ctx.lineTo(sx(X[i]) - w / 2 + h * .55, sy(Y[i]) - h * .12); ctx.closePath(); ctx.fill(); }
+  ctx.setLineDash([3, 4]); ctx.font = `500 ${Math.max(11, Math.min(18, 26 * k))}px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  sl.forEach((p_, q) => { const i = p_ != null ? PIDX.get(p_) : null; if (i != null && vis[i]) return; const [x, y] = hengeAt(q), r = Math.max(10, 40 * k);
+    ctx.strokeStyle = P.ink; ctx.globalAlpha = .45; ctx.beginPath(); ctx.ellipse(sx(x), sy(y), r, r * HGY * 1.4, 0, 0, 6.2832); ctx.stroke(); ctx.fillStyle = P.ink; ctx.fillText("+", sx(x), sy(y)); });
+  ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
+// one block in three-quarter view: front face, the side toward the middle, the top
+function hgBlock(bx, by, w, h, d, side, cols, rough, seed){ const td = d * .55, ox = side * d * .35;
+  const top = [];   /* the front face's top edge, a little rough */
+  const nTop = rough ? 5 : 1; for (let q = 0; q <= nTop; q++) { const f = q / nTop, j = rough ? (hash(seed + q, 71) - .5) * h * .07 - (q > 0 && q < nTop ? h * .025 : 0) : 0; top.push([bx - w / 2 + f * w, by - h + j]); }
+  // side face
+  const ex = side < 0 ? bx - w / 2 : bx + w / 2; ctx.fillStyle = cols[1]; ctx.beginPath(); ctx.moveTo(ex, by); ctx.lineTo(ex, top[side < 0 ? 0 : top.length - 1][1]); ctx.lineTo(ex + ox, top[side < 0 ? 0 : top.length - 1][1] - td); ctx.lineTo(ex + ox, by - td); ctx.closePath(); ctx.fill();
+  // top face
+  ctx.fillStyle = cols[2]; ctx.beginPath(); top.forEach(([x, y], q) => q ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); for (let q = top.length - 1; q >= 0; q--) ctx.lineTo(top[q][0] + ox, top[q][1] - td); ctx.closePath(); ctx.fill();
+  // front face, with a few weathered streaks
+  ctx.fillStyle = cols[0]; ctx.beginPath(); ctx.moveTo(bx - w / 2, by); top.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(bx + w / 2, by); ctx.closePath(); ctx.fill();
+  if (rough && h > 30) { ctx.save(); ctx.clip(); ctx.strokeStyle = "rgba(0,0,0,.08)"; ctx.lineWidth = Math.max(.6, w * .03); for (let q = 0; q < 3; q++) { const x = bx - w / 2 + w * (.2 + .3 * q + hash(seed + "s" + q, 5) * .1); ctx.beginPath(); ctx.moveTo(x, by - h); ctx.lineTo(x + w * .04, by); ctx.stroke(); } ctx.restore(); }
+  return top; }
+const HGHIT = [];
+function hengeNotes(lit){ const P = hgInk(), on = hgOn(); HGHIT.length = 0; ctx.save();
+  const byQ = new Map(on.map(([i, q]) => [q, i])), items = on.map(([i, q]) => ({ i, q, y: Y[i] }));
+  if (ARC0.c >= 0 && VV(ARC0.c)) items.push({ i: ARC0.c, q: -1, y: Y[ARC0.c] });
+  items.sort((a, b) => a.y - b.y);
+  const drawn = new Set(), tops = new Map(), linked = (a, b) => out[a].includes(b) || inn[a].includes(b);
+  const lintel = (a, b) => { const ta = tops.get(a), tb = tops.get(b); if (!ta || !tb) return; const lt = Math.max(3, 30 * k), hL = Math.min(ta.h, tb.h), hi = (sel >= 0 && (a === sel || b === sel)) || (lit && (lit.has(a) || lit.has(b)));
+    ctx.globalAlpha = lit && sel >= 0 && !hi ? .45 : 1; const [L, R] = ta.x0 < tb.x0 ? [ta, tb] : [tb, ta], xa = L.x0 - 4 * k, xb = R.x1 + 4 * k, ya = L.by - hL, yb = R.by - hL, td = 26 * k * .55;   /* the lintel rests on both tops, sloping with the ground */
+    ctx.fillStyle = P.sars[2]; ctx.beginPath(); ctx.moveTo(xa, ya - lt); ctx.lineTo(xb, yb - lt); ctx.lineTo(xb, yb - lt - td); ctx.lineTo(xa, ya - lt - td); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = P.sars[0]; ctx.beginPath(); ctx.moveTo(xa, ya + 2 * k); ctx.lineTo(xb, yb + 2 * k); ctx.lineTo(xb, yb - lt); ctx.lineTo(xa, ya - lt); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = P.line; ctx.lineWidth = Math.max(.5, 1.2 * k); ctx.stroke(); ctx.globalAlpha = 1; };
+  for (const it of items) { const i = it.i, alt = it.q < 0, bx = sx(X[i]), by = sy(Y[i]), lv = N[i].level;
+    const w = (alt ? 300 : hgW(i)) * k, h = (alt ? 46 : hgH(i)) * k, d = (alt ? 150 : hgW(i) * .45) * k, side = alt ? -1 : X[i] > 0 ? -1 : 1, cols = lv >= 3 || alt ? P.sars : P.blue;
+    ctx.globalAlpha = lit && sel >= 0 && !lit.has(i) && i !== sel ? .5 : 1;
+    const top = hgBlock(bx, by, w, h, d, side, cols, !alt, N[i].path);
+    if (i === sel) { ctx.strokeStyle = css.accent; ctx.lineWidth = Math.max(1.5, 3 * k); ctx.beginPath(); ctx.moveTo(bx - w / 2, by); top.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(bx + w / 2, by); ctx.closePath(); ctx.stroke(); }
+    else { ctx.strokeStyle = P.line; ctx.lineWidth = Math.max(.4, 1 * k); ctx.beginPath(); ctx.moveTo(bx - w / 2, by); top.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(bx + w / 2, by); ctx.stroke(); }
+    // the level, cut into the stone as a small mark in its colour
+    if (h > 26 && !alt) { ctx.fillStyle = lv >= 3 ? GRAD[lv][0] : lv === 2 ? css.l2 || "#8aa" : css.l1 || "#999"; ctx.globalAlpha *= .9; ctx.beginPath(); ctx.arc(bx, by - h * .78, Math.max(2, Math.min(9, w * .07)), 0, 6.2832); ctx.fill(); }
+    ctx.globalAlpha = 1; HGHIT.push([bx - w / 2, by - h - d * .55, w + Math.abs(d * .35), h + d * .55, i]);
+    tops.set(i, { x0: bx - w / 2, x1: bx + w / 2, by, h }); drawn.add(it.q);
+    // a lintel joins two linked neighbours, once both stand
+    if (!alt) for (const q2 of [(it.q + 1) % ARN, (it.q - 1 + ARN) % ARN]) { const j = byQ.get(q2); if (j != null && drawn.has(q2) && linked(i, j)) lintel(i, j); } }
+  // names on the grass below each stone
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (const it of items) { const i = it.i, alt = it.q < 0; ctx.fillStyle = P.ink; ctx.globalAlpha = lit && sel >= 0 && !lit.has(i) && i !== sel ? .5 : 1; ctx.font = `${i === sel || alt ? 600 : 500} ${Math.max(10, Math.min(alt ? 17 : 14, (alt ? 24 : 20) * k))}px ${css.body}`;
+    let t = N[i].title; const mw = Math.max(80, (alt ? 360 : hgW(i) + 90) * k); while (t.length > 4 && ctx.measureText(t).width > mw) t = t.slice(0, -2); if (t !== N[i].title) t += "…"; ctx.fillText(t, sx(X[i]), sy(Y[i]) + 6); }
+  ctx.globalAlpha = 1; ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
+function hengePick(x, y){ const px = sx(x), py = sy(y); for (let q = HGHIT.length - 1; q >= 0; q--) { const [hx, hy, hw, hh, i] = HGHIT[q]; if (px >= hx && px <= hx + hw && py >= hy && py <= hy + hh + 8) return i; } return -1; }
 EXP.arena = {
   layout: layoutArena,
-  get notes(){ return ARSTY === "board" ? boardNotes : undefined; },
-  get pick(){ return ARSTY === "board" ? boardPick : undefined; },
-  get ownLabels(){ return ARSTY === "board"; },
-  guides(){ if (ARSTY === "board") { boardGuides(); return; } const sl = arenaSlots(), cx = sx(0), cy = sy(0); ctx.save();
+  get notes(){ return ARSTY === "board" ? boardNotes : ARSTY === "henge" ? hengeNotes : undefined; },
+  get pick(){ return ARSTY === "board" ? boardPick : ARSTY === "henge" ? hengePick : undefined; },
+  get ownLabels(){ return ARSTY !== "ring"; },
+  guides(){ if (ARSTY === "board") { boardGuides(); return; } if (ARSTY === "henge") { hengeGuides(); return; } const sl = arenaSlots(), cx = sx(0), cy = sy(0); ctx.save();
     ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.globalAlpha = .7; ctx.beginPath(); ctx.arc(cx, cy, ARR * k, 0, 6.2832); ctx.stroke();
     // empty slots: a dashed ring with a plus, to fill
     ctx.setLineDash([3, 4]); ctx.globalAlpha = .85; ctx.font = `500 ${Math.max(11, Math.min(18, 26 * k))}px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -2157,8 +2228,8 @@ EXP.arena = {
       const x1 = sx(X[a]), y1 = sy(Y[a]), x2 = sx(X[b]), y2 = sy(Y[b]), mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx + (mx - cx) * .25, cy + (my - cy) * .25, x2, y2); ctx.stroke(); }
     ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; },
-  get mustLabel(){ return ARSTY === "board" ? undefined : () => arenaSlots().map(p_ => p_ != null ? PIDX.get(p_) : null).filter(i => i != null).concat(ARC0.c >= 0 ? [ARC0.c] : []); },   // the board names its own notes
-  get legend(){ return ARSTY === "board" ? "Arena · Board (experimental): your slots as framed squares on a shaped board, after a painting. A square is a note (bigger for a higher score; yellow hubs, teal maps of maps, blue maps of content); its thin frame is its place. Links run as wires in their link's ink: purple up, yellow related, blue in the text, grey other properties. Where a wire meets a frame: a dot for a linked note, a ring for a map, a ring with a dot for a hub; a short thick bar marks a link both ways. Click an empty square (+) to fill it; Option-click to empty one. ⚙ switches back to the Ring." : ARENA_LEG; },
+  get mustLabel(){ return ARSTY !== "ring" ? undefined : () => arenaSlots().map(p_ => p_ != null ? PIDX.get(p_) : null).filter(i => i != null).concat(ARC0.c >= 0 ? [ARC0.c] : []); },   // the board names its own notes
+  get legend(){ return ARSTY === "henge" ? "Arena · Stonehenge (experimental): your slots as standing stones, seen from above and in front. A stone's height is its level, its width its link score; sarsens (warm grey) are maps and hubs, bluestones the rest. Two neighbours that link carry a lintel across their tops; links across the circle are worn paths on the grass. The centre note lies flat in the middle as the altar stone. Click an empty footprint (+) to raise a stone there." : ARSTY === "board" ? "Arena · Board (experimental): your slots as framed squares on a shaped board, after a painting. A square is a note (bigger for a higher score; yellow hubs, teal maps of maps, blue maps of content); its thin frame is its place. Links run as wires in their link's ink: purple up, yellow related, blue in the text, grey other properties. Where a wire meets a frame: a dot for a linked note, a ring for a map, a ring with a dot for a hub; a short thick bar marks a link both ways. Click an empty square (+) to fill it; Option-click to empty one. ⚙ switches back to the Ring." : ARENA_LEG; },
 };
 const ARENA_LEG = "Arena: a ring of slots you fill with notes, a workspace of your own. Click an empty slot (+) to put a note in it; Option-click (Alt-click) a slot to empty it. The links between the ring's notes cross the middle, as in Chord. Pin a note in the editor to set it at the centre. ⚙ sets how many slots (8 to 20).";
 
@@ -3774,7 +3845,7 @@ function render(){
     for (const j of nb) {
       lit.add(j);
       if (bundle && N[j].level < 5 && BOD[j] >= 0) { const g = bundle.get(BOD[j]) || bundle.set(BOD[j], []).get(BOD[j]); g.push(j); continue; }
-      if ((view === "arena" && ARSTY === "board") || view === "kandinsky") continue;   // the board wires its own links; Kandinsky's tiles say it without lines (its traces light up instead)
+      if ((view === "arena" && ARSTY !== "ring") || view === "kandinsky") continue;   // the board wires its own links; Kandinsky's tiles say it without lines (its traces light up instead)
       const upward = upOf(hl, j);
       ctx.strokeStyle = edgeColor(hl, j, upward); ctx.globalAlpha = (sel >= 0 ? .75 : .5)*many; ctx.lineWidth = sel >= 0 ? 1.4 : 1;
       const x1 = sx(X[hl]), y1 = sy(Y[hl]), x2 = sx(X[j]), y2 = sy(Y[j]);
@@ -4027,7 +4098,7 @@ const order = [...N.keys()].sort((a,b) => (N[b].level - N[a].level) || (N[b].sco
 const dim_ok = () => (sel === focus || sel < 0) && hover < 0;
 let LH = [];   // where labels were drawn last frame: [x, y, w, h, note], so a click on the text works like a click on the dot
 function labels(lit){ let PICKDRAW = null;   // the picked note's name is drawn again last, so nothing covers it
-  if ((view === "arena" && ARSTY === "board") || view === "kandinsky") { LH = []; return; }   // these name their own notes
+  if ((view === "arena" && ARSTY !== "ring") || view === "kandinsky") { LH = []; return; }   // these name their own notes
   LH = view === "stars" ? LH.filter(q => q[5] != null) : [];   // Starfield's galaxy names were placed earlier, with the sky
   if (view === "chord" && !lit && k < 2) return;   // the ring is named by its kinds; note names show for the note you're on and its links, or once zoomed in
   const nv = NVIS;
@@ -6209,7 +6280,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Arena: how many slots, and start again from the tabs
   { const fa = mo.createDiv({ cls: "mosec emoany arnany" }); fa.hidden = true;
     { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "Style" }); const seg = sr.createDiv({ cls: "seg" });
-      for (const [v, t_] of [["ring", "Ring"], ["board", "Board (experimental)"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(ARSTY === v) } });
+      for (const [v, t_] of [["ring", "Ring"], ["board", "Board"], ["henge", "Stonehenge"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(ARSTY === v) } });
         b.onclick = e => { e.stopPropagation(); ARSTY = v; save("iv-arsty", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (view === "arena") { morph(true, () => fitTarget()); legend(); } }; } }
     const r = fa.createEl("label", { cls: "eorow arnrow" }); r.createSpan({ cls: "eol", text: "Slots" });
     const sl_ = r.createEl("input", { type: "range", attr: { min: "8", max: "20", step: "1", "aria-label": "Slots" } }); const v_ = r.createSpan({ cls: "eov" });
