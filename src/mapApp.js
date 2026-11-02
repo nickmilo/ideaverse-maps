@@ -2168,7 +2168,7 @@ const ARENA_LEG = "Arena: a ring of slots you fill with notes, a workspace of yo
 const KPAL = ["#f2c230", "#d98e04", "#c8312b", "#a0233f", "#5b3a8a", "#1f4e9c", "#3aa0c8", "#3a8f5a", "#1b1b1b", "#f2ede1", "#e6a0b0", "#e46b2a"];
 let KDN = [24, 48, 96, 192].includes(+pref("iv-kdn", 48)) ? +pref("iv-kdn", 48) : 48, KSC = pref("iv-ksc", "top") === "links" ? "links" : "top"; const KD = { ids: [], c: -1, T: 200 };
 // Composition (0.8.63, after Composition VIII, 1923): one map note and its links as a painting of circles, triangles, arcs, checkerboards and lines
-let KSTY = pref("iv-ksty", "squares") === "comp" ? "comp" : "squares"; const KC = { c: -1, ids: [], sz: new Map(), kind: new Map() };
+let KSTY = pref("iv-ksty", "squares") === "comp" ? "comp" : "squares", KNAMES = pref("iv-knames", false) === true; /* KNAMES: every shape named (0.8.64, Nick) */ const KC = { c: -1, ids: [], sz: new Map(), kind: new Map() };
 function layoutComp(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
   let c = -1; try { c = sel; } catch (_) { /* not ready */ } if (c < 0 || !vis[c]) { c = -1; for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i] && N[i].is_map && (c < 0 || N[i].score > N[c].score)) c = i; }
   KC.c = c; KC.ids = []; KC.sz.clear(); KC.kind.clear(); if (c < 0) { expBox = { x0: -800, y0: -500, x1: 800, y1: 500 }; return; }
@@ -2224,10 +2224,13 @@ function compDraw(lit){ const c = KC.c; if (c < 0) return; const P = KCP, cols =
   for (const j of [...KC.ids].reverse()) if (VV(j)) shape(j); shape(c);
   // names, small, for the map note, the note you're on and the bigger shapes
   ctx.globalAlpha = 1; ctx.textAlign = "center"; ctx.textBaseline = "top";
-  for (const i of [c, ...KC.ids]) { if (!VV(i)) continue; const r = KC.sz.get(i) * k; if (!(i === c || i === sel || r > 34)) continue; const big = i === c;
+  const taken = [];
+  for (const i of [c, ...KC.ids]) { if (!VV(i)) continue; const r = KC.sz.get(i) * k; if (!(KNAMES || i === c || i === sel || r > 34)) continue; const big = i === c;
     ctx.font = `${big || i === sel ? 700 : 500} ${big ? Math.max(12, Math.min(18, 24 * k)) : Math.max(10, Math.min(13, 18 * k))}px ${css.body}`;
     let t = N[i].title; while (t.length > 4 && ctx.measureText(t).width > Math.max(110, r * 2.4)) t = t.slice(0, -2); if (t !== N[i].title) t += "…";
-    const ty = sy(EY[i]) + r * (KC.kind.get(i) === "tri" ? 1.25 : KC.kind.get(i) === "sun" ? 1.62 : 1.08) + 4; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(239,230,207,.85)"; ctx.strokeText(t, sx(EX[i]), ty); ctx.fillStyle = P.ink; ctx.fillText(t, sx(EX[i]), ty); }
+    const ty = sy(EY[i]) + r * (KC.kind.get(i) === "tri" ? 1.25 : KC.kind.get(i) === "sun" ? 1.62 : 1.08) + 4, tw = ctx.measureText(t).width, bx_ = [sx(EX[i]) - tw / 2, ty, tw, 14];
+    if (KNAMES && !big && i !== sel && taken.some(q => bx_[0] < q[0] + q[2] && bx_[0] + bx_[2] > q[0] && bx_[1] < q[1] + q[3] && bx_[1] + bx_[3] > q[1])) continue; taken.push(bx_);   // names never sit on each other
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(239,230,207,.85)"; ctx.strokeText(t, sx(EX[i]), ty); ctx.fillStyle = P.ink; ctx.fillText(t, sx(EX[i]), ty); }
   ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 function layoutKandinsky(){ if (KSTY === "comp") { layoutComp(); return; } for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
   let ids = []; KD.c = -1; let sl = -1; try { sl = sel; } catch (_) { /* the first layout runs before the picked note exists */ }
@@ -2254,7 +2257,7 @@ EXP.kandinsky = {
         ctx.fillStyle = col; kCircle(cx, cy, r, hash(p_, 70 + q) * 6.28); ctx.fill(); prev = col; }
       if (i === sel || i === KD.c) { ctx.strokeStyle = css.accent; ctx.lineWidth = 3; ctx.strokeRect(x + 1.5, y + 1.5, w - 3, w - 3); }
       // its name, small, at the foot of the tile, once there's room
-      if (w > 90) { ctx.font = `600 ${Math.min(12, w * .065)}px ${css.body}`; ctx.textBaseline = "bottom"; let t = d.title; while (t.length > 4 && ctx.measureText(t).width > w - 12) t = t.slice(0, -2); if (t !== d.title) t += "…";
+      if (w > 90 || (KNAMES && w > 34)) { ctx.font = `600 ${Math.max(8, Math.min(12, w * .065))}px ${css.body}`; ctx.textBaseline = "bottom"; let t = d.title; while (t.length > 4 && ctx.measureText(t).width > w - 12) t = t.slice(0, -2); if (t !== d.title) t += "…";
         ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.strokeText(t, x + 6, y + w - 5); ctx.fillStyle = "#fbf8f0"; ctx.fillText(t, x + 6, y + w - 5); ctx.textBaseline = "alphabetic"; } }
     ctx.globalAlpha = 1; },
   get legend(){ return KSTY === "comp" ? "Kandinsky · Composition: one map and its links as a painting, after Composition VIII (1923). The map is the great dark circle with its halo; its links are the shapes: haloed circles for hubs and maps of maps, discs and rings for maps, triangles, half-circles, arcs and checkerboards for linked notes, dots for the rest, bigger for a higher score. Black lines run from the map to each (an arc for an up or related link); thin coloured lines join the shapes that link to each other. Pick a note outside the painting to paint it instead." : KLEG; },
@@ -5986,6 +5989,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     segRow("Style", [["squares", "Squares"], ["comp", "Composition"]], () => KSTY, v => { KSTY = v; save("iv-ksty", v); legend(); });
     segRow("Notes", [["top", "Top by rank"], ["links", "Picked + links"]], () => KSC, v => { KSC = v; save("iv-ksc", v); });
     segRow("Tiles", [[24, "24"], [48, "48"], [96, "96"], [192, "192"]], () => KDN, v => { KDN = v; save("iv-kdn", v); });
+    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = KNAMES; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Show note names" });
+      c_.onchange = () => { KNAMES = c_.checked; save("iv-knames", KNAMES); draw(); }; }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "kandinsky"; }; }
   // Compass: Relevance
   { const fa = mo.createDiv({ cls: "mosec emoany cmpany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "mini lcemo" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Relevance: pull related notes toward the centre" });
