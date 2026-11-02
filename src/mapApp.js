@@ -2454,7 +2454,11 @@ function ckSF(){ layoutStars(); build3D(); if (CKSF.ver === starVer && CKSF.P) r
     else { x = lx; y = ly; z = lz; } P[3 * i] = x * sc; P[3 * i + 1] = y * sc; P[3 * i + 2] = z * sc; }
   CKSF.B = B3.map(B => { const b = B.b, M = B.M; return { b, x: b.x * sc, y: b.y * sc, z: B.z * sc, r: (b.r || 200) * sc, flat: B.flat, u: [M[0][0], M[1][0], M[2][0]], v: [M[0][1], M[1][1], M[2][1]] }; });
   CKSF.ver = starVer; CKSF.P = P; CKSF.sc = sc; return CKSF; }
-const chxSF = k_ => STCH && CHL[k_];   /* Star Chart's layers, as set in Starfield's ⚙ */
+// the Starfield world's layers, each a mini switch in the Cockpit's ⚙ (0.8.96, Nick: "add as mini-toggles for me to play with")
+const CKX_DEF = { names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
+let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
+const chxSF = k_ => !!CKX[k_];
+const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"]];
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2516,13 +2520,13 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   g.globalCompositeOperation = "source-over";
   // Star Chart (0.8.93), when it's on in Starfield's ⚙: lines between hubs, rings round the hubs ahead (a dial of twelve ticks; the cockpit note's ring brighter),
   // turning orbits with a moon, and the readout card beside the cockpit note
-  if (STCH) { const HUDc = a_ => `rgba(127,231,255,${a_})`, pj = i => pr(P[3 * i], P[3 * i + 1], P[3 * i + 2]);
+  { const HUDc = a_ => `rgba(127,231,255,${a_})`, pj = i => pr(P[3 * i], P[3 * i + 1], P[3 * i + 2]);
     if (chxSF("lines")) { g.lineWidth = 1; for (let i = 0; i < n; i++) { if (N[i].level < 4 || !vis[i]) continue; const a_ = pj(i); if (!a_) continue;
         for (const j of out[i]) { if (j === i || N[j].level < 4 || !vis[j]) continue; const both = out[j].includes(i); if (both && j < i) continue; const b_ = pj(j); if (!b_ || a_[2] < 160 || b_[2] < 160) continue;   /* a hub right beside the ship would throw a line across the whole view */
           g.globalAlpha = Math.min(1, 9000 / ((a_[2] + b_[2]) / 2)) * .35; g.strokeStyle = HUDc(both ? .3 : .12);   /* stepped back, as in Starfield while a note is picked */ g.beginPath(); g.moveTo(a_[0], a_[1]); g.lineTo(b_[0], b_[1]); g.stroke(); } } }
     const tt = win.performance.now() / 1000, ring = (i, main) => { const p_ = pj(i); if (!p_) return null; const R = Math.max(12, Math.min(150, F * (main ? 420 : 300) / p_[2])); if (p_[0] < -R || p_[0] > W + R || p_[1] < -R || p_[1] > VH + R) return null;
-        g.globalAlpha = 1; g.strokeStyle = HUDc(main ? .7 : .35); g.lineWidth = main ? 1.4 : 1; g.beginPath(); g.arc(p_[0], p_[1], R, 0, 6.2832); g.stroke();
-        for (let q = 0; q < 12; q++) { const a_ = q / 12 * 6.2832 - Math.PI / 2, r0 = R * (q % 3 ? .9 : .82); g.beginPath(); g.moveTo(p_[0] + Math.cos(a_) * r0, p_[1] + Math.sin(a_) * r0); g.lineTo(p_[0] + Math.cos(a_) * R, p_[1] + Math.sin(a_) * R); g.stroke(); }
+        g.globalAlpha = 1; g.strokeStyle = HUDc(main ? .7 : .35); g.lineWidth = main ? 1.4 : 1; if (CKX.rings) { g.beginPath(); g.arc(p_[0], p_[1], R, 0, 6.2832); g.stroke(); }
+        if (CKX.rings) for (let q = 0; q < 12; q++) { const a_ = q / 12 * 6.2832 - Math.PI / 2, r0 = R * (q % 3 ? .9 : .82); g.beginPath(); g.moveTo(p_[0] + Math.cos(a_) * r0, p_[1] + Math.sin(a_) * r0); g.lineTo(p_[0] + Math.cos(a_) * R, p_[1] + Math.sin(a_) * R); g.stroke(); }
         if (chxSF("orb")) { const R2 = R * 1.45, sp_ = .25 + (hash(N[i].path, 41) * .3), a_ = tt * sp_ + hash(N[i].path, 42) * 6.2832; g.setLineDash([3, 5]); g.lineDashOffset = -tt * 8; g.strokeStyle = HUDc(main ? .4 : .22); g.beginPath(); g.arc(p_[0], p_[1], R2, 0, 6.2832); g.stroke(); g.setLineDash([]);
           g.fillStyle = HUDc(.85); g.beginPath(); g.arc(p_[0] + Math.cos(a_) * R2, p_[1] + Math.sin(a_) * R2, main ? 2.6 : 1.8, 0, 6.2832); g.fill(); }
         return [p_[0], p_[1], R]; };
@@ -2540,7 +2544,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     for (const it of CK.items) { const pi = pr(it.x, it.y, it.z); const a = pc || null; if (!pi || !a) continue; g.globalAlpha = ckShows(it) ? .22 : .05; g.strokeStyle = ckCol(N[it.i].level); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(pi[0], pi[1]); g.stroke(); }
     if (pc) { g.globalAlpha = .9; g.strokeStyle = "#ffffff"; g.beginPath(); g.arc(pc[0], pc[1], 9, 0, 6.2832); g.stroke(); g.font = `600 11px ${font}`; g.fillStyle = "#ffffff"; g.textAlign = "center"; g.fillText(N[ck].title, pc[0], pc[1] - 14); g.textAlign = "left"; } }
   // galaxy names as Starfield writes them (0.8.91): spaced capitals with a dark outline, the count beneath in the galaxy's hue, under each galaxy; nearer names first, never on top of each other
-  { const hasLS = "letterSpacing" in g, taken = CK.side.map(q => [q[0] - 6, q[1], q[2] + 30, q[3]]), lab = [];   /* the side names keep their room */
+  if (CKX.names) { const hasLS = "letterSpacing" in g, taken = CK.side.map(q => [q[0] - 6, q[1], q[2] + 30, q[3]]), lab = [];   /* the side names keep their room */
     for (const B of sf.B) { const b = B.b; if (!b.name || b.kind === "home") continue; const p0 = pr(B.x, B.y, B.z); if (!p0) continue; const d = p0[2]; if (d < B.r * .6 || (b.kind === "dwarf" && d > B.r * 7)) continue; lab.push([B, p0, d]); }
     lab.sort((a, b) => a[2] - b[2]); g.textAlign = "center"; g.textBaseline = "top";
     for (const [B, p0, d] of lab) { const b = B.b, rr = F * B.r / d, y = p0[1] + Math.min(140, rr * .55) + 8; if (p0[0] < -200 || p0[0] > W + 200 || y < -20 || y > VH + 20) continue;
@@ -2551,12 +2555,12 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
       const sub = b.kind === "neb" ? `${m_.toLocaleString()} unlinked` : b.kind === "old" ? `${m_.toLocaleString()} notes` : `${m_.toLocaleString()} stars`; g.strokeText(sub, p0[0], y + 15); g.fillText(sub, p0[0], y + 15); }
     g.textBaseline = "alphabetic"; }
   // twinkle (0.8.95), when it's on in Starfield: now and then one star glints and fades
-  if (twOn) { const now = win.performance.now(); CK.tw = (CK.tw || []).filter(q => now - q.t0 < 1400); if (!CK.twN || now > CK.twN) { CK.twN = now + 900 + Math.random() * 2600; const j = Math.floor(Math.random() * n); if (vis[j] && N[j].level >= 2) CK.tw.push({ i: j, t0: now }); }
+  if (CKX.twinkle) { const now = win.performance.now(); CK.tw = (CK.tw || []).filter(q => now - q.t0 < 1400); if (!CK.twN || now > CK.twN) { CK.twN = now + 900 + Math.random() * 2600; const j = Math.floor(Math.random() * n); if (vis[j] && N[j].level >= 2) CK.tw.push({ i: j, t0: now }); }
     for (const q of CK.tw) { const p_ = pr(P[3 * q.i], P[3 * q.i + 1], P[3 * q.i + 2]); if (!p_) continue; const f_ = (now - q.t0) / 1400, a_ = Math.sin(f_ * Math.PI), L_ = 4 + 10 * a_;
       g.globalAlpha = a_ * .9; g.strokeStyle = "#ffffff"; g.lineWidth = 1; g.beginPath(); g.moveTo(p_[0] - L_, p_[1]); g.lineTo(p_[0] + L_, p_[1]); g.moveTo(p_[0], p_[1] - L_); g.lineTo(p_[0], p_[1] + L_); g.stroke();
       g.fillStyle = "#ffffff"; g.beginPath(); g.arc(p_[0], p_[1], 1.6 * a_ + .4, 0, 6.2832); g.fill(); } g.globalAlpha = 1; }
   // the overview map (0.8.94), when it's on in Starfield: the whole sky seen from above, where you are and which way you're heading
-  if (MINI) { const bw = 168, bh = 120, bx = W - bw - 14, by = 86;   /* under the Back button */ let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  if (CKX.mini) { const bw = 168, bh = 120, bx = W - bw - 14, by = 86;   /* under the Back button */ let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const B of sf.B) { x0 = Math.min(x0, B.x - B.r); x1 = Math.max(x1, B.x + B.r); y0 = Math.min(y0, B.y - B.r); y1 = Math.max(y1, B.y + B.r); }
     const s_ = Math.min((bw - 12) / Math.max(1, x1 - x0), (bh - 12) / Math.max(1, y1 - y0)), mx = x => bx + 6 + (x - x0) * s_ + ((bw - 12) - (x1 - x0) * s_) / 2, my = y => by + 6 + (y - y0) * s_ + ((bh - 12) - (y1 - y0) * s_) / 2;
     g.globalAlpha = 1; g.fillStyle = "rgba(4,5,12,.82)"; g.strokeStyle = "rgba(160,180,255,.28)"; g.beginPath(); g.roundRect(bx, by, bw, bh, 10); g.fill(); g.stroke();
@@ -6562,7 +6566,12 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const fa = mo.createDiv({ cls: "mosec emoany ckany" }); fa.hidden = true;
     { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "World" }); const seg = sr.createDiv({ cls: "seg" });
       for (const [v, t_] of [["links", "One note's links"], ["sf", "Starfield"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKW === v) } });
-        b.onclick = e => { e.stopPropagation(); if (CKW === v) return; CKW = v; save("iv-ckw", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); CK.sfIn = false; CK.c = -2; ckSync(); CK.warp = 1; }; } }
+        b.onclick = e => { e.stopPropagation(); if (CKW === v) return; CKW = v; save("iv-ckw", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); CK.sfIn = false; CK.c = -2; ckSync(); CK.warp = 1; FUI.emoany(); }; } }
+    // Starfield's layers, one mini switch each, two to a row (shown when the world is Starfield)
+    { const box = fa.createDiv({ cls: "ckxsf" }), grid = box.createDiv({ cls: "ckxgrid" });
+      for (const [k_, label] of CKX_LABELS) { const l_ = grid.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = !!CKX[k_]; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: label });
+        c_.onchange = () => { CKX = { ...CKX, [k_]: c_.checked }; save("iv-ckx", CKX); if (k_ === "turn") CKSF.ver = -1; }; }
+      const f1 = FUI.emoany; FUI.emoany = () => { if (f1) f1(); box.hidden = CKW !== "sf"; }; }
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKFRAME; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Cockpit frame" });
       c_.onchange = () => { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); }; }
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });

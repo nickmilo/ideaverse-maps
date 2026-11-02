@@ -1467,3 +1467,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .ckany .ckkey kbd{min-width:74px;font:600 10px var(--mono, monospace);opacity:.85;background:none;border:0;padding:0;box-shadow:none}
 .ivm .ckany .ckkey span{opacity:.8}
 .ivm .ckany .ckkeys .eol{font:600 10px var(--body);letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:2px}
+.ivm .ckany .ckxsf{margin-top:6px;padding-top:6px;border-top:1px solid var(--line, rgba(127,127,127,.25))}
+.ivm .ckany .ckxsf[hidden]{display:none}
+.ivm .ckany .ckxgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px}
+.ivm .ckany .arnrow > .eol{font:600 10px var(--body);letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-right:8px}
