@@ -1979,7 +1979,7 @@ EXP.lifeline = {
 // log scale so last week and ten years ago both have room. Relevance (in the gear) pulls the notes most related to the centre toward it,
 // like radar, keeping each one's direction: relevance is a walk from the centre note along links that keeps coming home (personalized
 // PageRank), with up and related links weighted double, tempered so hubs don't win just for being big.
-let CMPREL = pref("iv-cmprel", false) === true; const CMP = { c: -1, ids: [], pv: [], rel: null, R: 0 };
+let CMPREL = pref("iv-cmprel", false) === true, CMPPUSH = pref("iv-cmppush", false) === true; /* 0.8.51: push less related linked notes out (Nick, to try) */ const CMP = { c: -1, ids: [], pv: [], rel: null, R: 0 };
 let RADJ = null;
 function radj(){ if (RADJ) return RADJ; const nb = Array.from({length:n}, () => []), wt = Array.from({length:n}, () => []), sw = new Float64Array(n);
   const wOf = t => t === 1 || t === 4 ? 2 : t === 5 ? .6 : t === 2 ? .5 : 1;
@@ -2005,11 +2005,16 @@ function layoutCompass(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[
     const top = new Set(all.slice(0, 120)); for (const j of [...nb].sort((p, q) => rel[q] - rel[p]).slice(0, 80)) top.add(j); ids = [...top].sort((p, q) => rel[q] - rel[p]); }
   else ids = [...nb].sort((p, q) => N[q].score - N[p].score).slice(0, 250);
   CMP.rel = rel; CMP.ids = ids; const m = ids.length, P = new Float64Array(m * 2);
+  const LQ = new Map(); if (rel) { const ln = ids.filter(j => nb.has(j)); ln.forEach((j, k_) => LQ.set(j, k_ / Math.max(1, ln.length - 1))); }   // each link's place among the links, by relevance
   ids.forEach((j, q) => { const ka = EKIND.get(a*n + j), kb = EKIND.get(j*n + a), dl = N[j].level - N[a].level;
     const up = ka === 1 ? 1 : kb === 1 ? -1 : dl > 0 ? 1 : dl < 0 ? -1 : 0, h1 = hash(N[j].path, 11), h2 = hash(N[j].path, 13);
     let y = up === 0 ? (h1 - .5) * 150 : -up * (170 + (Math.max(1, Math.abs(dl)) - 1) * 130 + h2 * 110);
     const dd = (TV[j] - TV[a]) / DAY; let x = isFinite(dd) ? Math.sign(dd) * Math.log1p(Math.abs(dd) / 20) * 170 : (h2 - .5) * 260;
-    if (rel) { const qn = q / Math.max(1, m - 1), th = Math.atan2(y || (h1 - .5), x || (h2 - .5)), r = 150 + Math.pow(qn, .55) * 950; x = Math.cos(th) * r; y = Math.sin(th) * r; }
+    if (rel) { let qn = q / Math.max(1, m - 1);
+      // Push less related links out: the centre's own links spread over the whole radius by how related they are among themselves, so a weak link
+      // sits out at the edge instead of near the middle just for being linked
+      if (CMPPUSH && LQ.has(j)) qn = Math.pow(LQ.get(j), .8);
+      const th = Math.atan2(y || (h1 - .5), x || (h2 - .5)), r = 150 + Math.pow(qn, .55) * 950; x = Math.cos(th) * r; y = Math.sin(th) * r; }
     P[q*2] = x; P[q*2+1] = y; });
   // a little room for each note: push apart any that sit closer than a dot and its name need, and off the centre
   for (let it = 0; it < 40; it++) for (let p = 0; p < m; p++) { let px = P[p*2], py = P[p*2+1];
@@ -5750,8 +5755,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     clr.onclick = e => { e.stopPropagation(); ARENA = []; arenaSlots(); for (let q = 0; q < ARENA.length; q++) ARENA[q] = null; save("iv-arena", ARENA); if (view === "arena") morph(true); }; }
   // Compass: Relevance
   { const fa = mo.createDiv({ cls: "mosec emoany cmpany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "mini lcemo" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Relevance: pull related notes toward the centre" });
-    const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "compass"; cb.checked = CMPREL; };
-    cb.onchange = () => { CMPREL = cb.checked; save("iv-cmprel", CMPREL); if (view === "compass") morph(true, () => fitTarget()); }; }
+    const r2 = fa.createEl("label", { cls: "mini lcemo sub" }); const cb2 = r2.createEl("input", { type: "checkbox" }); r2.createEl("i", { cls: "sw" }); r2.createSpan({ text: "Push less related links outward (trial)" });
+    const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "compass"; cb.checked = CMPREL; cb2.checked = CMPPUSH; r2.hidden = !CMPREL; };
+    cb.onchange = () => { CMPREL = cb.checked; save("iv-cmprel", CMPREL); r2.hidden = !CMPREL; if (view === "compass") morph(true, () => fitTarget()); };
+    cb2.onchange = () => { CMPPUSH = cb2.checked; save("iv-cmppush", CMPPUSH); if (view === "compass") morph(true, () => fitTarget()); }; }
   // Mosaic and Treemap: color every note by its folder
   { const fa = mo.createDiv({ cls: "mosec emoany foldany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "mini lcemo" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Color every note by its folder" });
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = !(view === "mosaic" || view === "treemap"); cb.checked = FCOL(); };
