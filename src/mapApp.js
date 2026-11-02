@@ -3863,7 +3863,8 @@ const drawer = $("#drawer");
 let drawerCollapsed = pref("iv-dcol", false) === true;
 const dtab = $("#main").createEl("button", { cls: "dtab", attr: { "aria-label": "Show the note panel", title: "Show the note panel" } }); dtab.hidden = true;
 function syncDtab(){ const on = sel >= 0 && drawerCollapsed; dtab.hidden = !on; if (on) dtab.setText("‹  " + (N[sel].title.length > 40 ? N[sel].title.slice(0, 39) + "…" : N[sel].title)); }
-function setCollapsed(c){ ANCHOR_T = performance.now() + 700; drawerCollapsed = c; save("iv-dcol", c); if (sel >= 0) { drawer.hidden = c; if (!c) drawer.scrollTop = 0; } syncDtab(); resize(); }
+let PANAUTO = false;   // the note panel was tucked away by Edit mode (0.8.38), not by you: it comes back when the editors close
+function setCollapsed(c, auto){ ANCHOR_T = performance.now() + 700; drawerCollapsed = c; if (!auto) { save("iv-dcol", c); PANAUTO = false; } if (sel >= 0) { drawer.hidden = c; if (!c) drawer.scrollTop = 0; } syncDtab(); resize(); }
 dtab.onclick = () => setCollapsed(false);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function noteList(ids, tag){
@@ -3936,6 +3937,9 @@ function edRect(kind){ const vw = W - sideW();
 function makeEd(kind){
   const el = doc.createElement("div"); el.className = "ivm-card ivm-card-" + kind; el.hidden = true; root.after(el);
   const hd = el.createDiv({ cls: "cardhd" }), t = hd.createSpan({ cls: "cardt" }), ob = hd.createEl("button", { cls: "cardbtn", text: "Open in editor", attr: { type: "button" } }), xb = hd.createEl("button", { cls: "cardbtn cardx", text: "×", attr: { type: "button", "aria-description": "Close" } });
+  // the strip under the name (0.8.38, Nick): level, score, links in and out, then what sits above and below it and its up and related links;
+  // a click on one opens its list in place, and a note in the list opens like a click on the map
+  const strip = el.createDiv({ cls: "cardstrip" }), drop = el.createDiv({ cls: "carddrop" }); drop.hidden = true;
   const body = el.createDiv({ cls: "cardbody" });
   for (const ty of ["pointerdown", "wheel", "click"]) el.addEventListener(ty, e => e.stopPropagation());
   // the side editors tuck away to a tab on their edge, like the legend and the note panel; the note stays open in them
@@ -3945,7 +3949,7 @@ function makeEd(kind){
   const pb = kind !== "right" ? hd.createEl("button", { cls: "cardbtn cardpin", attr: { type: "button", "aria-label": "Pin this note", title: "Pin this note" } }) : null;
   if (pb) { setIcon(pb, "pin"); hd.insertBefore(pb, cb || ob); pb.onclick = () => tabPin(); }
   const tab = side ? $("#main").createEl("button", { cls: "dtab edtab edtab-" + kind, attr: { "aria-label": "Show the editor", title: "Show the editor" } }) : null; if (tab) tab.hidden = true;
-  const o = { kind, el, ed: null, path: null, key: "", pb, col: side && pref("iv-edcol-" + kind, false) === true,
+  const o = { kind, el, strip, drop, open_: "", ed: null, path: null, key: "", pb, col: side && pref("iv-edcol-" + kind, false) === true,
     tabSync(){ if (!tab) return; const on = o.col && !!o.path; tab.hidden = !on; if (!on) return; const nm = t.textContent || "";
       tab.setText((kind === "left" ? "›  " : "‹  ") + (nm.length > 40 ? nm.slice(0, 39) + "…" : nm)); if (kind === "right") tab.style.right = sideW() + "px"; },
     collapse(c){ o.col = c; save("iv-edcol-" + kind, c); if (o.path) { el.hidden = c; o.key = ""; o.place(); } o.tabSync(); edFree(); if (!c && o.ed) { o.ed.resize(); } draw(); },
@@ -3953,7 +3957,7 @@ function makeEd(kind){
       el.style.left = (c.left - pr.left + r.x) + "px"; el.style.top = (c.top - pr.top + r.y) + "px"; el.style.width = r.w + "px"; el.style.height = r.h + "px"; if (o.ed) o.ed.resize(); },
     close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; o.tabSync(); if (o.ed) { o.ed.close(); o.ed = null; } edFree(); },
     async open(i){ const p = N[i].path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
-      const nw = o.path !== p; o.path = p; t.setText(N[i].title); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
+      const nw = o.path !== p; o.path = p; t.setText(N[i].title); if (nw) o.open_ = ""; fillStrip(o, i); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
       if (nw) { await o.ed.open(p); o.ed.resize(); } } };
   // a side editor tucks away from anywhere on its header but its buttons, like the legend (0.8.31); its inner edge drags to resize
   if (side) { hd.classList.add("cardhd-tuck"); hd.title = "Tuck away"; hd.addEventListener("click", e => { if (!(e.target instanceof Element) || e.target.closest("button")) return; o.collapse(true); });
@@ -3963,15 +3967,34 @@ function makeEd(kind){
     const up = () => { if (!drag_) return; drag_ = null; el.classList.remove("resizing"); EDW[kind] = Math.round(edRect(kind).w); save("iv-edw", EDW); if (o.ed) o.ed.resize(); };
     gr.addEventListener("pointerup", up); gr.addEventListener("pointercancel", up);
     gr.addEventListener("dblclick", e => { e.stopPropagation(); delete EDW[kind]; save("iv-edw", EDW); edFree(); draw(); }); }   // double-click: back to the default width
-  xb.onclick = () => o.close(); if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
+  xb.onclick = () => { o.close(); panBack(); }; if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
   return o; }
 let LIVEQ = false;   // the map reacting as you write refreshes the note panel quietly: no camera move, no editor reload
 let EDS = null; EDS = { center: makeEd("center"), left: makeEd("left"), right: makeEd("right") };
 const edMain = () => EDLEFT ? EDS.left : EDS.center;
+function stripLists(i){ const d = N[i], L = { above: [], below: [], up: [], related: [] };
+  for (const j of new Set([...out[i], ...inn[i]])) { if (!vis[j] || j === i) continue; const kk = EKIND.get(i*n + j);
+    if (kk === 1) L.up.push(j); else if (kk === 4) L.related.push(j); else if (kk === 5) continue; else (N[j].level > d.level || (N[j].level === d.level && upOf(i, j)) ? L.above : L.below).push(j); }
+  for (const k_ of Object.keys(L)) L[k_].sort((a, b) => N[b].level - N[a].level || N[b].score - N[a].score); return L; }
+function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.drop.hidden = true; return; } const d = N[i], L = stripLists(i); o.strip.empty();
+  const lv = o.strip.createSpan({ cls: "slv", text: "L" + d.level }); lv.setCssProps({ "--slc": d.level >= 3 ? GRAD[d.level][0] : d.level === 2 ? css.l2 : css.l1 }); lv.setAttribute("aria-description", LV[d.level] ? LV[d.level].name : "");
+  const dot = () => o.strip.createSpan({ cls: "ssep", text: "·" });
+  dot(); o.strip.createSpan({ text: "score " + d.score.toFixed(d.score < 10 ? 1 : 0) }); dot(); o.strip.createSpan({ text: `${d.body_in} in, ${d.body_out} out` });
+  const chip = (key, label, cls) => { const b = o.strip.createEl("button", { cls: "schip " + cls + (o.open_ === key ? " on" : ""), text: label, attr: { type: "button", "aria-expanded": String(o.open_ === key) } });
+    b.onclick = e => { e.stopPropagation(); o.open_ = o.open_ === key ? "" : key; fillStrip(o, i); }; };
+  if (L.above.length || L.below.length) dot();
+  if (L.above.length) chip("above", `↑ ${L.above.length} above`, "sab"); if (L.below.length) chip("below", `↓ ${L.below.length} below`, "sbe");
+  if (L.up.length) chip("up", `${L.up.length} up`, "spill"); if (L.related.length) chip("related", `${L.related.length} related`, "spill");
+  const list = o.open_ ? L[o.open_] || [] : []; o.drop.empty(); o.drop.hidden = !list.length; if (!list.length) { o.open_ = ""; return; }
+  o.drop.createDiv({ cls: "sdh", text: `${o.open_.toUpperCase()} · ${list.length}` }); const rows = o.drop.createDiv({ cls: "sdl" });
+  for (const j of list) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
+    r.onclick = e => { e.stopPropagation(); if (e.shiftKey) TABNEW = true; if (Platform.isMacOS ? e.metaKey : e.ctrlKey) void EDS.right.open(j); else select(j); }; } }
 function edFree(){ EDLW = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 0; for (const o of Object.values(EDS)) { o.key = ""; o.place(); } }
-function closeEds(){ for (const o of Object.values(EDS)) o.close(); }
-async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(); EDS.left.close(); if (!edOn()) EDS.right.close(); return; }
+function panBack(){ if (PANAUTO && EDS.center.el.hidden && EDS.left.el.hidden) { PANAUTO = false; setCollapsed(false, true); } }   // the note panel returns when the main editor closes
+function closeEds(){ for (const o of Object.values(EDS)) o.close(); panBack(); }
+async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(); EDS.left.close(); if (!edOn()) EDS.right.close(); if (PANAUTO) { PANAUTO = false; setCollapsed(false, true); } return; }
   const m = edMain(); (m === EDS.left ? EDS.center : EDS.left).close();
+  if (m.el.hidden && !m.col && !drawerCollapsed) { PANAUTO = true; setCollapsed(true, true); }   // the editor shows the note: the note panel tucks away (its tab brings it back)
   const tp = TABS[TCUR], pj = tp && tp.pin && tp.path !== N[i].path ? PIDX.get(tp.path) : null;
   if (pj != null) { const p0 = m.open(pj); void EDS.right.open(i); syncOrbs(); if (view === "compass") win.setTimeout(() => { if (!dead && view === "compass" && !morphing) animateTo(fitTarget()); }, 300); await p0; return; }   // pinned: the main editor keeps its note, the one you picked opens beside it
   const p = m.open(i);
@@ -4868,7 +4891,8 @@ function liveLinks(path, list){ const i = PIDX.get(path); if (i == null || ARCH[
   const keep = sel >= 0 ? sel : i, kp = k, px = sx(X[keep]), py = sy(Y[keep]), fixed = sphOn() || geo3On() || s3dOn() || domeOn();
   relayout(true, true, fixed ? undefined : (tX, tY) => ({ k: kp, tx: px - tX[keep]*kp, ty: py - tY[keep]*kp }));
   for (let q = 0; q < n; q++) if (N[q].level !== lv0[q]) LIVE.rings.push({ i: q, t0: now + 300, up: N[q].level > lv0[q], from: lv0[q] });
-  if (sel >= 0) win.setTimeout(() => { if (dead || sel < 0) return; const st0 = drawer.scrollTop; LIVEQ = true; try { select(sel, true); } finally { LIVEQ = false; } drawer.scrollTop = st0; }, 820);   // the panel's numbers, once the map has settled (no camera move, no editor reload)
+  if (sel >= 0) win.setTimeout(() => { if (dead || sel < 0) return; const st0 = drawer.scrollTop; LIVEQ = true; try { select(sel, true); } finally { LIVEQ = false; } drawer.scrollTop = st0;
+    for (const o of Object.values(EDS)) if (o.path && PIDX.has(o.path)) fillStrip(o, PIDX.get(o.path)); }, 820);   // the panel's numbers, once the map has settled (no camera move, no editor reload)
   draw(); }
 function drawLive(){ if (!LIVE.links.length && !LIVE.rings.length) return; const now = performance.now();
   LIVE.links = LIVE.links.filter(o => now - o.t0 < LIVE_MS); LIVE.rings = LIVE.rings.filter(o => now - o.t0 < LIVE_MS);
