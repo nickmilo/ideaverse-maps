@@ -1462,3 +1462,8 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .ivm-cockpit .ckbtns button{font:600 11px var(--body);letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:4px;background:rgba(10,16,30,.85);color:#cfe0ff;border:1px solid rgba(120,170,255,.4);box-shadow:none;cursor:pointer}
 .ivm .ivm-cockpit .ckbtns button.ckeject{color:#ffb0a0;border-color:rgba(255,140,120,.55)}
 .ivm .ivm-cockpit .ckbtns button[hidden]{display:none}
+.ivm .ckany .ckkeys{margin-top:8px;padding-top:6px;border-top:1px solid var(--line, rgba(127,127,127,.25))}
+.ivm .ckany .ckkey{display:flex;gap:8px;align-items:baseline;font:500 11px var(--body);line-height:1.55;white-space:nowrap}
+.ivm .ckany .ckkey kbd{min-width:74px;font:600 10px var(--mono, monospace);opacity:.85;background:none;border:0;padding:0;box-shadow:none}
+.ivm .ckany .ckkey span{opacity:.8}
+.ivm .ckany .ckkeys .eol{font:600 10px var(--body);letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:2px}

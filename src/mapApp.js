@@ -2442,7 +2442,7 @@ EXP.kandinsky = {
 // After Nick's X-Wing (1993) mockup: "actually fly through our notes… almost like a game, but not a game", built no further than needed.
 // Space: links in on the left, links out on the right, two-way links ahead; what the note links up to above the horizon, what sits below it beneath;
 // the strongest links (relevance from this note) nearest. F shows only links in, R only links out (Nick's swap). No S·T·I·R gauges yet (Nick: don't calculate them yet).
-const CK = { on: false, c: -1, items: [], lock: -1, sug: -1, P: [0, 0, 0], yaw: 0, pitch: 0, v: 0, keys: new Set(), only: "", t0: 0, warp: 0, auto: false, roll: 0, el: null, cv: null, g: null, w: 0, h: 0, stars: [], last: 0, drag: null, msg: "" };
+const CK = { inL: [], outL: [], side: [], on: false, c: -1, items: [], lock: -1, sug: -1, P: [0, 0, 0], yaw: 0, pitch: 0, v: 0, keys: new Set(), only: "", t0: 0, warp: 0, auto: false, roll: 0, el: null, cv: null, g: null, w: 0, h: 0, stars: [], last: 0, drag: null, msg: "" };
 let CKFRAME = pref("iv-ckframe", false) === true;
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2464,6 +2464,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.P = 
     const z = 430 + q * 105 + ja * 40;
     CK.items.push({ i: j, x: tx * z, y: ty * z, z, side, inn: inn_, out: out_, up: ups.has(j), rel: rels.has(j), none: !inn_ && !out_, sx: 0, sy: 0, sw: 0, sh: 0, zc: 0 }); });
   CK.lock = CK.items.findIndex(it => it.i === CK.sug); if (CK.lock < 0 && CK.items.length) CK.lock = 0;
+  CK.inL = [...L.in].sort((a, b) => rv(b) - rv(a) || N[b].score - N[a].score); CK.outL = [...L.out].sort((a, b) => rv(b) - rv(a) || N[b].score - N[a].score);
   CK.msg = CK.sug >= 0 ? `Closest relative not in its up or related: ${N[CK.sug].title}${CK.items.find(it => it.i === CK.sug && it.none) ? " (no link yet)" : ""}. Locked on. Space flies you there.` : "Every close relative is already up or related.";
 }
 function ckFwd(){ const cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch); return [sy_ * cp, sp, cy * cp]; }
@@ -2478,10 +2479,10 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
   CK.ej = ej;
   for (let q = 0; q < 420; q++) CK.stars.push([hash("s" + q, 3) * 4000 - 2000, hash("s" + q, 5) * 4000 - 2000, hash("s" + q, 7) * 4000 - 2000, .3 + hash("s" + q, 9) * .7]);
   c_.addEventListener("pointerdown", e => { if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false }; c_.setPointerCapture(e.pointerId); });
-  c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); c_.classList.toggle("hot", h_ >= 0); return; }
+  c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); c_.classList.toggle("hot", h_ >= 0 || ckSideHit(e.offsetX, e.offsetY) >= 0); return; }
     const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) > 4) d.moved = true; d.x = e.clientX; d.y = e.clientY;
     if (d.moved) { CK.auto = false; CK.yaw += dx * .0032; CK.pitch = Math.max(-1.2, Math.min(1.2, CK.pitch + dy * .0032)); CK.roll += dx * .004; } });
-  c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return; const h_ = ckHit(e.offsetX, e.offsetY);
+  c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return; { const sj = ckSideHit(e.offsetX, e.offsetY); if (sj >= 0) { const was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } } const h_ = ckHit(e.offsetX, e.offsetY);
     if (h_ < 0) return; if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
   c_.addEventListener("dblclick", e => { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) { CK.lock = h_; CK.auto = true; } });
   c_.addEventListener("wheel", e => { e.preventDefault(); CK.auto = false; CK.v = Math.max(-500, Math.min(1500, CK.v - e.deltaY * 2.2)); }, { passive: false });
@@ -2502,6 +2503,10 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
 function ckOrder(){ return CK.items.map((it, q) => q).filter(q => ckShows(CK.items[q])).sort((a, b) => { const A = CK.items[a], B = CK.items[b]; return (A.zc > 0 ? 0 : 1) - (B.zc > 0 ? 0 : 1) || A.sx - B.sx; }); }
 function ckShows(it){ return !CK.only || (CK.only === "in" ? it.inn : it.out); }
 function ckBack(){ if (!trail.length) return; const p = trail.pop(); if (p != null && p >= 0) select(p, true); }
+function ckSideHit(x, y){ for (const [hx, hy, hw, hh, j] of CK.side) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; }
+function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0) { const inn_ = CK.inL.includes(j), out_ = CK.outL.includes(j), side = inn_ && out_ ? 0 : inn_ ? -1 : 1, z = 900 + hash(N[j].path, 5) * 300, tx = side * .3;
+    const [xc, yc] = [CK.P[0], CK.P[1]]; CK.items.push({ i: j, x: xc + tx * z, y: yc, z: CK.P[2] + z, side, inn: inn_, out: out_, up: false, rel: false, none: false, sx: 0, sy: 0, sw: 0, sh: 0, zc: 0 }); q = CK.items.length - 1; }
+  CK.lock = q; CK.auto = false; }
 function ckHit(x, y){ let b = -1, bz = 1e9; CK.items.forEach((it, q) => { if (it.zc <= 1 || !ckShows(it)) return; if (x >= it.sx - it.sw / 2 && x <= it.sx + it.sw / 2 && y >= it.sy - it.sh / 2 && y <= it.sy + it.sh / 2 && it.zc < bz) { b = q; bz = it.zc; } }); return b; }
 win.setTimeout(() => { if (!dead) ckView(); }, 0);
 function ckView(){ ckEl(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
@@ -2563,6 +2568,24 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
       g.fillText(tx, x0 + sw * .07, it.sy - (sw > 90 ? sh * .12 : 0));
       if (sw > 90) { g.font = `500 ${fs * .62}px ${font}`; g.fillStyle = "rgba(200,215,240,.7)"; g.fillText(`L${d.level} · ${it.none ? "not linked yet" : it.inn && it.out ? "both ways" : it.inn ? "links in" : "links out"}${it.up ? " · up" : it.rel ? " · related" : ""}`, x0 + sw * .07, it.sy + sh * .26); } } }
   g.globalAlpha = 1;
+  if (CKFRAME) { /* the canopy's struts, as in the mockup: two bars from the console's corners up and out */ const sw_ = Math.max(6, W * .011);
+    for (const s_ of [-1, 1]) { const x0 = W / 2 + s_ * W * .2, x1 = W / 2 + s_ * W * .48, y1 = VH * .02, gr = g.createLinearGradient(x0 - sw_, 0, x0 + sw_, 0);
+      gr.addColorStop(0, "#5c6474"); gr.addColorStop(.5, "#c9ced8"); gr.addColorStop(1, "#5c6474"); g.strokeStyle = gr; g.lineWidth = sw_; g.lineCap = "butt"; g.beginPath(); g.moveTo(x0, VH); g.lineTo(x1, y1); g.stroke();
+      g.strokeStyle = "rgba(0,0,0,.35)"; g.lineWidth = 1; g.beginPath(); g.moveTo(x0 + s_ * sw_ / 2, VH); g.lineTo(x1 + s_ * sw_ / 2, y1); g.stroke(); } }
+  /* links in down the left, links out down the right: a dim arc of names, centred (Nick, from the mockup) */
+  CK.side = []; const lockI = (CK.items[CK.lock] || {}).i;
+  for (const [s, list, lab] of [[-1, CK.inL, "IN · F"], [1, CK.outL, "OUT · R"]]) { const n_ = list.length; if (!n_) continue; const cap = n_ > 22 ? 20 : n_, rows = cap + (n_ > cap ? 1 : 0), Rx = W * .5, Ry = VH * .62, lh = Math.min(15.5, (VH - 90) / (rows + 1));
+    const dim = CK.only && CK.only !== (s < 0 ? "in" : "out"); g.save(); g.font = `500 11px ${font}`; g.textBaseline = "middle";
+    const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [cx + s * Rx * Math.sqrt(Math.max(0, 1 - u * u)) - s * 34, y, Math.asin(Math.max(-1, Math.min(1, u))) * .3]; };
+    for (let r = 0; r < rows; r++) { const [x, y, tl] = at(r), more = r === cap, j = more ? -1 : list[r]; g.save(); g.translate(x, y); g.rotate(s < 0 ? -tl : tl); g.textAlign = s < 0 ? "left" : "right";
+      g.globalAlpha = (dim ? .18 : .62) * (j >= 0 && j === lockI ? 1.5 : 1);
+      if (more) { g.fillStyle = "#8fa3bf"; g.fillText(`+${n_ - cap} more`, s < 0 ? 13 : -13, 0); g.restore(); continue; }
+      g.fillStyle = ckCol(N[j].level); g.beginPath(); g.arc(s < 0 ? 6 : -6, 0, 2.2, 0, 6.2832); g.fill();
+      let tt = N[j].title; while (g.measureText(tt).width > 165 && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…";
+      g.fillStyle = j === lockI ? "#ffcf5a" : "#c9d6ea"; g.fillText(tt, s < 0 ? 13 : -13, 0); const tw = g.measureText(tt).width + 16; g.restore();
+      CK.side.push([s < 0 ? x : x - tw, y - lh / 2, tw, lh, j]); }
+    const [hx, hy] = at(-1.3); g.globalAlpha = dim ? .25 : .55; g.font = `600 9.5px ${font}`; g.fillStyle = "#7dffb0"; g.textAlign = s < 0 ? "left" : "right"; g.fillText(`${lab} · ${n_}`, hx + (s < 0 ? 4 : -4), hy); g.restore(); }
+  g.textAlign = "left";
   /* reticle on the locked panel, or an arrow at the edge pointing to it */
   const lk = CK.items[CK.lock];
   if (lk) { const col = "#ffcf5a"; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1.6;
@@ -2582,10 +2605,6 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   if (CK.msg) { g.font = `500 12px ${font}`; g.textAlign = "center"; g.textBaseline = "top"; const tw = Math.min(W - 40, g.measureText(CK.msg).width + 24);
     g.fillStyle = "rgba(8,14,28,.8)"; g.fillRect(cx - tw / 2, 10, tw, 24); g.strokeStyle = "rgba(255,207,90,.4)"; g.strokeRect(cx - tw / 2 + .5, 10.5, tw - 1, 23); g.fillStyle = "#ffcf5a";
     let m = CK.msg; while (m.length > 10 && g.measureText(m).width > tw - 20) m = m.slice(0, -2); if (m !== CK.msg) m += "…"; g.fillText(m, cx, 16); g.textAlign = "left"; }
-  if (CKFRAME) { /* the canopy's struts, as in the mockup: two bars from the console's corners up and out */ const sw_ = Math.max(6, W * .011);
-    for (const s_ of [-1, 1]) { const x0 = W / 2 + s_ * W * .2, x1 = W / 2 + s_ * W * .48, y1 = VH * .02, gr = g.createLinearGradient(x0 - sw_, 0, x0 + sw_, 0);
-      gr.addColorStop(0, "#5c6474"); gr.addColorStop(.5, "#c9ced8"); gr.addColorStop(1, "#5c6474"); g.strokeStyle = gr; g.lineWidth = sw_; g.lineCap = "butt"; g.beginPath(); g.moveTo(x0, VH); g.lineTo(x1, y1); g.stroke();
-      g.strokeStyle = "rgba(0,0,0,.35)"; g.lineWidth = 1; g.beginPath(); g.moveTo(x0 + s_ * sw_ / 2, VH); g.lineTo(x1 + s_ * sw_ / 2, y1); g.stroke(); } }
   ckConsole(g, W, H, VH, cons, font); }
 function ckScope(g, x, y, R, label, key, ids, act, font){ g.save(); g.fillStyle = "rgba(10,30,24,.9)"; g.beginPath(); g.arc(x, y, R, 0, 6.2832); g.fill();
   g.strokeStyle = act ? "#7dffb0" : "rgba(110,220,160,.45)"; g.lineWidth = act ? 2 : 1; g.stroke(); g.lineWidth = 1; g.strokeStyle = "rgba(110,220,160,.22)";
@@ -2633,7 +2652,7 @@ EXP.cockpit = {
   notes(){}, pick: () => -1, ownLabels: true,
   get about(){ return [
       "The note you pick is the cockpit. Its links hang ahead of you as panels: links in on the left, links out on the right, links both ways straight ahead. What it links up to sits above the horizon, what sits below it beneath. The strongest links (by relevance from this note) are nearest.",
-      "Fly: W or ↑ forward, S or ↓ back, A D or ← → to turn, Q E to look up and down, or drag to steer and scroll to fly. Fly into a panel and that note becomes the cockpit.",
+      "Fly: W or ↑ forward, S or ↓ back, A D or ← → to turn, Q E to look up and down. Or drag to steer and scroll to fly. Fly into a panel and that note becomes the cockpit.",
       "Click a panel to lock on; click it again, double-click, or press Space to fly there on autopilot. Tab moves the lock. B flies back.",
       "F shows only the links in, R only the links out (press again for both). The scopes count them.",
       "The message line names the closest relative it doesn't yet link up or related to; it starts locked on. The centre display: level, rank, score, links, and what the next level takes. The left dial is links made this year, the right one its age. Eject unpins the editor."
