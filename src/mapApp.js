@@ -4096,11 +4096,17 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   for (const j of list) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
     r.onclick = e => { e.stopPropagation(); if (e.shiftKey) TABNEW = true; if (Platform.isMacOS ? e.metaKey : e.ctrlKey) void EDS.right.open(j); else select(j); }; } }
 // the main editor's history: back and forward move through it without adding to it; a pinned editor keeps its note, so they wait
-let HIST = [], HPOS = -1, HNAV = false;
+let HIST = [], HPOS = -1, HNAV = null;
+// 0.8.51 (Nick: all the way back, and forward was gone): the step back or forward is remembered by the note it goes to, not as a flag the next
+// editor change could use up; and going to the note just ahead or behind (from the trail, say) moves along the history instead of cutting it
+function histNote(p){ if (HNAV === p) { HNAV = null; return; } HNAV = null;
+  if (HIST[HPOS] === p) return;
+  if (HIST[HPOS + 1] === p) { HPOS++; return; } if (HIST[HPOS - 1] === p) { HPOS--; return; }
+  HIST = HIST.slice(0, HPOS + 1); HIST.push(p); if (HIST.length > 100) HIST.shift(); HPOS = HIST.length - 1; }
 function syncNav(){ let pin = false; try { pin = !!(TABS[TCUR] && TABS[TCUR].pin); } catch (_) { /* not ready yet */ }
   for (const o of [EDS.center, EDS.left]) if (o && o.nav) { o.nav[0].disabled = pin || HPOS <= 0; o.nav[1].disabled = pin || HPOS >= HIST.length - 1; } }
 function histGo(d_){ const q = HPOS + d_; if (q < 0 || q >= HIST.length) return; const i = PIDX.get(HIST[q]); if (i == null) return;
-  if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map.`); return; } HPOS = q; HNAV = true; select(i); syncNav(); }
+  if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map.`); return; } HPOS = q; HNAV = HIST[q]; select(i); syncNav(); }
 function edFree(){ EDLW = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 0; for (const o of Object.values(EDS)) { o.key = ""; o.place(); } }
 function panBack(){ if (PANAUTO && EDS.center.el.hidden && EDS.left.el.hidden) { PANAUTO = false; setCollapsed(false, true); } }   // the note panel returns when the main editor closes
 function closeEds(){ for (const o of Object.values(EDS)) o.close(); panBack(); }
@@ -4109,7 +4115,7 @@ async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(
   if (m.el.hidden && !m.col && !drawerCollapsed) { PANAUTO = true; setCollapsed(true, true); }   // the editor shows the note: the note panel tucks away (its tab brings it back)
   const tp = TABS[TCUR], pj = tp && tp.pin && tp.path !== N[i].path ? PIDX.get(tp.path) : null;
   if (pj != null) { const p0 = m.open(pj); void EDS.right.open(i); syncOrbs(); if (view === "compass" || view === "arena") refitSoon(); await p0; return; }   // pinned: the main editor keeps its note, the one you picked opens beside it
-  if (HNAV) HNAV = false; else if (HIST[HPOS] !== N[i].path) { HIST = HIST.slice(0, HPOS + 1); HIST.push(N[i].path); if (HIST.length > 100) HIST.shift(); HPOS = HIST.length - 1; }
+  histNote(N[i].path);
   syncNav();
   const p = m.open(i);
   if (view === "compass" || view === "arena") refitSoon();   // they frame themselves between the editors, once any move has finished   // Compass frames itself, clear of the editors
