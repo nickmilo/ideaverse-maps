@@ -4183,10 +4183,10 @@ const tabsSave = () => { save("iv-tabs", TABS); save("iv-tabcur", TCUR); };
 function tabTake(i){ const p = N[i].path, nw = TABNEW; TABNEW = false; const cur = TABS[TCUR];
   if (!cur) { TABS.push({ path: p }); TCUR = TABS.length - 1; }
   else if (cur.path === p) return syncOrbs();
+  else if (cur.pin && !nw) return syncOrbs();   // pinned: the note stays and the pick opens as the support note, even one open in another tab (0.8.60, Nick)
   else { const ex = TABS.findIndex(t => t.path === p);
     if (ex >= 0) TCUR = ex;   // already open in a tab: go to it
     else if (nw) { TABS.splice(TCUR + 1, 0, { path: p }); TCUR++; }
-    else if (cur.pin) return syncOrbs();   // pinned: openMain shows it as the support note
     else TABS[TCUR] = { path: p }; }
   tabsSave(); syncOrbs(); }
 function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
