@@ -2572,6 +2572,9 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     g.fillStyle = "#ffcf5a"; g.save(); g.translate(Math.max(bx + 4, Math.min(bx + bw - 4, sxp)), Math.max(by + 4, Math.min(by + bh - 4, syp))); g.rotate(ha); g.globalAlpha = hl > .2 ? 1 : .6;
     g.beginPath(); g.moveTo(7, 0); g.lineTo(-4, -4); g.lineTo(-2, 0); g.lineTo(-4, 4); g.closePath(); g.fill(); g.restore(); g.restore(); }
   g.restore(); g.globalAlpha = 1; g.textAlign = "left"; }
+/* past straight up or down the ship is upside down: turning keeps its feel (left stays left), and autopilot first rights it, as a pilot would */
+const ckUp = () => Math.cos(CK.pitch) < 0 ? -1 : 1;
+function ckUpright(){ CK.pitch = Math.atan2(Math.sin(CK.pitch), Math.cos(CK.pitch)); if (Math.cos(CK.pitch) < 0) { CK.yaw += Math.PI; CK.pitch = (CK.pitch > 0 ? Math.PI : -Math.PI) - CK.pitch; CK.roll += 1.2; } }
 function ckFwd(){ const cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch); return [sy_ * cp, sp, cy * cp]; }
 function ckCam(x, y, z){ const dx = x - CK.P[0], dy = y - CK.P[1], dz = z - CK.P[2], cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);
   const xc = cy * dx - sy_ * dz, z1 = sy_ * dx + cy * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1; return [xc, yc, zc]; }
@@ -2586,7 +2589,7 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
   c_.addEventListener("pointerdown", e => { if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false }; c_.setPointerCapture(e.pointerId); });
   c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); CK.hovS = ckSideHit(e.offsetX, e.offsetY); c_.classList.toggle("hot", h_ >= 0 || CK.hovS >= 0); return; }
     const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) > 4) d.moved = true; d.x = e.clientX; d.y = e.clientY;
-    if (d.moved) { CK.auto = false; CK.yaw += dx * .0032; CK.pitch = Math.max(-1.2, Math.min(1.2, CK.pitch + dy * .0032)); CK.roll += dx * .004; } });
+    if (d.moved) { CK.auto = false; CK.yaw += dx * .0032 * ckUp(); CK.pitch += dy * .0032; CK.roll += dx * .004; } });
   c_.addEventListener("pointerleave", () => { CK.hovS = -1; });
   c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return; { const sj = ckSideHit(e.offsetX, e.offsetY); if (sj >= 0) { const was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } } const h_ = ckHit(e.offsetX, e.offsetY);
     if (h_ < 0) return; if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
@@ -2594,7 +2597,7 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
   /* trackpad (Nick): two fingers steer, a pinch flies; a mouse wheel (no sideways scroll) still flies */
   c_.addEventListener("wheel", e => { e.preventDefault(); CK.auto = false; const mouse = e.deltaMode === 1 || (!e.deltaX && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
     if (e.ctrlKey || mouse) CK.v = Math.max(-500, Math.min(1500, CK.v - e.deltaY * (e.ctrlKey ? 9 : 2.2)));
-    else { CK.yaw += e.deltaX * .0024; CK.pitch = Math.max(-1.2, Math.min(1.2, CK.pitch + e.deltaY * .0024)); CK.roll += e.deltaX * .002; } }, { passive: false });
+    else { CK.yaw += e.deltaX * .0024 * ckUp(); CK.pitch += e.deltaY * .0024; CK.roll += e.deltaX * .002; } }, { passive: false });
   on(doc, "keydown", e => { if (!CK.on || dead || !host.isActive()) return; const a = doc.activeElement; if (a && a !== doc.body && (a.closest && (a.closest(".ivm-card") || a.closest("input,textarea,[contenteditable]")) || /INPUT|TEXTAREA/.test(a.tagName))) return; if (a && a !== doc.body && !root.contains(a)) return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; let used = true;
     if (["w", "s", "a", "d", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "q", "e"].includes(k)) { CK.keys.add(k); if (k === "w" || k === "s" || k === "ArrowUp" || k === "ArrowDown") CK.auto = false; }
@@ -2623,18 +2626,19 @@ function ckView(){ ckEl(); const want = view === "cockpit"; if (want === CK.on) 
 function ckArrive(q){ const it = CK.items[q]; if (!it) return; CK.auto = false; CK.v = 0; const j = it.i; if (vis[j]) select(j); win.setTimeout(ckSync, 0); }
 function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK.last) / 1000); CK.last = t; RAF(ckTick);
   const K = CK.keys, turn = 1.3 * dt;
-  if (K.has("a") || K.has("ArrowLeft")) { CK.yaw -= turn; CK.roll -= turn * 1.2; CK.auto = false; }
-  if (K.has("d") || K.has("ArrowRight")) { CK.yaw += turn; CK.roll += turn * 1.2; CK.auto = false; }
-  if (K.has("q")) { CK.pitch = Math.max(-1.2, CK.pitch - turn); CK.auto = false; }
-  if (K.has("e")) { CK.pitch = Math.min(1.2, CK.pitch + turn); CK.auto = false; }
+  if (K.has("a") || K.has("ArrowLeft")) { CK.yaw -= turn * ckUp(); CK.roll -= turn * 1.2; CK.auto = false; }
+  if (K.has("d") || K.has("ArrowRight")) { CK.yaw += turn * ckUp(); CK.roll += turn * 1.2; CK.auto = false; }
+  if (K.has("q")) { CK.pitch -= turn; CK.auto = false; }
+  if (K.has("e")) { CK.pitch += turn; CK.auto = false; }   /* 360° (0.8.97, Nick): no limit on looking up or down; loop right over */
   const VMAX = CKW === "sf" ? 3200 : 1100; if (K.has("w") || K.has("ArrowUp")) CK.v = Math.min(VMAX, CK.v + (CKW === "sf" ? 1600 : 800) * dt);
   else if (K.has("s") || K.has("ArrowDown")) CK.v = Math.max(-400, CK.v - 800 * dt);
   else if (!CK.auto) CK.v *= Math.pow(.25, dt);
   CK.roll *= Math.pow(.08, dt);
   if (CK.lookT && !CK.auto && !K.size && !CK.drag && win.performance.now() - CK.lookT0 < 1600) { const [ty_, tp_] = ckLook(CK.P, CK.lookT), dy_ = Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)), s_ = Math.min(1, dt * 3); CK.yaw += dy_ * s_; CK.pitch += (tp_ - CK.pitch) * s_; CK.roll += dy_ * s_ * .5; }   /* arriving in Starfield, the ship turns to face the new note's links */
+  if (CK.auto || (CK.lookT && !K.size && !CK.drag && win.performance.now() - CK.lookT0 < 1600)) ckUpright();
   const it = CK.items[CK.lock];
   if (CK.auto && it) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z), ay = Math.atan2(xc, zc), ap = Math.atan2(yc, Math.hypot(xc, zc)), s_ = Math.min(1, dt * 3.2);
-    CK.yaw += ay * s_; CK.pitch = Math.max(-1.2, Math.min(1.2, CK.pitch + ap * s_)); CK.roll += ay * s_ * .8;
+    CK.yaw += ay * s_; CK.pitch += ap * s_; CK.roll += ay * s_ * .8;
     const dist = Math.hypot(xc, yc, zc); CK.v += (Math.min(CKW === "sf" ? 4200 : 1500, 160 + dist * 1.4) - CK.v) * Math.min(1, dt * 2.5); }
   const f = ckFwd(); CK.P[0] += f[0] * CK.v * dt; CK.P[1] += f[1] * CK.v * dt; CK.P[2] += f[2] * CK.v * dt; CK.trav = (CK.trav || 0) + Math.abs(CK.v) * dt;
   if (CK.warp > 0) CK.warp = Math.max(0, CK.warp - dt * 1.6);
