@@ -2514,6 +2514,27 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   for (const [key, a] of bins) { g.fillStyle = SPAL[key]; g.globalAlpha = .8; g.beginPath(); for (let q = 0; q < a.length; q += 3) { const r = a[q + 2]; if (r < 1.2) g.rect(a[q] - r, a[q + 1] - r, 2 * r, 2 * r); else { g.moveTo(a[q] + r, a[q + 1]); g.arc(a[q], a[q + 1], r, 0, 6.2832); } } g.fill(); }
   for (const [i, px, py, r] of bright) { const col = SPAL[SC[i]], s = r * 6; g.globalAlpha = .45; g.drawImage(sprite(col), px - s / 2, py - s / 2, s, s); g.globalAlpha = 1; g.fillStyle = i === ck ? "#ffffff" : col; g.beginPath(); g.arc(px, py, Math.max(1, r * .7), 0, 6.2832); g.fill(); }
   g.globalCompositeOperation = "source-over";
+  // Star Chart (0.8.93), when it's on in Starfield's ⚙: lines between hubs, rings round the hubs ahead (a dial of twelve ticks; the cockpit note's ring brighter),
+  // turning orbits with a moon, and the readout card beside the cockpit note
+  if (STCH) { const HUDc = a_ => `rgba(127,231,255,${a_})`, pj = i => pr(P[3 * i], P[3 * i + 1], P[3 * i + 2]);
+    if (chxSF("lines")) { g.lineWidth = 1; for (let i = 0; i < n; i++) { if (N[i].level < 4 || !vis[i]) continue; const a_ = pj(i); if (!a_) continue;
+        for (const j of out[i]) { if (j === i || N[j].level < 4 || !vis[j]) continue; const both = out[j].includes(i); if (both && j < i) continue; const b_ = pj(j); if (!b_ || a_[2] < 160 || b_[2] < 160) continue;   /* a hub right beside the ship would throw a line across the whole view */
+          g.globalAlpha = Math.min(1, 9000 / ((a_[2] + b_[2]) / 2)) * .35; g.strokeStyle = HUDc(both ? .3 : .12);   /* stepped back, as in Starfield while a note is picked */ g.beginPath(); g.moveTo(a_[0], a_[1]); g.lineTo(b_[0], b_[1]); g.stroke(); } } }
+    const tt = win.performance.now() / 1000, ring = (i, main) => { const p_ = pj(i); if (!p_) return null; const R = Math.max(12, Math.min(150, F * (main ? 420 : 300) / p_[2])); if (p_[0] < -R || p_[0] > W + R || p_[1] < -R || p_[1] > VH + R) return null;
+        g.globalAlpha = 1; g.strokeStyle = HUDc(main ? .7 : .35); g.lineWidth = main ? 1.4 : 1; g.beginPath(); g.arc(p_[0], p_[1], R, 0, 6.2832); g.stroke();
+        for (let q = 0; q < 12; q++) { const a_ = q / 12 * 6.2832 - Math.PI / 2, r0 = R * (q % 3 ? .9 : .82); g.beginPath(); g.moveTo(p_[0] + Math.cos(a_) * r0, p_[1] + Math.sin(a_) * r0); g.lineTo(p_[0] + Math.cos(a_) * R, p_[1] + Math.sin(a_) * R); g.stroke(); }
+        if (chxSF("orb")) { const R2 = R * 1.45, sp_ = .25 + (hash(N[i].path, 41) * .3), a_ = tt * sp_ + hash(N[i].path, 42) * 6.2832; g.setLineDash([3, 5]); g.lineDashOffset = -tt * 8; g.strokeStyle = HUDc(main ? .4 : .22); g.beginPath(); g.arc(p_[0], p_[1], R2, 0, 6.2832); g.stroke(); g.setLineDash([]);
+          g.fillStyle = HUDc(.85); g.beginPath(); g.arc(p_[0] + Math.cos(a_) * R2, p_[1] + Math.sin(a_) * R2, main ? 2.6 : 1.8, 0, 6.2832); g.fill(); }
+        return [p_[0], p_[1], R]; };
+    for (let i = 0; i < n; i++) if (i !== ck && N[i].level === 5 && vis[i]) ring(i, false);
+    const rc = ck >= 0 ? ring(ck, true) : null;
+    if (rc && chxSF("read")) { const nb = new Set([...out[ck], ...inn[ck]]), CY = new Date().getUTCFullYear(), y0 = Date.UTC(CY, 0, 1); let first = Infinity, yr = 0;
+      for (const j of nb) { const tv = TVD[j]; if (!(tv > 0)) continue; if (tv < first) first = tv; if (tv >= y0) yr++; }
+      const Ls = [`L${N[ck].level} · SCORE ${N[ck].score.toFixed(N[ck].score < 10 ? 1 : 0)}`, `IN ${N[ck].body_in} · OUT ${N[ck].body_out}`, `${isFinite(first) ? "SINCE " + new Date(first).getUTCFullYear() : "NO DATES"} · +${yr} ${CY}`];
+      g.font = `500 9.5px ${css.mono || font}`; const tw = Math.max(...Ls.map(s_ => g.measureText(s_).width)) + 12, th = Ls.length * 12 + 6, ax = rc[0] + Math.cos(-.62) * rc[2], ay = rc[1] + Math.sin(-.62) * rc[2], bx = ax + 22, by = ay - 16;
+      g.strokeStyle = HUDc(.55); g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.lineTo(bx + 6, by); g.stroke(); g.fillStyle = "rgba(4,5,12,.78)"; g.beginPath(); g.roundRect(bx + 6, by - 9, tw, th, 4); g.fill();
+      g.textBaseline = "middle"; Ls.forEach((s_, q) => { g.fillStyle = HUDc(q ? .75 : .98); g.fillText(s_, bx + 12, by + q * 12); }); g.textBaseline = "alphabetic"; } }
+  g.globalAlpha = 1;
   // threads from the cockpit note to its links
   if (ck >= 0) { const pc = pr(P[3 * ck], P[3 * ck + 1], P[3 * ck + 2]); g.lineWidth = 1;
     for (const it of CK.items) { const pi = pr(it.x, it.y, it.z); const a = pc || null; if (!pi || !a) continue; g.globalAlpha = ckShows(it) ? .22 : .05; g.strokeStyle = ckCol(N[it.i].level); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(pi[0], pi[1]); g.stroke(); }
