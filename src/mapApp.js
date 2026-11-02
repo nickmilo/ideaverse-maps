@@ -4072,12 +4072,14 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   const rk = scoreRank(i); chip("score", rk ? `#${rk.toLocaleString()}` : d.score.toFixed(1), "spill sscore");
   o.drop.empty();
   if (o.open_ === "score") { o.drop.hidden = false; o.drop.createDiv({ cls: "sdh", text: `#${rk.toLocaleString()} IN ${d.archive ? "THE ARCHIVE" : "THE IDEAVERSE"} · SCORE ${f2(d.score)}` });
-    const g = o.drop.createDiv({ cls: "sdnums" }); for (const [v, t_] of [[d.body_in, "linked from"], [d.body_out, "links to"], [d.up_in || 0, "link up to it"], [d.score.toFixed(1), "link score"]]) { const c_ = g.createDiv(); c_.createEl("b", { text: String(v) }); c_.createSpan({ text: t_ }); }
-    o.drop.createDiv({ cls: "sdwhy", text: `Level ${d.level}: ${levelRule(i)}` });
+    // with "above" or "below" open, the score's details fold away so the list has the room (0.8.51, Nick)
+    const det = o.drop.createDiv({ cls: "sddet" }); det.hidden = !!o.sub_;
+    const g = det.createDiv({ cls: "sdnums" }); for (const [v, t_] of [[d.body_in, "linked from"], [d.body_out, "links to"], [d.up_in || 0, "link up to it"], [d.score.toFixed(1), "link score"]]) { const c_ = g.createDiv(); c_.createEl("b", { text: String(v) }); c_.createSpan({ text: t_ }); }
+    det.createDiv({ cls: "sdwhy", text: `Level ${d.level}: ${levelRule(i)}` });
     // how the score adds up, as in the note panel's Why box: each part, its count, its weight and what it adds
     if (d.s) { const [a, b, u, c] = d.s, w = S.w, rows = [["Links in", a, w.in, w.in*LN(a)], ["Links out", b, w.out, w.out*LN(b)], ["Links both in and out", a && b ? `${a} in · ${b} out` : "—", w.both, w.both*Math.sqrt(LN(a)*LN(b))]];
       if (!d.archive) rows.push(["Notes that link up to this note", u, w.up, w.up*LN(u)], ["Notes in its collection", c, w.coll, w.coll*LN(c)]);
-      const t = o.drop.createDiv({ cls: "sdtab" }); for (const h of ["", "count", "weight", "adds"]) t.createSpan({ cls: "sdth", text: h });
+      const t = det.createDiv({ cls: "sdtab" }); for (const h of ["", "count", "weight", "adds"]) t.createSpan({ cls: "sdth", text: h });
       for (const [l, ct, wt, ad] of rows) { const z = !ad; t.createSpan({ cls: "sdtl" + (z ? " z" : ""), text: l }); t.createSpan({ cls: "sdtn" + (z ? " z" : ""), text: String(ct) }); t.createSpan({ cls: "sdtn" + (z ? " z" : ""), text: "×" + (+wt).toFixed(2) }); t.createSpan({ cls: "sdtn" + (z ? " z" : ""), text: f2(ad) }); }
       t.createSpan({ cls: "sdtl sdtt", text: "Score" }); t.createSpan(); t.createSpan(); t.createSpan({ cls: "sdtn sdtt", text: f2(d.score) }); }
     // where it sits in emergence: the notes above it and below it, each list opening in place (0.8.47, Nick)

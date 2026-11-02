@@ -1433,3 +1433,5 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .ivm-htip{position:absolute;z-index:60;pointer-events:none;white-space:nowrap;font:600 11.5px var(--body);color:var(--ink);background:color-mix(in srgb,var(--bg) 92%,transparent);border:1px solid var(--line);border-radius:6px;padding:3px 7px}
 .ivm .ivm-htip[hidden]{display:none}
 .ivm .ivm-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ivm-card .carddrop .sddet[hidden]{display:none}
+.ivm-card .carddrop .sddet[hidden] + .sdem{margin-top:4px;padding-top:0;border-top:0}
