@@ -191,7 +191,7 @@ export async function mountInto(owner, el, opts) {
           if (!leaf) leaf = W.createLeafInParent(split, 0);
           await leaf.openFile(f, { state: { mode: "source", source: false }, active: false }); return true; },
         resize: () => { if (leaf && leaf.view && typeof leaf.view.onResize === "function") leaf.view.onResize(); },
-        focus: () => { if (leaf) W.setActiveLeaf(leaf, { focus: true }); },
+        focus: () => { const ed = leaf && leaf.view && leaf.view.editor; if (ed) ed.focus(); },   // straight to the editor: our leaf has no tab group, so it can't be the workspace's active leaf
         close: () => { if (leaf) { leaf.detach(); leaf = null; } split.containerEl.remove(); } }; },
     // a read-only preview of a note (Starfield's hub previews): its text without the properties, the start of it, rendered as Obsidian would
     preview: async (path, el) => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return;

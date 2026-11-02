@@ -122,7 +122,7 @@ Notes with a picture property show up as cards with their picture. Notes without
 
 ### Edit mode (experimental)
 
-Turn on **Display → Edit mode (experimental)** and pick a note in Starfield or Emergence: a card opens below it, in the middle of the map, holding Obsidian's own editor, with Live Preview, links and properties. Changes save to the note as you type, and the map stays all around you. Its settings, under the same switch, can move the editor to the left side, give it the map's dark or light colors, set how much of the map shows through, and show small previews of each galaxy's hub note in Starfield. ⌘-click (Ctrl-click) a note to open it as a support note, in a second editor on the right.
+Turn on **Display → Edit mode (experimental)** and pick a note in Starfield or Emergence: a card opens below it, in the middle of the map, holding Obsidian's own editor, with Live Preview, links and properties. Changes save to the note as you type, and the map stays all around you. Its settings, under the same switch, can move the editor to the left side, give it the map's dark or light colors, set how much of the map shows through, and show small previews of each galaxy's hub note in Starfield. ⌘-click (Ctrl-click) a note to open it as a support note, in a second editor on the right. Two commands, Open note in Emergence and Open note in Starfield, open the note you're on in that map's left editor; give them hotkeys in Settings → Hotkeys.
 
 ### Linear Calendar
 

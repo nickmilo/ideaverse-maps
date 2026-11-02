@@ -1,6 +1,6 @@
 /* Maps of the Ideaverse: the map itself. Ported from the standalone HTML map (index.html) with its logic intact:
    the page's code runs inside the plugin's view, scoped to `root`, with Obsidian handling storage, events and notes. */
-import { Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
+import { Notice, Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 
 export const VIEWS_ON = ["emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
@@ -5942,6 +5942,17 @@ return {
   destroy(){ dead = true; closeEds(); for (const o of Object.values(EDS)) o.el.remove(); pvLayer.remove(); ro.disconnect(); popObs.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
     win.clearTimeout(senseTimer); win.clearTimeout(pTimer); driftStop(); tip.remove(); },
   openNote(path){ const i = PIDX.get(path); if (i != null) navTo(i); },
+  // the commands "Open note in Emergence / Starfield" (0.8.27, Nick: so they can be hotkeyed): that map, Edit mode on, the note in the left editor
+  editIn(path, which){ const i = PIDX.get(path); if (i == null || dead) return false;
+    if (!EDITM || !EDLEFT) { EDITM = true; EDLEFT = true; save("iv-editm", true); save("iv-edleft", true);
+      const cb = root.querySelector(".editm input"); if (cb) cb.checked = true; const g = root.querySelector(".editopts"); if (g) g.hidden = false;
+      for (const l_ of root.querySelectorAll(".editopts .eosw")) if (/left side/.test(l_.textContent)) { const c_ = l_.querySelector("input"); if (c_) c_.checked = true; } }
+    const hop = new Map(HOPS).get(which === "stars" ? "stars2d" : "emergence"); if (hop && !(which === "stars" ? view === "stars" : view === "emergence")) hop();
+    if (EDS.left.col) EDS.left.collapse(false);
+    win.setTimeout(() => { if (dead) return; if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
+      if (sel !== i) select(i); else void openMain(i);
+      win.setTimeout(() => { if (!dead && EDS.left.ed) EDS.left.ed.focus(); }, 500); }, 60);
+    return true; },
   follow(path){ followPath(path); },
   // a base re-sends its notes whenever anything in the vault changes; only a different set of notes refits the view,
   // so zooming in isn't undone a second later
@@ -5956,6 +5967,7 @@ return {
   _cam(){ let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i=0;i<n;i++) if (vis[i]) { x0 = Math.min(x0, sx(X[i])); x1 = Math.max(x1, sx(X[i])); y0 = Math.min(y0, sy(Y[i])); y1 = Math.max(y1, sy(Y[i])); } return { view, k, tx, ty, W, H, box: [x0, y0, x1, y1].map(Math.round), side: sideW() }; },
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
   _kt(){ return [k, tx, ty]; },
+  _view(){ return view; },
   _note(path){ const i = PIDX.get(path); return i == null ? null : { sel: sel === i, level: N[i].level, in: N[i].body_in, out: N[i].body_out, score: N[i].score }; },
   _graph(){ return { mlive: morphing, rms: GPH.x ? Math.round(Math.sqrt([...GPH.x].reduce((t, v, i) => t + v * v + GPH.y[i] * GPH.y[i], 0) / GPH.x.length)) : 0, st: GPH.stepMs, dr: GPH.drawMs, mo: GPH.morph, it: GPH.it, its: GPH.its, key: GPH.key }; },
   setBaseInfo(info){ const sig = info ? JSON.stringify([info.sort, info.order, info.cols, info.groups ? [...info.groups].join() : ""]) : ""; if (sig === baseSig) return;

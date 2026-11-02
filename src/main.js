@@ -20,6 +20,10 @@ export default class IdeaverseMapsPlugin extends Plugin {
       if (!maps.length) return false;
       if (!checking) for (const v of maps) v.map.toggleFollow();
       return true; } });
+    // open the note you're on in a map, in the left editor (0.8.27; hotkey them in Settings → Hotkeys)
+    for (const [id, name, which] of [["open-in-emergence", "Open note in Emergence", "emergence"], ["open-in-starfield", "Open note in Starfield", "stars"]])
+      this.addCommand({ id, name, checkCallback: checking => { const f = this.app.workspace.getActiveFile(); if (!f || f.extension !== "md") return false;
+        if (!checking) void this.openNoteIn(f.path, which); return true; } });
     this.addCommand({ id: "rescan", name: "Rescan the vault", callback: () => { void this.rescan(); } });
     this.addSettingTab(new MapsSettingTab(this.app, this));
     registerBases(this);   // the map as a view inside any base (Obsidian 1.10+)
@@ -75,6 +79,14 @@ export default class IdeaverseMapsPlugin extends Plugin {
     const leaf = existing || this.app.workspace.getLeaf("tab");
     if (!existing) await leaf.setViewState({ type: VIEW_TYPE, active: true });
     await this.app.workspace.revealLeaf(leaf);
+  }
+
+  /** Open the map (or bring it forward), wait for it to be ready, then show this note in that map's left editor. */
+  async openNoteIn(path, which) {
+    await this.openMap();
+    const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE)[0]; if (!leaf) return;
+    for (let t = 0; t < 600 && !(leaf.view instanceof MapView && leaf.view.map); t++) await new Promise(r => window.setTimeout(r, 100));   // a first scan can take a while
+    const v = leaf.view; if (v instanceof MapView && v.map && v.map.editIn) v.map.editIn(path, which);
   }
 
   async rescan() {
