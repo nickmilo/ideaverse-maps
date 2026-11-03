@@ -2464,10 +2464,10 @@ function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), tu
   if (turn && CKW === "sf") for (const it of CK.items) { it.x = P[3 * it.i]; it.y = P[3 * it.i + 1]; it.z = P[3 * it.i + 2]; }   /* the panels ride along with their stars */
   return CKSF; }
 // the Starfield world's layers, each a mini switch in the Cockpit's ⚙ (0.8.96, Nick: "add as mini-toggles for me to play with")
-const CKX_DEF = { haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
+const CKX_DEF = { rel: false, haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
-const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["haze", "Star haze"]];
+const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["rel", "Relevance scores"], ["haze", "Star haze"]];
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2484,6 +2484,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
   let rel = null; try { rel = relFrom(c); } catch (_) { rel = null; }
   const ids = [...new Set([...L.in, ...L.out])].filter(j => j !== c && vis[j]);
   const rv = j => rel ? rel[j] : N[j].score / 1e3;
+  { let mx = 0; for (const j of ids) mx = Math.max(mx, rv(j)); CK.relS = new Map(ids.map(j => [j, mx > 0 ? Math.round(100 * rv(j) / mx) : 0])); }   /* relevance shown as 100 for its most relevant link */
   ids.sort((a, b) => rv(b) - rv(a) || N[b].score - N[a].score);
   const shown = ids.slice(0, 40);
   /* the closest relative it doesn't yet link up or related to: the note to suggest */
@@ -2859,7 +2860,9 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
       if (more) { const mt = below > 0 ? `+${below} more  ↓` : "↑  back to the top"; g.globalAlpha = CK.hovS === -10 - sk ? 1 : .7; g.fillStyle = CK.hovS === -10 - sk ? "#ffffff" : "#8fa3bf"; g.fillText(mt, s < 0 ? 13 : -13, 0); const mw = g.measureText(mt).width + 16; g.restore(); CK.side.push([s < 0 ? x0_ : x0_ - mw, y - lh / 2, mw, lh, -10 - sk]); continue; }
       g.fillStyle = ckCol(N[j].level); g.beginPath(); g.arc(s < 0 ? 6 : -6, 0, 2.2, 0, 6.2832); g.fill();
       let tt = N[j].title; while (g.measureText(tt).width > 165 && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…"; if (merged) tt = (inS.has(j) && outS.has(j) ? "↔ " : inS.has(j) ? "← " : "→ ") + tt;
-      g.fillStyle = j === lockI ? "#ffcf5a" : tv > .3 ? "#ffffff" : "#c9d6ea"; g.fillText(tt, s < 0 ? 13 : -13, 0); const tw = g.measureText(tt).width + 16; g.restore();
+      g.fillStyle = j === lockI ? "#ffcf5a" : tv > .3 ? "#ffffff" : "#c9d6ea"; g.fillText(tt, s < 0 ? 13 : -13, 0); const tw = g.measureText(tt).width + 16;
+      if (CKX.rel && CKW === "sf" && CK.relS && CK.relS.has(j)) { const sc = String(CK.relS.get(j)); g.font = `600 9.5px ${css.mono || font}`; g.fillStyle = "#7fe7ff"; g.globalAlpha *= .85; g.fillText(sc, s < 0 ? tw + 2 : -tw - 2, 0); }   /* relevance, 100 = its most relevant link (0.8.120) */
+      g.restore();
       CK.side.push([s < 0 ? x0_ : x0_ - tw, y - lh / 2, tw, lh, j]);
       if (tv > .05) { const it = CK.items.find(o => o.i === j); if (it && it.zc > 8 && it.sw > 0) { g.save(); g.globalAlpha = .55 * tv; g.strokeStyle = ckCol(N[j].level); g.lineWidth = 1; g.setLineDash([3, 4]); g.lineDashOffset = -win.performance.now() / 40;
           g.beginPath(); g.moveTo(x + (s < 0 ? tw * (1 + .24 * tv) : -tw * (1 + .24 * tv)), ym); g.lineTo(it.sx + (s < 0 ? -it.sw / 2 : it.sw / 2), it.sy); g.stroke(); g.restore(); } } }
