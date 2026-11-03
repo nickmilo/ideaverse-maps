@@ -2686,7 +2686,7 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
   on(doc, "keydown", e => { if (!CK.on || dead || !host.isActive()) return; const a = doc.activeElement; if (a && a !== doc.body && (a.closest && (a.closest(".ivm-card") || a.closest("input,textarea,[contenteditable]")) || /INPUT|TEXTAREA/.test(a.tagName))) return; if (a && a !== doc.body && !root.contains(a)) return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; let used = true;
     /* keys (0.8.154, Nick): E forward, D back, S F turn, W R look up and down, A G orbit round the note; I O only links in or out */
-    if (["e", "d", "s", "f", "w", "r", "a", "g", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(k)) { CK.keys.add(k); if (CK.wd) ckWanderStop(); if (k !== "w" && k !== "r") CK.auto = false; }
+    if (["e", "d", "s", "f", "w", "r", "a", "g", "q", "z", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(k)) { CK.keys.add(k); if (CK.wd) ckWanderStop(); if (k !== "w" && k !== "r") CK.auto = false; }
     else if (k === "i") CK.only = CK.only === "in" ? "" : "in";
     else if (k === "o") CK.only = CK.only === "out" ? "" : "out";
     else if (k === " " || k === "Enter") { if (CK.lock >= 0) CK.auto = true; }
@@ -2835,9 +2835,14 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   if (K.has("w")) { CK.pitch -= turn; CK.auto = false; }
   if (K.has("r")) { CK.pitch += turn; CK.auto = false; }
   /* A and G orbit: the ship swings round the note it's on (or the one locked, in the links world), keeping its distance and its eyes on it */
-  if (K.has("a") || K.has("g")) { CK.auto = false; CK.settle = null; let T = null; if (CKW === "sf" && CK.c >= 0) { const P = ckSF().P; T = [P[3 * CK.c], P[3 * CK.c + 1], P[3 * CK.c + 2]]; } else { const it = CK.items[CK.lock]; if (it) T = [it.x, it.y, it.z]; }
-    if (T) { const da = (K.has("a") ? -1 : 1) * .9 * dt, dx = CK.P[0] - T[0], dz = CK.P[2] - T[2], ca = Math.cos(da), sa = Math.sin(da); CK.P[0] = T[0] + dx * ca - dz * sa; CK.P[2] = T[2] + dx * sa + dz * ca;
-      const [ty_, tp_] = ckLook(CK.P, T); ckUpright(); CK.yaw += Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)) * Math.min(1, dt * 8); CK.pitch += (tp_ - CK.pitch) * Math.min(1, dt * 8); } }   /* 360° (0.8.97, Nick): no limit on looking up or down; loop right over */
+  if (K.has("a") || K.has("g") || K.has("q") || K.has("z")) { CK.auto = false; CK.settle = null; let T = null; if (CKW === "sf" && CK.c >= 0) { const P = ckSF().P; T = [P[3 * CK.c], P[3 * CK.c + 1], P[3 * CK.c + 2]]; } else { const it = CK.items[CK.lock]; if (it) T = [it.x, it.y, it.z]; }
+    if (T && (K.has("a") || K.has("g"))) { const da = (K.has("a") ? -1 : 1) * .9 * dt, dx = CK.P[0] - T[0], dz = CK.P[2] - T[2], ca = Math.cos(da), sa = Math.sin(da); CK.P[0] = T[0] + dx * ca - dz * sa; CK.P[2] = T[2] + dx * sa + dz * ca; }
+    /* Q and Z orbit over and under (0.8.155, Nick): round the note's side axis, right over the top or under the bottom and on round */
+    if (T && (K.has("q") || K.has("z"))) { const v = [CK.P[0] - T[0], CK.P[1] - T[1], CK.P[2] - T[2]], fw = ckFwd(); let ax = [fw[2], 0, -fw[0]]; const la = Math.hypot(...ax) || 1; ax = ax.map(q_ => q_ / la);
+      const th = (K.has("q") ? -1 : 1) * .9 * dt, c_ = Math.cos(th), s_ = Math.sin(th), dt_ = ax[0] * v[0] + ax[1] * v[1] + ax[2] * v[2], cr = [ax[1] * v[2] - ax[2] * v[1], ax[2] * v[0] - ax[0] * v[2], ax[0] * v[1] - ax[1] * v[0]];
+      for (let q_ = 0; q_ < 3; q_++) CK.P[q_] = T[q_] + v[q_] * c_ + cr[q_] * s_ + ax[q_] * dt_ * (1 - c_); }
+    if (T) {
+      const [ty_, tp_] = ckLook(CK.P, T); if (!K.has("q") && !K.has("z")) ckUpright(); CK.yaw += Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)) * Math.min(1, dt * 8); CK.pitch += (tp_ - CK.pitch) * Math.min(1, dt * 8); } }   /* 360° (0.8.97, Nick): no limit on looking up or down; loop right over */
   const VMAX = CKW === "sf" ? 3200 : 1100; if (K.has("e") || K.has("ArrowUp")) CK.v = Math.min(VMAX, CK.v + (CKW === "sf" ? 1600 : 800) * dt);   /* back to the speed before 0.8.149 (0.8.152, Nick) */   /* full speed back for the open space between galaxies (0.8.151, Nick); gentle near them */   /* gentler by hand (0.8.150, Nick: "speeds by too fast") */
   else if (K.has("d") || K.has("ArrowDown")) CK.v = Math.max(-400, CK.v - 800 * dt);
   else if (!CK.auto) CK.v *= Math.pow(.06, dt);   /* off the gas, the ship slows sooner (0.8.150) */
@@ -3068,7 +3073,7 @@ EXP.cockpit = {
   notes(){}, pick: () => -1, ownLabels: true,
   get about(){ return [
       "The note you pick is the cockpit. Its links hang ahead of you as panels: links in on the left, links out on the right, links both ways straight ahead. What it links up to sits above the horizon, what sits below it beneath. The strongest links (by relevance from this note) are nearest.",
-      "Fly: E or ↑ forward, D or ↓ back, S F or ← → to turn, W R to look up and down, A G to orbit round the note. On a trackpad, two fingers steer and a pinch flies; or drag to steer. A mouse wheel flies. Fly into a panel and that note becomes the cockpit.",
+      "Fly: E or ↑ forward, D or ↓ back, S F or ← → to turn, W R to look up and down, A G to orbit round the note, Q Z to orbit over and under it. On a trackpad, two fingers steer and a pinch flies; or drag to steer. A mouse wheel flies. Fly into a panel and that note becomes the cockpit.",
       "Click a panel to lock on; click it again, double-click, or press Space to fly there on autopilot. Tab moves the lock. B flies back.",
       "I shows only the links in, O only the links out (press again for both); the names down each side list them. The two scopes, as in X-Wing: the left one shows every panel ahead of you, the right one every panel behind you; the middle is dead ahead (or dead behind), the rim is square to your side.",
       "The message line names the closest relative it doesn't yet link up or related to; it starts locked on. The centre display: level, rank, score, links, and what the next level takes. The left dial is links made this year, the right one its age. Eject unpins the editor."
@@ -6930,7 +6935,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKFRAME; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Cockpit frame" });
       c_.onchange = () => { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); }; }
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
-      for (const [k_, v_] of [["E D  ↑ ↓", "forward, back"], ["S F  ← →", "turn"], ["W R", "look up, down"], ["A G", "orbit left, right round the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
+      for (const [k_, v_] of [["E D  ↑ ↓", "forward, back"], ["S F  ← →", "turn"], ["W R", "look up, down"], ["A G", "orbit left, right round the note"], ["Q Z", "orbit over, under the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
         const r_ = box.createDiv({ cls: "ckkey" }); r_.createEl("kbd", { text: k_ }); r_.createSpan({ text: v_ }); } }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "cockpit"; }; }
   // Compass: Relevance
