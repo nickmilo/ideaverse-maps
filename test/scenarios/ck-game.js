@@ -8,6 +8,6 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.locator('.ivm #q').fill('Pace Layers'); await sleep(700); await page.keyboard.press('Enter'); await sleep(3000); await page.evaluate(() => document.activeElement && document.activeElement.blur());
   await page.mouse.move(5, 950); await sleep(1000); await shot('g0');
   for (let r = 0; r < 4; r++) { const txt = await page.evaluate(() => (document.querySelector('.ivm .ckgame .ckgtx') || {}).textContent); console.log('Q:', txt);
-    await page.keyboard.press(r % 2 ? '2' : '1'); await sleep(450); await shot('g' + (r + 1) + 'a'); console.log('A:', await page.evaluate(() => document.querySelector('.ivm .ckgame .ckghd').textContent)); await sleep(2800); await shot('g' + (r + 1) + 'b'); }
+    await page.keyboard.press(r % 2 ? '2' : '1'); await sleep(1500); await shot('g' + (r + 1) + 'a'); console.log('A:', await page.evaluate(() => document.querySelector('.ivm .ckgame .ckghd').textContent)); await sleep(9000); await shot('g' + (r + 1) + 'b'); console.log('now at', await page.evaluate(() => document.querySelector('.ivm .ckgame .ckghd').textContent)); }
   console.log('errors:', errs.join(' | ') || 'none');
 };

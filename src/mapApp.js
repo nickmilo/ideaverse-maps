@@ -2734,7 +2734,7 @@ function ckGameNew(){ const c = CK.c, G = CK.gEl; if (!G) return; if (!CKG || c 
   const pool = CK.items.map(it => it.i).filter(j => j !== c), near = []; for (let k_ = 0; k_ < 400 && near.length < 30; k_++) { const j = Math.floor(Math.random() * n); if (vis[j] && j !== c && N[j].level >= 2) near.push(j); }
   const tries = []; for (let k_ = 0; k_ < 30; k_++) { const L_ = Math.random() < .5 && pool.length ? pool : near.length ? near : pool, j = L_[Math.floor(Math.random() * L_.length)]; if (j == null) continue;
     const A = N[c].title, B = N[j].title, types = [
-      [`“${A}” links to “${B}”.`, out[c].includes(j)], [`“${B}” links to “${A}”.`, out[j].includes(c)],
+      [`“${A}” and “${B}” are linked.`, out[c].includes(j) || out[j].includes(c)],   /* either direction counts (0.8.110, Nick: "if a note is linked, it still should work") */
       [`“${B}” is a higher level than “${A}”.`, N[j].level > N[c].level], [`“${B}” lives in the same folder as “${A}”.`, ckFolder(j) === ckFolder(c)] ];
     if (TVD[j] > 0 && TVD[c] > 0 && Math.abs(TVD[j] - TVD[c]) > 864e5 * 20) types.push([`“${B}” was written before “${A}”.`, TVD[j] < TVD[c]]);
     const [s_, v_] = types[Math.floor(Math.random() * types.length)]; tries.push({ j, s: s_, v: !!v_ }); }
