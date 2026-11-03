@@ -1504,3 +1504,4 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 /* no focus box round the text in the preview editor (0.8.138, Nick) */
 .ivm .ivm-cockpit .ivm-card.ivm-card.ckedit :is(.cm-editor,.cm-scroller,.cm-content,.cm-sizer,.markdown-source-view,.view-content,.workspace-leaf,.workspace-leaf-content,.workspace-split),
 .ivm .ivm-cockpit .ivm-card.ivm-card.ckedit :is(.cm-editor,.cm-scroller,.cm-content,.cm-sizer,.markdown-source-view,.view-content,.workspace-leaf,.workspace-leaf-content,.workspace-split):is(:focus,:focus-visible,:focus-within){outline:none;box-shadow:none;border-color:transparent}
+.ivm.ivm-land header,.ivm.ivm-land .trail{display:none}

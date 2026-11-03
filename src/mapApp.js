@@ -2636,7 +2636,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
       g.globalAlpha = a_ * .9; g.strokeStyle = "#ffffff"; g.lineWidth = 1; g.beginPath(); g.moveTo(p_[0] - L_, p_[1]); g.lineTo(p_[0] + L_, p_[1]); g.moveTo(p_[0], p_[1] - L_); g.lineTo(p_[0], p_[1] + L_); g.stroke();
       g.fillStyle = "#ffffff"; g.beginPath(); g.arc(p_[0], p_[1], 1.6 * a_ + .4, 0, 6.2832); g.fill(); } g.globalAlpha = 1; }
   // the overview map (0.8.94), when it's on in Starfield: the whole sky seen from above, where you are and which way you're heading
-  if (CKX.mini) { const bw = 140, bh = 100, bx = W - bw - 12, by = VH - bh - 12;   /* bottom right (0.8.131, Nick) */   /* under the Back button */ let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  if (CKX.mini) { const nar = W < 700 || VH < 520, bw = nar ? 104 : 140, bh = nar ? 74 : 100, bx = W - bw - 12, by = nar ? (VH < 520 && W >= 700 ? VH - bh - 8 : 50) : VH - bh - 12;   /* a narrow pane or phone: top right, clear of the scopes (0.8.140) */   /* bottom right (0.8.131, Nick) */   /* under the Back button */ let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const B of sf.B) { x0 = Math.min(x0, B.x - B.r); x1 = Math.max(x1, B.x + B.r); y0 = Math.min(y0, B.y - B.r); y1 = Math.max(y1, B.y + B.r); }
     const s_ = Math.min((bw - 12) / Math.max(1, x1 - x0), (bh - 12) / Math.max(1, y1 - y0)), mx = x => bx + 6 + (x - x0) * s_ + ((bw - 12) - (x1 - x0) * s_) / 2, my = y => by + 6 + (y - y0) * s_ + ((bh - 12) - (y1 - y0) * s_) / 2;
     g.globalAlpha = 1; g.fillStyle = "rgba(4,5,12,.82)"; g.strokeStyle = "rgba(160,180,255,.28)"; g.beginPath(); g.roundRect(bx, by, bw, bh, 10); g.fill(); g.stroke();
@@ -2744,7 +2744,7 @@ function ckPreview(W, VH){ if (CK.pvOver && CK.pvEl && !CK.pvEl.hidden && CK.pvP
   if (hj >= 0 && hj !== CK.c) { tj = hj; px = ax; py = ay; inV = true; }
   if (!inV) { if (CK.pvEl) CK.pvEl.hidden = true; ckPvMany(W, VH, null); return; }
   const p = N[tj].path; if (!CK.pvEl || CK.pvP !== p) { if (CK.pvEl) CK.pvEl.remove(); const e = ckPvMake(p, N[tj].title); CK.pvEl = e; CK.pvP = p; }
-  const pw = 230, ph = 140, x = side > 0 ? Math.min(W - pw - 8, px + 64) : side < 0 ? Math.max(8, px - 64 - pw) : px + 24 + pw > W - 8 ? px - 24 - pw : px + 24, y = Math.max(8, Math.min(VH - ph - 8, py - ph / 2));
+  const pw = 230, ph = Math.min(140, VH - 24), x = side > 0 ? Math.min(W - pw - 8, px + 64) : side < 0 ? Math.max(8, px - 64 - pw) : px + 24 + pw > W - 8 ? px - 24 - pw : px + 24, y = Math.max(8, Math.min(VH - ph - 8, py - ph / 2));
   CK.pvEl.hidden = false; CK.pvEl.setCssProps({ "--pvx": Math.round(x) + "px", "--pvy": Math.round(y) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); CK.pvEl.addClass("ckpv1"); ckPvMany(W, VH, [x, y, pw, ph, tj]); }
 function ckSideHit(x, y){ for (const [hx, hy, hw, hh, j] of CK.side) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; }
 function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0 && CKW === "sf") { const P = ckSF().P, inn_ = CK.inL.includes(j), out_ = CK.outL.includes(j);
@@ -2903,8 +2903,8 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   /* one list down the right, always (0.8.139, Nick): each note once, ← in, → out, ↔ both; up links first, then by relevance */
   const merged = (() => { const all = [...new Set([...CK.inL, ...CK.outL])], upS2 = new Set(CK.upL || []), rs = CK.relS || new Map(); return all.sort((a, b) => (upS2.has(b) ? 1 : 0) - (upS2.has(a) ? 1 : 0) || (rs.get(b) || 0) - (rs.get(a) || 0) || N[b].score - N[a].score); })();
   CK.sideLists = merged ? [null, merged] : [CK.inL, CK.outL];
-  for (const [s, list0, lab] of merged ? [[1, merged, "LINKS"]] : [[-1, CK.inL, "IN"], [1, CK.outL, "OUT"]]) { const n_ = list0.length; if (!n_) continue; const maxR = Math.max(12, Math.floor((VH - 300) / 13))   /* clear of the scopes and overview map below */, cap = n_ <= maxR ? n_ : maxR - 1, sk = s < 0 ? 0 : 1; CK.sideCap[sk] = cap; const off = Math.round(CK.sOff[sk] = Math.max(0, Math.min(n_ - cap, CK.sOff[sk] || 0))), list = list0.slice(off, off + cap), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* scrolls (0.8.115): wheel over the names, or click the last line */ Rx = W * .5, Ry = VH * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))), lh = Math.min(15.5, (VH - 90) / (rows + 1));   /* a busy note's list curves less, so more names fit (0.8.139) */
-    const dim = CK.only && CK.only !== (s < 0 ? "in" : "out"); g.save(); g.font = `500 11px ${font}`; g.textBaseline = "middle";
+  for (const [s, list0, lab] of merged ? [[1, merged, "LINKS"]] : [[-1, CK.inL, "IN"], [1, CK.outL, "OUT"]]) { const n_ = list0.length; if (!n_) continue; const shortV = VH < 520, maxR = shortV ? Math.max(3, Math.floor((VH - 70) / 12)) : Math.max(12, Math.floor((VH - (W < 700 ? 250 : 300)) / (W < 700 ? 12 : 13)))   /* a short view (a phone on its side) keeps names 12 px apart and shows fewer (0.8.142) */   /* clear of the scopes and overview map below */, cap = n_ <= maxR ? n_ : maxR - 1, sk = s < 0 ? 0 : 1; CK.sideCap[sk] = cap; const off = Math.round(CK.sOff[sk] = Math.max(0, Math.min(n_ - cap, CK.sOff[sk] || 0))), list = list0.slice(off, off + cap), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* scrolls (0.8.115): wheel over the names, or click the last line */ Rx = W * .5, Ry = VH * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))), lh = shortV ? 12 : Math.min(W < 700 ? 13 : 15.5, (VH - 90) / (rows + 1));   /* a busy note's list curves less, so more names fit (0.8.139) */
+    const dim = CK.only && CK.only !== (s < 0 ? "in" : "out"); g.save(); g.font = `500 ${W < 700 ? 9.5 : 11}px ${font}`; g.textBaseline = "middle";
     const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [W / 2 + s * Rx * Math.sqrt(Math.max(0, 1 - u * u)) - s * 34, y, Math.asin(Math.max(-1, Math.min(1, u))) * .3]; };
     /* hover (Nick: "a dynamic feel"): the name under the pointer eases in toward the middle and grows, its neighbours make way, and a tether runs to its panel */
     const rH = CK.hovS >= 0 ? list.indexOf(CK.hovS) : -1, tH = rH >= 0 && rH < cap ? (CK.hv.get(CK.hovS) || 0) : 0;
@@ -2917,7 +2917,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
         g.save(); g.globalAlpha = .2 * tv; g.fillStyle = ckCol(N[j].level); g.beginPath(); g.roundRect(s < 0 ? 1 : -w_ - 1, -8, w_, 16, 8); g.fill(); g.restore(); }
       if (more) { const mt = below > 0 ? `+${below} more  ↓` : "↑  back to the top"; g.globalAlpha = CK.hovS === -10 - sk ? 1 : .7; g.fillStyle = CK.hovS === -10 - sk ? "#ffffff" : "#8fa3bf"; g.fillText(mt, s < 0 ? 13 : -13, 0); const mw = g.measureText(mt).width + 16; g.restore(); CK.side.push([s < 0 ? x0_ : x0_ - mw, y - lh / 2, mw, lh, -10 - sk]); continue; }
       g.fillStyle = ckCol(N[j].level); g.beginPath(); g.arc(s < 0 ? 6 : -6, 0, 2.2, 0, 6.2832); g.fill();
-      let tt = N[j].title; while (g.measureText(tt).width > 165 && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…"; if (merged) tt = (inS.has(j) && outS.has(j) ? "↔ " : inS.has(j) ? "← " : "→ ") + tt;
+      let tt = N[j].title; while (g.measureText(tt).width > (W < 700 ? 150 : 165) && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…"; if (merged) tt = (inS.has(j) && outS.has(j) ? "↔ " : inS.has(j) ? "← " : "→ ") + tt;
       g.fillStyle = j === lockI ? "#ffcf5a" : tv > .3 ? "#ffffff" : "#c9d6ea"; g.fillText(tt, s < 0 ? 13 : -13, 0); const tw = g.measureText(tt).width + 16;
       if (CKX.rel && CKW === "sf" && CK.relS && CK.relS.has(j)) { const sc = String(CK.relS.get(j)); g.font = `600 9.5px ${css.mono || font}`; g.fillStyle = "#7fe7ff"; g.globalAlpha *= .85; g.fillText(sc, s < 0 ? tw + 2 : -tw - 2, 0); }   /* relevance, 100 = its most relevant link (0.8.120) */
       g.restore();
@@ -3008,7 +3008,7 @@ function ckConsole(g, W, H, VH, cons, font){ const c = CK.c, fl = !CKFRAME; if (
   g.fillStyle = "#0a0f1c"; g.beginPath(); g.moveTo(0, VH); g.lineTo(W * .12, VH); g.lineTo(0, VH - cons * .9); g.closePath(); g.fill(); g.beginPath(); g.moveTo(W, VH); g.lineTo(W * .88, VH); g.lineTo(W, VH - cons * .9); g.closePath(); g.fill(); }
   if (c < 0) return; const d = N[c], L = stripLists(c), R = Math.min(cons * .36, 54), sy_ = VH + cons * .44;
   CK.scDots = []; CK.scHovAt = null;
-  { const L0 = ckLeftEd(), span = W - L0, m_ = Math.max(R + 18, span * .16, CKW === "sf" && CKX.mini ? 140 + 24 + R : 0);   /* clear of the overview map in the corner */   /* both scopes and the card centred on the free space (0.8.127) */
+  { const L0 = ckLeftEd(), span = W - L0, m_ = W < 700 ? R + 12 : Math.max(R + 18, span * .16, CKW === "sf" && CKX.mini ? 140 + 24 + R : 0);   /* clear of the overview map in the corner */   /* both scopes and the card centred on the free space (0.8.127) */
     ckScope3(g, L0 + m_, sy_, R, true, font); ckScope3(g, W - m_, sy_, R, false, font); }
   /* a scope dot under the pointer names itself (0.8.112, Nick): click to lock, again to fly */
   if (CK.scHovAt && CK.scHov >= 0) { const dN = N[CK.scHov], [hx, hy] = CK.scHovAt; let tt = dN.title; g.font = `600 11px ${font}`; while (tt.length > 4 && g.measureText(tt).width > 230) tt = tt.slice(0, -2); if (tt !== dN.title) tt += "…";
@@ -3017,7 +3017,7 @@ function ckConsole(g, W, H, VH, cons, font){ const c = CK.c, fl = !CKFRAME; if (
   /* the centre display */
   const LXc = ckLeftEd(), bw = fl ? Math.min((W - LXc) * .42, 430) : Math.min(W * .46, 520), bx = (LXc + W) / 2 - bw / 2, by = VH + (fl ? 4 : 10), bh = cons - (fl ? 8 : 20);
   if (CKX.mirror) { ckMirror(g, bx, by, bw, bh, font); ckEjectSync(); return; }
-  if (!CKX.card) { ckEjectSync(); return; }   /* the note card can be switched off (0.8.128) */
+  if (!CKX.card || W < 700 || VH < 520) { ckEjectSync(); return; }   /* on a phone the card would sit on the scopes and the list (0.8.140) */   /* the note card can be switched off (0.8.128) */
   if (fl) { g.fillStyle = "rgba(8,14,28,.72)"; g.beginPath(); g.roundRect(bx, by, bw, bh, 8); g.fill(); g.strokeStyle = "rgba(120,170,255,.28)"; g.stroke(); } else { g.fillStyle = "rgba(14,24,44,.95)"; g.fillRect(bx, by, bw, bh); g.strokeStyle = "rgba(120,170,255,.35)"; g.strokeRect(bx + .5, by + .5, bw - 1, bh - 1); }
   const col = ckCol(d.level); g.fillStyle = col; if (fl) { g.beginPath(); g.roundRect(bx, by + 6, 3, bh - 12, 2); g.fill(); } else g.fillRect(bx, by, 3, bh); g.textBaseline = "top";
   const tx = bx + 14; let t = d.title; g.font = `700 ${Math.min(17, bh * .17)}px ${font}`; g.fillStyle = "#eef3ff"; while (t.length > 3 && g.measureText(t).width > bw - 28) t = t.slice(0, -2); if (t !== d.title) t += "…"; g.fillText(t, tx, by + 9);
@@ -6569,6 +6569,9 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
   for (const [b, ic] of [[hb, "chevron-up"], [tab, "chevron-down"]]) { b.empty(); setIcon(b, ic); const sv = b.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } }
   hb.onclick = () => flip(true); tab.onclick = () => flip(false);
   set(pref("iv-hcol", false) === true); }
+// a phone on its side (0.8.142, Nick: landscape "really fails"): the top bar and the trail step aside so the map gets the height; turn it back upright and they return
+{ const land = () => { const on_ = Platform.isMobile && win.innerWidth > win.innerHeight && win.innerHeight < 560; if (root.classList.contains("ivm-land") !== on_) { root.classList.toggle("ivm-land", on_); win.setTimeout(() => { if (!dead) { resize(); draw(); } }, 60); } };
+  on(win, "resize", land); land(); }
 
 // watermarks on the map: Linking Your Thinking at the bottom center, and (desktop) the plugin's name at the top left. Neither takes clicks.
 { const m = cv.parentElement;
