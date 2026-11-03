@@ -1983,7 +1983,9 @@ let CMPREL = pref("iv-cmprel", false) === true, CMPPUSH = pref("iv-cmppush", fal
 let RADJ = null;
 function radj(){ if (RADJ) return RADJ; const nb = Array.from({length:n}, () => []), wt = Array.from({length:n}, () => []), sw = new Float64Array(n);
   const wOf = t => t === 1 || t === 4 ? 2 : t === 5 ? .6 : t === 2 ? .5 : 1;
-  for (const [a, b, t] of E) { if (t === 3 || ARCH[a] || ARCH[b] || a === b) continue; const w = wOf(t); nb[a].push(b); wt[a].push(w); nb[b].push(a); wt[b].push(w); sw[a] += w; sw[b] += w; }
+  /* one weight per pair of notes (0.8.120): every link between them added up, in either direction, and ×1.25 more when they link both ways (Nick: "a very clear signal") */
+  const P_ = new Map(); for (const [a, b, t] of E) { if (t === 3 || ARCH[a] || ARCH[b] || a === b) continue; const lo = Math.min(a, b), hi = Math.max(a, b), k_ = lo * n + hi; let o = P_.get(k_); if (!o) P_.set(k_, o = { lo, hi, w: 0, f: 0 }); o.w += wOf(t); o.f |= a === lo ? 1 : 2; }
+  for (const o of P_.values()) { const w = o.w * (o.f === 3 ? 1.25 : 1); nb[o.lo].push(o.hi); wt[o.lo].push(w); nb[o.hi].push(o.lo); wt[o.hi].push(w); sw[o.lo] += w; sw[o.hi] += w; }
   return (RADJ = { nb, wt, sw }); }
 function relFrom(a){ const { nb, wt, sw } = radj(), al = .2; let x = new Float64Array(n), y = new Float64Array(n); x[a] = 1;
   for (let it = 0; it < 24; it++) { y.fill(0); y[a] = al;
