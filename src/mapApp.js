@@ -2720,7 +2720,7 @@ async function ckEdit(p, x, y){ if (!host.editCard) return; ckEditClose(); const
   const body = el.createDiv({ cls: "cardbody" }); for (const ty of ["pointerdown", "wheel", "click"]) el.addEventListener(ty, ev => ev.stopPropagation());
   el.addEventListener("keydown", ev => { if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); ckEditClose(); } }, true);
   try { edLook(el); } catch (_) { /* theme only */ }
-  const ed = host.editCard(); body.appendChild(ed.el); CK.edit = { el, ed, p }; await ed.open(p); ed.resize(); try { ed.el.querySelector(".cm-content")?.focus(); } catch (_) { /* fine */ } }
+  const ed = host.editCard(); body.appendChild(ed.el); CK.edit = { el, ed, p }; await ed.open(p); ed.resize(); propKeep(el); try { ed.el.querySelector(".cm-content")?.focus(); } catch (_) { /* fine */ } }
 function ckEditClose(){ const E_ = CK.edit; if (!E_) return; CK.edit = null; try { E_.ed.close(); } catch (_) { /* gone */ } E_.el.remove();
   CK.pvOver = null;   /* previews are rebuilt, so they show what was written */
   if (CK.pvEl) { CK.pvEl.remove(); CK.pvEl = null; CK.pvP = null; } if (CK.pvM) { for (const e of CK.pvM.values()) e.remove(); CK.pvM.clear(); } }
@@ -5151,6 +5151,12 @@ function edRect(kind){ const vw = W - sideW();
   if (kind === "right") { const w = edW("right", .3, 320, 520, vw); return { x: vw - w - 8, y: 8, w, h: H - 16 }; }
   const R = EDS && !EDS.right.el.hidden ? edRect("right").x - 8 : vw, L = EDS && !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 8 : 0;   // the centre card sits between the side editors
   const fw = R - L, cw = clampN(fw*.42, 360, 640), y = Math.round(H*.33); return { x: Math.round(L + (fw - cw)/2), y, w: cw, h: H - y - 12 }; }
+// the editors remember whether you folded the properties (0.8.166, Nick: "i collapsed but then in the next note it was open again")
+let PROPCOL = pref("iv-propcol", false) === true;
+function propKeep(el){ const go = (k_) => { const mc = el.querySelector(".metadata-container"); if (!mc) { if (k_ < 8) win.setTimeout(() => go(k_ + 1), 60); return; }
+    if (!mc.dataset.ivw) { mc.dataset.ivw = "1"; const hd = mc.querySelector(".metadata-properties-heading"); if (hd) hd.addEventListener("click", () => win.setTimeout(() => { PROPCOL = mc.classList.contains("is-collapsed"); save("iv-propcol", PROPCOL); }, 30)); }
+    if (mc.classList.contains("is-collapsed") !== PROPCOL) { const hd = mc.querySelector(".metadata-properties-heading"); if (hd) hd.click(); } };
+  go(0); }
 function makeEd(kind){
   const el = doc.createElement("div"); el.className = "ivm-card ivm-card-" + kind; el.hidden = true; root.after(el);
   const hd = el.createDiv({ cls: "cardhd" }), t = hd.createSpan({ cls: "cardt" }), ob = hd.createEl("button", { cls: "cardbtn cardopen", attr: { type: "button", "aria-label": "Open in editor" } }), xb = hd.createEl("button", { cls: "cardbtn cardx", text: "×", attr: { type: "button", "aria-description": "Close" } });
@@ -5178,7 +5184,7 @@ function makeEd(kind){
     close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; o.tabSync(); if (o.ed) { o.ed.close(); o.ed = null; } edFree(); },
     async open(i){ const p = N[i].path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
       const nw = o.path !== p; o.path = p; t.setText(N[i].title); if (nw) { o.open_ = ""; o.sub_ = ""; } fillStrip(o, i); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
-      if (nw) { await o.ed.open(p); o.ed.resize(); } } };
+      if (nw) { await o.ed.open(p); o.ed.resize(); propKeep(el); } } };
   // a side editor tucks away from anywhere on its header but its buttons, like the legend (0.8.31); its inner edge drags to resize
   if (side) { hd.classList.add("cardhd-tuck"); hd.title = "Tuck away"; hd.addEventListener("click", e => { if (!(e.target instanceof Element) || e.target.closest("button")) return; o.collapse(true); });
     const gr = el.createDiv({ cls: "cardgrip cardgrip-" + kind, attr: { "aria-label": "Drag to resize" } }); let drag_ = null;
