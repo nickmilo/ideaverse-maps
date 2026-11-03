@@ -2462,7 +2462,7 @@ function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), tu
   if (turn && CKW === "sf") for (const it of CK.items) { it.x = P[3 * it.i]; it.y = P[3 * it.i + 1]; it.z = P[3 * it.i + 2]; }   /* the panels ride along with their stars */
   return CKSF; }
 // the Starfield world's layers, each a mini switch in the Cockpit's ⚙ (0.8.96, Nick: "add as mini-toggles for me to play with")
-const CKX_DEF = { haze: true, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
+const CKX_DEF = { haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
 const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["haze", "Star haze"]];
@@ -2517,7 +2517,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     const near = Math.min(1, Math.max(.15, dist / (B.r * 3)));   /* inside a galaxy its glow thins so the stars stay clear */
     /* Starfield's own settings carry over (0.8.92): Galaxy glow (Clear keeps only a faint tint, no white cores), and Star Chart's folder gas */
     const GM = { clear: .4, soft: .75, normal: 1, bright: 1.4 }[sGlow] || .75;
-    if (chxSF("gas") && (b.kind === "gal" || b.kind === "dwarf")) { const gc = NEBC[chartFolder(b)]; if (gc) { lay.unshift([2.6, gc, .34]); lay.unshift([1.5, gc, .22]); } }   /* stronger, wider folder gas (0.8.107), closer to the map */
+    if (chxSF("gas") && (b.kind === "gal" || b.kind === "dwarf")) { const gc = NEBC[chartFolder(b)]; if (gc) { lay.unshift([3.0, gc, .55]); lay.unshift([1.7, gc, .4]); } }   /* stronger, wider folder gas (0.8.107), closer to the map */
     for (const [f_, col0, al0] of lay) { if (CLEAR() && (col0 === "#fff1d6" || col0 === "#ffffff")) continue; const col = col0, al = Math.min(1, al0 * GM); const R = B.r * f_; let a = null, bb = null;
       if (B.flat && p0) { const pu = pr(B.x + B.u[0] * R, B.y + B.u[1] * R, B.z + B.u[2] * R), pv = pr(B.x + B.v[0] * R, B.y + B.v[1] * R, B.z + B.v[2] * R); if (pu && pv) { a = [pu[0] - p0[0], pu[1] - p0[1]]; bb = [pv[0] - p0[0], pv[1] - p0[1]]; } }
       if (!a) { if (!p0) continue; const rs = F * R / p0[2]; a = [rs, 0]; bb = [0, rs]; }
