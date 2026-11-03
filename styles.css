@@ -1472,3 +1472,13 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .ckany .ckxgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px}
 .ivm .ckany .arnrow > .eol{font:600 10px var(--body);letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-right:8px}
 .ivm .ckany .ckplay{margin-left:8px;min-width:30px;padding:2px 8px;border-radius:12px;font:600 11px var(--body);cursor:pointer}
+.ivm .ivm-cockpit .ckgame{position:absolute;top:58px;left:50%;transform:translateX(-50%);width:min(560px,80%);padding:10px 14px 12px;border-radius:8px;background:rgba(8,14,30,.88);border:1px solid rgba(127,231,255,.45);color:#e9f1ff;font:500 13px var(--body);text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.ivm .ivm-cockpit .ckgame[hidden]{display:none}
+.ivm .ivm-cockpit .ckgame .ckghd{font:600 10px var(--body);letter-spacing:.12em;text-transform:uppercase;color:#7fe7ff;margin-bottom:6px}
+.ivm .ivm-cockpit .ckgame .ckgtx{font:600 14px var(--body);line-height:1.35;margin-bottom:10px}
+.ivm .ivm-cockpit .ckgame .ckgrow{display:flex;gap:10px;justify-content:center}
+.ivm .ivm-cockpit .ckgame button{min-width:110px;padding:5px 12px;border-radius:5px;font:600 12px var(--body);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:rgba(20,40,70,.9);color:#e9f1ff;border:1px solid rgba(127,231,255,.5);box-shadow:none}
+.ivm .ivm-cockpit .ckgame button.ckgt{border-color:rgba(125,255,176,.6)}
+.ivm .ivm-cockpit .ckgame button.ckgf{border-color:rgba(255,140,120,.6)}
+.ivm .ivm-cockpit .ckgame.ok{border-color:#7dffb0;box-shadow:0 0 22px rgba(125,255,176,.35)}
+.ivm .ivm-cockpit .ckgame.no{border-color:#ff8f78;box-shadow:0 0 22px rgba(255,140,120,.35)}

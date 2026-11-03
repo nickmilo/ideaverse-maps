@@ -2616,13 +2616,17 @@ function ckUpright(){ CK.pitch = Math.atan2(Math.sin(CK.pitch), Math.cos(CK.pitc
 function ckFwd(){ const cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch); return [sy_ * cp, sp, cy * cp]; }
 function ckCam(x, y, z){ const dx = x - CK.P[0], dy = y - CK.P[1], dz = z - CK.P[2], cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);
   const xc = cy * dx - sy_ * dz, z1 = sy_ * dx + cy * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1; return [xc, yc, zc]; }
-function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); CK.warp = 1; } }
+function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); CK.warp = 1; if (CKG && !CK.gj) win.setTimeout(() => { if (!dead && CKG && (!CK.gq || CK.gq.j === CK.c || !CK.items.find(it => it.i === CK.gq.j))) ckGameNew(); }, 700); } }
 function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.createElement("div"); el.className = "ivm-cockpit"; el.hidden = true; m.appendChild(el);
   const c_ = doc.createElement("canvas"); el.appendChild(c_); CK.el = el; CK.cv = c_; CK.g = c_.getContext("2d");
   const bar = el.createDiv({ cls: "ckbtns" });
   const back = bar.createEl("button", { text: "Back", attr: { type: "button", "aria-label": "Fly back to the note before (B)" } }); back.onclick = e => { e.stopPropagation(); ckBack(); };
   const ej = bar.createEl("button", { cls: "ckeject", text: "Eject", attr: { type: "button", "aria-label": "Unpin the editor's note" } }); ej.onclick = e => { e.stopPropagation(); try { if (TABS[TCUR] && TABS[TCUR].pin) tabPin(); } catch (_) { /* no editor */ } };
   CK.ej = ej;
+  // True or false (0.8.104): a card at the top of the view
+  { const gc = el.createDiv({ cls: "ckgame" }); gc.hidden = true; const hd = gc.createDiv({ cls: "ckghd" }), tx = gc.createDiv({ cls: "ckgtx" }), row = gc.createDiv({ cls: "ckgrow" });
+    const bt = row.createEl("button", { cls: "ckgt", text: "1 · True", attr: { type: "button" } }), bf = row.createEl("button", { cls: "ckgf", text: "2 · False", attr: { type: "button" } });
+    bt.onclick = e => { e.stopPropagation(); ckGameAnswer(true); }; bf.onclick = e => { e.stopPropagation(); ckGameAnswer(false); }; CK.gEl = { gc, hd, tx, bt, bf }; }
   for (let q = 0; q < 420; q++) CK.stars.push([hash("s" + q, 3) * 4000 - 2000, hash("s" + q, 5) * 4000 - 2000, hash("s" + q, 7) * 4000 - 2000, .3 + hash("s" + q, 9) * .7]);
   c_.addEventListener("pointerdown", e => { if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false }; c_.setPointerCapture(e.pointerId); });
   c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); CK.hovS = ckSideHit(e.offsetX, e.offsetY); CK.mouseOnPanel = h_ >= 0; CK.mouse = [e.offsetX, e.offsetY]; CK.mouseT = win.performance.now(); c_.classList.toggle("hot", h_ >= 0 || CK.hovS >= 0 || (CK.starHov || -1) >= 0); return; }
@@ -2646,6 +2650,7 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
     else if (k === "Tab") { const L_ = ckOrder(); if (L_.length) { const p_ = L_.indexOf(CK.lock); CK.lock = L_[(p_ + (e.shiftKey ? L_.length - 1 : 1)) % L_.length]; CK.auto = false; } }
     else if (k === "b" || k === "Backspace") ckBack();
     else if (k === "Escape") { CK.auto = false; CK.v = 0; if (CK.wd) ckWanderStop(); }
+    else if (CKG && (k === "1" || k === "2")) ckGameAnswer(k === "1");
     else if (k === "p") { if (typeof setPlaying === "function") setPlaying(!playing); else ckWander(!CK.wd); }
     else used = false;
     if (used) { e.preventDefault(); e.stopImmediatePropagation(); } }, { capture: true });
@@ -2690,11 +2695,33 @@ function ckWanderTick(dt){ const W_ = CK.wd, now = win.performance.now(), el = (
   if (W_.phase === "fly") { if (CK.c === W_.tgt) { W_.seen.add(W_.tgt); W_.phase = "linger"; W_.t0 = now; CK.wmsg = `Wander · ${N[W_.tgt].title}`; return; } if (!CK.auto || el > 22) { W_.phase = "jump"; W_.t0 = now; } } }
 const ckWanderStop = () => { if (typeof setPlaying === "function" && playing) setPlaying(false); else ckWander(false); };
 const ckDist = j => { const it = CK.items.find(o => o.i === j); return it ? Math.hypot(it.x - CK.P[0], it.y - CK.P[1], it.z - CK.P[2]) : 0; };
+// True or false (0.8.104, Nick: "a game, true/false which results in a hyperspace jump"): a statement about the note you're on and another note;
+// get it right and you jump to that note; wrong, and the ship shudders and shows the truth. Keys 1 (true) and 2 (false). The streak and your best are kept.
+let CKG = pref("iv-ckgame", false) === true, CKBEST = +pref("iv-ckbest", 0) || 0;
+const ckFolder = i => { const p = N[i].path; return p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : ""; };
+function ckGameNew(){ const c = CK.c, G = CK.gEl; if (!G) return; if (!CKG || c < 0) { G.gc.hidden = true; CK.gq = null; if (!CK.wd) CK.wmsg = ""; return; }
+  if (!CK.wd) CK.wmsg = "True or false: press 1 for true, 2 for false. Right answers jump you there.";
+  const pool = CK.items.map(it => it.i).filter(j => j !== c), near = []; for (let k_ = 0; k_ < 400 && near.length < 30; k_++) { const j = Math.floor(Math.random() * n); if (vis[j] && j !== c && N[j].level >= 2) near.push(j); }
+  const tries = []; for (let k_ = 0; k_ < 30; k_++) { const L_ = Math.random() < .5 && pool.length ? pool : near.length ? near : pool, j = L_[Math.floor(Math.random() * L_.length)]; if (j == null) continue;
+    const A = N[c].title, B = N[j].title, types = [
+      [`“${A}” links to “${B}”.`, out[c].includes(j)], [`“${B}” links to “${A}”.`, out[j].includes(c)],
+      [`“${B}” is a higher level than “${A}”.`, N[j].level > N[c].level], [`“${B}” lives in the same folder as “${A}”.`, ckFolder(j) === ckFolder(c)] ];
+    if (TVD[j] > 0 && TVD[c] > 0 && Math.abs(TVD[j] - TVD[c]) > 864e5 * 20) types.push([`“${B}” was written before “${A}”.`, TVD[j] < TVD[c]]);
+    const [s_, v_] = types[Math.floor(Math.random() * types.length)]; tries.push({ j, s: s_, v: !!v_ }); }
+  const want = Math.random() < .5, q = tries.find(x => x.v === want) || tries[0]; if (!q) return;
+  CK.gq = q; G.gc.hidden = false; G.gc.removeClass("ok"); G.gc.removeClass("no"); G.hd.setText(`True or false${CK.gs ? ` · streak ${CK.gs}` : ""}${CKBEST ? ` · best ${CKBEST}` : ""}`); G.tx.setText(q.s); G.bt.disabled = G.bf.disabled = false; ckLockNote(q.j); }
+function ckGameAnswer(v){ const q = CK.gq, G = CK.gEl; if (!q || !G || G.bt.disabled) return; G.bt.disabled = G.bf.disabled = true;
+  if (v === q.v) { CK.gs = (CK.gs || 0) + 1; if (CK.gs > CKBEST) { CKBEST = CK.gs; save("iv-ckbest", CKBEST); } G.gc.addClass("ok"); G.hd.setText(`Correct · streak ${CK.gs} · jumping to ${N[q.j].title}`); CK.gj = { j: q.j, t0: win.performance.now() }; }
+  else { CK.gs = 0; G.gc.addClass("no"); G.hd.setText(`Not quite: it's ${q.v ? "true" : "false"}`); CK.shake = 1; win.setTimeout(() => { if (!dead && CKG) ckGameNew(); }, 2200); } }
+function ckGameTick(dt){ if (CK.shake > 0) { CK.shake = Math.max(0, CK.shake - dt * 2.2); CK.roll += (Math.random() - .5) * .18 * CK.shake; CK.yaw += (Math.random() - .5) * .012 * CK.shake; }
+  const gj = CK.gj; if (!gj) return; const el = (win.performance.now() - gj.t0) / 1000; CK.hyper = Math.min(1, el / .8); CK.v += (900 - CK.v) * Math.min(1, dt * 2);
+  if (el > 1) { CK.gj = null; CK.hyper = 0; CK.sfIn = false; if (vis[gj.j]) select(gj.j); win.setTimeout(ckSync, 0); CK.warp = 1; win.setTimeout(() => { if (!dead && CKG) ckGameNew(); }, 1300); } }
 function ckArrive(q){ const it = CK.items[q]; if (!it) return; CK.auto = false; CK.v = 0; const j = it.i; if (vis[j]) select(j); win.setTimeout(ckSync, 0); }
 function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK.last) / 1000); CK.last = t; RAF(ckTick);
   const K = CK.keys, turn = 1.3 * dt;
   if (CK.wd && (K.size || CK.drag)) ckWanderStop();
   if (CK.wd) ckWanderTick(dt);
+  ckGameTick(dt);
   if (K.has("a") || K.has("ArrowLeft")) { CK.yaw -= turn * ckUp(); CK.roll -= turn * 1.2; CK.auto = false; }
   if (K.has("d") || K.has("ArrowRight")) { CK.yaw += turn * ckUp(); CK.roll += turn * 1.2; CK.auto = false; }
   if (K.has("q")) { CK.pitch -= turn; CK.auto = false; }
@@ -6648,6 +6675,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         b.onclick = e => { e.stopPropagation(); CKWM = v; save("iv-ckwm", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (CK.wd) { ckWander(false); ckWander(true); } }; }
       const pb = sr.createEl("button", { cls: "ckplay", text: "▶", attr: { type: "button", "aria-label": "Start Wander Mode (P)" } }); pb.onclick = e => { e.stopPropagation(); setPlaying(!playing); };
       FUI.ckplay = () => { pb.setText(playing && view === "cockpit" ? "■" : "▶"); }; }
+    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKG; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "True or false (a game: right answers jump you there)" });
+      c_.onchange = () => { CKG = c_.checked; save("iv-ckgame", CKG); if (CKG && CK.wd) ckWanderStop(); CK.gs = 0; ckGameNew(); }; }
     // Starfield's layers, one mini switch each, two to a row (shown when the world is Starfield)
     { const box = fa.createDiv({ cls: "ckxsf" }), grid = box.createDiv({ cls: "ckxgrid" });
       for (const [k_, label] of CKX_LABELS) { const l_ = grid.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = !!CKX[k_]; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: label });
@@ -6656,7 +6685,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKFRAME; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Cockpit frame" });
       c_.onchange = () => { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); }; }
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
-      for (const [k_, v_] of [["W S  ↑ ↓", "forward, back"], ["A D  ← →", "turn"], ["Q E", "look up, down"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["F  R", "only links in, only links out"], ["P", "Wander Mode on or off"], ["Esc", "stop"]]) {
+      for (const [k_, v_] of [["W S  ↑ ↓", "forward, back"], ["A D  ← →", "turn"], ["Q E", "look up, down"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["F  R", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
         const r_ = box.createDiv({ cls: "ckkey" }); r_.createEl("kbd", { text: k_ }); r_.createSpan({ text: v_ }); } }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "cockpit"; }; }
   // Compass: Relevance
