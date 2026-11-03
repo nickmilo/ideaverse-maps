@@ -2497,7 +2497,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
   CK.lock = CK.items.findIndex(it => it.i === CK.sug); if (CK.lock < 0 && CK.items.length) CK.lock = 0;
   /* arriving in Starfield (0.8.105, Nick: "it should settle on a view that looks at it"): the ship eases back from the note and turns to face it, far enough that its links fit round it */
   if (sf) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]], ds = CK.items.filter(it => !it.none).map(it => Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2])).sort((a, b) => a - b);
-    const d75 = ds.length ? ds[Math.min(ds.length - 1, Math.floor(ds.length * .75))] : 600, D = Math.max(700, Math.min(5200, d75 * 1.5)), fw = ckFwd();
+    const d75 = ds.length ? ds[Math.min(ds.length - 1, Math.floor(ds.length * .75))] : 600, D = Math.max(450, Math.min(5200, d75 * (.9 + .6 * Math.min(1, ds.length / 120)))), fw = ckFwd();   /* closer in (0.8.106, Nick): about 0.9× for most notes, easing out to 1.5× for the biggest hubs */
     /* stand on the far side of the note from its nearer links, so the note and its links are both ahead */
     const nearL = CK.items.filter(it => !it.none && Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2]) <= d75); let C = [0, 0, 0]; for (const it of nearL) { C[0] += it.x; C[1] += it.y; C[2] += it.z; } if (nearL.length) C = C.map(v => v / nearL.length);
     const away = nearL.length ? [T[0] - C[0], T[1] - C[1], T[2] - C[2]] : [-fw[0], -fw[1], -fw[2]], la = Math.hypot(...away) || 1;
