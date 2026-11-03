@@ -2855,7 +2855,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
     /* hover (Nick: "a dynamic feel"): the name under the pointer eases in toward the middle and grows, its neighbours make way, and a tether runs to its panel */
     const rH = CK.hovS >= 0 ? list.indexOf(CK.hovS) : -1, tH = rH >= 0 && rH < cap ? (CK.hv.get(CK.hovS) || 0) : 0;
     for (let r = 0; r < rows; r++) { const [x0_, y, tl] = at(r), more = r === cap, j = more ? -1 : list[r];
-      let tv = 0; if (j >= 0) { const tgt = j === CK.hovS ? 1 : 0; tv = (CK.hv.get(j) || 0); tv += (tgt - tv) * .2; if (tv < .01 && !tgt) CK.hv.delete(j); else CK.hv.set(j, tv); }
+      let tv = 0; if (j >= 0) { const tgt = j === CK.hovS ? 1 : 0; tv = (CK.hv.get(j) || 0); tv += (tgt - tv) * .32;   /* about 40% quicker (0.8.130, Nick) */ if (tv < .01 && !tgt) CK.hv.delete(j); else CK.hv.set(j, tv); }
       const nb = rH >= 0 && r !== rH ? Math.max(0, 1 - Math.abs(r - rH) / 3) * tH : 0, x = x0_ - s * (16 * tv + 5 * nb), ym = y + (rH >= 0 && r !== rH ? Math.sign(r - rH) * nb * 3 : 0);
       g.save(); g.translate(x, ym); g.rotate((s < 0 ? -tl : tl) * (1 - tv)); g.scale(1 + .24 * tv, 1 + .24 * tv); g.textAlign = s < 0 ? "left" : "right";
       const dimJ = merged && j >= 0 && CK.only ? !(CK.only === "in" ? inS.has(j) : outS.has(j)) : dim; g.globalAlpha = Math.min(1, (dimJ ? .18 : .62 + .38 * tv) * (j >= 0 && j === lockI ? 1.5 : 1));
