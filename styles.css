@@ -1492,3 +1492,12 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .ivm-cockpit .ivm-card.ivm-pv.ckpv:hover{box-shadow:0 0 0 1.5px rgba(127,231,255,.7),0 4px 14px rgba(0,0,0,.3)}
 .ivm .ivm-cockpit .ivm-card.ckedit{position:absolute;left:var(--pvx);top:var(--pvy);width:var(--pvw);height:var(--pvh);z-index:5;display:flex;flex-direction:column;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.45),0 0 0 1.5px rgba(127,231,255,.6)}
 .ivm .ivm-cockpit .ivm-card.ckedit .cardbody{flex:1;min-height:0;overflow:auto}
+/* the live preview editor keeps the mini-preview's small type (0.8.137, Nick) */
+.ivm .ivm-cockpit .ivm-card.ckedit{--font-text-size:11px;--font-ui-small:10.5px;--font-ui-smaller:10px;--inline-title-size:15px;--h1-size:14px;--h2-size:13px;--h3-size:12px;--h4-size:11.5px;--h5-size:11px;--h6-size:11px;--line-height-normal:1.4;--file-margins:8px 12px;--metadata-property-height:22px;--metadata-label-font-size:10.5px;--metadata-input-font-size:10.5px}
+.ivm .ivm-cockpit .ivm-card.ckedit .cardhd .cardt{font-size:11.5px;font-weight:700}
+.ivm .ivm-cockpit .ivm-card.ckedit .cm-content,.ivm .ivm-cockpit .ivm-card.ckedit .markdown-source-view{font-size:11px}
+.ivm .ivm-cockpit .ivm-card.ckedit .inline-title{font-size:15px;margin-bottom:4px}
+.ivm .ivm-cockpit .ivm-card.ckedit :is(.metadata-property-key,.metadata-property-value,.metadata-add-button,.metadata-property-key-input,.metadata-input-text,.multi-select-pill,.metadata-input-longtext){font-size:10.5px}
+.ivm .ivm-cockpit .ivm-card.ckedit .metadata-property{--metadata-property-height:22px;min-height:22px;padding-top:0;padding-bottom:0}
+.ivm .ivm-cockpit .ivm-card.ckedit .metadata-property-icon svg{width:12px;height:12px}
+.ivm .ivm-cockpit .ivm-card.ckedit .metadata-properties-heading{font-size:11px}
