@@ -2508,7 +2508,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
     const nearL = CK.items.filter(it => !it.none && Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2]) <= d75); let C = [0, 0, 0]; for (const it of nearL) { C[0] += it.x; C[1] += it.y; C[2] += it.z; } if (nearL.length) C = C.map(v => v / nearL.length);
     const away = nearL.length ? [T[0] - C[0], T[1] - C[1], T[2] - C[2]] : [-fw[0], -fw[1], -fw[2]], la = Math.hypot(...away) || 1;
     let dir = [away[0] / la - fw[0] * .3, away[1] / la - fw[1] * .3 - .35, away[2] / la - fw[2] * .3]; const l = Math.hypot(...dir) || 1; dir = dir.map(v => v / l);
-    CK.settle = { P0: CK.P.slice(), P1: [T[0] + dir[0] * D, T[1] + dir[1] * D, T[2] + dir[2] * D], T, t0: win.performance.now() }; CK.lookT = null; }
+    CK.settle = { flow: (CK.arrV || 0) > 150, _r: (CK.arrV = 0), P0: CK.P.slice(), P1: [T[0] + dir[0] * D, T[1] + dir[1] * D, T[2] + dir[2] * D], T, t0: win.performance.now() }; CK.lookT = null; }
   CK.kind = new Map(); for (const [k_, key] of [["above", "up"], ["below", "down"], ["up", "upp"], ["related", "rel"]]) for (const j of L[k_]) CK.kind.set(j, key);
   try { CK.SL = SPACELINK(); } catch (_) { CK.SL = { up: "#ff7a6b", down: "#6fd3ff", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }; }
   CK.sOff = [0, 0]; CK.upL = L.up.filter(j => vis[j]); if (view === "cockpit") win.setTimeout(() => { if (!dead && view === "cockpit") legend(); }, 0);
@@ -2837,7 +2837,7 @@ function ckGameTick(dt){ if (CK.shake > 0) { CK.shake = Math.max(0, CK.shake - d
     else { gj.phase = "fly"; gj.t0 = now; } return; }
   if (gj.phase === "fly" && el > 45) { CK.gj = null; CK.sfIn = false; if (vis[gj.j]) select(gj.j); win.setTimeout(ckSync, 0); CK.warp = 1; }   /* a safety net, if the flight never lands */
   else if (gj.phase === "fly" && !CK.auto && el > .3) CK.gj = null; }   /* you took the stick: the game waits for you */
-function ckArrive(q){ const it = CK.items[q]; if (!it) return; CK.auto = false; CK.v = 0; const j = it.i; if (vis[j]) select(j); win.setTimeout(ckSync, 0); }
+function ckArrive(q){ const it = CK.items[q]; if (!it) return; CK.auto = false; CK.arrV = CK.v; CK.v = 0; const j = it.i; if (vis[j]) select(j); win.setTimeout(ckSync, 0); }
 function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK.last) / 1000); CK.last = t; RAF(ckTick);
   const K = CK.keys, turn = 1.3 * dt;
   if (CK.wd && (K.size || CK.drag)) ckWanderStop();
@@ -2863,7 +2863,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   if (CK.settle && (K.size || CK.drag || CK.auto)) CK.settle = null;   /* Wander lets the arrival swing play out (0.8.165) */
   /* the settle (0.8.133, Nick: "a nice, smooth arcing orbit… instead of a corkscrew"): the ship swings round the note on an arc (never through it),
      always upright, its gaze easing from where it looked onto the note; no roll */
-  if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / 2.4), e = f < .5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2, T = S_.T;
+  if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / (S_.flow ? 3 : 2.4)), e = S_.flow ? 1 - Math.pow(1 - f, 3) : f < .5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2, T = S_.T;
     if (!S_.u0) { const v0 = [0, 1, 2].map(q => S_.P0[q] - T[q]), r0 = Math.hypot(...v0) || 1, v1 = [0, 1, 2].map(q => S_.P1[q] - T[q]), r1 = Math.hypot(...v1) || 1; S_.u0 = v0.map(v => v / r0); S_.u1 = v1.map(v => v / r1); S_.r0 = r0; S_.r1 = r1; S_.f0 = ckFwd(); }
     const slerp = (a, b, w) => { const d = Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])), th = Math.acos(d); if (th < 1e-4) return b.slice(); if (th > 3.1) { const o = Math.abs(a[1]) < .9 ? [0, 1, 0] : [1, 0, 0]; const m_ = [a[1] * o[2] - a[2] * o[1], a[2] * o[0] - a[0] * o[2], a[0] * o[1] - a[1] * o[0]], l = Math.hypot(...m_); const mid = m_.map(v => v / l); return w < .5 ? slerp(a, mid, w * 2) : slerp(mid, b, w * 2 - 1); }
       const s = Math.sin(th), ka = Math.sin((1 - w) * th) / s, kb = Math.sin(w * th) / s; return [0, 1, 2].map(q => a[q] * ka + b[q] * kb); };
@@ -2882,7 +2882,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   const f = ckFwd(); CK.P[0] += f[0] * CK.v * dt; CK.P[1] += f[1] * CK.v * dt; CK.P[2] += f[2] * CK.v * dt; CK.trav = (CK.trav || 0) + Math.abs(CK.v) * dt;
   if (CK.warp > 0) CK.warp = Math.max(0, CK.warp - dt * 1.6);
   /* fly into a panel (near it and roughly ahead) to make it the cockpit */
-  if (CKW !== "sf" || CK.trav > 140) for (let q = 0; q < CK.items.length; q++) { const o = CK.items[q]; if (!ckShows(o) || (CK.auto && q !== CK.lock)) continue;   /* on autopilot only the locked panel catches you */ const [xc, yc, zc] = ckCam(o.x, o.y, o.z); if (zc > -10 && zc < 60 && Math.abs(xc) < 70 && Math.abs(yc) < 30) { ckArrive(q); return; } }
+  if (CKW !== "sf" || CK.trav > 140) for (let q = 0; q < CK.items.length; q++) { const o = CK.items[q]; if (!ckShows(o) || (CK.auto && q !== CK.lock)) continue;   /* on autopilot only the locked panel catches you */ const [xc, yc, zc] = ckCam(o.x, o.y, o.z); if ((CKW === "sf" && CK.auto && q === CK.lock ? Math.hypot(xc, yc, zc) < Math.max(60, Math.min(700, CK.v * .35)) : zc > -10 && zc < 60 && Math.abs(xc) < 70 && Math.abs(yc) < 30)   /* on autopilot in Starfield the arrival begins while still coming in, so the swing carries the motion on (0.8.167) */) { ckArrive(q); return; } }
   ckDraw(); }
 function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect(), dpr = win.devicePixelRatio || 1, W = Math.max(1, r.width), H = Math.max(1, r.height);
   if (CK.w !== W || CK.h !== H) { CK.w = W; CK.h = H; c_.width = W * dpr; c_.height = H * dpr; }

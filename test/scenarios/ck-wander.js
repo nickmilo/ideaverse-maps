@@ -7,7 +7,7 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.evaluate(() => { const ad = document.querySelector('.ivm #animdock'); if (ad && !ad.classList.contains('collapsed')) ad.click(); const lg = document.querySelector('.ivm #legend'); if (lg && !lg.classList.contains('collapsed')) lg.click(); });
   await page.locator('.ivm #q').fill('Pace Layers'); await sleep(700); await page.keyboard.press('Enter'); await sleep(3000); await page.evaluate(() => document.activeElement && document.activeElement.blur());
   await page.mouse.move(5, 950); await page.keyboard.press('p');
-  for (let q = 0; q < 30; q++) { await sleep(2500); const s_ = await page.evaluate(() => { const s = app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map._ck(); return [s.c, !!s.settle, s.off]; }); console.log('t', (q+1)*5, JSON.stringify(s_)); }
+  for (let q = 0; q < 16; q++) { await sleep(2500); const s_ = await page.evaluate(() => { const s = app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map._ck(); return [s.c, !!s.settle, s.off]; }); console.log('t', (q+1)*5, JSON.stringify(s_)); }
   console.log('trail:', await page.evaluate(() => [...document.querySelectorAll('.ivm #trail .crumb, .ivm .trail button')].map(b => b.textContent.trim()).slice(0, 8).join(' | ')));
   console.log('errors:', errs.join(' | ') || 'none');
 };
