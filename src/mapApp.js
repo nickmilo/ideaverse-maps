@@ -2787,6 +2787,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   if (CK.w !== W || CK.h !== H) { CK.w = W; CK.h = H; c_.width = W * dpr; c_.height = H * dpr; }
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = "#04060d"; g.fillRect(0, 0, W, H);
   const cons = CKFRAME ? Math.min(150, H * .26) : 0, VH = H - cons,   /* no frame: the view runs to the bottom and the instruments float over it */ LXd = ckLeftEd(), cx = W / 2 + (CK.cxo = (CK.cxo || 0) + ((LXd ? Math.min(90, LXd * .2) : 0) - (CK.cxo || 0)) * .08), cy = VH / 2;   /* the view eases a little to the right when the left editor opens (0.8.117, Nick) */
+  if (CK.bl !== LXd) { CK.bl = LXd; CK.el.setCssProps({ "--ckl": (LXd ? LXd + 6 : 34) + "px" }); }   /* Back sits top left, moving over beside the editor */
   const F = Math.min(W, VH) * .95, font = css.body || "sans-serif";
   /* stars: wrap round the ship; streaks when moving */
   g.save(); g.translate(cx, cy); g.rotate(CK.roll * .25); g.translate(-cx, -cy); const fw = ckFwd(), sp = Math.abs(CK.v);

@@ -1458,7 +1458,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .ivm-cockpit canvas,.ivm div main.has-drawer .ivm-cockpit canvas{width:100%;height:100%;cursor:crosshair}
 .ivm .ivm-cockpit canvas.hot{cursor:pointer}
 @container ivm (min-width:761px){.ivm div main.has-drawer .ivm-cockpit{right:var(--pw,420px)}}
-.ivm .ivm-cockpit .ckbtns{position:absolute;top:44px;right:14px;display:flex;gap:6px}
+.ivm .ivm-cockpit .ckbtns{position:absolute;top:14px;left:var(--ckl,14px);display:flex;gap:6px;transition:left .35s ease}
 .ivm .ivm-cockpit .ckbtns button{font:600 11px var(--body);letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:4px;background:rgba(10,16,30,.85);color:#cfe0ff;border:1px solid rgba(120,170,255,.4);box-shadow:none;cursor:pointer}
 .ivm .ivm-cockpit .ckbtns button.ckeject{color:#ffb0a0;border-color:rgba(255,140,120,.55)}
 .ivm .ivm-cockpit .ckbtns button[hidden]{display:none}
