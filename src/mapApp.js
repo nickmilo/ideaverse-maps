@@ -2699,11 +2699,18 @@ function ckOrder(){ return CK.items.map((it, q) => q).filter(q => ckShows(CK.ite
 function ckShows(it){ return !CK.only || (CK.only === "in" ? it.inn : it.out); }
 function ckBack(){ if (!trail.length) return; const p = trail.pop(); if (p != null && p >= 0) select(p, true); }
 function ckLeftEd(){ try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) { const r = edRect("left"); return r.x + r.w + 8; } } catch (_) { /* no editors */ } return 0; }
-function ckPreview(W, VH){ const it = CK.items[CK.lock], on = CKX.pv && !!host.preview && it && it.i !== CK.c && !CK.auto && !CK.wd && !CK.gj && (it.zc || 0) > 8;
-  const px = it ? (CKW === "sf" ? it.px : it.sx) : null, py = it ? (CKW === "sf" ? it.py : it.sy) : null, inV = on && px > 0 && px < W && py > 0 && py < VH;
+function ckPreview(W, VH){ const busy = !CKX.pv || !host.preview || CK.auto || CK.wd || CK.gj;
+  /* whatever you're hovering previews first (0.8.134, Nick): a side name, a scope dot or a star; with nothing under the pointer, the locked note's preview stays */
+  let hj = -1, ax = 0, ay = 0, side = 0;
+  if (!busy && CK.hovS >= 0) { const e = CK.side.find(q => q[4] === CK.hovS); if (e) { hj = CK.hovS; const left = e[0] < W / 2; ax = left ? e[0] + e[2] : e[0]; ay = e[1] + e[3] / 2; side = left ? 1 : -1; } }
+  else if (!busy && CK.scHov >= 0 && CK.scHovAt) { hj = CK.scHov; [ax, ay] = CK.scHovAt; side = ax < W / 2 ? 1 : -1; ay -= 90; }
+  else if (!busy && (CK.starHov ?? -1) >= 0 && CK.mouse) { hj = CK.starHov; [ax, ay] = CK.mouse; }
+  const it = CK.items[CK.lock], on = !busy && it && it.i !== CK.c && (it.zc || 0) > 8;
+  let px = it ? (CKW === "sf" ? it.px : it.sx) : null, py = it ? (CKW === "sf" ? it.py : it.sy) : null, inV = on && px > 0 && px < W && py > 0 && py < VH, tj = it ? it.i : -1;
+  if (hj >= 0 && hj !== CK.c) { tj = hj; px = ax; py = ay; inV = true; }
   if (!inV) { if (CK.pvEl) CK.pvEl.hidden = true; return; }
-  const p = N[it.i].path; if (!CK.pvEl || CK.pvP !== p) { if (CK.pvEl) CK.pvEl.remove(); const e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: N[it.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } CK.pvEl = e; CK.pvP = p; }
-  const pw = 230, ph = 140, x = px + 24 + pw > W - 8 ? px - 24 - pw : px + 24, y = Math.max(8, Math.min(VH - ph - 8, py - ph / 2));
+  const p = N[tj].path; if (!CK.pvEl || CK.pvP !== p) { if (CK.pvEl) CK.pvEl.remove(); const e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: N[tj].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } CK.pvEl = e; CK.pvP = p; }
+  const pw = 230, ph = 140, x = side > 0 ? Math.min(W - pw - 8, px + 64) : side < 0 ? Math.max(8, px - 64 - pw) : px + 24 + pw > W - 8 ? px - 24 - pw : px + 24, y = Math.max(8, Math.min(VH - ph - 8, py - ph / 2));
   CK.pvEl.hidden = false; CK.pvEl.setCssProps({ "--pvx": Math.round(x) + "px", "--pvy": Math.round(y) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); }
 function ckSideHit(x, y){ for (const [hx, hy, hw, hh, j] of CK.side) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; }
 function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0 && CKW === "sf") { const P = ckSF().P, inn_ = CK.inL.includes(j), out_ = CK.outL.includes(j);
