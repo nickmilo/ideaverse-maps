@@ -2467,10 +2467,10 @@ function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), tu
   if (turn && CKW === "sf") for (const it of CK.items) { it.x = P[3 * it.i]; it.y = P[3 * it.i + 1]; it.z = P[3 * it.i + 2]; }   /* the panels ride along with their stars */
   return CKSF; }
 // the Starfield world's layers, each a mini switch in the Cockpit's ⚙ (0.8.96, Nick: "add as mini-toggles for me to play with")
-const CKX_DEF = { mirror: false, card: true, gasp: false, rel: false, haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
+const CKX_DEF = { pv: true, mirror: false, card: true, gasp: false, rel: false, haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
-const CKX_LABELS = [["mirror", "Rear-view mirror"], ["card", "Note card"], ["names", "Galaxy names"], ["gas", "Folder gas"], ["gasp", "Folder gas+"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["rel", "Relevance scores"], ["haze", "Star haze"]];
+const CKX_LABELS = [["pv", "Preview the locked note"], ["mirror", "Rear-view mirror"], ["card", "Note card"], ["names", "Galaxy names"], ["gas", "Folder gas"], ["gasp", "Folder gas+"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["rel", "Relevance scores"], ["haze", "Star haze"]];
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2699,6 +2699,12 @@ function ckOrder(){ return CK.items.map((it, q) => q).filter(q => ckShows(CK.ite
 function ckShows(it){ return !CK.only || (CK.only === "in" ? it.inn : it.out); }
 function ckBack(){ if (!trail.length) return; const p = trail.pop(); if (p != null && p >= 0) select(p, true); }
 function ckLeftEd(){ try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) { const r = edRect("left"); return r.x + r.w + 8; } } catch (_) { /* no editors */ } return 0; }
+function ckPreview(W, VH){ const it = CK.items[CK.lock], on = CKX.pv && !!host.preview && it && it.i !== CK.c && !CK.auto && !CK.wd && !CK.gj && (it.zc || 0) > 8;
+  const px = it ? (CKW === "sf" ? it.px : it.sx) : null, py = it ? (CKW === "sf" ? it.py : it.sy) : null, inV = on && px > 0 && px < W && py > 0 && py < VH;
+  if (!inV) { if (CK.pvEl) CK.pvEl.hidden = true; return; }
+  const p = N[it.i].path; if (!CK.pvEl || CK.pvP !== p) { if (CK.pvEl) CK.pvEl.remove(); const e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: N[it.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } CK.pvEl = e; CK.pvP = p; }
+  const pw = 230, ph = 140, x = px + 24 + pw > W - 8 ? px - 24 - pw : px + 24, y = Math.max(8, Math.min(VH - ph - 8, py - ph / 2));
+  CK.pvEl.hidden = false; CK.pvEl.setCssProps({ "--pvx": Math.round(x) + "px", "--pvy": Math.round(y) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); }
 function ckSideHit(x, y){ for (const [hx, hy, hw, hh, j] of CK.side) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; }
 function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0 && CKW === "sf") { const P = ckSF().P, inn_ = CK.inL.includes(j), out_ = CK.outL.includes(j);
     CK.items.push({ i: j, x: P[3 * j], y: P[3 * j + 1], z: P[3 * j + 2], side: inn_ && out_ ? 0 : inn_ ? -1 : 1, inn: inn_, out: out_, up: false, rel: false, none: !inn_ && !out_, sx: 0, sy: 0, sw: 0, sh: 0, zc: 0 }); q = CK.items.length - 1; }
@@ -2880,6 +2886,8 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
       g.globalAlpha = hv || lk ? 1 : .8; g.fillStyle = SLc; g.beginPath(); g.moveTo(x + 4, y + 4); g.lineTo(x + 8.5, y - 4); g.lineTo(x + 13, y + 4); g.closePath(); g.fill();
       g.lineWidth = 3.5; g.strokeStyle = "rgba(3,4,10,.85)"; g.strokeText(tt, x + 16, y); g.fillStyle = lk ? "#ffcf5a" : hv ? "#ffffff" : "rgba(255,240,200,.92)"; g.fillText(tt, x + 16, y); CK.side.push([x, y - 9, w_, 18, j]); x += w_ + gap; }
     g.restore(); }
+  /* a preview of the locked note (0.8.132, Nick: "that mini preview… for the selected note"), beside it, as Compass shows them */
+  ckPreview(W, VH);
   /* reticle on the locked panel, or an arrow at the edge pointing to it */
   const lk = CK.items[CK.lock];
   if (lk) { const col = "#ffcf5a"; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1.6;
