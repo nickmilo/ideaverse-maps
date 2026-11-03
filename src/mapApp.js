@@ -2833,7 +2833,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   if (K.has("d") || K.has("ArrowRight")) { CK.yaw += turn * ckUp(); CK.roll += turn * 1.2; CK.auto = false; }
   if (K.has("q")) { CK.pitch -= turn; CK.auto = false; }
   if (K.has("e")) { CK.pitch += turn; CK.auto = false; }   /* 360° (0.8.97, Nick): no limit on looking up or down; loop right over */
-  const VMAX = CKW === "sf" ? 3200 : 1100; if (K.has("w") || K.has("ArrowUp")) CK.v = Math.min(VMAX, CK.v + (CKW === "sf" ? 900 + 900 * (CK.open ?? 1) : 800) * dt);   /* full speed back for the open space between galaxies (0.8.151, Nick); gentle near them */   /* gentler by hand (0.8.150, Nick: "speeds by too fast") */
+  const VMAX = CKW === "sf" ? 3200 : 1100; if (K.has("w") || K.has("ArrowUp")) CK.v = Math.min(VMAX, CK.v + (CKW === "sf" ? 1600 : 800) * dt);   /* back to the speed before 0.8.149 (0.8.152, Nick) */   /* full speed back for the open space between galaxies (0.8.151, Nick); gentle near them */   /* gentler by hand (0.8.150, Nick: "speeds by too fast") */
   else if (K.has("s") || K.has("ArrowDown")) CK.v = Math.max(-400, CK.v - 800 * dt);
   else if (!CK.auto) CK.v *= Math.pow(.06, dt);   /* off the gas, the ship slows sooner (0.8.150) */
   CK.roll *= Math.pow(.08, dt);
@@ -2854,8 +2854,8 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
     CK.yaw += ay * s_; CK.pitch += ap * s_; CK.roll += ay * s_ * .8;
     const dist = Math.hypot(xc, yc, zc); CK.v += (Math.min(CKW === "sf" ? 4200 : 1500, 160 + dist * 1.4) - CK.v) * Math.min(1, dt * 2.5); }
   /* near a galaxy the ship eases off (0.8.149, Nick): flying by hand, top speed falls from full out in open space to a cruise inside a galaxy, so you can see where you are */
-  if (CKW === "sf" && !CK.auto && CK.v > 0) { let near = 1e9; for (const B of ckSF().B) { const d = Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]) / Math.max(1, B.r); if (d < near) near = d; }
-    CK.open = Math.min(1, Math.max(0, (near - 1.2) / 2.8)); const cap = 500 + 2700 * CK.open; if (CK.v > cap) CK.v += (cap - CK.v) * Math.min(1, dt * 3); }
+  /* only right inside a galaxy's disk does the ship ease off, and not much: open space and the clouds are full speed (0.8.152) */
+  if (CKW === "sf" && !CK.auto && CK.v > 1400) { for (const B of ckSF().B) { if (B.b.kind !== "gal" && B.b.kind !== "dwarf") continue; if (Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]) < B.r) { CK.v += (1400 - CK.v) * Math.min(1, dt * 2); break; } } }
   const f = ckFwd(); CK.P[0] += f[0] * CK.v * dt; CK.P[1] += f[1] * CK.v * dt; CK.P[2] += f[2] * CK.v * dt; CK.trav = (CK.trav || 0) + Math.abs(CK.v) * dt;
   if (CK.warp > 0) CK.warp = Math.max(0, CK.warp - dt * 1.6);
   /* fly into a panel (near it and roughly ahead) to make it the cockpit */
