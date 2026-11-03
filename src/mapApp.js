@@ -2512,7 +2512,8 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
   CK.kind = new Map(); for (const [k_, key] of [["above", "up"], ["below", "down"], ["up", "upp"], ["related", "rel"]]) for (const j of L[k_]) CK.kind.set(j, key);
   try { CK.SL = SPACELINK(); } catch (_) { CK.SL = { up: "#ff7a6b", down: "#6fd3ff", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }; }
   CK.sOff = [0, 0]; CK.upL = L.up.filter(j => vis[j]); if (view === "cockpit") win.setTimeout(() => { if (!dead && view === "cockpit") legend(); }, 0);
-  CK.inL = [...L.in].sort((a, b) => rv(b) - rv(a) || N[b].score - N[a].score); CK.outL = [...L.out].sort((a, b) => rv(b) - rv(a) || N[b].score - N[a].score);
+  const upS = new Set(L.up), ord = (a, b) => (upS.has(b) ? 1 : 0) - (upS.has(a) ? 1 : 0) || rv(b) - rv(a) || N[b].score - N[a].score;   /* up links always first (0.8.122, Nick) */
+  CK.inL = [...L.in].sort(ord); CK.outL = [...L.out].sort(ord);
   CK.msg = CK.sug >= 0 ? `Closest relative not in its up or related: ${N[CK.sug].title}${CK.items.find(it => it.i === CK.sug && it.none) ? " (no link yet)" : ""}. Locked on. Space flies you there.` : "Every close relative is already up or related.";
 }
 // Starfield as seen from the ship: the galaxies' glow (disks tilted as in 3D Starfield, clouds round), every note as a star in its Starfield colour, names of nearby galaxies, the cockpit note's links as threads
@@ -2846,7 +2847,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   CK.side = []; CK.sideCol = [null, null]; CK.sOff ||= [0, 0]; const lockI = (CK.items[CK.lock] || {}).i;
   /* with the left editor open it would cover the links in, so every link goes down the right as one list (0.8.118, Nick): each note once, marked ← links in, → links out, ↔ both, most relevant first */
   const LX = ckLeftEd(), inS = new Set(CK.inL), outS = new Set(CK.outL);
-  const merged = LX ? (() => { const rk = new Map(); CK.inL.forEach((j, q) => rk.set(j, q)); CK.outL.forEach((j, q) => rk.set(j, Math.min(rk.has(j) ? rk.get(j) : 1e9, q))); return [...rk.keys()].sort((a, b) => rk.get(a) - rk.get(b)); })() : null;
+  const merged = LX ? (() => { const rk = new Map(); CK.inL.forEach((j, q) => rk.set(j, q)); CK.outL.forEach((j, q) => rk.set(j, Math.min(rk.has(j) ? rk.get(j) : 1e9, q))); const upS2 = new Set(CK.upL || []); return [...rk.keys()].sort((a, b) => (upS2.has(b) ? 1 : 0) - (upS2.has(a) ? 1 : 0) || rk.get(a) - rk.get(b)); })() : null;
   CK.sideLists = merged ? [null, merged] : [CK.inL, CK.outL];
   for (const [s, list0, lab] of merged ? [[1, merged, "LINKS"]] : [[-1, CK.inL, "IN"], [1, CK.outL, "OUT"]]) { const n_ = list0.length; if (!n_) continue; const cap = n_ > 22 ? 20 : n_, sk = s < 0 ? 0 : 1, off = Math.round(CK.sOff[sk] = Math.max(0, Math.min(n_ - cap, CK.sOff[sk] || 0))), list = list0.slice(off, off + cap), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* scrolls (0.8.115): wheel over the names, or click the last line */ Rx = W * .5, Ry = VH * .62, lh = Math.min(15.5, (VH - 90) / (rows + 1));
     const dim = CK.only && CK.only !== (s < 0 ? "in" : "out"); g.save(); g.font = `500 11px ${font}`; g.textBaseline = "middle";
