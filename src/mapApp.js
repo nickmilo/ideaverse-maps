@@ -2470,7 +2470,7 @@ function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), tu
 const CKX_DEF = { pv: true, mirror: false, card: true, gasp: false, rel: false, haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
-const CKX_LABELS = [["pv", "Preview the locked note"], ["mirror", "Rear-view mirror"], ["card", "Note card"], ["names", "Galaxy names"], ["gas", "Folder gas"], ["gasp", "Folder gas+"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["rel", "Relevance scores"], ["haze", "Star haze"]];
+const CKX_LABELS = [["mirror", "Rear-view mirror"], ["card", "Note card"], ["names", "Galaxy names"], ["gas", "Folder gas"], ["gasp", "Folder gas+"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["rel", "Relevance scores"], ["haze", "Star haze"]];
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2613,7 +2613,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     /* links as Starfield draws them: gentle curves in their link colours (above, below, up, related, other) */
     g.lineWidth = 1.5; for (const it of CK.items) { if (it.none) continue; const pi = pr(it.x, it.y, it.z); if (!pi || !pc) continue; const mx = (pc[0] + pi[0]) / 2, my = (pc[1] + pi[1]) / 2, dx = pi[0] - pc[0], dy = pi[1] - pc[1];
       g.globalAlpha = ckShows(it) ? (it.i === (CK.items[CK.lock] || {}).i ? .95 : .7) : .08; g.strokeStyle = kc(it.i); g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(mx - dy * .14, my + dx * .14, pi[0], pi[1]); g.stroke(); }
-    if (pc) { g.font = `700 14px ${font}`; CK.noteBox = [pc[0] + 30, pc[1] - 10, g.measureText(N[ck].title).width + 12, 20]; } else CK.noteBox = null;
+    CK.cPos = pc; if (pc) { g.font = `700 14px ${font}`; CK.noteBox = [pc[0] + 30, pc[1] - 10, g.measureText(N[ck].title).width + 12, 20]; } else CK.noteBox = null;
     if (pc) { /* its ring split by kind of link, the counts as arcs; then its name in yellow */ const cnt = ["up", "down", "upp", "rel"].map(k_ => [k_, [...CK.kind.values()].filter(v => v === k_).length]).filter(q => q[1]), tot = cnt.reduce((a, q) => a + q[1], 0);
       g.globalAlpha = 1; g.lineWidth = 4; let a0 = -Math.PI / 2; if (tot) for (const [k_, v] of cnt) { const da = v / tot * 6.2832; g.strokeStyle = SL[k_] || "#ccc"; g.beginPath(); g.arc(pc[0], pc[1], 28, a0 + .05, a0 + da - .05); g.stroke(); a0 += da; }
       else { g.strokeStyle = "rgba(255,255,255,.5)"; g.beginPath(); g.arc(pc[0], pc[1], 28, 0, 6.2832); g.stroke(); }
@@ -2699,7 +2699,22 @@ function ckOrder(){ return CK.items.map((it, q) => q).filter(q => ckShows(CK.ite
 function ckShows(it){ return !CK.only || (CK.only === "in" ? it.inn : it.out); }
 function ckBack(){ if (!trail.length) return; const p = trail.pop(); if (p != null && p >= 0) select(p, true); }
 function ckLeftEd(){ try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) { const r = edRect("left"); return r.x + r.w + 8; } } catch (_) { /* no editors */ } return 0; }
-function ckPreview(W, VH){ const busy = !CKX.pv || !host.preview || CK.auto || CK.wd || CK.gj;
+// Previews: Off | One | Fewer | Natural | Max (0.8.135, as Compass's): One is the hovered or locked note; the others also preview the most relevant links in view
+let CKPV = ["off", "one", "fewer", "natural", "max"].includes(pref("iv-ckpv", "")) ? pref("iv-ckpv", "") : (pref("iv-ckx", {}) || {}).pv === false ? "off" : "one";
+function ckPvMany(W, VH, prim){ const cap = { fewer: 5, natural: 10, max: 18 }[CKPV] || 0, [pw, ph] = ({ fewer: [210, 128], natural: [190, 112], max: [172, 100] })[CKPV] || [190, 112];
+  CK.pvM ||= new Map(); const want = new Set();
+  if (cap && !(CK.auto || CK.wd || CK.gj)) { const hit = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1];
+    const taken = [...(prim ? [prim] : []), ...CK.side.map(q => [q[0] - 4, q[1], q[2] + 30, q[3]]), [0, VH - 130, W, 130], [W - 170, 0, 170, 60], ...(CK.noteBox ? [CK.noteBox] : [])];
+    const pc = CK.cPos; if (pc) taken.push([pc[0] - 34, pc[1] - 34, 68, 68]);
+    const cand = CK.items.filter(it => it.i !== CK.c && !it.none && ckShows(it) && (it.zc || 0) > 8 && (!prim || it.i !== prim[4])).map(it => [it, CKW === "sf" ? it.px : it.sx, CKW === "sf" ? it.py : it.sy])
+      .filter(([, x, y]) => x > 0 && x < W && y > 0 && y < VH).sort((a, b) => ((CK.relS && CK.relS.get(b[0].i)) || 0) - ((CK.relS && CK.relS.get(a[0].i)) || 0));
+    let k_ = 0; for (const [it, x, y] of cand) { if (k_ >= cap) break; let box = null;
+      for (const [dx, dy] of [[14, -ph / 2], [-14 - pw, -ph / 2], [-pw / 2, 14], [-pw / 2, -14 - ph], [14, 8], [-14 - pw, -ph + -8]]) { const b = [x + dx, y + dy, pw, ph]; if (b[0] < 6 || b[1] < 6 || b[0] + pw > W - 6 || b[1] + ph > VH - 6) continue; if (!taken.some(q => hit(q, b))) { box = b; break; } }
+      if (!box) continue; taken.push(box); k_++; const p = N[it.i].path; want.add(p); let e = CK.pvM.get(p);
+      if (!e) { e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: N[it.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } CK.pvM.set(p, e); }
+      e.hidden = false; e.setCssProps({ "--pvx": Math.round(box[0]) + "px", "--pvy": Math.round(box[1]) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); } }
+  for (const [p, e] of CK.pvM) if (!want.has(p)) { e.remove(); CK.pvM.delete(p); } }
+function ckPreview(W, VH){ const busy = CKPV === "off" || !host.preview || CK.auto || CK.wd || CK.gj;
   /* whatever you're hovering previews first (0.8.134, Nick): a side name, a scope dot or a star; with nothing under the pointer, the locked note's preview stays */
   let hj = -1, ax = 0, ay = 0, side = 0;
   if (!busy && CK.hovS >= 0) { const e = CK.side.find(q => q[4] === CK.hovS); if (e) { hj = CK.hovS; const left = e[0] < W / 2; ax = left ? e[0] + e[2] : e[0]; ay = e[1] + e[3] / 2; side = left ? 1 : -1; } }
@@ -2708,10 +2723,10 @@ function ckPreview(W, VH){ const busy = !CKX.pv || !host.preview || CK.auto || C
   const it = CK.items[CK.lock], on = !busy && it && it.i !== CK.c && (it.zc || 0) > 8;
   let px = it ? (CKW === "sf" ? it.px : it.sx) : null, py = it ? (CKW === "sf" ? it.py : it.sy) : null, inV = on && px > 0 && px < W && py > 0 && py < VH, tj = it ? it.i : -1;
   if (hj >= 0 && hj !== CK.c) { tj = hj; px = ax; py = ay; inV = true; }
-  if (!inV) { if (CK.pvEl) CK.pvEl.hidden = true; return; }
+  if (!inV) { if (CK.pvEl) CK.pvEl.hidden = true; ckPvMany(W, VH, null); return; }
   const p = N[tj].path; if (!CK.pvEl || CK.pvP !== p) { if (CK.pvEl) CK.pvEl.remove(); const e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: N[tj].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } CK.pvEl = e; CK.pvP = p; }
   const pw = 230, ph = 140, x = side > 0 ? Math.min(W - pw - 8, px + 64) : side < 0 ? Math.max(8, px - 64 - pw) : px + 24 + pw > W - 8 ? px - 24 - pw : px + 24, y = Math.max(8, Math.min(VH - ph - 8, py - ph / 2));
-  CK.pvEl.hidden = false; CK.pvEl.setCssProps({ "--pvx": Math.round(x) + "px", "--pvy": Math.round(y) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); }
+  CK.pvEl.hidden = false; CK.pvEl.setCssProps({ "--pvx": Math.round(x) + "px", "--pvy": Math.round(y) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); CK.pvEl.addClass("ckpv1"); ckPvMany(W, VH, [x, y, pw, ph, tj]); }
 function ckSideHit(x, y){ for (const [hx, hy, hw, hh, j] of CK.side) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; }
 function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0 && CKW === "sf") { const P = ckSF().P, inn_ = CK.inL.includes(j), out_ = CK.outL.includes(j);
     CK.items.push({ i: j, x: P[3 * j], y: P[3 * j + 1], z: P[3 * j + 2], side: inn_ && out_ ? 0 : inn_ ? -1 : 1, inn: inn_, out: out_, up: false, rel: false, none: !inn_ && !out_, sx: 0, sy: 0, sw: 0, sh: 0, zc: 0 }); q = CK.items.length - 1; }
@@ -6793,6 +6808,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "World" }); const seg = sr.createDiv({ cls: "seg" });
       for (const [v, t_] of [["links", "One note's links"], ["sf", "Starfield"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKW === v) } });
         b.onclick = e => { e.stopPropagation(); if (CKW === v) return; CKW = v; save("iv-ckw", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); CK.sfIn = false; CK.c = -2; ckSync(); CK.warp = 1; FUI.emoany(); }; } }
+    { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "Previews" }); const seg = sr.createDiv({ cls: "seg" });
+      for (const [v, t_] of [["off", "Off"], ["one", "One"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKPV === v) } });
+        b.onclick = e => { e.stopPropagation(); CKPV = v; save("iv-ckpv", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); }; } }
     { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "Wander" }); const seg = sr.createDiv({ cls: "seg" });
       for (const [v, t_] of [["links", "Links"], ["jumps", "Jumps"], ["drift", "Drift"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKWM === v) } });
         b.onclick = e => { e.stopPropagation(); CKWM = v; save("iv-ckwm", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (CK.wd) { ckWander(false); ckWander(true); } }; }
