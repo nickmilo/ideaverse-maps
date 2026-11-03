@@ -2666,7 +2666,7 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
     const bt = row.createEl("button", { cls: "ckgt", text: "1 · True", attr: { type: "button" } }), bf = row.createEl("button", { cls: "ckgf", text: "2 · False", attr: { type: "button" } });
     bt.onclick = e => { e.stopPropagation(); ckGameAnswer(true); }; bf.onclick = e => { e.stopPropagation(); ckGameAnswer(false); }; CK.gEl = { gc, hd, tx, bt, bf }; }
   for (let q = 0; q < 420; q++) CK.stars.push([hash("s" + q, 3) * 4000 - 2000, hash("s" + q, 5) * 4000 - 2000, hash("s" + q, 7) * 4000 - 2000, .3 + hash("s" + q, 9) * .7]);
-  c_.addEventListener("pointerdown", e => { if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false, star: CK.starHov };   /* the star under the pointer as you press: it stops being "hovered" the moment a press starts (0.8.109 fix) */ c_.setPointerCapture(e.pointerId); });
+  c_.addEventListener("pointerdown", e => { if (CK.edit) { ckEditClose(); return; } if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false, star: CK.starHov };   /* the star under the pointer as you press: it stops being "hovered" the moment a press starts (0.8.109 fix) */ c_.setPointerCapture(e.pointerId); });
   c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); CK.hovS = ckSideHit(e.offsetX, e.offsetY); { let b_ = -1, bd = 64; for (const [px, py, j] of CK.scDots || []) { const dd = (px - e.offsetX) ** 2 + (py - e.offsetY) ** 2; if (dd < bd) { bd = dd; b_ = j; } } CK.scHov = b_; } CK.mouseOnPanel = h_ >= 0; CK.mouse = [e.offsetX, e.offsetY]; CK.mouseT = win.performance.now(); c_.classList.toggle("hot", h_ >= 0 || CK.hovS >= 0 || CK.hovS <= -10 || CK.scHov >= 0 || (CK.starHov || -1) >= 0); return; }
     const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) > 4) d.moved = true; d.x = e.clientX; d.y = e.clientY;
     if (d.moved) { CK.auto = false; CK.yaw += dx * .0032 * ckUp(); CK.pitch += dy * .0032; CK.roll += dx * .004; } });
@@ -2701,6 +2701,24 @@ function ckBack(){ if (!trail.length) return; const p = trail.pop(); if (p != nu
 function ckLeftEd(){ try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) { const r = edRect("left"); return r.x + r.w + 8; } } catch (_) { /* no editors */ } return 0; }
 // Previews: Off | One | Fewer | Natural | Max (0.8.135, as Compass's): One is the hovered or locked note; the others also preview the most relevant links in view
 let CKPV = ["off", "one", "fewer", "natural", "max"].includes(pref("iv-ckpv", "")) ? pref("iv-ckpv", "") : (pref("iv-ckx", {}) || {}).pv === false ? "off" : "one";
+// a preview becomes a live editor where it is (0.8.136, Nick: "can these mini-previews be editable?"): click to edit, Esc or × to finish; Shift-click opens it as the support note
+function ckPvMake(p, title){ const e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ }
+  e.title = "Click to edit · Shift-click: open as the support note";
+  e.addEventListener("pointerenter", () => { CK.pvOver = p; }); e.addEventListener("pointerleave", () => { if (CK.pvOver === p) CK.pvOver = null; });
+  e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return;
+    if (ev.shiftKey && EDS) { void EDS.right.open(i); return; } const r = e.getBoundingClientRect(), pr = CK.el.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top); });
+  return e; }
+async function ckEdit(p, x, y){ if (!host.editCard) return; ckEditClose(); const i = PIDX.get(p); if (i == null) return;
+  const W = CK.el.clientWidth, H = CK.el.clientHeight, w = 380, h = Math.min(360, H - 40), cx = Math.max(8, Math.min(W - w - 8, x - 40)), cy = Math.max(8, Math.min(H - h - 8, y - 20));
+  const el = CK.el.createDiv({ cls: "ivm-card ckedit" }); el.setCssProps({ "--pvx": cx + "px", "--pvy": cy + "px", "--pvw": w + "px", "--pvh": h + "px" });
+  const hd = el.createDiv({ cls: "cardhd" }); hd.createSpan({ cls: "cardt", text: N[i].title }); const xb = hd.createEl("button", { cls: "cardbtn cardx", text: "×", attr: { type: "button", "aria-label": "Done" } }); xb.onclick = ev => { ev.stopPropagation(); ckEditClose(); };
+  const body = el.createDiv({ cls: "cardbody" }); for (const ty of ["pointerdown", "wheel", "click"]) el.addEventListener(ty, ev => ev.stopPropagation());
+  el.addEventListener("keydown", ev => { if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); ckEditClose(); } }, true);
+  try { edLook(el); } catch (_) { /* theme only */ }
+  const ed = host.editCard(); body.appendChild(ed.el); CK.edit = { el, ed, p }; await ed.open(p); ed.resize(); try { ed.el.querySelector(".cm-content")?.focus(); } catch (_) { /* fine */ } }
+function ckEditClose(){ const E_ = CK.edit; if (!E_) return; CK.edit = null; try { E_.ed.close(); } catch (_) { /* gone */ } E_.el.remove();
+  CK.pvOver = null;   /* previews are rebuilt, so they show what was written */
+  if (CK.pvEl) { CK.pvEl.remove(); CK.pvEl = null; CK.pvP = null; } if (CK.pvM) { for (const e of CK.pvM.values()) e.remove(); CK.pvM.clear(); } }
 function ckPvMany(W, VH, prim){ const cap = { fewer: 5, natural: 10, max: 18 }[CKPV] || 0, [pw, ph] = ({ fewer: [210, 128], natural: [190, 112], max: [172, 100] })[CKPV] || [190, 112];
   CK.pvM ||= new Map(); const want = new Set();
   if (cap && !(CK.auto || CK.wd || CK.gj)) { const hit = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1];
@@ -2711,10 +2729,11 @@ function ckPvMany(W, VH, prim){ const cap = { fewer: 5, natural: 10, max: 18 }[C
     let k_ = 0; for (const [it, x, y] of cand) { if (k_ >= cap) break; let box = null;
       for (const [dx, dy] of [[14, -ph / 2], [-14 - pw, -ph / 2], [-pw / 2, 14], [-pw / 2, -14 - ph], [14, 8], [-14 - pw, -ph + -8]]) { const b = [x + dx, y + dy, pw, ph]; if (b[0] < 6 || b[1] < 6 || b[0] + pw > W - 6 || b[1] + ph > VH - 6) continue; if (!taken.some(q => hit(q, b))) { box = b; break; } }
       if (!box) continue; taken.push(box); k_++; const p = N[it.i].path; want.add(p); let e = CK.pvM.get(p);
-      if (!e) { e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: N[it.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } CK.pvM.set(p, e); }
+      if (!e) { e = ckPvMake(p, N[it.i].title); CK.pvM.set(p, e); }
       e.hidden = false; e.setCssProps({ "--pvx": Math.round(box[0]) + "px", "--pvy": Math.round(box[1]) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); } }
   for (const [p, e] of CK.pvM) if (!want.has(p)) { e.remove(); CK.pvM.delete(p); } }
-function ckPreview(W, VH){ const busy = CKPV === "off" || !host.preview || CK.auto || CK.wd || CK.gj;
+function ckPreview(W, VH){ if (CK.pvOver && CK.pvEl && !CK.pvEl.hidden && CK.pvP === CK.pvOver) return;   /* the pointer is on the preview: it holds still, so you can click it */
+  const busy = CKPV === "off" || !host.preview || CK.auto || CK.wd || CK.gj;
   /* whatever you're hovering previews first (0.8.134, Nick): a side name, a scope dot or a star; with nothing under the pointer, the locked note's preview stays */
   let hj = -1, ax = 0, ay = 0, side = 0;
   if (!busy && CK.hovS >= 0) { const e = CK.side.find(q => q[4] === CK.hovS); if (e) { hj = CK.hovS; const left = e[0] < W / 2; ax = left ? e[0] + e[2] : e[0]; ay = e[1] + e[3] / 2; side = left ? 1 : -1; } }
@@ -2724,7 +2743,7 @@ function ckPreview(W, VH){ const busy = CKPV === "off" || !host.preview || CK.au
   let px = it ? (CKW === "sf" ? it.px : it.sx) : null, py = it ? (CKW === "sf" ? it.py : it.sy) : null, inV = on && px > 0 && px < W && py > 0 && py < VH, tj = it ? it.i : -1;
   if (hj >= 0 && hj !== CK.c) { tj = hj; px = ax; py = ay; inV = true; }
   if (!inV) { if (CK.pvEl) CK.pvEl.hidden = true; ckPvMany(W, VH, null); return; }
-  const p = N[tj].path; if (!CK.pvEl || CK.pvP !== p) { if (CK.pvEl) CK.pvEl.remove(); const e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: N[tj].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } CK.pvEl = e; CK.pvP = p; }
+  const p = N[tj].path; if (!CK.pvEl || CK.pvP !== p) { if (CK.pvEl) CK.pvEl.remove(); const e = ckPvMake(p, N[tj].title); CK.pvEl = e; CK.pvP = p; }
   const pw = 230, ph = 140, x = side > 0 ? Math.min(W - pw - 8, px + 64) : side < 0 ? Math.max(8, px - 64 - pw) : px + 24 + pw > W - 8 ? px - 24 - pw : px + 24, y = Math.max(8, Math.min(VH - ph - 8, py - ph / 2));
   CK.pvEl.hidden = false; CK.pvEl.setCssProps({ "--pvx": Math.round(x) + "px", "--pvy": Math.round(y) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); CK.pvEl.addClass("ckpv1"); ckPvMany(W, VH, [x, y, pw, ph, tj]); }
 function ckSideHit(x, y){ for (const [hx, hy, hw, hh, j] of CK.side) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; }
@@ -2735,7 +2754,7 @@ function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0 
   CK.lock = q; CK.auto = false; }
 function ckHit(x, y){ let b = -1, bz = 1e9; CK.items.forEach((it, q) => { if (it.zc <= 1 || !ckShows(it)) return; if (x >= it.sx - it.sw / 2 && x <= it.sx + it.sw / 2 && y >= it.sy - it.sh / 2 && y <= it.sy + it.sh / 2 && it.zc < bz) { b = q; bz = it.zc; } }); return b; }
 win.setTimeout(() => { if (!dead) ckView(); }, 0);
-function ckView(){ ckEl(); if (view !== "cockpit" && CK.wd) ckWander(false); if (CKX.emo && !EMOI) void loadEmo(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
+function ckView(){ ckEl(); if (view !== "cockpit") ckEditClose(); if (view !== "cockpit" && CK.wd) ckWander(false); if (CKX.emo && !EMOI) void loadEmo(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
   if (want) { CK.c = -2; ckSync(); CK.last = win.performance.now(); RAF(ckTick); } }
 // Wander Mode in the Cockpit (0.8.103, Nick: "bounce around to pointing at different notes, flying around, then jumping to the next note"):
 //   Links: turn toward a linked note, fly there on autopilot, linger, then the next link (a trail that backtracks at dead ends)

@@ -1488,3 +1488,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .ivm-cockpit .ivm-card.ivm-pv.ckpv{position:absolute;left:var(--pvx);top:var(--pvy);pointer-events:none;z-index:3;opacity:.94}
 .ivm .ivm-cockpit .ivm-card.ivm-pv.ckpv[hidden]{display:none}
 .ivm .ivm-cockpit .ivm-card.ivm-pv.ckpv .pvb{height:108px}
+.ivm .ivm-cockpit .ivm-card.ivm-pv.ckpv{pointer-events:auto;cursor:text}
+.ivm .ivm-cockpit .ivm-card.ivm-pv.ckpv:hover{box-shadow:0 0 0 1.5px rgba(127,231,255,.7),0 4px 14px rgba(0,0,0,.3)}
+.ivm .ivm-cockpit .ivm-card.ckedit{position:absolute;left:var(--pvx);top:var(--pvy);width:var(--pvw);height:var(--pvh);z-index:5;display:flex;flex-direction:column;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.45),0 0 0 1.5px rgba(127,231,255,.6)}
+.ivm .ivm-cockpit .ivm-card.ckedit .cardbody{flex:1;min-height:0;overflow:auto}
