@@ -2927,7 +2927,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
     for (let r = 0; r < rows; r++) { const [x0_, y, tl] = at(r), more = r === cap, j = more ? -1 : list[r];
       let tv = 0; if (j >= 0) { const tgt = j === CK.hovS ? 1 : 0; tv = (CK.hv.get(j) || 0); tv += (tgt - tv) * .32;   /* about 40% quicker (0.8.130, Nick) */ if (tv < .01 && !tgt) CK.hv.delete(j); else CK.hv.set(j, tv); }
       const nb = rH >= 0 && r !== rH ? Math.max(0, 1 - Math.abs(r - rH) / 3) * tH : 0, x = x0_ - s * (16 * tv + 5 * nb), ym = y + (rH >= 0 && r !== rH ? Math.sign(r - rH) * nb * 3 : 0);
-      g.save(); g.translate(x, ym); g.rotate((s < 0 ? -tl : tl) * (1 - tv)); g.scale(1 + .24 * tv, 1 + .24 * tv); g.textAlign = s < 0 ? "left" : "right";
+      g.save(); g.translate(x, ym); g.rotate((s < 0 ? -tl : tl) * (1 - tv)); g.scale(1 + .18 * tv, 1 + .18 * tv); g.textAlign = s < 0 ? "left" : "right";
       const dimJ = merged && j >= 0 && CK.only ? !(CK.only === "in" ? inS.has(j) : outS.has(j)) : dim; g.globalAlpha = Math.min(1, (dimJ ? .18 : .62 + .38 * tv) * (j >= 0 && j === lockI ? 1.5 : 1));
       if (tv > .02 && j >= 0) { let t0_ = N[j].title; while (g.measureText(t0_).width > 165 && t0_.length > 4) t0_ = t0_.slice(0, -2); if (t0_ !== N[j].title) t0_ += "…"; const w_ = g.measureText(t0_).width + 19;   /* hugs the name, rounded (0.8.112) */
         g.save(); g.globalAlpha = .2 * tv; g.fillStyle = ckCol(N[j].level); g.beginPath(); g.roundRect(s < 0 ? 1 : -w_ - 1, -8, w_, 16, 8); g.fill(); g.restore(); }
@@ -2939,7 +2939,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
       g.restore();
       CK.side.push([s < 0 ? x0_ : x0_ - tw, y - lh / 2, tw, lh, j]);
       if (tv > .05) { const it = CK.items.find(o => o.i === j); if (it && it.zc > 8 && it.sw > 0) { g.save(); g.globalAlpha = .55 * tv; g.strokeStyle = ckCol(N[j].level); g.lineWidth = 1; g.setLineDash([3, 4]); g.lineDashOffset = -win.performance.now() / 40;
-          g.beginPath(); g.moveTo(x + (s < 0 ? tw * (1 + .24 * tv) : -tw * (1 + .24 * tv)), ym); g.lineTo(it.sx + (s < 0 ? -it.sw / 2 : it.sw / 2), it.sy); g.stroke(); g.restore(); } } }
+          g.beginPath(); g.moveTo(x + (s < 0 ? tw * (1 + .18 * tv) : -tw * (1 + .18 * tv)), ym); g.lineTo(it.sx + (s < 0 ? -it.sw / 2 : it.sw / 2), it.sy); g.stroke(); g.restore(); } } }
     const [hx, hy] = at(-1.3); { const hw = 210; CK.side.push([s < 0 ? hx : hx - hw, hy - 9, hw, 18, -20]); } g.globalAlpha = dim ? .25 : .55; g.font = `600 9.5px ${font}`; g.fillStyle = "#7dffb0"; g.textAlign = s < 0 ? "left" : "right"; g.fillText((n_ > cap ? `${lab} · ${off + 1}–${off + cap} of ${n_}` : `${lab} · ${n_}`) + "  ›", hx + (s < 0 ? 4 : -4), hy); CK.sideCol[sk] = n_ > cap ? [Math.min(hx, at(rows - 1)[0]) - 200 * (s > 0 ? 1 : 0), hy - 10, 240, at(rows - 1)[1] - hy + 20] : null; g.restore(); }
   g.textAlign = "left";
   /* up links at the top of the HUD (0.8.116, Nick: "an uplink should be at the top"), just under the orbs: a gentle arc of ▲ names in the up colour; click to lock, again to fly */
@@ -4942,7 +4942,7 @@ function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hud
   const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [R_ - 30 - 60 * (1 - Math.sqrt(Math.max(0, 1 - u * u))), y, Math.asin(Math.max(-1, Math.min(1, u))) * .25]; };
   const [hx, hy] = at(-1.3); ctx.globalAlpha = .6; ctx.font = `600 9.5px ${css.body}`; ctx.fillStyle = css.accent || "#7dffb0"; const htx = (n_ > cap ? `LINKS · ${off + 1}–${off + cap} of ${n_}` : `LINKS · ${n_}`) + "  ›"; ctx.fillText(htx, hx, hy); HUDH.push([hx - ctx.measureText(htx).width - 4, hy - 9, ctx.measureText(htx).width + 8, 18, -5]);   /* the header tucks the list away */ ctx.font = `500 11px ${css.body}`;
   for (let r = 0; r < rows; r++) { const [x, y, tl] = at(r), more = r === cap, j = more ? -1 : D_.list[off + r], hv = j >= 0 && j === HUDHOV;
-    ctx.save(); ctx.translate(x, y); ctx.rotate(tl * (hv ? 0 : 1)); if (hv) ctx.scale(1.15, 1.15);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(tl * (hv ? 0 : 1)); if (hv) ctx.scale(1.11, 1.11);
     if (more) { ctx.globalAlpha = .6; ctx.fillStyle = css.muted || ink; ctx.fillText(below > 0 ? `+${below} more  ↓` : "↑  back to the top", 0, 0); ctx.restore(); HUDH.push([x - 120, y - lh / 2, 126, lh, -6]); continue; }
     let tt = N[j].title; while (ctx.measureText(tt).width > 175 && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…"; tt = (D_.inS.has(j) && D_.outS.has(j) ? "↔ " : D_.inS.has(j) ? "← " : "→ ") + tt;
     const tw = ctx.measureText(tt).width;
