@@ -6763,6 +6763,12 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const box = fa.createDiv({ cls: "ckxsf" }), grid = box.createDiv({ cls: "ckxgrid" });
       for (const [k_, label] of CKX_LABELS) { const l_ = grid.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = !!CKX[k_]; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: label });
         c_.onchange = () => { CKX = { ...CKX, [k_]: c_.checked }; save("iv-ckx", CKX); if (k_ === "turn") CKSF.ver = -1; if (k_ === "emo" && c_.checked && !EMOI) void loadEmo(); }; }
+      { const det = box.createEl("details", { cls: "ckrelx" }); det.createEl("summary", { text: "What's the relevance score?" }); det.addEventListener("click", e => e.stopPropagation());
+        for (const p_ of ["How close a linked note is to the cockpit note, 100 for the closest; the lists down the sides are in this order, with up links always first.",
+          "1. Each pair of notes gets a weight: every link between them added up, either direction (up or related 2, a link in the text 1, another property 0.6, navigation 0.5; collections don't count), ×1.25 if they link both ways.",
+          "2. A random walk starts at the cockpit note. Each step it either jumps home (20%) or moves to a neighbour, more often along heavier links. After 24 rounds, how often it sits on a note is that note's raw relevance.",
+          "3. Big hubs are toned down a little, so they don't win just by being big: ÷ (1 + the note's total link weight)^0.3.",
+          "4. What you declared counts most: a note it links up to ×3, a related note ×1.6."]) det.createEl("p", { text: p_ }); }
       const f1 = FUI.emoany; FUI.emoany = () => { if (f1) f1(); box.hidden = CKW !== "sf"; }; }
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKFRAME; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Cockpit frame" });
       c_.onchange = () => { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); }; }

@@ -1482,3 +1482,6 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .ivm-cockpit .ckgame button.ckgf{border-color:rgba(255,140,120,.6)}
 .ivm .ivm-cockpit .ckgame.ok{border-color:#7dffb0;box-shadow:0 0 22px rgba(125,255,176,.35)}
 .ivm .ivm-cockpit .ckgame.no{border-color:#ff8f78;box-shadow:0 0 22px rgba(255,140,120,.35)}
+.ivm .ckany .ckrelx{margin-top:6px;font:500 11px var(--body)}
+.ivm .ckany .ckrelx summary{cursor:pointer;opacity:.8}
+.ivm .ckany .ckrelx p{margin:4px 0 0;white-space:normal;max-width:300px;opacity:.85;line-height:1.4}
