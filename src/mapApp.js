@@ -2800,13 +2800,14 @@ function ckWanderPick(){ const W_ = CK.wd, c = CK.c; if (c < 0) return -1;
   for (let k_ = 0; k_ < 60; k_++) { const j = Math.floor(Math.random() * n); if (vis[j] && N[j].level >= 3 && !W_.seen.has(j)) return j; } return -1; }
 function ckWanderTick(dt){ const W_ = CK.wd, now = win.performance.now(), el = (now - W_.t0) / 1000, lsec = Math.max(4, Math.min(30, (typeof playSec === "number" ? playSec : 6) * 1.5));   /* calmer (0.8.163, Nick: "too fast, causes anxiety"): 9 s with each note at the default */
   const steer = (rate) => { const it = CK.items[CK.lock]; if (!it) return 0; const [xc, yc, zc] = ckCam(it.x, it.y, it.z), ay = Math.atan2(xc, zc), ap = Math.atan2(yc, Math.hypot(xc, zc)), s_ = Math.min(1, dt * rate); ckUpright(); CK.yaw += ay * s_; CK.pitch += ap * s_; CK.roll += ay * s_ * .6; return Math.abs(ay) + Math.abs(ap); };
+  if (CK.settle) { W_.t0 = now; return; }   /* the arrival swing first, then the lingering starts (0.8.165, Nick: it "cuts" to a different view) */
   if (W_.phase === "linger") { CK.auto = false; CK.v += (40 - CK.v) * Math.min(1, dt * .5); CK.yaw += .015 * dt;
     if (CKWM === "drift") { CK.v += (160 - CK.v) * Math.min(1, dt * .4); if (CK.items.length && el > W_.cyc * Math.max(4, lsec * 1.6)) {   /* slower (0.8.162, Nick): a new look every ~5 s, a slower cruise */ W_.cyc++; const L0 = ckOrder(), L_ = L0.filter(q => !W_.seen.has(CK.items[q].i)), LL = L_.length ? L_ : L0; if (LL.length) CK.lock = LL[Math.floor(Math.random() * LL.length)]; }   /* notes not yet visited first */ steer(.6); if (el < lsec * 3) return; }
     else if (el < lsec) return;
     const j = CKWM === "drift" && CK.items[CK.lock] ? CK.items[CK.lock].i : ckWanderPick(); if (j < 0) return; W_.tgt = j; ckLockNote(j); W_.phase = "look"; W_.t0 = now; CK.wmsg = `Wander · next: ${N[j].title}`; return; }
   if (W_.phase === "look") { CK.v += (0 - CK.v) * Math.min(1, dt * 2); const off = steer(1.1); if (el > 5 || (el > 2 && off < .03)) { W_.t0 = now; if (CKWM === "jumps" || (CKW === "sf" && ckDist(W_.tgt) > 9000)) W_.phase = "jump"; else { W_.phase = "fly"; CK.auto = true; } } return; }
   if (W_.phase === "jump") { W_.phase = "fly"; W_.hyp = true; W_.t0 = now; CK.auto = true; return; }   /* a jump is a real flight now (0.8.163, Nick: "let the hyperspeed travel play out"): autopilot at full speed, streaks and all, all the way */
-  if (W_.phase === "fly") { if (CK.c === W_.tgt) { W_.hyp = false; W_.seen.add(W_.tgt); W_.phase = "linger"; W_.t0 = now; CK.wmsg = `Wander · ${N[W_.tgt].title}`; return; } if (el > 90) { const j = W_.tgt; W_.hyp = false; W_.seen.add(j); W_.phase = "linger"; W_.t0 = now; CK.sfIn = false; if (vis[j]) select(j); win.setTimeout(ckSync, 0); } else if (!CK.auto) CK.auto = true; } }   /* only a flight that never lands is cut short */
+  if (W_.phase === "fly") { if (CK.c === W_.tgt || sel === W_.tgt) {   /* arrived (sel moves first; the cockpit rebuilds a moment later) */ W_.hyp = false; W_.seen.add(W_.tgt); W_.phase = "linger"; W_.t0 = now; CK.wmsg = `Wander · ${N[W_.tgt].title}`; return; } if (el > 90) { const j = W_.tgt; W_.hyp = false; W_.seen.add(j); W_.phase = "linger"; W_.t0 = now; CK.sfIn = false; if (vis[j]) select(j); win.setTimeout(ckSync, 0); } else if (!CK.auto) { /* only ever fly on to the chosen note: never to whatever got auto-locked (0.8.165: the non-stop jumping) */ if ((CK.items[CK.lock] || {}).i !== W_.tgt) ckLockNote(W_.tgt); if ((CK.items[CK.lock] || {}).i === W_.tgt) CK.auto = true; else { W_.phase = "linger"; W_.t0 = now; } } } }   /* only a flight that never lands is cut short */
 const ckWanderStop = () => { if (typeof setPlaying === "function" && playing) setPlaying(false); else ckWander(false); };
 const ckDist = j => { const it = CK.items.find(o => o.i === j); return it ? Math.hypot(it.x - CK.P[0], it.y - CK.P[1], it.z - CK.P[2]) : 0; };
 // True or false (0.8.104, Nick: "a game, true/false which results in a hyperspace jump"): a statement about the note you're on and another note;
@@ -2859,7 +2860,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   else if (K.has("w") || K.has("ArrowDown")) CK.v = Math.max(-400, CK.v - 800 * dt);
   else if (!CK.auto) CK.v *= Math.pow(.06, dt);   /* off the gas, the ship slows sooner (0.8.150) */
   CK.roll *= Math.pow(.08, dt);
-  if (CK.settle && (K.size || CK.drag || CK.auto || CK.wd)) CK.settle = null;
+  if (CK.settle && (K.size || CK.drag || CK.auto)) CK.settle = null;   /* Wander lets the arrival swing play out (0.8.165) */
   /* the settle (0.8.133, Nick: "a nice, smooth arcing orbit… instead of a corkscrew"): the ship swings round the note on an arc (never through it),
      always upright, its gaze easing from where it looked onto the note; no roll */
   if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / 2.4), e = f < .5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2, T = S_.T;
