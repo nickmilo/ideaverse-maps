@@ -2442,7 +2442,7 @@ EXP.kandinsky = {
 // After Nick's X-Wing (1993) mockup: "actually fly through our notes… almost like a game, but not a game", built no further than needed.
 // Space: links in on the left, links out on the right, two-way links ahead; what the note links up to above the horizon, what sits below it beneath;
 // the strongest links (relevance from this note) nearest. F shows only links in, R only links out (Nick's swap). No S·T·I·R gauges yet (Nick: don't calculate them yet).
-const CK = { hovS: -1, hv: new Map(), inL: [], outL: [], side: [], on: false, c: -1, items: [], lock: -1, sug: -1, P: [0, 0, 0], yaw: 0, pitch: 0, v: 0, keys: new Set(), only: "", t0: 0, warp: 0, auto: false, roll: 0, el: null, cv: null, g: null, w: 0, h: 0, stars: [], last: 0, drag: null, msg: "" };
+const CK = { scHov: -1, scDots: [], hovS: -1, hv: new Map(), inL: [], outL: [], side: [], on: false, c: -1, items: [], lock: -1, sug: -1, P: [0, 0, 0], yaw: 0, pitch: 0, v: 0, keys: new Set(), only: "", t0: 0, warp: 0, auto: false, roll: 0, el: null, cv: null, g: null, w: 0, h: 0, stars: [], last: 0, drag: null, msg: "" };
 let CKFRAME = pref("iv-ckframe", false) === true;
 // World (0.8.90, Nick's "big kahuna"): "links" builds a scene from one note's links; "sf" flies through Starfield itself,
 // every note at its place in 3D Starfield, the galaxies as glowing disks and clouds in their own colours, the links as panels where those notes really are.
@@ -2659,11 +2659,11 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
     bt.onclick = e => { e.stopPropagation(); ckGameAnswer(true); }; bf.onclick = e => { e.stopPropagation(); ckGameAnswer(false); }; CK.gEl = { gc, hd, tx, bt, bf }; }
   for (let q = 0; q < 420; q++) CK.stars.push([hash("s" + q, 3) * 4000 - 2000, hash("s" + q, 5) * 4000 - 2000, hash("s" + q, 7) * 4000 - 2000, .3 + hash("s" + q, 9) * .7]);
   c_.addEventListener("pointerdown", e => { if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false, star: CK.starHov };   /* the star under the pointer as you press: it stops being "hovered" the moment a press starts (0.8.109 fix) */ c_.setPointerCapture(e.pointerId); });
-  c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); CK.hovS = ckSideHit(e.offsetX, e.offsetY); CK.mouseOnPanel = h_ >= 0; CK.mouse = [e.offsetX, e.offsetY]; CK.mouseT = win.performance.now(); c_.classList.toggle("hot", h_ >= 0 || CK.hovS >= 0 || (CK.starHov || -1) >= 0); return; }
+  c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); CK.hovS = ckSideHit(e.offsetX, e.offsetY); { let b_ = -1, bd = 64; for (const [px, py, j] of CK.scDots || []) { const dd = (px - e.offsetX) ** 2 + (py - e.offsetY) ** 2; if (dd < bd) { bd = dd; b_ = j; } } CK.scHov = b_; } CK.mouseOnPanel = h_ >= 0; CK.mouse = [e.offsetX, e.offsetY]; CK.mouseT = win.performance.now(); c_.classList.toggle("hot", h_ >= 0 || CK.hovS >= 0 || CK.scHov >= 0 || (CK.starHov || -1) >= 0); return; }
     const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) > 4) d.moved = true; d.x = e.clientX; d.y = e.clientY;
     if (d.moved) { CK.auto = false; CK.yaw += dx * .0032 * ckUp(); CK.pitch += dy * .0032; CK.roll += dx * .004; } });
-  c_.addEventListener("pointerleave", () => { CK.hovS = -1; CK.mouse = null; CK.starHov = -1; });
-  c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return; { const sj = ckSideHit(e.offsetX, e.offsetY); if (sj >= 0) { const was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } } const h_ = ckHit(e.offsetX, e.offsetY);
+  c_.addEventListener("pointerleave", () => { CK.hovS = -1; CK.scHov = -1; CK.mouse = null; CK.starHov = -1; });
+  c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return; if (CK.scHov >= 0) { const sj = CK.scHov, was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } { const sj = ckSideHit(e.offsetX, e.offsetY); if (sj >= 0) { const was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } } const h_ = ckHit(e.offsetX, e.offsetY);
     if (h_ < 0 && CKW === "sf") { const p_ = (CK.posts || []).find(q => Math.hypot(q[0] - e.offsetX, q[1] - e.offsetY) < 12); if (p_) { const was = (CK.items[CK.lock] || {}).i === p_[2]; ckLockNote(p_[2]); if (was) CK.auto = true; return; } }
     if (h_ < 0) { if (CKW === "sf" && (d.star ?? -1) >= 0) { const sj = d.star, was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; } return; } if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
   c_.addEventListener("dblclick", e => { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) { CK.lock = h_; CK.auto = true; } });
@@ -2886,7 +2886,8 @@ function ckScope3(g, x, y, R, front, font){ g.save(); g.fillStyle = "rgba(8,18,4
   for (const it of CK.items) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z), d = Math.hypot(xc, yc, zc) || 1; if (front ? zc < 0 : zc >= 0) continue; cnt++;
     const ang = Math.acos(Math.max(-1, Math.min(1, zc / d))), off = front ? ang : Math.PI - ang, rr = Math.sqrt(Math.min(1, off / (Math.PI / 2))) * R * .94,   /* square root: notes a few degrees apart near the nose still spread out */ h = Math.hypot(xc, yc) || 1;
     const px = x + xc / h * rr, py = y + yc / h * rr, on = it.i === lk; g.globalAlpha = ckShows(it) ? 1 : .2; g.fillStyle = on ? "#ffcf5a" : ckCol(N[it.i].level);
-    g.beginPath(); g.arc(px, py, on ? 3.6 : 2, 0, 6.2832); g.fill(); if (on) { g.strokeStyle = "#ffcf5a"; g.beginPath(); g.arc(px, py, 6.5, 0, 6.2832); g.stroke(); } }
+    g.beginPath(); g.arc(px, py, on ? 3.6 : 2, 0, 6.2832); g.fill(); if (on) { g.strokeStyle = "#ffcf5a"; g.beginPath(); g.arc(px, py, 6.5, 0, 6.2832); g.stroke(); }
+    CK.scDots.push([px, py, it.i]); if (it.i === CK.scHov) { g.globalAlpha = 1; g.strokeStyle = "#ffffff"; g.lineWidth = 1.2; g.beginPath(); g.arc(px, py, 6, 0, 6.2832); g.stroke(); CK.scHovAt = [px, py]; } }
   g.globalAlpha = 1; g.fillStyle = "rgba(160,200,255,.9)"; g.beginPath(); if (front) { g.moveTo(x, y - 4); g.lineTo(x - 3, y + 3); g.lineTo(x + 3, y + 3); } else { g.moveTo(x, y + 4); g.lineTo(x - 3, y - 3); g.lineTo(x + 3, y - 3); } g.closePath(); g.fill();
   g.font = `600 9.5px ${font}`; g.fillStyle = "rgba(150,195,255,.9)"; g.textAlign = "center"; g.textBaseline = "top"; g.fillText(`${front ? "FRONT" : "REAR"} · ${cnt}`, x, y + R + 4); g.restore(); g.textAlign = "left"; }
 function ckScope(g, x, y, R, label, key, ids, act, font){ g.save(); g.fillStyle = "rgba(10,30,24,.9)"; g.beginPath(); g.arc(x, y, R, 0, 6.2832); g.fill();
@@ -2906,8 +2907,13 @@ function ckConsole(g, W, H, VH, cons, font){ const c = CK.c; g.fillStyle = "#0a0
   /* the canopy's frame: two struts from the console up into the view */
   g.fillStyle = "#0a0f1c"; g.beginPath(); g.moveTo(0, VH); g.lineTo(W * .12, VH); g.lineTo(0, VH - cons * .9); g.closePath(); g.fill(); g.beginPath(); g.moveTo(W, VH); g.lineTo(W * .88, VH); g.lineTo(W, VH - cons * .9); g.closePath(); g.fill();
   if (c < 0) return; const d = N[c], L = stripLists(c), R = Math.min(cons * .36, 54), sy_ = VH + cons * .44;
+  CK.scDots = []; CK.scHovAt = null;
   ckScope3(g, Math.max(R + 18, W * .16), sy_, R, true, font);
   ckScope3(g, Math.min(W - R - 18, W * .84), sy_, R, false, font);
+  /* a scope dot under the pointer names itself (0.8.112, Nick): click to lock, again to fly */
+  if (CK.scHovAt && CK.scHov >= 0) { const dN = N[CK.scHov], [hx, hy] = CK.scHovAt; let tt = dN.title; g.font = `600 11px ${font}`; while (tt.length > 4 && g.measureText(tt).width > 230) tt = tt.slice(0, -2); if (tt !== dN.title) tt += "…";
+    const tw = g.measureText(tt).width + 24, bx = Math.max(6, Math.min(W - tw - 6, hx - tw / 2)), by = hy - 34; g.globalAlpha = 1; g.fillStyle = "rgba(4,6,14,.92)"; g.beginPath(); g.roundRect(bx, by, tw, 22, 11); g.fill();
+    g.fillStyle = ckCol(dN.level); g.beginPath(); g.arc(bx + 11, by + 11, 3, 0, 6.2832); g.fill(); g.fillStyle = "#eef3ff"; g.textBaseline = "middle"; g.fillText(tt, bx + 18, by + 11.5); g.textBaseline = "alphabetic"; }
   /* the centre display */
   const bw = Math.min(W * .46, 520), bx = W / 2 - bw / 2, by = VH + 10, bh = cons - 20; g.fillStyle = "rgba(14,24,44,.95)"; g.fillRect(bx, by, bw, bh); g.strokeStyle = "rgba(120,170,255,.35)"; g.strokeRect(bx + .5, by + .5, bw - 1, bh - 1);
   const col = ckCol(d.level); g.fillStyle = col; g.fillRect(bx, by, 3, bh); g.textBaseline = "top";
@@ -7300,7 +7306,7 @@ return {
   _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
   _cam(){ let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i=0;i<n;i++) if (vis[i]) { x0 = Math.min(x0, sx(X[i])); x1 = Math.max(x1, sx(X[i])); y0 = Math.min(y0, sy(Y[i])); y1 = Math.max(y1, sy(Y[i])); } return { view, k, tx, ty, W, H, box: [x0, y0, x1, y1].map(Math.round), side: sideW() }; },
   _setEmo(o){ EMOF = o; emoBuild(); },
-  _ck(){ const sf = CKSF.P, c = CK.c, T = c >= 0 && sf ? [sf[3 * c], sf[3 * c + 1], sf[3 * c + 2]] : null; return { c, lock: (CK.items[CK.lock] || {}).i, star: CK.starHov, settle: CK.settle ? { P1: CK.settle.P1, T: CK.settle.T } : null, P: CK.P, dist: T ? Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) : null }; },
+  _ck(){ const sf = CKSF.P, c = CK.c, T = c >= 0 && sf ? [sf[3 * c], sf[3 * c + 1], sf[3 * c + 2]] : null; return { c, dots: CK.scDots, lock: (CK.items[CK.lock] || {}).i, star: CK.starHov, settle: CK.settle ? { P1: CK.settle.P1, T: CK.settle.T } : null, P: CK.P, dist: T ? Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) : null }; },
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
   _kt(){ return [k, tx, ty]; },
   _view(){ return view; },
