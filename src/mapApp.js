@@ -2738,7 +2738,7 @@ function ckPvMany(W, VH, prim){ const cap = { fewer: 5, natural: 10, max: 18 }[C
       e.hidden = false; e.setCssProps({ "--pvx": Math.round(box[0]) + "px", "--pvy": Math.round(box[1]) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); } }
   for (const [p, e] of CK.pvM) if (!want.has(p)) { e.remove(); CK.pvM.delete(p); } }
 function ckPreview(W, VH){ if (!CK.pvOver) CK.pvLead = null; if (CK.pvOver && CK.pvEl && !CK.pvEl.hidden && CK.pvP === CK.pvOver) return;   /* the pointer is on the preview: it holds still, so you can click it */
-  const busy = CKPV === "off" || !host.preview || CK.auto || CK.wd || CK.gj;
+  const busy = (CKPV === "off" && !CMDK) || !host.preview || CK.auto || CK.wd || CK.gj;   /* holding ⌘ previews even with Previews off */
   /* whatever you're hovering previews first (0.8.134, Nick): a side name, a scope dot or a star; with nothing under the pointer, the locked note's preview stays */
   let hj = -1, ax = 0, ay = 0, side = 0;
   if (!busy && CK.hovS >= 0) { const e = CK.side.find(q => q[4] === CK.hovS); if (e) { hj = CK.hovS; const left = e[0] < W / 2; ax = left ? e[0] + e[2] : e[0]; ay = e[1] + e[3] / 2; side = left ? 1 : -1; } }
@@ -4148,6 +4148,13 @@ buildGrid();
 // ---------- view ----------
 let k = 1, tx = 0, ty = 0, W = 0, H = 0, dpr = 1;
 let hover = -1, sel = -1, showAll = false;
+// hold ⌘ (Ctrl on Windows and Linux) over a note for a mini preview, as Obsidian does for links (0.8.159, Nick)
+let CMDK = false, CMDPT = null;
+const cmdPvSync = () => { if (view === "cockpit") return; if (!CMDK || hover < 0 || !vis[hover] || isPhone()) { if (!(HUDHOV >= 0 && HUDPV)) hudPv(-1); return; }
+  const x = sx(X[hover]), y = sy(Y[hover]), pw = 230; hudPv(hover, x + 18 + pw + 14 <= W - 8 ? x + 18 + pw + 14 : x - 18, y, true); try { tip.hidden = true; } catch (_) { /* no tip yet */ } };   /* the preview takes the hover label's place */
+on(doc, "keydown", e => { if ((e.key === "Meta" || e.key === "Control") && !CMDK && host.isActive()) { CMDK = true; cmdPvSync(); } });
+on(doc, "keyup", e => { if (e.key === "Meta" || e.key === "Control") { CMDK = false; cmdPvSync(); } });
+on(win, "blur", () => { CMDK = false; cmdPvSync(); });
 const css = {};
 const COLORS = ["bg","panel","line","ink","muted","accent","accent-soft","up","down","band-a","band-b","l2","l1","sl2","sl1","rel","upp","prop","edge-faint"];
 let probe = null;   // colors go through the browser once, so the canvas gets plain rgb() even when a theme writes color-mix() or Obsidian's own variables
@@ -4899,6 +4906,7 @@ cv.addEventListener("pointermove", e => {
   }
   const i = pick(e.offsetX, e.offsetY);
   if (i !== hover) { hover = i; cv.classList.toggle("hot", i >= 0); draw(); }
+  if (CMDK !== (e.metaKey || e.ctrlKey)) CMDK = e.metaKey || e.ctrlKey; cmdPvSync();
   if (pplOn() && i < 0) cv.classList.toggle("hot", pplHubAt(e.offsetX, e.offsetY) >= 0);
   if (i < 0 && chartOn()) { const h = chartPostAt(e.offsetX, e.offsetY); cv.classList.toggle("hot", h >= 0); if (h >= 0) { tip.classList.remove("arc"); html(tip).v = `<b>${esc(N[h].title)}</b><span>Level ${N[h].level} · click to go there</span>`; tip.hidden = false; const tw = tip.offsetWidth; tip.style.left = Math.min(e.clientX + 14, win.innerWidth - tw - 8) + "px"; tip.style.top = (e.clientY + 14) + "px"; return; } }
   if (i < 0 && view === "chord" && !csphOn()) { const a = chordArcAt(e.offsetX, e.offsetY);   // hovering an arc: its ribbons light up, with the counts
@@ -4951,7 +4959,7 @@ function hudTab(nLinks){ if (!HUDTAB) { HUDTAB = $("#main").createEl("button", {
     HUDTAB.addEventListener("pointerdown", e => e.stopPropagation()); HUDTAB.onclick = e => { e.stopPropagation(); hudCol(false); }; }
   const on_ = HUDCOL && nLinks > 0; HUDTAB.hidden = !on_; if (on_) { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); HUDTAB.setCssProps({ "--hr": Math.max(0, Math.round(mr.right - c.right + (view === "cockpit" ? 0 : sideW()))) + "px" }); }   /* at the map's right edge, beside the note panel */ if (on_) { const t_ = `‹  Links · ${nLinks}`; if (HUDTAB.textContent !== t_) HUDTAB.setText(t_); } }
 function hudCol(c){ HUDCOL = c; save("iv-hudcol", c); draw(); }
-function hudPv(j, x, y){ if (!HUDPV || j < 0 || !host.preview) { if (HUDPVE) HUDPVE.hidden = true; return; } const p = N[j].path;
+function hudPv(j, x, y, force){ if (!(HUDPV || force) || j < 0 || !host.preview) { if (HUDPVE) HUDPVE.hidden = true; return; } const p = N[j].path;
   if (!HUDPVE || HUDPVP !== p) { if (HUDPVE) HUDPVE.remove(); const e = $("#main").createDiv({ cls: "ivm-card ivm-pv hudpv" }); e.createDiv({ cls: "pvt", text: N[j].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } HUDPVE = e; HUDPVP = p; }
   const c = cv.getBoundingClientRect(), pr = $("#main").getBoundingClientRect(), pw = 230, ph = 140; HUDPVE.hidden = false;
   HUDPVE.setCssProps({ "--pvx": Math.round(c.left - pr.left + Math.max(8, x - pw - 14)) + "px", "--pvy": Math.round(c.top - pr.top + Math.max(8, Math.min(H - ph - 8, y - ph / 2))) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); }
