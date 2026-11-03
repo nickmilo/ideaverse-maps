@@ -1471,3 +1471,4 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .ckany .ckxsf[hidden]{display:none}
 .ivm .ckany .ckxgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px}
 .ivm .ckany .arnrow > .eol{font:600 10px var(--body);letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-right:8px}
+.ivm .ckany .ckplay{margin-left:8px;min-width:30px;padding:2px 8px;border-radius:12px;font:600 11px var(--body);cursor:pointer}

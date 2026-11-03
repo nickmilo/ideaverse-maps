@@ -2634,18 +2634,19 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
     if (h_ < 0) { if (CKW === "sf" && CK.starHov >= 0) { const sj = CK.starHov, was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; } return; } if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
   c_.addEventListener("dblclick", e => { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) { CK.lock = h_; CK.auto = true; } });
   /* trackpad (Nick): two fingers steer, a pinch flies; a mouse wheel (no sideways scroll) still flies */
-  c_.addEventListener("wheel", e => { e.preventDefault(); CK.auto = false; const mouse = e.deltaMode === 1 || (!e.deltaX && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
+  c_.addEventListener("wheel", e => { e.preventDefault(); CK.auto = false; if (CK.wd) ckWanderStop(); const mouse = e.deltaMode === 1 || (!e.deltaX && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
     if (e.ctrlKey || mouse) CK.v = Math.max(-500, Math.min(1500, CK.v - e.deltaY * (e.ctrlKey ? 9 : 2.2)));
     else { CK.yaw += e.deltaX * .0024 * ckUp(); CK.pitch += e.deltaY * .0024; CK.roll += e.deltaX * .002; } }, { passive: false });
   on(doc, "keydown", e => { if (!CK.on || dead || !host.isActive()) return; const a = doc.activeElement; if (a && a !== doc.body && (a.closest && (a.closest(".ivm-card") || a.closest("input,textarea,[contenteditable]")) || /INPUT|TEXTAREA/.test(a.tagName))) return; if (a && a !== doc.body && !root.contains(a)) return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; let used = true;
-    if (["w", "s", "a", "d", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "q", "e"].includes(k)) { CK.keys.add(k); if (k === "w" || k === "s" || k === "ArrowUp" || k === "ArrowDown") CK.auto = false; }
+    if (["w", "s", "a", "d", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "q", "e"].includes(k)) { CK.keys.add(k); if (CK.wd) ckWanderStop(); if (k === "w" || k === "s" || k === "ArrowUp" || k === "ArrowDown") CK.auto = false; }
     else if (k === "f") CK.only = CK.only === "in" ? "" : "in";
     else if (k === "r") CK.only = CK.only === "out" ? "" : "out";
     else if (k === " " || k === "Enter") { if (CK.lock >= 0) CK.auto = true; }
     else if (k === "Tab") { const L_ = ckOrder(); if (L_.length) { const p_ = L_.indexOf(CK.lock); CK.lock = L_[(p_ + (e.shiftKey ? L_.length - 1 : 1)) % L_.length]; CK.auto = false; } }
     else if (k === "b" || k === "Backspace") ckBack();
-    else if (k === "Escape") { CK.auto = false; CK.v = 0; }
+    else if (k === "Escape") { CK.auto = false; CK.v = 0; if (CK.wd) ckWanderStop(); }
+    else if (k === "p") { if (typeof setPlaying === "function") setPlaying(!playing); else ckWander(!CK.wd); }
     else used = false;
     if (used) { e.preventDefault(); e.stopImmediatePropagation(); } }, { capture: true });
   on(doc, "keyup", e => { const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; CK.keys.delete(k); }, { capture: true });
@@ -2662,11 +2663,38 @@ function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0 
   CK.lock = q; CK.auto = false; }
 function ckHit(x, y){ let b = -1, bz = 1e9; CK.items.forEach((it, q) => { if (it.zc <= 1 || !ckShows(it)) return; if (x >= it.sx - it.sw / 2 && x <= it.sx + it.sw / 2 && y >= it.sy - it.sh / 2 && y <= it.sy + it.sh / 2 && it.zc < bz) { b = q; bz = it.zc; } }); return b; }
 win.setTimeout(() => { if (!dead) ckView(); }, 0);
-function ckView(){ ckEl(); if (CKX.emo && !EMOI) void loadEmo(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
+function ckView(){ ckEl(); if (view !== "cockpit" && CK.wd) ckWander(false); if (CKX.emo && !EMOI) void loadEmo(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
   if (want) { CK.c = -2; ckSync(); CK.last = win.performance.now(); RAF(ckTick); } }
+// Wander Mode in the Cockpit (0.8.103, Nick: "bounce around to pointing at different notes, flying around, then jumping to the next note"):
+//   Links: turn toward a linked note, fly there on autopilot, linger, then the next link (a trail that backtracks at dead ends)
+//   Jumps: turn toward a note anywhere, then a hyperspace jump straight to it
+//   Drift: cruise slowly, the lock passing from link to link as you look at each, then fly to the last one
+// Started with ▶ under Animations → Wander Mode (or P, or the Cockpit's ⚙); any key, drag or scroll takes the stick back.
+let CKWM = ["links", "jumps", "drift"].includes(pref("iv-ckwm", "links")) ? pref("iv-ckwm", "links") : "links";
+function ckWander(on){ if (on) { CK.wd = { phase: "linger", t0: win.performance.now() - 1e5, seen: new Set([CK.c]), stack: [], cyc: 0 }; CK.wmsg = `Wander · ${({ links: "Links", jumps: "Jumps", drift: "Drift" })[CKWM]}`; }
+  else { CK.wd = null; CK.wmsg = ""; CK.auto = false; CK.hyper = 0; } }
+function ckWanderPick(){ const W_ = CK.wd, c = CK.c; if (c < 0) return -1;
+  if (CKWM === "jumps") { for (let k_ = 0; k_ < 60; k_++) { const j = Math.floor(Math.random() * n); if (vis[j] && j !== c && N[j].level >= 2 && !W_.seen.has(j)) return j; } return -1; }
+  const nb = CK.items.map(it => it.i).filter(j => !W_.seen.has(j) && !CK.items.find(it => it.i === j).none);
+  if (nb.length) { W_.stack.push(c); return nb[Math.floor(Math.pow(Math.random(), 1.6) * Math.min(nb.length, 12))]; }   /* nearer the top (most relevant) more often */
+  while (W_.stack.length) { const b = W_.stack.pop(); if (b !== c && vis[b]) return b; }
+  for (let k_ = 0; k_ < 60; k_++) { const j = Math.floor(Math.random() * n); if (vis[j] && N[j].level >= 3 && !W_.seen.has(j)) return j; } return -1; }
+function ckWanderTick(dt){ const W_ = CK.wd, now = win.performance.now(), el = (now - W_.t0) / 1000, lsec = Math.max(2, Math.min(12, (typeof playSec === "number" ? playSec : 6) * .5));
+  const steer = (rate) => { const it = CK.items[CK.lock]; if (!it) return 0; const [xc, yc, zc] = ckCam(it.x, it.y, it.z), ay = Math.atan2(xc, zc), ap = Math.atan2(yc, Math.hypot(xc, zc)), s_ = Math.min(1, dt * rate); ckUpright(); CK.yaw += ay * s_; CK.pitch += ap * s_; CK.roll += ay * s_ * .6; return Math.abs(ay) + Math.abs(ap); };
+  if (W_.phase === "linger") { CK.auto = false; CK.v += (70 - CK.v) * Math.min(1, dt); CK.yaw += .04 * dt;
+    if (CKWM === "drift") { CK.v += (260 - CK.v) * Math.min(1, dt * .6); if (CK.items.length && el > W_.cyc * 2.2) { W_.cyc++; const L0 = ckOrder(), L_ = L0.filter(q => !W_.seen.has(CK.items[q].i)), LL = L_.length ? L_ : L0; if (LL.length) CK.lock = LL[Math.floor(Math.random() * LL.length)]; }   /* notes not yet visited first */ steer(1.2); if (el < lsec * 2.5) return; }
+    else if (el < lsec) return;
+    const j = CKWM === "drift" && CK.items[CK.lock] ? CK.items[CK.lock].i : ckWanderPick(); if (j < 0) return; W_.tgt = j; ckLockNote(j); W_.phase = "look"; W_.t0 = now; CK.wmsg = `Wander · next: ${N[j].title}`; return; }
+  if (W_.phase === "look") { CK.v += (0 - CK.v) * Math.min(1, dt * 2); const off = steer(2.6); if (el > 2.6 || (el > .9 && off < .04)) { W_.t0 = now; if (CKWM === "jumps" || (CKW === "sf" && ckDist(W_.tgt) > 9000)) W_.phase = "jump"; else { W_.phase = "fly"; CK.auto = true; } } return; }
+  if (W_.phase === "jump") { CK.hyper = Math.min(1, el / .9); CK.v += (900 - CK.v) * Math.min(1, dt * 2); if (el > 1.1) { const j = W_.tgt; CK.hyper = 0; W_.seen.add(j); W_.phase = "linger"; W_.t0 = now; CK.sfIn = false; if (vis[j]) select(j); win.setTimeout(ckSync, 0); CK.warp = 1; CK.wmsg = `Wander · ${N[j].title}`; } return; }
+  if (W_.phase === "fly") { if (CK.c === W_.tgt) { W_.seen.add(W_.tgt); W_.phase = "linger"; W_.t0 = now; CK.wmsg = `Wander · ${N[W_.tgt].title}`; return; } if (!CK.auto || el > 22) { W_.phase = "jump"; W_.t0 = now; } } }
+const ckWanderStop = () => { if (typeof setPlaying === "function" && playing) setPlaying(false); else ckWander(false); };
+const ckDist = j => { const it = CK.items.find(o => o.i === j); return it ? Math.hypot(it.x - CK.P[0], it.y - CK.P[1], it.z - CK.P[2]) : 0; };
 function ckArrive(q){ const it = CK.items[q]; if (!it) return; CK.auto = false; CK.v = 0; const j = it.i; if (vis[j]) select(j); win.setTimeout(ckSync, 0); }
 function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK.last) / 1000); CK.last = t; RAF(ckTick);
   const K = CK.keys, turn = 1.3 * dt;
+  if (CK.wd && (K.size || CK.drag)) ckWanderStop();
+  if (CK.wd) ckWanderTick(dt);
   if (K.has("a") || K.has("ArrowLeft")) { CK.yaw -= turn * ckUp(); CK.roll -= turn * 1.2; CK.auto = false; }
   if (K.has("d") || K.has("ArrowRight")) { CK.yaw += turn * ckUp(); CK.roll += turn * 1.2; CK.auto = false; }
   if (K.has("q")) { CK.pitch -= turn; CK.auto = false; }
@@ -2704,7 +2732,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   g.restore();
   if (CKW === "sf") ckSFDraw(g, W, VH, cx, cy, F, font);
   /* hyperspace: when you speed into a note (autopilot, or the jump on arrival), thin streaks rush out from the middle */
-  { const I = Math.max(CK.warp, CK.auto ? Math.min(1, CK.v / 900) : Math.min(1, Math.max(0, (CK.v - 500) / 700)) * .6); if (I > .02) { const tt = win.performance.now() / 1000, Rm = Math.hypot(W, VH) * .6;
+  { const I = Math.max(CK.warp, CK.hyper || 0, CK.auto ? Math.min(1, CK.v / 900) : Math.min(1, Math.max(0, (CK.v - 500) / 700)) * .6); if (I > .02) { const tt = win.performance.now() / 1000, Rm = Math.hypot(W, VH) * .6;
       g.save(); g.lineCap = "round"; for (let q = 0; q < 140; q++) { const a = hash("hy" + q, 13) * 6.2832, sp_ = .5 + hash("hy" + q, 17), f = (hash("hy" + q, 19) + tt * sp_ * (.35 + I * 1.2)) % 1, r0 = 20 + f * f * Rm, len = (10 + f * 190) * I;
         g.globalAlpha = I * .5 * Math.min(1, f * 3) * (1 - f * .4); g.strokeStyle = q % 7 === 0 ? "#ffe9b0" : "#d6e6ff"; g.lineWidth = .6 + f * 1.1;
         g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len)); g.stroke(); }
@@ -2767,9 +2795,11 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
     for (let lv = 1; lv <= 5; lv++) { const a = Math.PI * (1.2 + (lv - 1) * .15), x = Math.cos(a) * (R + 12), y = Math.sin(a) * (R + 12), lit = d && d.level === lv; g.fillStyle = lit ? ckCol(lv) : "rgba(140,170,210,.4)"; g.fillText("L" + lv, x, y); if (lit) { g.beginPath(); g.arc(Math.cos(a) * R, Math.sin(a) * R, 3, 0, 6.2832); g.fill(); } }
     g.restore(); g.textAlign = "left"; }
   /* the message line */
+  const msg0 = CK.msg; if (CK.wmsg) CK.msg = CK.wmsg;
   if (CK.msg) { g.font = `500 12px ${font}`; g.textAlign = "center"; g.textBaseline = "top"; const tw = Math.min(W - 40, g.measureText(CK.msg).width + 24);
     const my = VH - 34;   /* at the foot of the view, clear of the orbs along the top (0.8.89) */ g.fillStyle = "rgba(8,14,28,.8)"; g.fillRect(cx - tw / 2, my, tw, 24); g.strokeStyle = "rgba(255,207,90,.4)"; g.strokeRect(cx - tw / 2 + .5, my + .5, tw - 1, 23); g.fillStyle = "#ffcf5a";
     let m = CK.msg; while (m.length > 10 && g.measureText(m).width > tw - 20) m = m.slice(0, -2); if (m !== CK.msg) m += "…"; g.fillText(m, cx, my + 6); g.textAlign = "left"; }
+  CK.msg = msg0;
   ckConsole(g, W, H, VH, cons, font); }
 // X-Wing's two scopes (0.8.87, Nick): the front one shows every panel ahead of the ship, the rear one every panel behind it.
 // A dot's distance from the middle is how far it lies off the nose (or the tail): the middle is dead ahead (or dead behind), the rim is square to your side.
@@ -5691,7 +5721,7 @@ function playStep(){
   schedule();
 }
 function schedule(){
-  win.clearTimeout(pTimer); if (!playing) { win.clearTimeout(trTimer); return; }
+  win.clearTimeout(pTimer); if (!playing || view === "cockpit") { win.clearTimeout(trTimer); return; }
   const pr = $("#pprog"); pr.removeClass("run"); pr.setCssProps({"--pdur": playSec + "s"});
   RAF(() => pr.addClass("run"));
   pTimer = win.setTimeout(playStep, playSec * 1000);
@@ -5712,6 +5742,7 @@ function apdFrame(now){
   render(); }
 function apdSync(){ if (playing && playDrift && !apdRaf) { apdLast = 0; apdRaf = RAF(apdFrame); } if ((!playing || !playDrift) && apdRaf) { win.cancelAnimationFrame(apdRaf); apdRaf = 0; buildGrid(); if (sphOn()) csKeep(); draw(); } }
 function setPlaying(on){
+  if (view === "cockpit") { playing = on; $("#playbar").classList.toggle("on", on); $("#pplay").textContent = on ? "■" : "▶"; $("#pplay").setAttribute("aria-label", on ? "Stop" : "Play"); win.clearTimeout(pTimer); ckWander(on); if (FUI.ckplay) FUI.ckplay(); return; }   /* the Cockpit flies its own Wander Mode */
   playing = on; win.setTimeout(apdSync, 0); $("#playbar").classList.toggle("on", on);
   $("#pplay").textContent = on ? "■" : "▶"; $("#pplay").setAttribute("aria-label", on ? "Stop" : "Play");
   if (on) { runSeen = new Set(); runStack = []; if (tourRun) { if (tourRun.idx >= tourRun.ids.length - 1) tourGo(0); schedule(); } else if (sel < 0) playStep(); else schedule(); }
@@ -6612,6 +6643,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "World" }); const seg = sr.createDiv({ cls: "seg" });
       for (const [v, t_] of [["links", "One note's links"], ["sf", "Starfield"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKW === v) } });
         b.onclick = e => { e.stopPropagation(); if (CKW === v) return; CKW = v; save("iv-ckw", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); CK.sfIn = false; CK.c = -2; ckSync(); CK.warp = 1; FUI.emoany(); }; } }
+    { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "Wander" }); const seg = sr.createDiv({ cls: "seg" });
+      for (const [v, t_] of [["links", "Links"], ["jumps", "Jumps"], ["drift", "Drift"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKWM === v) } });
+        b.onclick = e => { e.stopPropagation(); CKWM = v; save("iv-ckwm", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (CK.wd) { ckWander(false); ckWander(true); } }; }
+      const pb = sr.createEl("button", { cls: "ckplay", text: "▶", attr: { type: "button", "aria-label": "Start Wander Mode (P)" } }); pb.onclick = e => { e.stopPropagation(); setPlaying(!playing); };
+      FUI.ckplay = () => { pb.setText(playing && view === "cockpit" ? "■" : "▶"); }; }
     // Starfield's layers, one mini switch each, two to a row (shown when the world is Starfield)
     { const box = fa.createDiv({ cls: "ckxsf" }), grid = box.createDiv({ cls: "ckxgrid" });
       for (const [k_, label] of CKX_LABELS) { const l_ = grid.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = !!CKX[k_]; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: label });
@@ -6620,7 +6656,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKFRAME; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Cockpit frame" });
       c_.onchange = () => { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); }; }
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
-      for (const [k_, v_] of [["W S  ↑ ↓", "forward, back"], ["A D  ← →", "turn"], ["Q E", "look up, down"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["F  R", "only links in, only links out"], ["Esc", "stop"]]) {
+      for (const [k_, v_] of [["W S  ↑ ↓", "forward, back"], ["A D  ← →", "turn"], ["Q E", "look up, down"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["F  R", "only links in, only links out"], ["P", "Wander Mode on or off"], ["Esc", "stop"]]) {
         const r_ = box.createDiv({ cls: "ckkey" }); r_.createEl("kbd", { text: k_ }); r_.createSpan({ text: v_ }); } }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "cockpit"; }; }
   // Compass: Relevance
