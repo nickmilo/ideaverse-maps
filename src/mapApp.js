@@ -2650,7 +2650,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   g.restore(); g.globalAlpha = 1; g.textAlign = "left"; }
 /* past straight up or down the ship is upside down: turning keeps its feel (left stays left), and autopilot first rights it, as a pilot would */
 const ckUp = () => Math.cos(CK.pitch) < 0 ? -1 : 1;
-function ckUpright(){ CK.pitch = Math.atan2(Math.sin(CK.pitch), Math.cos(CK.pitch)); if (Math.cos(CK.pitch) < 0) { CK.yaw += Math.PI; CK.pitch = (CK.pitch > 0 ? Math.PI : -Math.PI) - CK.pitch; CK.roll += 1.2; } }
+function ckUpright(){ CK.pitch = Math.atan2(Math.sin(CK.pitch), Math.cos(CK.pitch)); if (Math.cos(CK.pitch) < 0) { CK.yaw += Math.PI; CK.pitch = (CK.pitch > 0 ? Math.PI : -Math.PI) - CK.pitch; } }
 function ckFwd(){ const cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch); return [sy_ * cp, sp, cy * cp]; }
 function ckCam(x, y, z){ const dx = x - CK.P[0], dy = y - CK.P[1], dz = z - CK.P[2], cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);
   const xc = cy * dx - sy_ * dz, z1 = sy_ * dx + cy * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1; return [xc, yc, zc]; }
@@ -2782,9 +2782,15 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   else if (!CK.auto) CK.v *= Math.pow(.25, dt);
   CK.roll *= Math.pow(.08, dt);
   if (CK.settle && (K.size || CK.drag || CK.auto || CK.wd)) CK.settle = null;
-  if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / 1.9), e = f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
-    CK.P = [0, 1, 2].map(q => S_.P0[q] + (S_.P1[q] - S_.P0[q]) * e); CK.v = 0; ckUpright(); const [ty_, tp_] = ckLook(CK.P, S_.T), dy_ = Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)), s_ = Math.min(1, dt * (2 + 4 * f));
-    CK.yaw += dy_ * s_; CK.pitch += (tp_ - CK.pitch) * s_; CK.roll += dy_ * s_ * .3; if (f >= 1 && Math.abs(dy_) < .01 && Math.abs(tp_ - CK.pitch) < .01) CK.settle = null; }
+  /* the settle (0.8.133, Nick: "a nice, smooth arcing orbit… instead of a corkscrew"): the ship swings round the note on an arc (never through it),
+     always upright, its gaze easing from where it looked onto the note; no roll */
+  if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / 2.4), e = f < .5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2, T = S_.T;
+    if (!S_.u0) { const v0 = [0, 1, 2].map(q => S_.P0[q] - T[q]), r0 = Math.hypot(...v0) || 1, v1 = [0, 1, 2].map(q => S_.P1[q] - T[q]), r1 = Math.hypot(...v1) || 1; S_.u0 = v0.map(v => v / r0); S_.u1 = v1.map(v => v / r1); S_.r0 = r0; S_.r1 = r1; S_.f0 = ckFwd(); }
+    const slerp = (a, b, w) => { const d = Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])), th = Math.acos(d); if (th < 1e-4) return b.slice(); if (th > 3.1) { const o = Math.abs(a[1]) < .9 ? [0, 1, 0] : [1, 0, 0]; const m_ = [a[1] * o[2] - a[2] * o[1], a[2] * o[0] - a[0] * o[2], a[0] * o[1] - a[1] * o[0]], l = Math.hypot(...m_); const mid = m_.map(v => v / l); return w < .5 ? slerp(a, mid, w * 2) : slerp(mid, b, w * 2 - 1); }
+      const s = Math.sin(th), ka = Math.sin((1 - w) * th) / s, kb = Math.sin(w * th) / s; return [0, 1, 2].map(q => a[q] * ka + b[q] * kb); };
+    const u = slerp(S_.u0, S_.u1, e), r = S_.r0 + (S_.r1 - S_.r0) * e; CK.P = [0, 1, 2].map(q => T[q] + u[q] * r); CK.v = 0;
+    const toT = [0, 1, 2].map(q => T[q] - CK.P[q]), lt = Math.hypot(...toT) || 1, fT = toT.map(v => v / lt), wf = Math.min(1, el / .9), wfe = wf * wf * (3 - 2 * wf), fw = slerp(S_.f0, fT, wfe), lf = Math.hypot(...fw) || 1;
+    CK.yaw = Math.atan2(fw[0] / lf, fw[2] / lf); CK.pitch = Math.asin(Math.max(-1, Math.min(1, fw[1] / lf))); CK.roll *= .9; if (f >= 1) CK.settle = null; }
   if (CK.lookT && !CK.auto && !K.size && !CK.drag && win.performance.now() - CK.lookT0 < 1600) { const [ty_, tp_] = ckLook(CK.P, CK.lookT), dy_ = Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)), s_ = Math.min(1, dt * 3); CK.yaw += dy_ * s_; CK.pitch += (tp_ - CK.pitch) * s_; CK.roll += dy_ * s_ * .5; }   /* arriving in Starfield, the ship turns to face the new note's links */
   if (CK.auto || (CK.lookT && !K.size && !CK.drag && win.performance.now() - CK.lookT0 < 1600)) ckUpright();
   const it = CK.items[CK.lock];
