@@ -2467,10 +2467,10 @@ function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), tu
   if (turn && CKW === "sf") for (const it of CK.items) { it.x = P[3 * it.i]; it.y = P[3 * it.i + 1]; it.z = P[3 * it.i + 2]; }   /* the panels ride along with their stars */
   return CKSF; }
 // the Starfield world's layers, each a mini switch in the Cockpit's ⚙ (0.8.96, Nick: "add as mini-toggles for me to play with")
-const CKX_DEF = { gasp: false, rel: false, haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
+const CKX_DEF = { card: true, gasp: false, rel: false, haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
-const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["gasp", "Folder gas+"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["rel", "Relevance scores"], ["haze", "Star haze"]];
+const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["gasp", "Folder gas+"], ["card", "Note card"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["rel", "Relevance scores"], ["haze", "Star haze"]];
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2904,6 +2904,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   ckConsole(g, W, H, VH, cons, font); }
 // X-Wing's two scopes (0.8.87, Nick): the front one shows every panel ahead of the ship, the rear one every panel behind it.
 // A dot's distance from the middle is how far it lies off the nose (or the tail): the middle is dead ahead (or dead behind), the rim is square to your side.
+const ckEjectSync = () => { if (CK.ej) { let pin = false; try { pin = !!(TABS[TCUR] && TABS[TCUR].pin); } catch (_) { pin = false; } CK.ej.hidden = !pin; } };
 function ckScope3(g, x, y, R, front, font){ g.save(); g.fillStyle = "rgba(8,18,40,.92)"; g.beginPath(); g.arc(x, y, R, 0, 6.2832); g.fill();
   g.strokeStyle = front ? "rgba(90,150,255,.85)" : "rgba(90,150,255,.55)"; g.lineWidth = 1.6; g.stroke(); g.lineWidth = 1; g.strokeStyle = "rgba(90,150,255,.22)";
   for (const f_ of [.33, .66]) { g.beginPath(); g.arc(x, y, R * f_, 0, 6.2832); g.stroke(); } g.beginPath(); g.moveTo(x - R, y); g.lineTo(x + R, y); g.moveTo(x, y - R); g.lineTo(x, y + R); g.stroke();
@@ -2942,6 +2943,7 @@ function ckConsole(g, W, H, VH, cons, font){ const c = CK.c, fl = !CKFRAME; if (
     g.fillStyle = ckCol(dN.level); g.beginPath(); g.arc(bx + 11, by + 11, 3, 0, 6.2832); g.fill(); g.fillStyle = "#eef3ff"; g.textBaseline = "middle"; g.fillText(tt, bx + 18, by + 11.5); g.textBaseline = "alphabetic"; }
   /* the centre display */
   const LXc = ckLeftEd(), bw = fl ? Math.min((W - LXc) * .42, 430) : Math.min(W * .46, 520), bx = (LXc + W) / 2 - bw / 2, by = VH + (fl ? 4 : 10), bh = cons - (fl ? 8 : 20);
+  if (!CKX.card) { ckEjectSync(); return; }   /* the note card can be switched off (0.8.128) */
   if (fl) { g.fillStyle = "rgba(8,14,28,.72)"; g.beginPath(); g.roundRect(bx, by, bw, bh, 8); g.fill(); g.strokeStyle = "rgba(120,170,255,.28)"; g.stroke(); } else { g.fillStyle = "rgba(14,24,44,.95)"; g.fillRect(bx, by, bw, bh); g.strokeStyle = "rgba(120,170,255,.35)"; g.strokeRect(bx + .5, by + .5, bw - 1, bh - 1); }
   const col = ckCol(d.level); g.fillStyle = col; if (fl) { g.beginPath(); g.roundRect(bx, by + 6, 3, bh - 12, 2); g.fill(); } else g.fillRect(bx, by, 3, bh); g.textBaseline = "top";
   const tx = bx + 14; let t = d.title; g.font = `700 ${Math.min(17, bh * .17)}px ${font}`; g.fillStyle = "#eef3ff"; while (t.length > 3 && g.measureText(t).width > bw - 28) t = t.slice(0, -2); if (t !== d.title) t += "…"; g.fillText(t, tx, by + 9);
