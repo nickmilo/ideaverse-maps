@@ -2497,7 +2497,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
   CK.lock = CK.items.findIndex(it => it.i === CK.sug); if (CK.lock < 0 && CK.items.length) CK.lock = 0;
   /* arriving in Starfield (0.8.105, Nick: "it should settle on a view that looks at it"): the ship eases back from the note and turns to face it, far enough that its links fit round it */
   if (sf) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]], ds = CK.items.filter(it => !it.none).map(it => Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2])).sort((a, b) => a - b);
-    const d75 = ds.length ? ds[Math.min(ds.length - 1, Math.floor(ds.length * .75))] : 600, D = Math.max(450, Math.min(5200, d75 * (.9 + .6 * Math.min(1, ds.length / 120)))), fw = ckFwd();   /* closer in (0.8.106, Nick): about 0.9× for most notes, easing out to 1.5× for the biggest hubs */
+    const d75 = ds.length ? ds[Math.min(ds.length - 1, Math.floor(ds.length * .75))] : 600, hubF = Math.min(1, ds.length / 120), d25 = ds.length ? ds[Math.floor(ds.length * .25)] : 500, D = Math.max(350, Math.min(2400 + 2800 * hubF, d25 * (1.3 + .7 * hubF))), fw = ckFwd();   /* closer still (0.8.107, Nick): framed on its nearest links (1.3× the distance a quarter of its links lie within, at most 2,400), since links in far galaxies would push the view out to the whole sky; the biggest hubs ease back out */
     /* stand on the far side of the note from its nearer links, so the note and its links are both ahead */
     const nearL = CK.items.filter(it => !it.none && Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2]) <= d75); let C = [0, 0, 0]; for (const it of nearL) { C[0] += it.x; C[1] += it.y; C[2] += it.z; } if (nearL.length) C = C.map(v => v / nearL.length);
     const away = nearL.length ? [T[0] - C[0], T[1] - C[1], T[2] - C[2]] : [-fw[0], -fw[1], -fw[2]], la = Math.hypot(...away) || 1;
@@ -7282,6 +7282,7 @@ return {
   _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
   _cam(){ let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i=0;i<n;i++) if (vis[i]) { x0 = Math.min(x0, sx(X[i])); x1 = Math.max(x1, sx(X[i])); y0 = Math.min(y0, sy(Y[i])); y1 = Math.max(y1, sy(Y[i])); } return { view, k, tx, ty, W, H, box: [x0, y0, x1, y1].map(Math.round), side: sideW() }; },
   _setEmo(o){ EMOF = o; emoBuild(); },
+  _ck(){ const sf = CKSF.P, c = CK.c, T = c >= 0 && sf ? [sf[3 * c], sf[3 * c + 1], sf[3 * c + 2]] : null; return { c, settle: CK.settle ? { P1: CK.settle.P1, T: CK.settle.T } : null, P: CK.P, dist: T ? Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) : null }; },
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
   _kt(){ return [k, tx, ty]; },
   _view(){ return view; },
