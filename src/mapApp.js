@@ -2448,7 +2448,7 @@ EXP.kandinsky = {
 // Space: links in on the left, links out on the right, two-way links ahead; what the note links up to above the horizon, what sits below it beneath;
 // the strongest links (relevance from this note) nearest. F shows only links in, R only links out (Nick's swap). No S·T·I·R gauges yet (Nick: don't calculate them yet).
 const CK = { scHov: -1, scDots: [], hovS: -1, hv: new Map(), inL: [], outL: [], side: [], on: false, c: -1, items: [], lock: -1, sug: -1, P: [0, 0, 0], yaw: 0, pitch: 0, v: 0, keys: new Set(), only: "", t0: 0, warp: 0, auto: false, roll: 0, el: null, cv: null, g: null, w: 0, h: 0, stars: [], last: 0, drag: null, msg: "" };
-let CKFRAME = pref("iv-ckframe", false) === true, CKINV = pref("iv-ckinv", false) === true;   /* CKINV: drag the other way (0.8.153, Nick) */
+let CKAUTO = pref("iv-ckauto", true) !== false, CKFRAME = pref("iv-ckframe", false) === true, CKINV = pref("iv-ckinv", false) === true;   /* CKINV: drag the other way (0.8.153, Nick) */
 // World (0.8.90, Nick's "big kahuna"): "links" builds a scene from one note's links; "sf" flies through Starfield itself,
 // every note at its place in 3D Starfield, the galaxies as glowing disks and clouds in their own colours, the links as panels where those notes really are.
 let CKW = pref("iv-ckw", "links") === "sf" ? "sf" : "links";
@@ -2500,7 +2500,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
     const ty = up_ ? -(.1 + .26 * jb) : dn ? (.1 + .26 * jb) : (jb - .5) * .16;
     const z = 430 + q * 105 + ja * 40, real = sf ? [sf.P[3 * j], sf.P[3 * j + 1], sf.P[3 * j + 2]] : null;
     CK.items.push({ i: j, x: real ? real[0] : tx * z, y: real ? real[1] : ty * z, z: real ? real[2] : z, side, inn: inn_, out: out_, up: ups.has(j), rel: rels.has(j), none: !inn_ && !out_, sx: 0, sy: 0, sw: 0, sh: 0, zc: 0 }); });
-  CK.lock = CK.items.findIndex(it => it.i === CK.sug); if (CK.lock < 0 && CK.items.length) CK.lock = 0;
+  CK.lock = CKAUTO ? CK.items.findIndex(it => it.i === CK.sug) : -1; if (CKAUTO && CK.lock < 0 && CK.items.length) CK.lock = 0;   /* the auto-lock can be switched off (0.8.161, Nick) */
   /* arriving in Starfield (0.8.105, Nick: "it should settle on a view that looks at it"): the ship eases back from the note and turns to face it, far enough that its links fit round it */
   if (sf) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]], ds = CK.items.filter(it => !it.none).map(it => Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2])).sort((a, b) => a - b);
     const d75 = ds.length ? ds[Math.min(ds.length - 1, Math.floor(ds.length * .75))] : 600, hubF = Math.min(1, ds.length / 120), d25 = ds.length ? ds[Math.floor(ds.length * .25)] : 500, D = Math.max(350, Math.min(2400 + 2800 * hubF, d25 * (1.3 + .7 * hubF))), fw = ckFwd();   /* closer still (0.8.107, Nick): framed on its nearest links (1.3× the distance a quarter of its links lie within, at most 2,400), since links in far galaxies would push the view out to the whole sky; the biggest hubs ease back out */
@@ -6925,6 +6925,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "kandinsky"; }; }
   // Cockpit: the canopy's frame (Nick: the structure bars from the mockup)
   { const fa = mo.createDiv({ cls: "mosec emoany ckany" }); fa.hidden = true;
+    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKAUTO; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Lock on the most relevant note when you arrive" });
+      c_.onchange = () => { CKAUTO = c_.checked; save("iv-ckauto", CKAUTO); if (!CKAUTO) { CK.lock = -1; CK.auto = false; } }; }
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKINV; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Drag the other way (grab the sky)" });
       c_.onchange = () => { CKINV = c_.checked; save("iv-ckinv", CKINV); }; }
     { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "World" }); const seg = sr.createDiv({ cls: "seg" });
