@@ -2467,10 +2467,10 @@ function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), tu
   if (turn && CKW === "sf") for (const it of CK.items) { it.x = P[3 * it.i]; it.y = P[3 * it.i + 1]; it.z = P[3 * it.i + 2]; }   /* the panels ride along with their stars */
   return CKSF; }
 // the Starfield world's layers, each a mini switch in the Cockpit's ⚙ (0.8.96, Nick: "add as mini-toggles for me to play with")
-const CKX_DEF = { card: true, gasp: false, rel: false, haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
+const CKX_DEF = { mirror: false, card: true, gasp: false, rel: false, haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
-const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["gasp", "Folder gas+"], ["card", "Note card"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["rel", "Relevance scores"], ["haze", "Star haze"]];
+const CKX_LABELS = [["mirror", "Rear-view mirror"], ["card", "Note card"], ["names", "Galaxy names"], ["gas", "Folder gas"], ["gasp", "Folder gas+"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["rel", "Relevance scores"], ["haze", "Star haze"]];
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2905,6 +2905,23 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
 // X-Wing's two scopes (0.8.87, Nick): the front one shows every panel ahead of the ship, the rear one every panel behind it.
 // A dot's distance from the middle is how far it lies off the nose (or the tail): the middle is dead ahead (or dead behind), the rim is square to your side.
 const ckEjectSync = () => { if (CK.ej) { let pin = false; try { pin = !!(TABS[TCUR] && TABS[TCUR].pin); } catch (_) { pin = false; } CK.ej.hidden = !pin; } };
+// the rear-view mirror (0.8.129, Nick: "I'd be interested if it was a rearview mirror"): what lies behind the ship, flipped left to right as a mirror shows it:
+// galaxies as soft glows, maps and hubs as stars, the cockpit note's links as dots in their link colours with the nearest named
+function ckMirror(g, bx, by, bw, bh, font){ const y0 = CK.yaw, p0 = CK.pitch; CK.yaw = y0 + Math.PI; CK.pitch = -p0; const mcx = bx + bw / 2, mcy = by + bh / 2, F2 = bh * 1.15;
+  const pr = (x, y, z) => { const [xc, yc, zc] = ckCam(x, y, z); return zc > 12 ? [mcx - F2 * xc / zc, mcy + F2 * yc / zc, zc] : null; };
+  g.save(); g.beginPath(); g.roundRect(bx, by, bw, bh, 10); g.fillStyle = "rgba(3,5,12,.9)"; g.fill(); g.clip();
+  try { if (CKW === "sf") { const sf = ckSF(); g.globalCompositeOperation = "lighter";
+      for (const B of sf.B) { const p = pr(B.x, B.y, B.z); if (!p) continue; const r = Math.max(2, Math.min(60, F2 * B.r / p[2])); if (p[0] < bx - r || p[0] > bx + bw + r || p[1] < by - r || p[1] > by + bh + r) continue; const gr = g.createRadialGradient(p[0], p[1], 0, p[0], p[1], r); gr.addColorStop(0, B.b.hue || "#9fb0ff"); gr.addColorStop(1, "rgba(0,0,0,0)"); g.globalAlpha = .45; g.fillStyle = gr; g.beginPath(); g.arc(p[0], p[1], r, 0, 6.2832); g.fill(); }
+      g.globalAlpha = .9; for (let i = 0; i < n; i++) { if (!vis[i] || N[i].level < 3) continue; const p = pr(sf.P[3 * i], sf.P[3 * i + 1], sf.P[3 * i + 2]); if (!p || p[0] < bx || p[0] > bx + bw || p[1] < by || p[1] > by + bh) continue; g.fillStyle = SPAL[SC[i]]; g.fillRect(p[0] - 1, p[1] - 1, 2, 2); }
+      g.globalCompositeOperation = "source-over"; }
+    const SL = CK.SL || {}, pts = []; for (const it of CK.items) { const p = pr(it.x, it.y, it.z); if (p && p[0] > bx && p[0] < bx + bw && p[1] > by && p[1] < by + bh) pts.push([it, p]); }
+    pts.sort((a, b) => a[1][2] - b[1][2]); g.font = `500 10px ${font}`; g.textBaseline = "middle"; let named = 0;
+    for (const [it, p] of pts) { g.globalAlpha = 1; g.fillStyle = SL[(CK.kind && CK.kind.get(it.i)) || "prop"] || ckCol(N[it.i].level); g.beginPath(); g.arc(p[0], p[1], 2.6, 0, 6.2832); g.fill();
+      if (named < 6) { named++; let tt = N[it.i].title; if (tt.length > 26) tt = tt.slice(0, 25) + "…"; g.lineWidth = 3; g.strokeStyle = "rgba(3,4,10,.9)"; g.strokeText(tt, p[0] + 5, p[1]); g.fillStyle = "rgba(230,238,255,.9)"; g.fillText(tt, p[0] + 5, p[1]); } }
+    const ck = CK.c; if (ck >= 0 && CKW === "sf") { const sf = ckSF(), p = pr(sf.P[3 * ck], sf.P[3 * ck + 1], sf.P[3 * ck + 2]); if (p) { g.strokeStyle = "#ffe14d"; g.lineWidth = 1.5; g.beginPath(); g.arc(p[0], p[1], 5, 0, 6.2832); g.stroke(); } }
+  } finally { CK.yaw = y0; CK.pitch = p0; }
+  g.restore(); g.save(); const gr = g.createLinearGradient(bx, by, bx, by + bh); gr.addColorStop(0, "rgba(220,230,250,.55)"); gr.addColorStop(1, "rgba(120,140,170,.35)"); g.strokeStyle = gr; g.lineWidth = 2; g.beginPath(); g.roundRect(bx, by, bw, bh, 10); g.stroke();
+  g.font = `600 9px ${font}`; g.fillStyle = "rgba(190,210,240,.6)"; g.textAlign = "center"; g.textBaseline = "top"; g.fillText("REAR VIEW", mcx, by + 4); g.restore(); g.textAlign = "left"; g.textBaseline = "alphabetic"; }
 function ckScope3(g, x, y, R, front, font){ g.save(); g.fillStyle = "rgba(8,18,40,.92)"; g.beginPath(); g.arc(x, y, R, 0, 6.2832); g.fill();
   g.strokeStyle = front ? "rgba(90,150,255,.85)" : "rgba(90,150,255,.55)"; g.lineWidth = 1.6; g.stroke(); g.lineWidth = 1; g.strokeStyle = "rgba(90,150,255,.22)";
   for (const f_ of [.33, .66]) { g.beginPath(); g.arc(x, y, R * f_, 0, 6.2832); g.stroke(); } g.beginPath(); g.moveTo(x - R, y); g.lineTo(x + R, y); g.moveTo(x, y - R); g.lineTo(x, y + R); g.stroke();
@@ -2943,6 +2960,7 @@ function ckConsole(g, W, H, VH, cons, font){ const c = CK.c, fl = !CKFRAME; if (
     g.fillStyle = ckCol(dN.level); g.beginPath(); g.arc(bx + 11, by + 11, 3, 0, 6.2832); g.fill(); g.fillStyle = "#eef3ff"; g.textBaseline = "middle"; g.fillText(tt, bx + 18, by + 11.5); g.textBaseline = "alphabetic"; }
   /* the centre display */
   const LXc = ckLeftEd(), bw = fl ? Math.min((W - LXc) * .42, 430) : Math.min(W * .46, 520), bx = (LXc + W) / 2 - bw / 2, by = VH + (fl ? 4 : 10), bh = cons - (fl ? 8 : 20);
+  if (CKX.mirror) { ckMirror(g, bx, by, bw, bh, font); ckEjectSync(); return; }
   if (!CKX.card) { ckEjectSync(); return; }   /* the note card can be switched off (0.8.128) */
   if (fl) { g.fillStyle = "rgba(8,14,28,.72)"; g.beginPath(); g.roundRect(bx, by, bw, bh, 8); g.fill(); g.strokeStyle = "rgba(120,170,255,.28)"; g.stroke(); } else { g.fillStyle = "rgba(14,24,44,.95)"; g.fillRect(bx, by, bw, bh); g.strokeStyle = "rgba(120,170,255,.35)"; g.strokeRect(bx + .5, by + .5, bw - 1, bh - 1); }
   const col = ckCol(d.level); g.fillStyle = col; if (fl) { g.beginPath(); g.roundRect(bx, by + 6, 3, bh - 12, 2); g.fill(); } else g.fillRect(bx, by, 3, bh); g.textBaseline = "top";
