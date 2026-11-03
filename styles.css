@@ -1505,3 +1505,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .ivm-cockpit .ivm-card.ivm-card.ckedit :is(.cm-editor,.cm-scroller,.cm-content,.cm-sizer,.markdown-source-view,.view-content,.workspace-leaf,.workspace-leaf-content,.workspace-split),
 .ivm .ivm-cockpit .ivm-card.ivm-card.ckedit :is(.cm-editor,.cm-scroller,.cm-content,.cm-sizer,.markdown-source-view,.view-content,.workspace-leaf,.workspace-leaf-content,.workspace-split):is(:focus,:focus-visible,:focus-within){outline:none;box-shadow:none;border-color:transparent}
 .ivm.ivm-land header,.ivm.ivm-land .trail{display:none}
+.ivm .dtab.hudtab{top:62%;right:var(--hr,0px)}
+.ivm .dtab.hudtab[hidden]{display:none}
+.ivm .ivm-card.ivm-pv.hudpv{position:absolute;left:var(--pvx);top:var(--pvy);pointer-events:none;z-index:5}
+.ivm .ivm-card.ivm-pv.hudpv[hidden]{display:none}
