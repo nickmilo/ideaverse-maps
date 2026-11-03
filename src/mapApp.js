@@ -2737,7 +2737,7 @@ function ckPvMany(W, VH, prim){ const cap = { fewer: 5, natural: 10, max: 18 }[C
       if (!e) { e = ckPvMake(p, N[it.i].title); CK.pvM.set(p, e); }
       e.hidden = false; e.setCssProps({ "--pvx": Math.round(box[0]) + "px", "--pvy": Math.round(box[1]) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); } }
   for (const [p, e] of CK.pvM) if (!want.has(p)) { e.remove(); CK.pvM.delete(p); } }
-function ckPreview(W, VH){ if (CK.pvOver && CK.pvEl && !CK.pvEl.hidden && CK.pvP === CK.pvOver) return;   /* the pointer is on the preview: it holds still, so you can click it */
+function ckPreview(W, VH){ if (!CK.pvOver) CK.pvLead = null; if (CK.pvOver && CK.pvEl && !CK.pvEl.hidden && CK.pvP === CK.pvOver) return;   /* the pointer is on the preview: it holds still, so you can click it */
   const busy = CKPV === "off" || !host.preview || CK.auto || CK.wd || CK.gj;
   /* whatever you're hovering previews first (0.8.134, Nick): a side name, a scope dot or a star; with nothing under the pointer, the locked note's preview stays */
   let hj = -1, ax = 0, ay = 0, side = 0;
@@ -2749,7 +2749,19 @@ function ckPreview(W, VH){ if (CK.pvOver && CK.pvEl && !CK.pvEl.hidden && CK.pvP
   if (hj >= 0 && hj !== CK.c) { tj = hj; px = ax; py = ay; inV = true; }
   if (!inV) { if (CK.pvEl) CK.pvEl.hidden = true; ckPvMany(W, VH, null); return; }
   const p = N[tj].path; if (!CK.pvEl || CK.pvP !== p) { if (CK.pvEl) CK.pvEl.remove(); const e = ckPvMake(p, N[tj].title); CK.pvEl = e; CK.pvP = p; }
-  const pw = 230, ph = Math.min(140, VH - 24), x = side > 0 ? Math.min(W - pw - 8, px + 64) : side < 0 ? Math.max(8, px - 64 - pw) : px + 24 + pw > W - 8 ? px - 24 - pw : px + 24, y = Math.max(8, Math.min(VH - ph - 8, py - ph / 2));
+  const pw = 230, ph = Math.min(140, VH - 24); let x, y;
+  if (side) { x = side > 0 ? Math.min(W - pw - 8, px + 64) : Math.max(8, px - 64 - pw); y = Math.max(8, Math.min(VH - ph - 8, py - ph / 2)); }
+  else { /* smarter (0.8.158, Nick: it covered the note's own name): try spots round the star, past its name, left, above, below; take the first that covers no name, the cockpit note or the lists, else the least covered */
+    const hit = (a, b) => Math.max(0, Math.min(a[0] + a[2], b[0] + b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1]));
+    const it_ = CK.items.find(o => o.i === tj), nameW = it_ && it_.tt ? it_.sw : 0, avoid = [...(CK.lbl || []), ...CK.side.map(q => [q[0], q[1], q[2], q[3]]), ...(CK.cPos ? [[CK.cPos[0] - 34, CK.cPos[1] - 34, 68, 68]] : []), [0, VH - 130, W, 130]];
+    /* search outward: rings 40–420 px from the star in 16 directions; each spot scores what it covers (names, lists, the note, the star's own name) plus a little for distance, so it settles in the nearest open space (0.8.158) */
+    const own = [px - 6, py - 9, nameW + 22, 18]; let best = null;
+    for (const r of [40, 90, 150, 220, 300, 420]) for (let q = 0; q < 16; q++) { const a = q / 16 * 6.2832, cx_ = px + Math.cos(a) * r - pw / 2 + Math.cos(a) * pw / 2, cy_ = py + Math.sin(a) * r - ph / 2 + Math.sin(a) * ph / 2;
+      const b = [cx_, cy_, pw, ph]; if (b[0] < 8 || b[1] < 8 || b[0] + pw > W - 8 || b[1] + ph > VH - 8) continue; let cov = hit(own, b) * 20; for (const a2 of avoid) cov += hit(a2, b); const sc_ = cov + r * 6;
+      if (!best || sc_ < best[0]) best = [sc_, b]; }
+    if (!best) best = [0, [Math.max(8, Math.min(W - pw - 8, px + 24)), Math.max(8, Math.min(VH - ph - 8, py - ph / 2)), pw, ph]];
+    CK.pvLead = [px, py, best[1]];
+    [x, y] = best[1]; }
   CK.pvEl.hidden = false; CK.pvEl.setCssProps({ "--pvx": Math.round(x) + "px", "--pvy": Math.round(y) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); CK.pvEl.addClass("ckpv1"); ckPvMany(W, VH, [x, y, pw, ph, tj]); }
 // look around by moving the phone (0.8.141, Nick): turning the phone turns the ship, tilting it looks up and down; each motion is added to the stick, so dragging still works
 let CKTILT = pref("iv-cktilt", false) === true, ckTiltLast = null, ckTiltOn = false;
@@ -2901,7 +2913,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   const sfw = CKW === "sf"; g.font = `500 11.5px ${font}`;
   for (const it of CK.items) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z + (sfw ? 0 : wz)); it.zc = zc; if (zc <= 8) { it.sw = 0; continue; } it.sx = cx + F * xc / zc; it.sy = cy + F * yc / zc; it.sw = Math.min(300, F * 112 / zc); it.sh = it.sw * 34 / 112;
     if (sfw) { /* in Starfield a link is a named star, not a panel (as on the map); its name is what you click */ it.px = it.sx; it.py = it.sy; let tt = N[it.i].title; if (tt.length > 40) tt = tt.slice(0, 39) + "…"; it.tt = tt; const tw = g.measureText(tt).width; it.sw = tw + 14; it.sh = 17; it.sx = it.px + 7 + it.sw / 2; } }
-  if (sfw) { const SL = CK.SL || {}, taken = CK.noteBox ? [CK.noteBox] : [], lk = (CK.items[CK.lock] || {}).i; g.textBaseline = "middle";
+  if (sfw) { const SL = CK.SL || {}, taken = CK.lbl = CK.noteBox ? [CK.noteBox] : [], lk = (CK.items[CK.lock] || {}).i; g.textBaseline = "middle";
     for (const it of [...CK.items].filter(o => o.zc > 8).sort((a, b) => a.zc - b.zc)) { if (it.px < -40 || it.px > W + 40 || it.py < -20 || it.py > VH + 20) continue; const on = ckShows(it), hv = CK.hv.get(it.i) || 0, col = SL[CK.kind.get(it.i) || "prop"] || "#a9b4c8";
       g.globalAlpha = on ? 1 : .2; g.fillStyle = it.none ? "#ffcf5a" : col; g.beginPath(); g.arc(it.px, it.py, it.i === lk ? 4.5 : 3.2, 0, 6.2832); g.fill(); g.strokeStyle = "rgba(255,255,255,.85)"; g.lineWidth = 1; g.stroke();
       const box = [it.sx - it.sw / 2, it.sy - 9, it.sw, 18]; if (it.i !== lk && !hv && taken.some(q => box[0] < q[0] + q[2] && box[0] + box[2] > q[0] && box[1] < q[1] + q[3] && box[1] + box[3] > q[1])) continue; taken.push(box);
@@ -2965,6 +2977,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
     g.restore(); }
   /* a preview of the locked note (0.8.132, Nick: "that mini preview… for the selected note"), beside it, as Compass shows them */
   ckPreview(W, VH);
+  if (CK.pvLead && CK.pvEl && !CK.pvEl.hidden) { const [lx, ly, b] = CK.pvLead, ex = Math.max(b[0], Math.min(b[0] + b[2], lx)), ey = Math.max(b[1], Math.min(b[1] + b[3], ly)); if (Math.hypot(ex - lx, ey - ly) > 30) { g.save(); g.globalAlpha = .45; g.strokeStyle = "#cfe0ff"; g.setLineDash([2, 4]); g.lineWidth = 1; g.beginPath(); g.moveTo(lx, ly); g.lineTo(ex, ey); g.stroke(); g.restore(); } }   /* a faint leader when the preview sits away from its star */
   /* reticle on the locked panel, or an arrow at the edge pointing to it */
   const lk = CK.items[CK.lock];
   if (lk) { const col = "#ffcf5a"; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1.6;

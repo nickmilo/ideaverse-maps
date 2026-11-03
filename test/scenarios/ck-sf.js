@@ -7,7 +7,7 @@ module.exports = async ({ page, sleep, shot }) => {
   await page.evaluate(() => { const ad = document.querySelector('.ivm #animdock'); if (ad && !ad.classList.contains('collapsed')) ad.click(); const lg = document.querySelector('.ivm #legend'); if (lg && !lg.classList.contains('collapsed') && !process.env.KEEPLEG) lg.click(); });
   await page.locator('.ivm #q').fill(process.env.NOTE || 'Pace Layers'); await sleep(700); await page.keyboard.press('Enter'); await sleep(2500); await page.evaluate(() => document.activeElement && document.activeElement.blur());
   await page.evaluate(() => { const m = app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map; if (m._setEmo && window.__EMO) m._setEmo(window.__EMO); });
-  await page.mouse.move(560, 300); await sleep(500); await shot('sf-start');
+  await page.mouse.move(+(process.env.MX||560), +(process.env.MY||300)); await sleep(500); await shot('sf-start');
   await page.keyboard.down('s'); await sleep(1500); await page.keyboard.up('s'); await sleep(1500); await shot('sf-back');
   await page.keyboard.down('s'); await sleep(3000); await page.keyboard.up('s'); await sleep(2500); await shot('sf-far');
   await page.keyboard.press(' '); for (let q = 0; q < 12; q++) { await sleep(400); await shot('sf-auto' + String(q).padStart(2,'0')); }
