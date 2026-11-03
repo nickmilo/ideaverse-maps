@@ -1903,6 +1903,89 @@ function layoutLincal(){
   const last = years.length - 1; expBox = {x0: -90, y0: last*H1 - 70, x1: (half ? 16 : 37)*C + 20, y1: last*H1 + 12*MH + 20}; if (LCUIOK) syncLC(); }   // fit to the latest year; the wheel scrolls back through the rest
 // keep the years inside the years that have notes (first time: this year, or the latest year with notes)
 function lcClamp(){ const [y0, y1] = datedYears(); if (!LCR0 || !LCR1) { LCR0 = LCR1 = Math.min(y1, NOW_Y); } LCR0 = Math.max(y0, Math.min(y1, LCR0)); LCR1 = Math.max(y0, Math.min(y1, LCR1)); if (LCR0 > LCR1) [LCR0, LCR1] = [LCR1, LCR0]; return [y0, y1]; }   // fit to the latest year; the wheel scrolls back through the rest
+/* Linear Calendar's year layer (0.8.170, Nick: an annual review on the map, "less difficult to recollect what happened, much easier to zoom out, identify patterns
+   and discover what themes of the year start to emerge"). Built on three notes: the year note (titled "2026"), its Preview note (in the same folder) and the reviews beside them.
+   Recall (left): emoji-first counts; hover one and its days light up, click to keep them lit. Reflect (right): the theme, the reviews in order, and an Extra fold.
+   Notes that point up to the year note glow: the ones you marked as meaningful. */
+let LCTH = pref("iv-lcth", true) !== false, LCYP = pref("iv-lcyp", true) !== false, LCGLOW = pref("iv-lcglow", true) !== false, LCXO = false, LCPIN = null, LCYHOV = null, LCYH = [];
+const LCYD = new Map();
+function lcYear(y){ let D = LCYD.get(y); if (D && D.n === n) return D;
+  const yS = String(y); let Y = -1; for (let i = 0; i < n; i++) if (N[i].title === yS && (Y < 0 || /\/reviews?\//i.test(N[i].path))) Y = i;
+  const dir = Y >= 0 && N[Y].path.includes("/") ? N[Y].path.slice(0, N[Y].path.lastIndexOf("/") + 1) : null;
+  const daily = [], books = [], movies = [], shows = [], marked = [], reviews = [], extra = []; let prev = -1;
+  const xpY = v => [].concat(v == null ? [] : v).some(q => parseInt(String(q), 10) === y);
+  for (let i = 0; i < n; i++) { const t = N[i].title, p = N[i].path;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t) && t.startsWith(yS)) daily.push(i);
+    if (dir && i !== Y && p.startsWith(dir)) { const sub = p.slice(dir.length).includes("/");
+      if (!sub && /\bpreview/i.test(t) && !/\breview/i.test(t)) { if (prev < 0 || /year/i.test(t)) prev = i; } else if (!sub && /\breview/i.test(t)) reviews.push(i); else extra.push(i); }
+    const f = fmOf(i); if (f && (xpY(f.YearXP) || xpY(f.yearXPL) || xpY(f.yearXP) || xpY(f.YearXPL))) { const cs = [].concat(f.collections || []).map(String).join(" ");
+      if (/\[\[Books(\||\]\])/i.test(cs)) books.push(i); else if (/\[\[Movies(\||\]\])/i.test(cs)) movies.push(i); else if (/\[\[(TV|Shows)(\||\]\])/i.test(cs)) shows.push(i); } }
+  if (Y >= 0) for (const j of new Set(inn[Y])) if (j !== Y && EKIND.get(j * n + Y) === 1) marked.push(j);
+  const byT = (a, b) => (isNaN(TV[a]) ? 9e15 : TV[a]) - (isNaN(TV[b]) ? 9e15 : TV[b]) || N[a].title.localeCompare(N[b].title); reviews.sort(byT); extra.sort(byT); marked.sort(byT);
+  D = { n, y, Y, prev, theme: null, daily, books, movies, shows, marked, reviews, extra,
+    rows: [["📅", "Daily notes", daily], ["📚", "Books noted", books], ["🎬", "Movies noted", movies], ["📺", "Shows noted", shows], ["⭐", `Marked for ${y}`, marked]].filter((r, q) => q === 0 || r[2].length) };
+  LCYD.set(y, D);
+  if (prev >= 0) { const f = fmOf(prev); if (f && f.theme) D.theme = String([].concat(f.theme)[0]).replace(/\[\[|\]\]/g, "");   /* a theme: property wins; otherwise the first bold line under a Theme heading */
+    else if (host.readText) host.readText(N[prev].path).then(txt => { if (!txt) return; const ls = txt.split(/\r?\n/); let h = -1, lv = 0;
+      for (let q = 0; q < ls.length; q++) { const m = /^(#{1,6})\s+(.*)$/.exec(ls[q]); if (h < 0) { if (m && /theme/i.test(m[2])) { h = q; lv = m[1].length; } continue; } if (m && m[1].length <= lv) break; const b = /\*\*([^*]+)\*\*/.exec(ls[q]); if (b) { D.theme = b[1].trim(); break; } }
+      if (D.theme) draw(); }).catch(() => {}); }
+  return D; }
+// what's lit on the calendar: the hovered (or kept) count, or the hovered review
+function lcLit(D){ const h = LCYHOV; if (h && h.y === D.y) { if (h.k === "m") return D.rows[h.v] ? D.rows[h.v][2] : []; if (h.k === "n") return [h.v]; if (h.k === "t" && D.prev >= 0) return [D.prev]; }
+  return LCPIN && LCPIN.y === D.y && D.rows[LCPIN.v] ? D.rows[LCPIN.v][2] : []; }
+function lcYearUnder(yi, y, top){ if (!(LCYP || LCGLOW)) return; const D = lcYear(y), { C, col, rowY } = LC;
+  const box = i => { if (isNaN(TV[i])) return null; const d = new Date(TV[i]); if (d.getUTCFullYear() !== y) return null; const m = d.getUTCMonth(), dd = d.getUTCDate(); return [sx(col(y, m, dd)*C) + 1.5, sy(top + rowY(m, dd)) + 1.5, C*k - 3]; };
+  if (LCGLOW) for (const j of D.marked) { if (!vis[j] || EHID[j] || isNaN(TV[j]) || new Date(TV[j]).getUTCFullYear() !== y) continue; const x = sx(X[j]), yy = sy(Y[j]), r = Math.max(12, C*k*.5), g = ctx.createRadialGradient(x, yy, 0, x, yy, r);
+    g.addColorStop(0, "rgba(255,207,110,.55)"); g.addColorStop(1, "rgba(255,207,110,0)"); ctx.fillStyle = g; ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(x, yy, r, 0, 6.2832); ctx.fill(); }
+  if (!LCYP) return; const lit = lcLit(D); if (!lit.length) return; const seen = new Set();
+  ctx.save(); ctx.fillStyle = css.accent; ctx.strokeStyle = css.accent; ctx.lineWidth = 2;
+  for (const i of lit) { const b = box(i); if (!b) continue; const kk = b[0] + "," + b[1]; if (seen.has(kk)) continue; seen.add(kk); ctx.globalAlpha = .2; ctx.fillRect(b[0], b[1], b[2], b[2]); ctx.globalAlpha = .9; ctx.strokeRect(b[0], b[1], b[2], b[2]); }
+  ctx.restore(); }
+function drawLcYear(){ LCYH = []; if (view !== "lincal" || !expOn() || !LCYP || isPhone() || morphing || !LC.years || !LC.years.length) return;
+  const { years, C, H1, MH, half } = LC, gw = (half ? 16 : 37) * C, hudR = HUDL && sel >= 0 && HUDBOX;
+  const lx1 = sx(-58), lw = Math.min(250, lx1 - 14), rx0 = sx(gw + 26), rw = Math.min(270, W - 14 - rx0), canL = lw >= 170, canR = rw >= 170 && !hudR;
+  if (!canL && !canR) return;
+  const fit = (t, w) => { if (ctx.measureText(t).width <= w) return t; while (t.length > 1 && ctx.measureText(t + "…").width > w) t = t.slice(0, -1); return t + "…"; };
+  const card = (x, y, w, h) => { ctx.save(); ctx.globalAlpha = .82; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - 10, y - 10, w + 20, h + 16, 10); ctx.fill(); ctx.globalAlpha = .9; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); };
+  const head = (t, x, y) => { ctx.font = `600 9.5px ${css.mono}`; ctx.fillStyle = css.muted; ctx.globalAlpha = .9; ctx.textAlign = "left"; ctx.letterSpacing = "1.2px"; ctx.fillText(t, x, y); ctx.letterSpacing = "0px"; ctx.globalAlpha = 1; };
+  const hot = (x, y, w, on) => { if (!on) return; ctx.save(); ctx.globalAlpha = .16; ctx.fillStyle = css.accent; ctx.beginPath(); ctx.roundRect(x - 6, y - 11, w + 12, 22, 6); ctx.fill(); ctx.restore(); };
+  ctx.save(); ctx.textBaseline = "middle";
+  for (let yi = 0; yi < years.length; yi++) { const y = years[yi], top = sy(yi*H1), bot = sy(yi*H1 + 12*MH); if (bot < 40 || top > H - 40) continue; const D = lcYear(y);
+    /* Recall: the counts */
+    const recall = (x, y0, w) => { const hgt = 22 + D.rows.length * 24; card(x, y0, w, hgt); head("RECALL", x, y0 + 4); let yy = y0 + 28;
+      D.rows.forEach((r, q) => { const on = (LCYHOV && LCYHOV.k === "m" && LCYHOV.v === q && LCYHOV.y === y) || (LCPIN && LCPIN.v === q && LCPIN.y === y); hot(x, yy, w, on);
+        ctx.font = `500 13px ${css.body}`; ctx.fillStyle = css.ink; ctx.textAlign = "left"; ctx.fillText(fit(`${r[0]} ${r[1]}`, w - 44), x, yy);
+        ctx.font = `600 12.5px ${css.mono}`; ctx.fillStyle = on ? css.accent : css.ink; ctx.textAlign = "right"; ctx.fillText(String(r[2].length), x + w, yy); ctx.textAlign = "left";
+        if (LCPIN && LCPIN.v === q && LCPIN.y === y) { ctx.fillStyle = css.accent; ctx.beginPath(); ctx.arc(x - 9, yy, 2.4, 0, 6.2832); ctx.fill(); }
+        LCYH.push([x - 6, yy - 11, w + 12, 22, { k: "m", v: q, y }]); yy += 24; }); return hgt + 26; };
+    /* Reflect: the theme, the reviews, then Extra (folded) */
+    const reflect = (x, y0, w) => { const rv = D.reviews, ex = D.extra, nT = D.prev >= 0 ? 1 : 0, hgt = 22 + (nT ? 46 : 0) + (rv.length ? 20 + rv.length * 22 : 0) + (ex.length ? 24 + (LCXO ? ex.length * 22 : 0) : 0); card(x, y0, w, hgt); head("REFLECT", x, y0 + 4); let yy = y0 + 30;
+      const strip = t => t.replace(new RegExp("^" + y + "\\s+(?:[-–·]\\s*)?"), "") || t;
+      const noteRow = (j, ind) => { const on = LCYHOV && LCYHOV.k === "n" && LCYHOV.v === j; hot(x, yy, w, on); ctx.font = `500 12.5px ${css.body}`; ctx.fillStyle = on ? css.accent : css.ink; ctx.fillText(fit(strip(N[j].title), w - ind), x + ind, yy);
+        LCYH.push([x - 6, yy - 11, w + 12, 22, { k: "n", v: j, y }]); yy += 22; };
+      if (nT) { const on = LCYHOV && LCYHOV.k === "t" && LCYHOV.y === y; hot(x, yy + 6, w, on); ctx.font = `italic ${css.dw} 17px ${css.display}`; ctx.fillStyle = on ? css.accent : css.ink; ctx.fillText(fit("🎻 " + (D.theme || strip(N[D.prev].title)), w), x, yy);
+        ctx.font = `500 11px ${css.body}`; ctx.fillStyle = css.muted; ctx.fillText(fit(N[D.prev].title, w), x, yy + 19); LCYH.push([x - 6, yy - 12, w + 12, 40, { k: "t", v: D.prev, y }]); yy += 46; }
+      if (rv.length) { head("REVIEWS", x, yy - 4); yy += 16; for (const j of rv) noteRow(j, 0); }
+      if (ex.length) { yy += 4; const on = LCYHOV && LCYHOV.k === "x" && LCYHOV.y === y; hot(x, yy, w, on); ctx.font = `600 12px ${css.body}`; ctx.fillStyle = on ? css.accent : css.muted; ctx.fillText(`${LCXO ? "▾" : "▸"} Extra · ${ex.length}`, x, yy); LCYH.push([x - 6, yy - 11, w + 12, 22, { k: "x", y }]); yy += 22;
+        if (LCXO) for (const j of ex) noteRow(j, 12); }
+      return hgt + 26; };
+    const y0 = Math.max(top + 4, 56);
+    if (canL && canR) { recall(lx1 - lw, y0, lw); reflect(rx0, y0, rw); }
+    else if (canL) { const h1 = recall(lx1 - lw, y0, lw); reflect(lx1 - lw, y0 + h1, lw); }
+    else { const h1 = recall(rx0, y0, rw); reflect(rx0, y0 + h1, rw); }
+    /* rings on the lit notes, and a thread from a hovered review to its day */
+    const lit = lcLit(D); ctx.strokeStyle = css.accent; ctx.lineWidth = 2;
+    for (const i of lit) { if (!vis[i] || EHID[i] || isNaN(TV[i]) || new Date(TV[i]).getUTCFullYear() !== y) continue; ctx.globalAlpha = .95; ctx.beginPath(); ctx.arc(sx(X[i]), sy(Y[i]), rad(i) + 4, 0, 6.2832); ctx.stroke(); }
+    if (LCYHOV && (LCYHOV.k === "n" || LCYHOV.k === "t") && LCYHOV.y === y) { const j = LCYHOV.v, hh = LCYH.find(q => q[4].v === j && q[4].k === LCYHOV.k);
+      if (hh && vis[j] && !EHID[j] && !isNaN(TV[j]) && new Date(TV[j]).getUTCFullYear() === y) { const fromL = hh[0] < sx(0), ax = fromL ? hh[0] + hh[2] + 4 : hh[0] - 4; ctx.save(); ctx.globalAlpha = .6; ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ax, hh[1] + hh[3] / 2); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); ctx.restore(); } } }
+  ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
+const lcAt = (x, y) => { for (const h of LCYH) if (x >= h[0] && x <= h[0] + h[2] && y >= h[1] && y <= h[1] + h[3]) return h[4]; return null; };
+cv.addEventListener("pointermove", e => { if (view !== "lincal") return; const h = lcAt(e.offsetX, e.offsetY), same = (h && LCYHOV && h.k === LCYHOV.k && h.v === LCYHOV.v && h.y === LCYHOV.y) || (!h && !LCYHOV); if (!same) { LCYHOV = h; cv.classList.toggle("hot", !!h); draw(); } });
+cv.addEventListener("pointerdown", e => { if (view !== "lincal" || e.button !== 0) return; const h = lcAt(e.offsetX, e.offsetY); if (!h) return; e.stopImmediatePropagation(); e.preventDefault();
+  if (h.k === "m") { LCPIN = LCPIN && LCPIN.v === h.v && LCPIN.y === h.y ? null : { v: h.v, y: h.y }; draw(); return; }
+  if (h.k === "x") { LCXO = !LCXO; draw(); return; }
+  const j = h.v; if (j >= 0) { if (e.shiftKey) TABNEW = true; if (vis[j]) navTo(j); if (following) toEditor(j); else if (host.openNote && !vis[j]) host.openNote(N[j].path, false, true); } }, { capture: true });
+cv.addEventListener("pointerleave", () => { if (LCYHOV) { LCYHOV = null; draw(); } });
 EXP.lincal = {
   layout: layoutLincal, pick: (x, y) => dotPick(x, y), spinePick: true,   // like Bookshelf: the nearest dot wins and names never block, so you can glide along a row either way
   guides(){ const {years, C, H1, col, rowY, MH, half} = LC, now = new Date();
@@ -1918,7 +2001,9 @@ EXP.lincal = {
       ctx.globalAlpha = 1; ctx.textBaseline = "middle"; ctx.fillStyle = css.muted; ctx.font = `600 ${Math.max(9, Math.min(13, C*k*.32))}px ${css.mono}`; ctx.textAlign = "right";
       for (let m = 0; m < 12; m++) ctx.fillText(MON3[m].toUpperCase(), sx(-10), sy(top + m*MH + (half ? C : C/2)));
       ctx.textAlign = "center"; if (!half) for (let c = 0; c < 37; c++) ctx.fillText("MTWTFSS"[c % 7], sx(c*C + C/2), sy(top - 16));
-      ctx.textAlign = "left"; ctx.fillStyle = css.accent; ctx.font = `600 ${Math.max(14, Math.min(30, C*k*.7))}px ${css.mono}`; ctx.fillText(String(y), sx(0), sy(top - 46)); ctx.textBaseline = "alphabetic"; } },
+      ctx.textAlign = "left"; ctx.fillStyle = css.accent; ctx.font = `600 ${Math.max(14, Math.min(30, C*k*.7))}px ${css.mono}`; ctx.fillText(String(y), sx(0), sy(top - 46));
+      if (LCTH) { const D = lcYear(y); if (D.theme) { const yw = ctx.measureText(String(y)).width, fs = Math.max(13, Math.min(26, C*k*.58)); ctx.font = `italic ${css.dw} ${fs}px ${css.display}`; ctx.fillStyle = css.ink; ctx.fillText("🎻 " + D.theme, sx(0) + yw + 18, sy(top - 46)); } }   /* the year's theme, from its Preview note (0.8.170) */
+      ctx.textBaseline = "alphabetic"; lcYearUnder(yi, y, top); } },
   legend: "Linear Calendar: a year as twelve rows, one per month, each day a box, with the weeks lined up down the page. The notes you made that day fill its box: maps and hubs first, in their level colors. Its menu: Years (drag the two handles; both on one year shows that year, ‹ › moves a year at a time; with several, the wheel scrolls through them and ⌘ + wheel zooms) and Whole or Half months (Half: each month on two rows, the 1st to the 15th and the 16th on, for a narrow pane).",
 };
 
@@ -4493,6 +4578,7 @@ function render(){
   if (chartOn()) drawChart();
   drawMini();   // Starfield's overview map, bottom right
   drawHudLinks();
+  drawLcYear();
   drawContrails();
   drawLive();
   for (const o of Object.values(EDS)) o.place(); placeOrbs();
@@ -5750,6 +5836,10 @@ const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) e
   { const r = c.createEl("label", { cls: "mini lcemo", attr: { title: "Each note's emoji from a base column (Settings → Emoji labels), beside its dot" } }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = emoOn("lincal"); { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = emoOn("lincal"); }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
     const st = c.createDiv({ cls: "pn lcemost" });
     cb.onchange = async () => { setEmoOn("lincal", cb.checked); st.setText(""); if (cb.checked) { const e_ = await loadEmo(); if (e_) st.setText(e_); } draw(); }; }
+  /* the year layer's switches (0.8.170) */
+  for (const [key, get, set, t, tip] of [["iv-lcth", () => LCTH, v => { LCTH = v; }, "Year theme", "The theme from the year's Preview note, beside the year"], ["iv-lcyp", () => LCYP, v => { LCYP = v; }, "Year panel", "Recall (counts that light up their days) and Reflect (theme, reviews, Extra) in the space beside the months"], ["iv-lcglow", () => LCGLOW, v => { LCGLOW = v; }, "Glow marked notes", "Notes that point up to the year note glow gold"]]) {
+    const r = c.createEl("label", { cls: "mini lcemo", attr: { title: tip } }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = get(); r.createEl("i", { cls: "sw" }); r.createSpan({ text: t });
+    cb.onchange = () => { set(cb.checked); save(key, cb.checked); draw(); }; }
   return { yc }; })(); LCUIOK = true;
 function syncLC(){ const [y0, y1] = lcClamp(); syncDual(LCUI.yc, LCR0, LCR1, y0, y1); $("#lcyear").textContent = LCR0 === LCR1 ? String(LCR0) : `${LCR0}–${LCR1}`; $("#lcprev").disabled = LCR0 <= y0; $("#lcnext").disabled = LCR1 >= y1; }
 syncLC();
@@ -7555,6 +7645,7 @@ return {
   _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
   _cam(){ let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i=0;i<n;i++) if (vis[i]) { x0 = Math.min(x0, sx(X[i])); x1 = Math.max(x1, sx(X[i])); y0 = Math.min(y0, sy(Y[i])); y1 = Math.max(y1, sy(Y[i])); } return { view, k, tx, ty, W, H, box: [x0, y0, x1, y1].map(Math.round), side: sideW() }; },
   _setEmo(o){ EMOF = o; emoBuild(); },
+  _lcy(){ return LCYH.map(h => [h[0], h[1], h[2], h[3], h[4].k, h[4].v]); },
   _ck(){ const sf = CKSF.P, c = CK.c, T = c >= 0 && sf ? [sf[3 * c], sf[3 * c + 1], sf[3 * c + 2]] : null; const fw_ = ckFwd(), Tq = c >= 0 && sf ? [sf[3 * c], sf[3 * c + 1], sf[3 * c + 2]] : null, dd = Tq ? [Tq[0] - CK.P[0], Tq[1] - CK.P[1], Tq[2] - CK.P[2]] : null, ldd = dd ? Math.hypot(...dd) : 1; return { yaw: CK.yaw, pitch: CK.pitch, off: dd ? Math.round(Math.acos(Math.max(-1, Math.min(1, (fw_[0] * dd[0] + fw_[1] * dd[1] + fw_[2] * dd[2]) / ldd))) * 180 / Math.PI) : null, c, dots: CK.scDots, lock: (CK.items[CK.lock] || {}).i, star: CK.starHov, settle: CK.settle ? { P1: CK.settle.P1, T: CK.settle.T } : null, P: CK.P, dist: T ? Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) : null }; },
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
   _kt(){ return [k, tx, ty]; },
