@@ -2476,7 +2476,7 @@ const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
 function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 0; CK.auto = false; CK.trav = 0; CK.t0 = win.performance.now();
   const sf = CKW === "sf" ? ckSF() : null;
-  if (!sf) { CK.P = [0, 0, 0]; CK.yaw = 0; CK.pitch = 0; }
+  let gl = null; if (!sf) { CK.glide = null; if ((CK.arrV || 0) > 150) { ckUpright(); const v = Math.min(CK.arrV, 1500), dur = 1.8, s_ = v * dur / 3, fw = ckFwd(); gl = { P0: CK.P.slice(), fw, s: s_, dur, t0: win.performance.now() }; } else { CK.P = [0, 0, 0]; CK.yaw = 0; CK.pitch = 0; } CK.arrV = 0; }   /* 0.8.169 (Nick: "apply to the rest of regular Cockpit… autopilot arrivals"): a flown arrival in Links no longer snaps the ship home; it glides on and the new links gather ahead */
   else if (c >= 0) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]];   /* in Starfield the ship stays where it is, unless the note is far off: then it jumps to just outside it, facing it */
     if (!CK.sfIn || Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) > 1600) { const bi = BOD[c], G = bi >= 0 ? sf.B[bi] : { x: 0, y: 0, z: 0 }; let d = [T[0] - G.x, T[1] - G.y, T[2] - G.z]; let l = Math.hypot(...d); if (l < 1) { d = [0, 0, -1]; l = 1; }
       let nn = [0, -1, 0]; if (bi >= 0 && G.u) { const u = G.u, v = G.v; nn = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]; if (nn[1] > 0) nn = nn.map(q => -q); }   /* from above its galaxy's disk, a little outside, so the disk opens up */
@@ -2502,6 +2502,8 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
     CK.items.push({ i: j, x: real ? real[0] : tx * z, y: real ? real[1] : ty * z, z: real ? real[2] : z, side, inn: inn_, out: out_, up: ups.has(j), rel: rels.has(j), none: !inn_ && !out_, sx: 0, sy: 0, sw: 0, sh: 0, zc: 0 }); });
   CK.lock = CKAUTO ? CK.items.findIndex(it => it.i === CK.sug) : -1; if (CKAUTO && CK.lock < 0 && CK.items.length) CK.lock = 0;   /* the auto-lock can be switched off (0.8.161, Nick) */
   /* arriving in Starfield (0.8.105, Nick: "it should settle on a view that looks at it"): the ship eases back from the note and turns to face it, far enough that its links fit round it */
+  if (gl) { const O = [0, 1, 2].map(q => gl.P0[q] + gl.fw[q] * gl.s), cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);   /* the new layout is built round where the ship will come to rest, turned to its heading */
+    for (const it of CK.items) { const z1 = -sp * it.y + cp * it.z, dy = cp * it.y + sp * it.z, dx = cy * it.x + sy_ * z1, dz = -sy_ * it.x + cy * z1; it.x = O[0] + dx; it.y = O[1] + dy; it.z = O[2] + dz; } CK.glide = gl; }
   if (sf) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]], ds = CK.items.filter(it => !it.none).map(it => Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2])).sort((a, b) => a - b);
     const d75 = ds.length ? ds[Math.min(ds.length - 1, Math.floor(ds.length * .75))] : 600, hubF = Math.min(1, ds.length / 120), d25 = ds.length ? ds[Math.floor(ds.length * .25)] : 500, D = Math.max(350, Math.min(2400 + 2800 * hubF, d25 * (1.3 + .7 * hubF))), fw = ckFwd();   /* closer still (0.8.107, Nick): framed on its nearest links (1.3× the distance a quarter of its links lie within, at most 2,400), since links in far galaxies would push the view out to the whole sky; the biggest hubs ease back out */
     /* stand on the far side of the note from its nearer links, so the note and its links are both ahead */
@@ -2651,10 +2653,11 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
 /* past straight up or down the ship is upside down: turning keeps its feel (left stays left), and autopilot first rights it, as a pilot would */
 const ckUp = () => Math.cos(CK.pitch) < 0 ? -1 : 1;
 function ckUpright(){ CK.pitch = Math.atan2(Math.sin(CK.pitch), Math.cos(CK.pitch)); if (Math.cos(CK.pitch) < 0) { CK.yaw += Math.PI; CK.pitch = (CK.pitch > 0 ? Math.PI : -Math.PI) - CK.pitch; } }
+function ckRebase(){ /* items into the ship's own frame, ship back home: nothing on screen moves (bar any roll) */ if (CKW !== "sf") { for (const it of CK.items) { const [x, y, z] = ckCam(it.x, it.y, it.z); it.x = x; it.y = y; it.z = z; } CK.P = [0, 0, 0]; CK.yaw = 0; CK.pitch = 0; } CK.glide = null; }
 function ckFwd(){ const cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch); return [sy_ * cp, sp, cy * cp]; }
 function ckCam(x, y, z){ const dx = x - CK.P[0], dy = y - CK.P[1], dz = z - CK.P[2], cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);
   const xc = cy * dx - sy_ * dz, z1 = sy_ * dx + cy * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1; return [xc, yc, zc]; }
-function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); if (!(CK.settle && CK.settle.flow)) CK.warp = 1; else CK.fadeT = win.performance.now(); if (CKG && !CK.gj) win.setTimeout(() => { if (!dead && CKG && (!CK.gq || CK.gq.j === CK.c || !CK.items.find(it => it.i === CK.gq.j))) ckGameNew(); }, 700); } }
+function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); if (!(CK.settle && CK.settle.flow) && !CK.glide) CK.warp = 1; else CK.fadeT = win.performance.now(); if (CKG && !CK.gj) win.setTimeout(() => { if (!dead && CKG && (!CK.gq || CK.gq.j === CK.c || !CK.items.find(it => it.i === CK.gq.j))) ckGameNew(); }, 700); } }
 function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.createElement("div"); el.className = "ivm-cockpit"; el.hidden = true; m.appendChild(el);
   const c_ = doc.createElement("canvas"); el.appendChild(c_); CK.el = el; CK.cv = c_; CK.g = c_.getContext("2d");
   const bar = el.createDiv({ cls: "ckbtns" });
@@ -2860,7 +2863,8 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   else if (K.has("w") || K.has("ArrowDown")) CK.v = Math.max(-400, CK.v - 800 * dt);
   else if (!CK.auto) CK.v *= Math.pow(.06, dt);   /* off the gas, the ship slows sooner (0.8.150) */
   CK.roll *= Math.pow(.08, dt);
-  if (CK.settle && (K.size || CK.drag || CK.auto)) CK.settle = null;   /* Wander lets the arrival swing play out (0.8.165) */
+  if (CK.settle && (K.size || CK.drag || CK.auto)) CK.settle = null;
+  if (CK.glide) { const G_ = CK.glide, f = Math.min(1, (win.performance.now() - G_.t0) / 1000 / G_.dur), h = G_.s * (1 - Math.pow(1 - f, 3)); if (K.size || CK.drag || CK.auto || CKW === "sf") ckRebase(); else { CK.P = [0, 1, 2].map(q => G_.P0[q] + G_.fw[q] * h); CK.v = 0; CK.roll *= .9; if (f >= 1) ckRebase(); } }   /* Links: the flown arrival eases to a stop, then the view quietly becomes the usual one */   /* Wander lets the arrival swing play out (0.8.165) */
   /* the settle (0.8.133, Nick: "a nice, smooth arcing orbit… instead of a corkscrew"): the ship swings round the note on an arc (never through it),
      always upright, its gaze easing from where it looked onto the note; no roll */
   if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / (S_.flow ? 3 : 2.4)), e = S_.flow ? 1 - Math.pow(1 - f, 3) : f < .5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2, T = S_.T;
