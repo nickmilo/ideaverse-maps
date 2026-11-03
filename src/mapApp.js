@@ -2495,7 +2495,16 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
     const z = 430 + q * 105 + ja * 40, real = sf ? [sf.P[3 * j], sf.P[3 * j + 1], sf.P[3 * j + 2]] : null;
     CK.items.push({ i: j, x: real ? real[0] : tx * z, y: real ? real[1] : ty * z, z: real ? real[2] : z, side, inn: inn_, out: out_, up: ups.has(j), rel: rels.has(j), none: !inn_ && !out_, sx: 0, sy: 0, sw: 0, sh: 0, zc: 0 }); });
   CK.lock = CK.items.findIndex(it => it.i === CK.sug); if (CK.lock < 0 && CK.items.length) CK.lock = 0;
-  if (sf && CK.items.length) { let sx_ = 0, sy_ = 0, sz_ = 0; for (const it of CK.items) { sx_ += it.x; sy_ += it.y; sz_ += it.z; } const k_ = CK.items.length; CK.lookT = [sx_ / k_, sy_ / k_, sz_ / k_]; CK.lookT0 = win.performance.now(); }
+  /* arriving in Starfield (0.8.105, Nick: "it should settle on a view that looks at it"): the ship eases back from the note and turns to face it, far enough that its links fit round it */
+  if (sf) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]], ds = CK.items.filter(it => !it.none).map(it => Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2])).sort((a, b) => a - b);
+    const d75 = ds.length ? ds[Math.min(ds.length - 1, Math.floor(ds.length * .75))] : 600, D = Math.max(700, Math.min(5200, d75 * 1.5)), fw = ckFwd();
+    /* stand on the far side of the note from its nearer links, so the note and its links are both ahead */
+    const nearL = CK.items.filter(it => !it.none && Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2]) <= d75); let C = [0, 0, 0]; for (const it of nearL) { C[0] += it.x; C[1] += it.y; C[2] += it.z; } if (nearL.length) C = C.map(v => v / nearL.length);
+    const away = nearL.length ? [T[0] - C[0], T[1] - C[1], T[2] - C[2]] : [-fw[0], -fw[1], -fw[2]], la = Math.hypot(...away) || 1;
+    let dir = [away[0] / la - fw[0] * .3, away[1] / la - fw[1] * .3 - .35, away[2] / la - fw[2] * .3]; const l = Math.hypot(...dir) || 1; dir = dir.map(v => v / l);
+    CK.settle = { P0: CK.P.slice(), P1: [T[0] + dir[0] * D, T[1] + dir[1] * D, T[2] + dir[2] * D], T, t0: win.performance.now() }; CK.lookT = null; }
+  CK.kind = new Map(); for (const [k_, key] of [["above", "up"], ["below", "down"], ["up", "upp"], ["related", "rel"]]) for (const j of L[k_]) CK.kind.set(j, key);
+  try { CK.SL = SPACELINK(); } catch (_) { CK.SL = { up: "#ff7a6b", down: "#6fd3ff", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }; }
   CK.inL = [...L.in].sort((a, b) => rv(b) - rv(a) || N[b].score - N[a].score); CK.outL = [...L.out].sort((a, b) => rv(b) - rv(a) || N[b].score - N[a].score);
   CK.msg = CK.sug >= 0 ? `Closest relative not in its up or related: ${N[CK.sug].title}${CK.items.find(it => it.i === CK.sug && it.none) ? " (no link yet)" : ""}. Locked on. Space flies you there.` : "Every close relative is already up or related.";
 }
@@ -2539,6 +2548,8 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     g.globalAlpha = 1; g.strokeStyle = col; g.lineWidth = 1.2; g.beginPath(); g.arc(hp[0], hp[1], 7, 0, 6.2832); g.stroke();
     g.fillStyle = "rgba(4,6,14,.88)"; g.beginPath(); g.roundRect(bx, by, bw, 32, 5); g.fill(); g.fillStyle = col; g.beginPath(); g.arc(bx + 9, by + 11, 3, 0, 6.2832); g.fill();
     g.textBaseline = "middle"; g.fillStyle = "#eef3ff"; g.font = `600 11.5px ${font}`; g.fillText(tt, bx + 16, by + 11); g.fillStyle = "rgba(190,205,230,.75)"; g.font = `500 9.5px ${font}`; g.fillText(sub, bx + 16, by + 24); g.textBaseline = "alphabetic"; }
+  // the focus, as Starfield draws a picked note (0.8.105): the sky darkens round it
+  { const pc0 = ck >= 0 ? pr(P[3 * ck], P[3 * ck + 1], P[3 * ck + 2]) : null; if (pc0) { const Rv = Math.min(W, VH) * .42, gv = g.createRadialGradient(pc0[0], pc0[1], 0, pc0[0], pc0[1], Rv); gv.addColorStop(0, "rgba(2,3,9,.62)"); gv.addColorStop(.7, "rgba(2,3,9,.35)"); gv.addColorStop(1, "rgba(2,3,9,0)"); g.globalAlpha = 1; g.fillStyle = gv; g.fillRect(pc0[0] - Rv, pc0[1] - Rv, Rv * 2, Rv * 2); } }
   // Star Chart (0.8.93), when it's on in Starfield's ⚙: lines between hubs, rings round the hubs ahead (a dial of twelve ticks; the cockpit note's ring brighter),
   // turning orbits with a moon, and the readout card beside the cockpit note
   { const HUDc = a_ => `rgba(127,231,255,${a_})`, pj = i => pr(P[3 * i], P[3 * i + 1], P[3 * i + 2]);
@@ -2579,8 +2590,16 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   g.globalAlpha = 1;
   // threads from the cockpit note to its links
   if (ck >= 0) { const pc = pr(P[3 * ck], P[3 * ck + 1], P[3 * ck + 2]); g.lineWidth = 1;
-    for (const it of CK.items) { const pi = pr(it.x, it.y, it.z); const a = pc || null; if (!pi || !a) continue; g.globalAlpha = ckShows(it) ? .22 : .05; g.strokeStyle = ckCol(N[it.i].level); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(pi[0], pi[1]); g.stroke(); }
-    if (pc) { g.globalAlpha = .9; g.strokeStyle = "#ffffff"; g.beginPath(); g.arc(pc[0], pc[1], 9, 0, 6.2832); g.stroke(); g.font = `600 11px ${font}`; g.fillStyle = "#ffffff"; g.textAlign = "center"; g.fillText(N[ck].title, pc[0], pc[1] - 14); g.textAlign = "left"; } }
+    const SL = CK.SL || {}, kc = j => SL[CK.kind.get(j) || "prop"] || "#a9b4c8";
+    /* links as Starfield draws them: gentle curves in their link colours (above, below, up, related, other) */
+    g.lineWidth = 1.5; for (const it of CK.items) { if (it.none) continue; const pi = pr(it.x, it.y, it.z); if (!pi || !pc) continue; const mx = (pc[0] + pi[0]) / 2, my = (pc[1] + pi[1]) / 2, dx = pi[0] - pc[0], dy = pi[1] - pc[1];
+      g.globalAlpha = ckShows(it) ? (it.i === (CK.items[CK.lock] || {}).i ? .95 : .7) : .08; g.strokeStyle = kc(it.i); g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(mx - dy * .14, my + dx * .14, pi[0], pi[1]); g.stroke(); }
+    if (pc) { g.font = `700 14px ${font}`; CK.noteBox = [pc[0] + 30, pc[1] - 10, g.measureText(N[ck].title).width + 12, 20]; } else CK.noteBox = null;
+    if (pc) { /* its ring split by kind of link, the counts as arcs; then its name in yellow */ const cnt = ["up", "down", "upp", "rel"].map(k_ => [k_, [...CK.kind.values()].filter(v => v === k_).length]).filter(q => q[1]), tot = cnt.reduce((a, q) => a + q[1], 0);
+      g.globalAlpha = 1; g.lineWidth = 4; let a0 = -Math.PI / 2; if (tot) for (const [k_, v] of cnt) { const da = v / tot * 6.2832; g.strokeStyle = SL[k_] || "#ccc"; g.beginPath(); g.arc(pc[0], pc[1], 28, a0 + .05, a0 + da - .05); g.stroke(); a0 += da; }
+      else { g.strokeStyle = "rgba(255,255,255,.5)"; g.beginPath(); g.arc(pc[0], pc[1], 28, 0, 6.2832); g.stroke(); }
+      g.lineWidth = 1.5; g.strokeStyle = "#ffffff"; g.fillStyle = "#0b0f1c"; g.beginPath(); g.arc(pc[0], pc[1], 5, 0, 6.2832); g.fill(); g.stroke();
+      g.font = `700 14px ${font}`; g.textBaseline = "middle"; g.lineWidth = 4; g.strokeStyle = "rgba(3,4,10,.9)"; g.strokeText(N[ck].title, pc[0] + 36, pc[1]); g.fillStyle = "#ffe14d"; g.fillText(N[ck].title, pc[0] + 36, pc[1]); g.textBaseline = "alphabetic"; } }
   // galaxy names as Starfield writes them (0.8.91): spaced capitals with a dark outline, the count beneath in the galaxy's hue, under each galaxy; nearer names first, never on top of each other
   if (CKX.names) { const hasLS = "letterSpacing" in g, taken = CK.side.map(q => [q[0] - 6, q[1], q[2] + 30, q[3]]), lab = [];   /* the side names keep their room */
     for (const B of sf.B) { const b = B.b; if (!b.name || b.kind === "home") continue; const p0 = pr(B.x, B.y, B.z); if (!p0) continue; const d = p0[2]; if (d < B.r * .6 || (b.kind === "dwarf" && d > B.r * 7)) continue; lab.push([B, p0, d]); }
@@ -2730,6 +2749,10 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   else if (K.has("s") || K.has("ArrowDown")) CK.v = Math.max(-400, CK.v - 800 * dt);
   else if (!CK.auto) CK.v *= Math.pow(.25, dt);
   CK.roll *= Math.pow(.08, dt);
+  if (CK.settle && (K.size || CK.drag || CK.auto || CK.wd)) CK.settle = null;
+  if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / 1.9), e = f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+    CK.P = [0, 1, 2].map(q => S_.P0[q] + (S_.P1[q] - S_.P0[q]) * e); CK.v = 0; ckUpright(); const [ty_, tp_] = ckLook(CK.P, S_.T), dy_ = Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)), s_ = Math.min(1, dt * (2 + 4 * f));
+    CK.yaw += dy_ * s_; CK.pitch += (tp_ - CK.pitch) * s_; CK.roll += dy_ * s_ * .3; if (f >= 1 && Math.abs(dy_) < .01 && Math.abs(tp_ - CK.pitch) < .01) CK.settle = null; }
   if (CK.lookT && !CK.auto && !K.size && !CK.drag && win.performance.now() - CK.lookT0 < 1600) { const [ty_, tp_] = ckLook(CK.P, CK.lookT), dy_ = Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)), s_ = Math.min(1, dt * 3); CK.yaw += dy_ * s_; CK.pitch += (tp_ - CK.pitch) * s_; CK.roll += dy_ * s_ * .5; }   /* arriving in Starfield, the ship turns to face the new note's links */
   if (CK.auto || (CK.lookT && !K.size && !CK.drag && win.performance.now() - CK.lookT0 < 1600)) ckUpright();
   const it = CK.items[CK.lock];
@@ -2766,8 +2789,16 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
       g.restore(); g.globalAlpha = 1; } }
   /* panels, far first */
   const wz = CK.warp > 0 ? CK.warp * CK.warp * 2600 : 0;
-  for (const it of CK.items) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z + wz); it.zc = zc; if (zc <= 8) { it.sw = 0; continue; } it.sx = cx + F * xc / zc; it.sy = cy + F * yc / zc; it.sw = Math.min(300, F * 112 / zc); it.sh = it.sw * 34 / 112; }
-  const order = CK.items.map((it, q) => q).filter(q => CK.items[q].zc > 8).sort((a, b) => CK.items[b].zc - CK.items[a].zc);
+  const sfw = CKW === "sf"; g.font = `500 11.5px ${font}`;
+  for (const it of CK.items) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z + (sfw ? 0 : wz)); it.zc = zc; if (zc <= 8) { it.sw = 0; continue; } it.sx = cx + F * xc / zc; it.sy = cy + F * yc / zc; it.sw = Math.min(300, F * 112 / zc); it.sh = it.sw * 34 / 112;
+    if (sfw) { /* in Starfield a link is a named star, not a panel (as on the map); its name is what you click */ it.px = it.sx; it.py = it.sy; let tt = N[it.i].title; if (tt.length > 40) tt = tt.slice(0, 39) + "…"; it.tt = tt; const tw = g.measureText(tt).width; it.sw = tw + 14; it.sh = 17; it.sx = it.px + 7 + it.sw / 2; } }
+  if (sfw) { const SL = CK.SL || {}, taken = CK.noteBox ? [CK.noteBox] : [], lk = (CK.items[CK.lock] || {}).i; g.textBaseline = "middle";
+    for (const it of [...CK.items].filter(o => o.zc > 8).sort((a, b) => a.zc - b.zc)) { if (it.px < -40 || it.px > W + 40 || it.py < -20 || it.py > VH + 20) continue; const on = ckShows(it), hv = CK.hv.get(it.i) || 0, col = SL[CK.kind.get(it.i) || "prop"] || "#a9b4c8";
+      g.globalAlpha = on ? 1 : .2; g.fillStyle = it.none ? "#ffcf5a" : col; g.beginPath(); g.arc(it.px, it.py, it.i === lk ? 4.5 : 3.2, 0, 6.2832); g.fill(); g.strokeStyle = "rgba(255,255,255,.85)"; g.lineWidth = 1; g.stroke();
+      const box = [it.sx - it.sw / 2, it.sy - 9, it.sw, 18]; if (it.i !== lk && !hv && taken.some(q => box[0] < q[0] + q[2] && box[0] + box[2] > q[0] && box[1] < q[1] + q[3] && box[1] + box[3] > q[1])) continue; taken.push(box);
+      g.font = `${it.i === lk || hv > .3 ? 600 : 500} 11.5px ${font}`; g.lineWidth = 3.5; g.strokeStyle = "rgba(3,4,10,.9)"; g.strokeText(it.tt, it.px + 8, it.py); g.fillStyle = it.i === lk ? "#ffcf5a" : hv > .3 ? "#ffffff" : "rgba(236,242,255,.92)"; g.fillText(it.tt, it.px + 8, it.py); }
+    g.textBaseline = "alphabetic"; g.globalAlpha = 1; }
+  const order = sfw ? [] : CK.items.map((it, q) => q).filter(q => CK.items[q].zc > 8).sort((a, b) => CK.items[b].zc - CK.items[a].zc);
   for (const q of order) { const it = CK.items[q], d = N[it.i], col = ckCol(d.level), sw = it.sw, sh = it.sh, x0 = it.sx - sw / 2, y0 = it.sy - sh / 2; if (x0 > W || x0 + sw < 0 || y0 > VH || y0 + sh < 0) continue;
     const fade = Math.max(.12, Math.min(1, 2600 / it.zc - .2)) * (ckShows(it) ? 1 : .08) * (1 - CK.warp * .7);
     g.globalAlpha = fade; g.fillStyle = "rgba(10,16,30,.86)"; g.fillRect(x0, y0, sw, sh);
@@ -2815,7 +2846,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
     else { const [xc, yc] = ckCam(lk.x, lk.y, lk.z), a = Math.atan2(yc, xc), ex = cx + Math.cos(a) * Math.min(cx - 30, (VH / 2) - 30) * 1.0, ey = cy + Math.sin(a) * ((VH / 2) - 30);
       g.save(); g.translate(ex, ey); g.rotate(a); g.beginPath(); g.moveTo(12, 0); g.lineTo(-6, -7); g.lineTo(-6, 7); g.closePath(); g.fill(); g.restore(); } }
   /* attitude ring: L1–L5 round the centre, the note's level lit */
-  { const d = CK.c >= 0 ? N[CK.c] : null, R = Math.min(70, VH * .14); g.save(); g.translate(cx, cy); g.rotate(CK.roll * .5);
+  if (CKW !== "sf") { const d = CK.c >= 0 ? N[CK.c] : null, R = Math.min(70, VH * .14); g.save(); g.translate(cx, cy); g.rotate(CK.roll * .5);   /* in Starfield the note's own ring says its level, and the attitude ring would sit right on it */
     g.strokeStyle = "rgba(140,190,255,.35)"; g.lineWidth = 1; g.beginPath(); g.arc(0, 0, R, Math.PI * .15, Math.PI * .85); g.stroke(); g.beginPath(); g.arc(0, 0, R, Math.PI * 1.15, Math.PI * 1.85); g.stroke();
     g.beginPath(); g.moveTo(-R - 14, 0); g.lineTo(-R + 6, 0); g.moveTo(R - 6, 0); g.lineTo(R + 14, 0); g.moveTo(0, -5); g.lineTo(0, 5); g.moveTo(-5, 0); g.lineTo(5, 0); g.stroke();
     g.font = `600 9px ${font}`; g.textAlign = "center"; g.textBaseline = "middle";
