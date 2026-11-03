@@ -2838,10 +2838,12 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   if (K.has("a") || K.has("g") || K.has("q") || K.has("z")) { CK.auto = false; CK.settle = null; let T = null; if (CKW === "sf" && CK.c >= 0) { const P = ckSF().P; T = [P[3 * CK.c], P[3 * CK.c + 1], P[3 * CK.c + 2]]; } else { const it = CK.items[CK.lock]; if (it) T = [it.x, it.y, it.z]; }
     if (T && (K.has("a") || K.has("g"))) { const da = (K.has("a") ? -1 : 1) * .9 * dt, dx = CK.P[0] - T[0], dz = CK.P[2] - T[2], ca = Math.cos(da), sa = Math.sin(da); CK.P[0] = T[0] + dx * ca - dz * sa; CK.P[2] = T[2] + dx * sa + dz * ca; }
     /* Q and Z orbit over and under (0.8.155, Nick): round the note's side axis, right over the top or under the bottom and on round */
-    if (T && (K.has("q") || K.has("z"))) { const v = [CK.P[0] - T[0], CK.P[1] - T[1], CK.P[2] - T[2]], fw = ckFwd(); let ax = [fw[2], 0, -fw[0]]; const la = Math.hypot(...ax) || 1; ax = ax.map(q_ => q_ / la);
+    if (T && (K.has("q") || K.has("z"))) { const v = [CK.P[0] - T[0], CK.P[1] - T[1], CK.P[2] - T[2]], ax = [Math.cos(CK.yaw), 0, -Math.sin(CK.yaw)];   /* the side axis from the heading alone, so it never flips over the top (0.8.156: the spin) */
       const th = (K.has("q") ? -1 : 1) * .9 * dt, c_ = Math.cos(th), s_ = Math.sin(th), dt_ = ax[0] * v[0] + ax[1] * v[1] + ax[2] * v[2], cr = [ax[1] * v[2] - ax[2] * v[1], ax[2] * v[0] - ax[0] * v[2], ax[0] * v[1] - ax[1] * v[0]];
-      for (let q_ = 0; q_ < 3; q_++) CK.P[q_] = T[q_] + v[q_] * c_ + cr[q_] * s_ + ax[q_] * dt_ * (1 - c_); }
-    if (T) {
+      for (let q_ = 0; q_ < 3; q_++) CK.P[q_] = T[q_] + v[q_] * c_ + cr[q_] * s_ + ax[q_] * dt_ * (1 - c_);
+      /* keep the heading, and turn only the pitch to face the note: right over the top it simply carries on (no flip, no spin) */
+      const d = [T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]], h = d[0] * Math.sin(CK.yaw) + d[2] * Math.cos(CK.yaw), want = Math.atan2(d[1], h); CK.pitch += Math.atan2(Math.sin(want - CK.pitch), Math.cos(want - CK.pitch)); CK.roll *= .9; }
+    if (T && !K.has("q") && !K.has("z")) {
       const [ty_, tp_] = ckLook(CK.P, T); if (!K.has("q") && !K.has("z")) ckUpright(); CK.yaw += Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)) * Math.min(1, dt * 8); CK.pitch += (tp_ - CK.pitch) * Math.min(1, dt * 8); } }   /* 360° (0.8.97, Nick): no limit on looking up or down; loop right over */
   const VMAX = CKW === "sf" ? 3200 : 1100; if (K.has("e") || K.has("ArrowUp")) CK.v = Math.min(VMAX, CK.v + (CKW === "sf" ? 1600 : 800) * dt);   /* back to the speed before 0.8.149 (0.8.152, Nick) */   /* full speed back for the open space between galaxies (0.8.151, Nick); gentle near them */   /* gentler by hand (0.8.150, Nick: "speeds by too fast") */
   else if (K.has("d") || K.has("ArrowDown")) CK.v = Math.max(-400, CK.v - 800 * dt);
@@ -7508,7 +7510,7 @@ return {
   _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
   _cam(){ let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i=0;i<n;i++) if (vis[i]) { x0 = Math.min(x0, sx(X[i])); x1 = Math.max(x1, sx(X[i])); y0 = Math.min(y0, sy(Y[i])); y1 = Math.max(y1, sy(Y[i])); } return { view, k, tx, ty, W, H, box: [x0, y0, x1, y1].map(Math.round), side: sideW() }; },
   _setEmo(o){ EMOF = o; emoBuild(); },
-  _ck(){ const sf = CKSF.P, c = CK.c, T = c >= 0 && sf ? [sf[3 * c], sf[3 * c + 1], sf[3 * c + 2]] : null; return { c, dots: CK.scDots, lock: (CK.items[CK.lock] || {}).i, star: CK.starHov, settle: CK.settle ? { P1: CK.settle.P1, T: CK.settle.T } : null, P: CK.P, dist: T ? Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) : null }; },
+  _ck(){ const sf = CKSF.P, c = CK.c, T = c >= 0 && sf ? [sf[3 * c], sf[3 * c + 1], sf[3 * c + 2]] : null; const fw_ = ckFwd(), Tq = c >= 0 && sf ? [sf[3 * c], sf[3 * c + 1], sf[3 * c + 2]] : null, dd = Tq ? [Tq[0] - CK.P[0], Tq[1] - CK.P[1], Tq[2] - CK.P[2]] : null, ldd = dd ? Math.hypot(...dd) : 1; return { off: dd ? Math.round(Math.acos(Math.max(-1, Math.min(1, (fw_[0] * dd[0] + fw_[1] * dd[1] + fw_[2] * dd[2]) / ldd))) * 180 / Math.PI) : null, c, dots: CK.scDots, lock: (CK.items[CK.lock] || {}).i, star: CK.starHov, settle: CK.settle ? { P1: CK.settle.P1, T: CK.settle.T } : null, P: CK.P, dist: T ? Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) : null }; },
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
   _kt(){ return [k, tx, ty]; },
   _view(){ return view; },
