@@ -2786,7 +2786,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
 function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect(), dpr = win.devicePixelRatio || 1, W = Math.max(1, r.width), H = Math.max(1, r.height);
   if (CK.w !== W || CK.h !== H) { CK.w = W; CK.h = H; c_.width = W * dpr; c_.height = H * dpr; }
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = "#04060d"; g.fillRect(0, 0, W, H);
-  const cons = CKFRAME ? Math.min(150, H * .26) : 0, VH = H - cons,   /* no frame: the view runs to the bottom and the instruments float over it */ cx = W / 2, cy = VH / 2;
+  const cons = CKFRAME ? Math.min(150, H * .26) : 0, VH = H - cons,   /* no frame: the view runs to the bottom and the instruments float over it */ LXd = ckLeftEd(), cx = W / 2 + (CK.cxo = (CK.cxo || 0) + ((LXd ? Math.min(90, LXd * .2) : 0) - (CK.cxo || 0)) * .08), cy = VH / 2;   /* the view eases a little to the right when the left editor opens (0.8.117, Nick) */
   const F = Math.min(W, VH) * .95, font = css.body || "sans-serif";
   /* stars: wrap round the ship; streaks when moving */
   g.save(); g.translate(cx, cy); g.rotate(CK.roll * .25); g.translate(-cx, -cy); const fw = ckFwd(), sp = Math.abs(CK.v);
@@ -2843,7 +2843,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   CK.sideLists = merged ? [null, merged] : [CK.inL, CK.outL];
   for (const [s, list0, lab] of merged ? [[1, merged, "LINKS"]] : [[-1, CK.inL, "IN"], [1, CK.outL, "OUT"]]) { const n_ = list0.length; if (!n_) continue; const cap = n_ > 22 ? 20 : n_, sk = s < 0 ? 0 : 1, off = Math.round(CK.sOff[sk] = Math.max(0, Math.min(n_ - cap, CK.sOff[sk] || 0))), list = list0.slice(off, off + cap), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* scrolls (0.8.115): wheel over the names, or click the last line */ Rx = W * .5, Ry = VH * .62, lh = Math.min(15.5, (VH - 90) / (rows + 1));
     const dim = CK.only && CK.only !== (s < 0 ? "in" : "out"); g.save(); g.font = `500 11px ${font}`; g.textBaseline = "middle";
-    const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [cx + s * Rx * Math.sqrt(Math.max(0, 1 - u * u)) - s * 34, y, Math.asin(Math.max(-1, Math.min(1, u))) * .3]; };
+    const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [W / 2 + s * Rx * Math.sqrt(Math.max(0, 1 - u * u)) - s * 34, y, Math.asin(Math.max(-1, Math.min(1, u))) * .3]; };
     /* hover (Nick: "a dynamic feel"): the name under the pointer eases in toward the middle and grows, its neighbours make way, and a tether runs to its panel */
     const rH = CK.hovS >= 0 ? list.indexOf(CK.hovS) : -1, tH = rH >= 0 && rH < cap ? (CK.hv.get(CK.hovS) || 0) : 0;
     for (let r = 0; r < rows; r++) { const [x0_, y, tl] = at(r), more = r === cap, j = more ? -1 : list[r];
