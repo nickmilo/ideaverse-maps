@@ -2636,7 +2636,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
       g.globalAlpha = a_ * .9; g.strokeStyle = "#ffffff"; g.lineWidth = 1; g.beginPath(); g.moveTo(p_[0] - L_, p_[1]); g.lineTo(p_[0] + L_, p_[1]); g.moveTo(p_[0], p_[1] - L_); g.lineTo(p_[0], p_[1] + L_); g.stroke();
       g.fillStyle = "#ffffff"; g.beginPath(); g.arc(p_[0], p_[1], 1.6 * a_ + .4, 0, 6.2832); g.fill(); } g.globalAlpha = 1; }
   // the overview map (0.8.94), when it's on in Starfield: the whole sky seen from above, where you are and which way you're heading
-  if (CKX.mini) { const bw = 168, bh = 120, bx = W - bw - 14, by = 86;   /* under the Back button */ let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  if (CKX.mini) { const bw = 140, bh = 100, bx = W - bw - 12, by = VH - bh - 12;   /* bottom right (0.8.131, Nick) */   /* under the Back button */ let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const B of sf.B) { x0 = Math.min(x0, B.x - B.r); x1 = Math.max(x1, B.x + B.r); y0 = Math.min(y0, B.y - B.r); y1 = Math.max(y1, B.y + B.r); }
     const s_ = Math.min((bw - 12) / Math.max(1, x1 - x0), (bh - 12) / Math.max(1, y1 - y0)), mx = x => bx + 6 + (x - x0) * s_ + ((bw - 12) - (x1 - x0) * s_) / 2, my = y => by + 6 + (y - y0) * s_ + ((bh - 12) - (y1 - y0) * s_) / 2;
     g.globalAlpha = 1; g.fillStyle = "rgba(4,5,12,.82)"; g.strokeStyle = "rgba(160,180,255,.28)"; g.beginPath(); g.roundRect(bx, by, bw, bh, 10); g.fill(); g.stroke();
@@ -2952,7 +2952,7 @@ function ckConsole(g, W, H, VH, cons, font){ const c = CK.c, fl = !CKFRAME; if (
   g.fillStyle = "#0a0f1c"; g.beginPath(); g.moveTo(0, VH); g.lineTo(W * .12, VH); g.lineTo(0, VH - cons * .9); g.closePath(); g.fill(); g.beginPath(); g.moveTo(W, VH); g.lineTo(W * .88, VH); g.lineTo(W, VH - cons * .9); g.closePath(); g.fill(); }
   if (c < 0) return; const d = N[c], L = stripLists(c), R = Math.min(cons * .36, 54), sy_ = VH + cons * .44;
   CK.scDots = []; CK.scHovAt = null;
-  { const L0 = ckLeftEd(), span = W - L0, m_ = Math.max(R + 18, span * .16);   /* both scopes and the card centred on the free space (0.8.127) */
+  { const L0 = ckLeftEd(), span = W - L0, m_ = Math.max(R + 18, span * .16, CKW === "sf" && CKX.mini ? 140 + 24 + R : 0);   /* clear of the overview map in the corner */   /* both scopes and the card centred on the free space (0.8.127) */
     ckScope3(g, L0 + m_, sy_, R, true, font); ckScope3(g, W - m_, sy_, R, false, font); }
   /* a scope dot under the pointer names itself (0.8.112, Nick): click to lock, again to fly */
   if (CK.scHovAt && CK.scHov >= 0) { const dN = N[CK.scHov], [hx, hy] = CK.scHovAt; let tt = dN.title; g.font = `600 11px ${font}`; while (tt.length > 4 && g.measureText(tt).width > 230) tt = tt.slice(0, -2); if (tt !== dN.title) tt += "…";
