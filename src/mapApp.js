@@ -2505,7 +2505,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
     CK.settle = { P0: CK.P.slice(), P1: [T[0] + dir[0] * D, T[1] + dir[1] * D, T[2] + dir[2] * D], T, t0: win.performance.now() }; CK.lookT = null; }
   CK.kind = new Map(); for (const [k_, key] of [["above", "up"], ["below", "down"], ["up", "upp"], ["related", "rel"]]) for (const j of L[k_]) CK.kind.set(j, key);
   try { CK.SL = SPACELINK(); } catch (_) { CK.SL = { up: "#ff7a6b", down: "#6fd3ff", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }; }
-  CK.sOff = [0, 0]; CK.upL = L.up.filter(j => vis[j]);
+  CK.sOff = [0, 0]; CK.upL = L.up.filter(j => vis[j]); if (view === "cockpit") win.setTimeout(() => { if (!dead && view === "cockpit") legend(); }, 0);
   CK.inL = [...L.in].sort((a, b) => rv(b) - rv(a) || N[b].score - N[a].score); CK.outL = [...L.out].sort((a, b) => rv(b) - rv(a) || N[b].score - N[a].score);
   CK.msg = CK.sug >= 0 ? `Closest relative not in its up or related: ${N[CK.sug].title}${CK.items.find(it => it.i === CK.sug && it.none) ? " (no link yet)" : ""}. Locked on. Space flies you there.` : "Every close relative is already up or related.";
 }
@@ -2885,7 +2885,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
     for (let lv = 1; lv <= 5; lv++) { const a = Math.PI * (1.2 + (lv - 1) * .15), x = Math.cos(a) * (R + 12), y = Math.sin(a) * (R + 12), lit = d && d.level === lv; g.fillStyle = lit ? ckCol(lv) : "rgba(140,170,210,.4)"; g.fillText("L" + lv, x, y); if (lit) { g.beginPath(); g.arc(Math.cos(a) * R, Math.sin(a) * R, 3, 0, 6.2832); g.fill(); } }
     g.restore(); g.textAlign = "left"; }
   /* the message line */
-  const msg0 = CK.msg; if (CK.wmsg) CK.msg = CK.wmsg;
+  const msg0 = CK.msg; CK.msg = CK.wmsg || "";   /* only Wander and the game speak on the message line; the suggestion is in the legend */
   if (CK.msg) { g.font = `500 12px ${font}`; g.textAlign = "center"; g.textBaseline = "top"; const tw = Math.min(W - 40, g.measureText(CK.msg).width + 24);
     const my = CKFRAME ? VH - 34 : VH - Math.min(104, H * .18) - 40;   /* at the foot of the view, clear of the orbs along the top (0.8.89) */ g.fillStyle = "rgba(8,14,28,.8)"; g.fillRect(cx - tw / 2, my, tw, 24); g.strokeStyle = "rgba(255,207,90,.4)"; g.strokeRect(cx - tw / 2 + .5, my + .5, tw - 1, 23); g.fillStyle = "#ffcf5a";
     let m = CK.msg; while (m.length > 10 && g.measureText(m).width > tw - 20) m = m.slice(0, -2); if (m !== CK.msg) m += "…"; g.fillText(m, cx, my + 6); g.textAlign = "left"; }
@@ -2937,17 +2937,17 @@ function ckConsole(g, W, H, VH, cons, font){ const c = CK.c, fl = !CKFRAME; if (
   const lh = Math.min(16, bh * .15); g.font = `500 ${Math.min(12, bh * .12)}px ${font}`;
   const row = (y, parts) => { let x = tx; for (const [s_, c_] of parts) { g.fillStyle = c_ || "rgba(205,218,240,.85)"; g.fillText(s_, x, y); x += g.measureText(s_).width; } };
   const y1 = by + 12 + lh * 1.5; row(y1, [["L" + d.level, col], [`  ·  #${RANK[c].toLocaleString()}  ·  score ${f2(d.score)}`]]);
-  row(y1 + lh, [[`in ${L.in.length}  ·  out ${L.out.length}  ·  up ${L.up.length}  ·  related ${L.related.length}`]]);
+  row(y1 + lh, [[`up ${L.up.length}  ·  related ${L.related.length}  ·  in ${L.in.length}  ·  out ${L.out.length}`]]);   /* the strip's order: up, related, in, out */
   row(y1 + lh * 2, [["Next  ", "rgba(255,207,90,.9)"], [ckNext(d)]]);
   /* age clock and links-this-year speed, at the display's right */
   const t0 = TV[c], gx = bx + bw - 34, gy = by + bh - 32;
   if (bh > 60) { const yrs = isNaN(t0) ? null : (Date.now() - t0) / 31557600000; g.strokeStyle = "rgba(140,190,255,.5)"; g.beginPath(); g.arc(gx, gy, 18, 0, 6.2832); g.stroke();
     if (yrs != null) { const a = -Math.PI / 2 + (yrs % 1) * 6.2832, a2 = -Math.PI / 2 + Math.min(1, yrs / 12) * 6.2832; g.strokeStyle = "#8fc3ff"; g.lineWidth = 2; g.beginPath(); g.arc(gx, gy, 18, -Math.PI / 2, a2); g.stroke(); g.lineWidth = 1; g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx + Math.cos(a) * 13, gy + Math.sin(a) * 13); g.stroke(); }
-    g.font = `600 9px ${font}`; g.fillStyle = "rgba(205,218,240,.8)"; g.textAlign = "center"; g.fillText(yrs == null ? "no date" : yrs < 1 ? Math.round(yrs * 12) + " mo" : yrs.toFixed(1) + " yrs", gx, gy + 21);
+    g.font = `600 9px ${font}`; g.fillStyle = "rgba(205,218,240,.8)"; g.textAlign = "center"; g.fillText(yrs == null ? "no date" : (yrs < 1 ? Math.round(yrs * 12) + " mo" : yrs.toFixed(1) + " yrs") + " old", gx, gy + 21);
     const yr = new Date().getUTCFullYear(); let ny = 0; for (const j of new Set([...L.in, ...L.out])) if (!isNaN(TV[j]) && new Date(TV[j]).getUTCFullYear() === yr) ny++;
-    const sx = gx - 54; g.strokeStyle = "rgba(140,190,255,.5)"; g.beginPath(); g.arc(sx, gy, 18, Math.PI * .75, Math.PI * 2.25); g.stroke();
+    const sx = gx - 60; g.strokeStyle = "rgba(140,190,255,.5)"; g.beginPath(); g.arc(sx, gy, 18, Math.PI * .75, Math.PI * 2.25); g.stroke();
     const fr = Math.min(1, ny / 20), a3 = Math.PI * .75 + fr * Math.PI * 1.5; g.strokeStyle = "#ffcf5a"; g.lineWidth = 2; g.beginPath(); g.moveTo(sx, gy); g.lineTo(sx + Math.cos(a3) * 14, gy + Math.sin(a3) * 14); g.stroke(); g.lineWidth = 1;
-    g.fillText(`${ny} this yr`, sx, gy + 21); g.textAlign = "left"; }
+    g.fillText(`+${ny} this yr`, sx, gy + 21); g.textAlign = "left"; }
   /* throttle: the ship's own speed */
   { const tx_ = bx - 16, th = bh - 10, fr = Math.max(-.33, Math.min(1, CK.v / 1500)); g.strokeStyle = "rgba(140,190,255,.4)"; g.strokeRect(tx_ - 4.5, by + 5.5, 8, th); g.fillStyle = fr >= 0 ? "#8fc3ff" : "#ff8f8f";
     const z0 = by + 5 + th * .75; if (fr >= 0) g.fillRect(tx_ - 3, z0 - fr * th * .75, 5, fr * th * .75); else g.fillRect(tx_ - 3, z0, 5, -fr * th * .75); }
@@ -2962,7 +2962,7 @@ EXP.cockpit = {
       "F shows only the links in, R only the links out (press again for both); the names down each side list them. The two scopes, as in X-Wing: the left one shows every panel ahead of you, the right one every panel behind you; the middle is dead ahead (or dead behind), the rim is square to your side.",
       "The message line names the closest relative it doesn't yet link up or related to; it starts locked on. The centre display: level, rank, score, links, and what the next level takes. The left dial is links made this year, the right one its age. Eject unpins the editor."
     ]; },
-  legend: "Cockpit: fly through a note's links. Fly into a panel to make it the cockpit.",
+  get legend(){ return "Cockpit: fly through a note's links. Fly into a panel (or a named star) to make it the cockpit." + (CK.sug >= 0 && N[CK.sug] ? ` Suggestion: the closest relative not yet in its up or related is “${N[CK.sug].title}”${CK.items.find(it => it.i === CK.sug && it.none) ? " (no link yet)" : ""}. It starts locked on: Space flies you there.` : ""); },   /* the suggestion lives in the legend now (0.8.119, Nick) */
 };
 
 // ---------- Posters: a targeted dataset (a base's view, a filter) laid out by its own properties ----------
