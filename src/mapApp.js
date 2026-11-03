@@ -2844,7 +2844,8 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
       const nb = rH >= 0 && r !== rH ? Math.max(0, 1 - Math.abs(r - rH) / 3) * tH : 0, x = x0_ - s * (16 * tv + 5 * nb), ym = y + (rH >= 0 && r !== rH ? Math.sign(r - rH) * nb * 3 : 0);
       g.save(); g.translate(x, ym); g.rotate((s < 0 ? -tl : tl) * (1 - tv)); g.scale(1 + .24 * tv, 1 + .24 * tv); g.textAlign = s < 0 ? "left" : "right";
       g.globalAlpha = Math.min(1, (dim ? .18 : .62 + .38 * tv) * (j >= 0 && j === lockI ? 1.5 : 1));
-      if (tv > .02 && j >= 0) { const w_ = g.measureText(N[j].title.slice(0, 40)).width + 26; g.save(); g.globalAlpha = .16 * tv; g.fillStyle = ckCol(N[j].level); g.fillRect(s < 0 ? 0 : -w_, -8, w_, 16); g.restore(); }
+      if (tv > .02 && j >= 0) { let t0_ = N[j].title; while (g.measureText(t0_).width > 165 && t0_.length > 4) t0_ = t0_.slice(0, -2); if (t0_ !== N[j].title) t0_ += "…"; const w_ = g.measureText(t0_).width + 19;   /* hugs the name, rounded (0.8.112) */
+        g.save(); g.globalAlpha = .2 * tv; g.fillStyle = ckCol(N[j].level); g.beginPath(); g.roundRect(s < 0 ? 1 : -w_ - 1, -8, w_, 16, 8); g.fill(); g.restore(); }
       if (more) { g.fillStyle = "#8fa3bf"; g.fillText(`+${n_ - cap} more`, s < 0 ? 13 : -13, 0); g.restore(); continue; }
       g.fillStyle = ckCol(N[j].level); g.beginPath(); g.arc(s < 0 ? 6 : -6, 0, 2.2, 0, 6.2832); g.fill();
       let tt = N[j].title; while (g.measureText(tt).width > 165 && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…";
