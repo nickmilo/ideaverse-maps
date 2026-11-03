@@ -2746,6 +2746,17 @@ function ckPreview(W, VH){ if (CK.pvOver && CK.pvEl && !CK.pvEl.hidden && CK.pvP
   const p = N[tj].path; if (!CK.pvEl || CK.pvP !== p) { if (CK.pvEl) CK.pvEl.remove(); const e = ckPvMake(p, N[tj].title); CK.pvEl = e; CK.pvP = p; }
   const pw = 230, ph = Math.min(140, VH - 24), x = side > 0 ? Math.min(W - pw - 8, px + 64) : side < 0 ? Math.max(8, px - 64 - pw) : px + 24 + pw > W - 8 ? px - 24 - pw : px + 24, y = Math.max(8, Math.min(VH - ph - 8, py - ph / 2));
   CK.pvEl.hidden = false; CK.pvEl.setCssProps({ "--pvx": Math.round(x) + "px", "--pvy": Math.round(y) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); CK.pvEl.addClass("ckpv1"); ckPvMany(W, VH, [x, y, pw, ph, tj]); }
+// look around by moving the phone (0.8.141, Nick): turning the phone turns the ship, tilting it looks up and down; each motion is added to the stick, so dragging still works
+let CKTILT = pref("iv-cktilt", false) === true, ckTiltLast = null, ckTiltOn = false;
+function ckTiltEv(e){ if (!CKTILT || !CK.on || e.alpha == null || e.beta == null) { ckTiltLast = null; return; } const ang = (win.screen && win.screen.orientation && win.screen.orientation.angle) || 0, a = e.alpha * Math.PI / 180, b = (ang === 90 ? -e.gamma : ang === 270 || ang === -90 ? e.gamma : e.beta) * Math.PI / 180;   /* on its side the phone tilts up and down round its other axis */
+  if (ckTiltLast && !CK.auto && !CK.wd && !CK.gj && !CK.settle && !CK.edit) { const da = Math.atan2(Math.sin(a - ckTiltLast[0]), Math.cos(a - ckTiltLast[0])), db = b - ckTiltLast[1];
+    if (Math.abs(da) < .5 && Math.abs(db) < .5) { CK.yaw -= da * ckUp(); CK.pitch -= db; } }
+  ckTiltLast = [a, b]; }
+async function ckTiltSet(on){ CKTILT = on; save("iv-cktilt", on); ckTiltLast = null;
+  if (on) { const DOE = win.DeviceOrientationEvent; try { if (DOE && typeof DOE.requestPermission === "function") { const r = await DOE.requestPermission(); if (r !== "granted") { new Notice("Motion access wasn't granted, so the phone can't steer."); CKTILT = false; save("iv-cktilt", false); return false; } } } catch (_) { new Notice("This app doesn't let the map read the phone's motion."); CKTILT = false; save("iv-cktilt", false); return false; }
+    if (!ckTiltOn) { ckTiltOn = true; on(win, "deviceorientation", ckTiltEv); } }
+  return CKTILT; }
+if (CKTILT) win.setTimeout(() => { if (!dead) void ckTiltSet(true); }, 0);
 function ckSideHit(x, y){ for (const [hx, hy, hw, hh, j] of CK.side) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; }
 function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0 && CKW === "sf") { const P = ckSF().P, inn_ = CK.inL.includes(j), out_ = CK.outL.includes(j);
     CK.items.push({ i: j, x: P[3 * j], y: P[3 * j + 1], z: P[3 * j + 2], side: inn_ && out_ ? 0 : inn_ ? -1 : 1, inn: inn_, out: out_, up: false, rel: false, none: !inn_ && !out_, sx: 0, sy: 0, sw: 0, sh: 0, zc: 0 }); q = CK.items.length - 1; }
@@ -6831,6 +6842,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "World" }); const seg = sr.createDiv({ cls: "seg" });
       for (const [v, t_] of [["links", "One note's links"], ["sf", "Starfield"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKW === v) } });
         b.onclick = e => { e.stopPropagation(); if (CKW === v) return; CKW = v; save("iv-ckw", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); CK.sfIn = false; CK.c = -2; ckSync(); CK.warp = 1; FUI.emoany(); }; } }
+    if (Platform.isMobile) { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKTILT; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Look around by moving the phone" });
+      c_.onchange = async () => { c_.checked = await ckTiltSet(c_.checked); }; }
     { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "Previews" }); const seg = sr.createDiv({ cls: "seg" });
       for (const [v, t_] of [["off", "Off"], ["one", "One"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKPV === v) } });
         b.onclick = e => { e.stopPropagation(); CKPV = v; save("iv-ckpv", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); }; } }
