@@ -2462,10 +2462,10 @@ function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), tu
   if (turn && CKW === "sf") for (const it of CK.items) { it.x = P[3 * it.i]; it.y = P[3 * it.i + 1]; it.z = P[3 * it.i + 2]; }   /* the panels ride along with their stars */
   return CKSF; }
 // the Starfield world's layers, each a mini switch in the Cockpit's ⚙ (0.8.96, Nick: "add as mini-toggles for me to play with")
-const CKX_DEF = { names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
+const CKX_DEF = { haze: true, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
-const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"]];
+const CKX_LABELS = [["names", "Galaxy names"], ["gas", "Folder gas"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["haze", "Star haze"]];
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2517,7 +2517,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     const near = Math.min(1, Math.max(.15, dist / (B.r * 3)));   /* inside a galaxy its glow thins so the stars stay clear */
     /* Starfield's own settings carry over (0.8.92): Galaxy glow (Clear keeps only a faint tint, no white cores), and Star Chart's folder gas */
     const GM = { clear: .4, soft: .75, normal: 1, bright: 1.4 }[sGlow] || .75;
-    if (chxSF("gas") && (b.kind === "gal" || b.kind === "dwarf")) { const gc = NEBC[chartFolder(b)]; if (gc) lay.unshift([2.1, gc, .2]); }
+    if (chxSF("gas") && (b.kind === "gal" || b.kind === "dwarf")) { const gc = NEBC[chartFolder(b)]; if (gc) { lay.unshift([2.6, gc, .34]); lay.unshift([1.5, gc, .22]); } }   /* stronger, wider folder gas (0.8.107), closer to the map */
     for (const [f_, col0, al0] of lay) { if (CLEAR() && (col0 === "#fff1d6" || col0 === "#ffffff")) continue; const col = col0, al = Math.min(1, al0 * GM); const R = B.r * f_; let a = null, bb = null;
       if (B.flat && p0) { const pu = pr(B.x + B.u[0] * R, B.y + B.u[1] * R, B.z + B.u[2] * R), pv = pr(B.x + B.v[0] * R, B.y + B.v[1] * R, B.z + B.v[2] * R); if (pu && pv) { a = [pu[0] - p0[0], pu[1] - p0[1]]; bb = [pv[0] - p0[0], pv[1] - p0[1]]; } }
       if (!a) { if (!p0) continue; const rs = F * R / p0[2]; a = [rs, 0]; bb = [0, rs]; }
@@ -2537,6 +2537,17 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     const lv = N[i].level, r = Math.max(.5, Math.min(lv >= 4 ? 9 : 5, (lv >= 5 ? 26 : lv === 4 ? 18 : lv === 3 ? 12 : lv === 2 ? 7 : 5) * F / zc / 9));
     if (emoL && EMOI[i] && zc < 1500) { emoL.push([i, px, py, Math.max(11, Math.min(30, 9000 / zc)), zc, r]); continue; }
     if (lv >= 3 || i === ck || lk.has(i)) { bright.push([i, px, py, r, zc]); continue; } const key = SC[i]; (bins.get(key) || bins.set(key, []).get(key)).push(px, py, r); }
+  /* star haze (0.8.107, Nick: "the cool light diffusion… which makes the original Starfield look so much cooler"): every star also lights a small,
+     low-resolution glow buffer, which is blurred and laid over the sky, so dense parts of a galaxy glow as one soft light, as on the map */
+  if (CKX.haze !== false) { const q4 = 4, GW = Math.ceil(W / q4), GH = Math.ceil(VH / q4); CK.hz ||= doc.createElement("canvas"); const hz = CK.hz; if (hz.width !== GW || hz.height !== GH) { hz.width = GW; hz.height = GH; }
+    const h_ = hz.getContext("2d"); h_.globalCompositeOperation = "source-over"; h_.clearRect(0, 0, GW, GH); h_.globalCompositeOperation = "lighter";
+    for (const [key, a] of bins) { h_.fillStyle = SPAL[key]; h_.globalAlpha = .55; h_.beginPath(); for (let q = 0; q < a.length; q += 3) { const r = Math.max(.6, a[q + 2] * 1.6 / q4); h_.rect(a[q] / q4 - r, a[q + 1] / q4 - r, 2 * r, 2 * r); } h_.fill(); }
+    for (const [i, px, py, r] of bright) { h_.fillStyle = SPAL[SC[i]]; h_.globalAlpha = .9; h_.beginPath(); h_.arc(px / q4, py / q4, Math.max(1.2, r * 2.2 / q4), 0, 6.2832); h_.fill(); }
+    const HM = { clear: .55, soft: .85, normal: 1.05, bright: 1.35 }[sGlow] || .85;
+    g.save(); g.globalCompositeOperation = "lighter"; g.imageSmoothingEnabled = true;
+    g.filter = "blur(10px)"; g.globalAlpha = .55 * HM; g.drawImage(hz, 0, 0, GW, GH, 0, 0, GW * q4, GH * q4);
+    g.filter = "blur(30px)"; g.globalAlpha = .6 * HM; g.drawImage(hz, 0, 0, GW, GH, 0, 0, GW * q4, GH * q4);
+    g.filter = "none"; g.restore(); }
   for (const [key, a] of bins) { g.fillStyle = SPAL[key]; g.globalAlpha = .8; g.beginPath(); for (let q = 0; q < a.length; q += 3) { const r = a[q + 2]; if (r < 1.2) g.rect(a[q] - r, a[q + 1] - r, 2 * r, 2 * r); else { g.moveTo(a[q] + r, a[q + 1]); g.arc(a[q], a[q + 1], r, 0, 6.2832); } } g.fill(); }
   for (const [i, px, py, r] of bright) { const col = SPAL[SC[i]], s = r * 6; g.globalAlpha = .45; g.drawImage(sprite(col), px - s / 2, py - s / 2, s, s); g.globalAlpha = 1; g.fillStyle = i === ck ? "#ffffff" : col; g.beginPath(); g.arc(px, py, Math.max(1, r * .7), 0, 6.2832); g.fill(); }
   g.globalCompositeOperation = "source-over";
