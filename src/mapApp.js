@@ -6942,6 +6942,12 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         b.onclick = e => { e.stopPropagation(); CKWM = v; save("iv-ckwm", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (CK.wd) { ckWander(false); ckWander(true); } }; }
       const pb = sr.createEl("button", { cls: "ckplay", text: "▶", attr: { type: "button", "aria-label": "Start Wander Mode (P)" } }); pb.onclick = e => { e.stopPropagation(); setPlaying(!playing); };
       FUI.ckplay = () => { pb.setText(playing && view === "cockpit" ? "■" : "▶"); }; }
+    /* Wander's pace, here too (0.8.164, Nick: the Cockpit had no seconds slider): how long the ship stays with each note */
+    { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "Pace" }); const seg = sr.createDiv({ cls: "seg" });
+      const sync_ = () => seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(+x.dataset.s === playSec)));
+      for (const s_ of [4, 6, 10, 15, 20]) { const b = seg.createEl("button", { text: s_ + " s", attr: { type: "button", "data-s": String(s_) } });
+        b.onclick = e => { e.stopPropagation(); playSec = s_; save("iv-psec", playSec); try { syncPlay(); } catch (_) { /* dock not ready */ } sync_(); }; }
+      sync_(); const f2_ = FUI.emoany; FUI.emoany = () => { if (f2_) f2_(); sync_(); }; }
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKG; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "True or false (a game: right answers jump you there)" });
       c_.onchange = () => { CKG = c_.checked; save("iv-ckgame", CKG); if (CKG && CK.wd) ckWanderStop(); CK.gs = 0; ckGameNew(); }; }
     // Starfield's layers, one mini switch each, two to a row (shown when the world is Starfield)
