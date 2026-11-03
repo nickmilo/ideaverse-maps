@@ -2508,7 +2508,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
     const nearL = CK.items.filter(it => !it.none && Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2]) <= d75); let C = [0, 0, 0]; for (const it of nearL) { C[0] += it.x; C[1] += it.y; C[2] += it.z; } if (nearL.length) C = C.map(v => v / nearL.length);
     const away = nearL.length ? [T[0] - C[0], T[1] - C[1], T[2] - C[2]] : [-fw[0], -fw[1], -fw[2]], la = Math.hypot(...away) || 1;
     let dir = [away[0] / la - fw[0] * .3, away[1] / la - fw[1] * .3 - .35, away[2] / la - fw[2] * .3]; const l = Math.hypot(...dir) || 1; dir = dir.map(v => v / l);
-    CK.settle = { flow: (CK.arrV || 0) > 150, _r: (CK.arrV = 0), P0: CK.P.slice(), P1: [T[0] + dir[0] * D, T[1] + dir[1] * D, T[2] + dir[2] * D], T, t0: win.performance.now() }; CK.lookT = null; }
+    CK.settle = { flow: (CK.arrV || 0) > 150, vin: Math.min(CK.arrV || 0, 1800), aF: CK.arrF, _r: (CK.arrV = 0), P0: CK.P.slice(), P1: [T[0] + dir[0] * D, T[1] + dir[1] * D, T[2] + dir[2] * D], T, t0: win.performance.now() }; CK.lookT = null; }
   CK.kind = new Map(); for (const [k_, key] of [["above", "up"], ["below", "down"], ["up", "upp"], ["related", "rel"]]) for (const j of L[k_]) CK.kind.set(j, key);
   try { CK.SL = SPACELINK(); } catch (_) { CK.SL = { up: "#ff7a6b", down: "#6fd3ff", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }; }
   CK.sOff = [0, 0]; CK.upL = L.up.filter(j => vis[j]); if (view === "cockpit") win.setTimeout(() => { if (!dead && view === "cockpit") legend(); }, 0);
@@ -2654,7 +2654,7 @@ function ckUpright(){ CK.pitch = Math.atan2(Math.sin(CK.pitch), Math.cos(CK.pitc
 function ckFwd(){ const cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch); return [sy_ * cp, sp, cy * cp]; }
 function ckCam(x, y, z){ const dx = x - CK.P[0], dy = y - CK.P[1], dz = z - CK.P[2], cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);
   const xc = cy * dx - sy_ * dz, z1 = sy_ * dx + cy * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1; return [xc, yc, zc]; }
-function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); CK.warp = 1; if (CKG && !CK.gj) win.setTimeout(() => { if (!dead && CKG && (!CK.gq || CK.gq.j === CK.c || !CK.items.find(it => it.i === CK.gq.j))) ckGameNew(); }, 700); } }
+function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); if (!(CK.settle && CK.settle.flow)) CK.warp = 1; else CK.fadeT = win.performance.now(); if (CKG && !CK.gj) win.setTimeout(() => { if (!dead && CKG && (!CK.gq || CK.gq.j === CK.c || !CK.items.find(it => it.i === CK.gq.j))) ckGameNew(); }, 700); } }
 function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.createElement("div"); el.className = "ivm-cockpit"; el.hidden = true; m.appendChild(el);
   const c_ = doc.createElement("canvas"); el.appendChild(c_); CK.el = el; CK.cv = c_; CK.g = c_.getContext("2d");
   const bar = el.createDiv({ cls: "ckbtns" });
@@ -2837,7 +2837,7 @@ function ckGameTick(dt){ if (CK.shake > 0) { CK.shake = Math.max(0, CK.shake - d
     else { gj.phase = "fly"; gj.t0 = now; } return; }
   if (gj.phase === "fly" && el > 45) { CK.gj = null; CK.sfIn = false; if (vis[gj.j]) select(gj.j); win.setTimeout(ckSync, 0); CK.warp = 1; }   /* a safety net, if the flight never lands */
   else if (gj.phase === "fly" && !CK.auto && el > .3) CK.gj = null; }   /* you took the stick: the game waits for you */
-function ckArrive(q){ const it = CK.items[q]; if (!it) return; CK.auto = false; CK.arrV = CK.v; CK.v = 0; const j = it.i; if (vis[j]) select(j); win.setTimeout(ckSync, 0); }
+function ckArrive(q){ const it = CK.items[q]; if (!it) return; CK.auto = false; CK.arrV = CK.v; CK.arrF = ckFwd(); CK.v = 0; const j = it.i; if (vis[j]) select(j); win.setTimeout(ckSync, 0); }
 function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK.last) / 1000); CK.last = t; RAF(ckTick);
   const K = CK.keys, turn = 1.3 * dt;
   if (CK.wd && (K.size || CK.drag)) ckWanderStop();
@@ -2864,11 +2864,16 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   /* the settle (0.8.133, Nick: "a nice, smooth arcing orbit… instead of a corkscrew"): the ship swings round the note on an arc (never through it),
      always upright, its gaze easing from where it looked onto the note; no roll */
   if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / (S_.flow ? 3 : 2.4)), e = S_.flow ? 1 - Math.pow(1 - f, 3) : f < .5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2, T = S_.T;
-    if (!S_.u0) { const v0 = [0, 1, 2].map(q => S_.P0[q] - T[q]), r0 = Math.hypot(...v0) || 1, v1 = [0, 1, 2].map(q => S_.P1[q] - T[q]), r1 = Math.hypot(...v1) || 1; S_.u0 = v0.map(v => v / r0); S_.u1 = v1.map(v => v / r1); S_.r0 = r0; S_.r1 = r1; S_.f0 = ckFwd(); }
+    if (!S_.u0) { const v0 = [0, 1, 2].map(q => S_.P0[q] - T[q]), r0 = Math.hypot(...v0) || 1, v1 = [0, 1, 2].map(q => S_.P1[q] - T[q]), r1 = Math.hypot(...v1) || 1; S_.u0 = v0.map(v => v / r0); S_.u1 = v1.map(v => v / r1); S_.r0 = r0; S_.r1 = r1; S_.f0 = ckFwd();
+      if (S_.flow && S_.aF) { const dur = 3, vr = Math.max(0, S_.vin * -(S_.aF[0] * S_.u0[0] + S_.aF[1] * S_.u0[1] + S_.aF[2] * S_.u0[2])), floor = .55 * Math.min(r0, r1); let m = -vr * dur;   /* 0.8.168 (Nick: "it still jumps upon arrival"): the ship doesn't stop dead and back away; it carries its speed in, swings round and eases out */
+        const rr = (q, m_) => (2 * q * q * q - 3 * q * q + 1) * r0 + (q * q * q - 2 * q * q + q) * m_ + (-2 * q * q * q + 3 * q * q) * r1;
+        for (let n = 0; n < 12; n++) { let lo = Infinity; for (let q = 0; q <= 1; q += .05) lo = Math.min(lo, rr(q, m)); if (lo >= floor) break; m *= .7; } S_.m = m; S_.rr = rr; } }
     const slerp = (a, b, w) => { const d = Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])), th = Math.acos(d); if (th < 1e-4) return b.slice(); if (th > 3.1) { const o = Math.abs(a[1]) < .9 ? [0, 1, 0] : [1, 0, 0]; const m_ = [a[1] * o[2] - a[2] * o[1], a[2] * o[0] - a[0] * o[2], a[0] * o[1] - a[1] * o[0]], l = Math.hypot(...m_); const mid = m_.map(v => v / l); return w < .5 ? slerp(a, mid, w * 2) : slerp(mid, b, w * 2 - 1); }
       const s = Math.sin(th), ka = Math.sin((1 - w) * th) / s, kb = Math.sin(w * th) / s; return [0, 1, 2].map(q => a[q] * ka + b[q] * kb); };
-    const u = slerp(S_.u0, S_.u1, e), r = S_.r0 + (S_.r1 - S_.r0) * e; CK.P = [0, 1, 2].map(q => T[q] + u[q] * r); CK.v = 0;
-    const toT = [0, 1, 2].map(q => T[q] - CK.P[q]), lt = Math.hypot(...toT) || 1, fT = toT.map(v => v / lt), wf = Math.min(1, el / .9), wfe = wf * wf * (3 - 2 * wf), fw = slerp(S_.f0, fT, wfe), lf = Math.hypot(...fw) || 1;
+    const ea = S_.rr ? f * f * (3 - 2 * f) : e, u = slerp(S_.u0, S_.u1, ea), r = S_.rr ? S_.rr(f, S_.m) : S_.r0 + (S_.r1 - S_.r0) * e; CK.P = [0, 1, 2].map(q => T[q] + u[q] * r); CK.v = 0;
+    const toT = [0, 1, 2].map(q => T[q] - CK.P[q]), lt = Math.hypot(...toT) || 1, fT = toT.map(v => v / lt), wf = Math.min(1, el / .9), wfe = wf * wf * (3 - 2 * wf);
+    if (!S_.o0) S_.o0 = [0, 1, 2].map(q => S_.f0[q] - fT[q]);   /* the gaze keeps the note where it was on screen and eases it to the centre; it no longer holds still while the ship swings, which swept the note out of view (0.8.168, Nick's clip) */
+    const fw = [0, 1, 2].map(q => fT[q] + S_.o0[q] * (1 - wfe)), lf = Math.hypot(...fw) || 1;
     CK.yaw = Math.atan2(fw[0] / lf, fw[2] / lf); CK.pitch = Math.asin(Math.max(-1, Math.min(1, fw[1] / lf))); CK.roll *= .9; if (f >= 1) CK.settle = null; }
   if (CK.lookT && !CK.auto && !K.size && !CK.drag && win.performance.now() - CK.lookT0 < 1600) { const [ty_, tp_] = ckLook(CK.P, CK.lookT), dy_ = Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)), s_ = Math.min(1, dt * 3); CK.yaw += dy_ * s_; CK.pitch += (tp_ - CK.pitch) * s_; CK.roll += dy_ * s_ * .5; }   /* arriving in Starfield, the ship turns to face the new note's links */
   if (CK.auto || (CK.lookT && !K.size && !CK.drag && win.performance.now() - CK.lookT0 < 1600)) ckUpright();
@@ -2904,7 +2909,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   g.restore();
   if (CKW === "sf") ckSFDraw(g, W, VH, cx, cy, F, font);
   /* hyperspace: when you speed into a note (autopilot, or the jump on arrival), thin streaks rush out from the middle */
-  { const I = Math.max(CK.warp, CK.hyper || 0, CK.auto ? Math.min(1, CK.v / 900) : Math.min(1, Math.max(0, (CK.v - 500) / 700)) * .6); if (I > .02) { const tt = win.performance.now() / 1000, Rm = Math.hypot(W, VH) * .6;
+  { const I0 = Math.max(CK.warp, CK.hyper || 0, CK.auto ? Math.min(1, CK.v / 900) : Math.min(1, Math.max(0, (CK.v - 500) / 700)) * .6), I = CK.strI = I0 >= (CK.strI || 0) ? I0 : Math.max(I0, (CK.strI || 0) - .02);   /* the streaks fade out over ~¾ s instead of vanishing on arrival (0.8.168) */ if (I > .02) { const tt = win.performance.now() / 1000, Rm = Math.hypot(W, VH) * .6;
       g.save(); g.lineCap = "round"; for (let q = 0; q < 140; q++) { const a = hash("hy" + q, 13) * 6.2832, sp_ = .5 + hash("hy" + q, 17), f = (hash("hy" + q, 19) + tt * sp_ * (.35 + I * 1.2)) % 1, r0 = 20 + f * f * Rm, len = (10 + f * 190) * I;
         g.globalAlpha = I * .5 * Math.min(1, f * 3) * (1 - f * .4); g.strokeStyle = q % 7 === 0 ? "#ffe9b0" : "#d6e6ff"; g.lineWidth = .6 + f * 1.1;
         g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len)); g.stroke(); }
@@ -2922,7 +2927,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
     g.textBaseline = "alphabetic"; g.globalAlpha = 1; }
   const order = sfw ? [] : CK.items.map((it, q) => q).filter(q => CK.items[q].zc > 8).sort((a, b) => CK.items[b].zc - CK.items[a].zc);
   for (const q of order) { const it = CK.items[q], d = N[it.i], col = ckCol(d.level), sw = it.sw, sh = it.sh, x0 = it.sx - sw / 2, y0 = it.sy - sh / 2; if (x0 > W || x0 + sw < 0 || y0 > VH || y0 + sh < 0) continue;
-    const fade = Math.max(.12, Math.min(1, 2600 / it.zc - .2)) * (ckShows(it) ? 1 : .08) * (1 - CK.warp * .7);
+    const fade = Math.max(.12, Math.min(1, 2600 / it.zc - .2)) * (ckShows(it) ? 1 : .08) * (1 - CK.warp * .7) * (CK.fadeT ? Math.min(1, (win.performance.now() - CK.fadeT) / 700) : 1);
     g.globalAlpha = fade; g.fillStyle = "rgba(10,16,30,.86)"; g.fillRect(x0, y0, sw, sh);
     g.strokeStyle = col; g.lineWidth = Math.max(.6, Math.min(2.2, sw / 90)); if (it.none) g.setLineDash([4, 3]); g.strokeRect(x0, y0, sw, sh); g.setLineDash([]);
     { const hv = CK.hv.get(it.i) || 0; if (hv > .02) { g.save(); g.globalAlpha = hv * .9; g.strokeStyle = "#ffffff"; g.lineWidth = 1.5; g.strokeRect(x0 - 4, y0 - 4, sw + 8, sh + 8); g.restore(); g.globalAlpha = Math.max(fade, hv); } }
@@ -4330,6 +4335,8 @@ function capCrop(){ const cw = cv.width, ch = cv.height, a = CAP.frame === "squa
   const ar = capArea(), aw = (ar.x1 - ar.x0) * dpr; let w = ch * a, h = ch; if (w > aw) { w = aw; h = aw / a; } const cx = (ar.x0 + ar.x1) / 2 * dpr; return { x: Math.max(0, Math.min(cw - w, cx - w / 2)), y: (ch - h) / 2, w, h }; }
 // one frame of a capture: the map, cropped to its frame, scaled to the output, with the credit in the corner
 function capCompose(out){ const c = capCrop(), o = out.getContext("2d"); o.drawImage(cv, c.x, c.y, c.w, c.h, 0, 0, out.width, out.height);
+  if (CK.on && CK.cv && CK.cv.width) { const a = cv.getBoundingClientRect(), b = CK.cv.getBoundingClientRect(), s = cv.width / Math.max(1, a.width), fx = out.width / c.w, fy = out.height / c.h;   /* the Cockpit draws on its own canvas over the map (0.8.168: clips of it came out blank) */
+    o.drawImage(CK.cv, ((b.left - a.left) * s - c.x) * fx, ((b.top - a.top) * s - c.y) * fy, b.width * s * fx, b.height * s * fy); }
   if (CAP.credit) { const t = "Maps of the Ideaverse", fs = Math.round(out.width / 42); o.save(); o.font = `600 ${fs}px ${css.display}`; o.textAlign = "right"; o.textBaseline = "bottom"; o.globalAlpha = .8; o.lineWidth = fs / 3; o.strokeStyle = css.bg; o.fillStyle = css.ink;
     o.strokeText(t, out.width - fs, out.height - fs * .8); o.fillText(t, out.width - fs, out.height - fs * .8); o.restore(); } }
 function capCanvas(){ const c = capCrop(), out = doc.createElement("canvas"), fixed = CAP.frame === "square" ? [1080, 1080] : CAP.frame === "vertical" ? [1080, 1920] : null;
