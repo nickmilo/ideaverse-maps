@@ -2658,14 +2658,14 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
     const bt = row.createEl("button", { cls: "ckgt", text: "1 · True", attr: { type: "button" } }), bf = row.createEl("button", { cls: "ckgf", text: "2 · False", attr: { type: "button" } });
     bt.onclick = e => { e.stopPropagation(); ckGameAnswer(true); }; bf.onclick = e => { e.stopPropagation(); ckGameAnswer(false); }; CK.gEl = { gc, hd, tx, bt, bf }; }
   for (let q = 0; q < 420; q++) CK.stars.push([hash("s" + q, 3) * 4000 - 2000, hash("s" + q, 5) * 4000 - 2000, hash("s" + q, 7) * 4000 - 2000, .3 + hash("s" + q, 9) * .7]);
-  c_.addEventListener("pointerdown", e => { if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false }; c_.setPointerCapture(e.pointerId); });
+  c_.addEventListener("pointerdown", e => { if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false, star: CK.starHov };   /* the star under the pointer as you press: it stops being "hovered" the moment a press starts (0.8.109 fix) */ c_.setPointerCapture(e.pointerId); });
   c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); CK.hovS = ckSideHit(e.offsetX, e.offsetY); CK.mouseOnPanel = h_ >= 0; CK.mouse = [e.offsetX, e.offsetY]; CK.mouseT = win.performance.now(); c_.classList.toggle("hot", h_ >= 0 || CK.hovS >= 0 || (CK.starHov || -1) >= 0); return; }
     const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) > 4) d.moved = true; d.x = e.clientX; d.y = e.clientY;
     if (d.moved) { CK.auto = false; CK.yaw += dx * .0032 * ckUp(); CK.pitch += dy * .0032; CK.roll += dx * .004; } });
   c_.addEventListener("pointerleave", () => { CK.hovS = -1; CK.mouse = null; CK.starHov = -1; });
   c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return; { const sj = ckSideHit(e.offsetX, e.offsetY); if (sj >= 0) { const was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } } const h_ = ckHit(e.offsetX, e.offsetY);
     if (h_ < 0 && CKW === "sf") { const p_ = (CK.posts || []).find(q => Math.hypot(q[0] - e.offsetX, q[1] - e.offsetY) < 12); if (p_) { const was = (CK.items[CK.lock] || {}).i === p_[2]; ckLockNote(p_[2]); if (was) CK.auto = true; return; } }
-    if (h_ < 0) { if (CKW === "sf" && CK.starHov >= 0) { const sj = CK.starHov, was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; } return; } if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
+    if (h_ < 0) { if (CKW === "sf" && (d.star ?? -1) >= 0) { const sj = d.star, was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; } return; } if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
   c_.addEventListener("dblclick", e => { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) { CK.lock = h_; CK.auto = true; } });
   /* trackpad (Nick): two fingers steer, a pinch flies; a mouse wheel (no sideways scroll) still flies */
   c_.addEventListener("wheel", e => { e.preventDefault(); CK.auto = false; if (CK.wd) ckWanderStop(); const mouse = e.deltaMode === 1 || (!e.deltaX && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
@@ -7293,7 +7293,7 @@ return {
   _scr(p){ const i = PIDX.get(p); return i == null ? null : [sx(X[i]), sy(Y[i]), vis[i], GPH.loc ? GPH.loc[i] : -9, GPH.deg && GPH.loc && GPH.loc[i] >= 0 ? GPH.deg[GPH.loc[i]] : -9]; },
   _cam(){ let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i=0;i<n;i++) if (vis[i]) { x0 = Math.min(x0, sx(X[i])); x1 = Math.max(x1, sx(X[i])); y0 = Math.min(y0, sy(Y[i])); y1 = Math.max(y1, sy(Y[i])); } return { view, k, tx, ty, W, H, box: [x0, y0, x1, y1].map(Math.round), side: sideW() }; },
   _setEmo(o){ EMOF = o; emoBuild(); },
-  _ck(){ const sf = CKSF.P, c = CK.c, T = c >= 0 && sf ? [sf[3 * c], sf[3 * c + 1], sf[3 * c + 2]] : null; return { c, settle: CK.settle ? { P1: CK.settle.P1, T: CK.settle.T } : null, P: CK.P, dist: T ? Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) : null }; },
+  _ck(){ const sf = CKSF.P, c = CK.c, T = c >= 0 && sf ? [sf[3 * c], sf[3 * c + 1], sf[3 * c + 2]] : null; return { c, lock: (CK.items[CK.lock] || {}).i, star: CK.starHov, settle: CK.settle ? { P1: CK.settle.P1, T: CK.settle.T } : null, P: CK.P, dist: T ? Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) : null }; },
   _at(path){ const i = PIDX.get(path); return i == null ? null : [sx(X[i]), sy(Y[i])]; },
   _kt(){ return [k, tx, ty]; },
   _view(){ return view; },
