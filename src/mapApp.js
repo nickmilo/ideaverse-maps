@@ -1991,7 +1991,10 @@ function relFrom(a){ const { nb, wt, sw } = radj(), al = .2; let x = new Float64
   for (let it = 0; it < 24; it++) { y.fill(0); y[a] = al;
     for (let i = 0; i < n; i++) { const v = x[i]; if (!v || !sw[i]) continue; const f = (1 - al) * v / sw[i], L = nb[i], Wt = wt[i]; for (let q = 0; q < L.length; q++) y[L[q]] += f * Wt[q]; }
     [x, y] = [y, x]; }
-  for (let i = 0; i < n; i++) x[i] = x[i] / Math.sqrt(sw[i] + 1);   // tempered by how linked a note is
+  /* tempered by how linked a note is, gently (0.8.122, Nick: the √ markdown "feels fairly steep"): ÷ (1 + link weight)^0.3 */
+  for (let i = 0; i < n; i++) x[i] = x[i] / Math.pow(sw[i] + 1, .3);
+  /* what you declared counts most: a note it links up to (up) ×3, a related note ×1.6 */
+  for (const j of [...out[a], ...inn[a]]) { const kk = EKIND.get(a * n + j) ?? EKIND.get(j * n + a); if (kk === 1 && EKIND.get(a * n + j) === 1) x[j] *= 3; else if (kk === 4) x[j] *= 1.6; }
   return x; }
 // the centre: the pinned main-editor note, else the picked note, else the top-scored note. The map's first layout runs before the tabs and
 // the picked note exist (Nick's blank map on 0.8.33, opening on Compass), so those are read carefully
