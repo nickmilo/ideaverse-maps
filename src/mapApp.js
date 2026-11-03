@@ -2934,8 +2934,8 @@ function ckConsole(g, W, H, VH, cons, font){ const c = CK.c, fl = !CKFRAME; if (
   g.fillStyle = "#0a0f1c"; g.beginPath(); g.moveTo(0, VH); g.lineTo(W * .12, VH); g.lineTo(0, VH - cons * .9); g.closePath(); g.fill(); g.beginPath(); g.moveTo(W, VH); g.lineTo(W * .88, VH); g.lineTo(W, VH - cons * .9); g.closePath(); g.fill(); }
   if (c < 0) return; const d = N[c], L = stripLists(c), R = Math.min(cons * .36, 54), sy_ = VH + cons * .44;
   CK.scDots = []; CK.scHovAt = null;
-  ckScope3(g, Math.max(ckLeftEd() + R + 18, W * .16), sy_, R, true, font);
-  ckScope3(g, Math.min(W - R - 18, W * .84), sy_, R, false, font);
+  { const L0 = ckLeftEd(), span = W - L0, m_ = Math.max(R + 18, span * .16);   /* both scopes and the card centred on the free space (0.8.127) */
+    ckScope3(g, L0 + m_, sy_, R, true, font); ckScope3(g, W - m_, sy_, R, false, font); }
   /* a scope dot under the pointer names itself (0.8.112, Nick): click to lock, again to fly */
   if (CK.scHovAt && CK.scHov >= 0) { const dN = N[CK.scHov], [hx, hy] = CK.scHovAt; let tt = dN.title; g.font = `600 11px ${font}`; while (tt.length > 4 && g.measureText(tt).width > 230) tt = tt.slice(0, -2); if (tt !== dN.title) tt += "…";
     const tw = g.measureText(tt).width + 24, bx = Math.max(6, Math.min(W - tw - 6, hx - tw / 2)), by = hy - 34; g.globalAlpha = 1; g.fillStyle = "rgba(4,6,14,.92)"; g.beginPath(); g.roundRect(bx, by, tw, 22, 11); g.fill();
