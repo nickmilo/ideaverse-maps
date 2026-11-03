@@ -2786,7 +2786,8 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
 function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect(), dpr = win.devicePixelRatio || 1, W = Math.max(1, r.width), H = Math.max(1, r.height);
   if (CK.w !== W || CK.h !== H) { CK.w = W; CK.h = H; c_.width = W * dpr; c_.height = H * dpr; }
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = "#04060d"; g.fillRect(0, 0, W, H);
-  const cons = CKFRAME ? Math.min(150, H * .26) : 0, VH = H - cons,   /* no frame: the view runs to the bottom and the instruments float over it (0.8.117) */ cx = W / 2, cy = VH / 2, F = Math.min(W, VH) * .95, font = css.body || "sans-serif";
+  const cons = CKFRAME ? Math.min(150, H * .26) : 0, VH = H - cons,   /* no frame: the view runs to the bottom and the instruments float over it */ cx = W / 2, cy = VH / 2;
+  const F = Math.min(W, VH) * .95, font = css.body || "sans-serif";
   /* stars: wrap round the ship; streaks when moving */
   g.save(); g.translate(cx, cy); g.rotate(CK.roll * .25); g.translate(-cx, -cy); const fw = ckFwd(), sp = Math.abs(CK.v);
   for (const s of CK.stars) { let x = s[0] - CK.P[0], y = s[1] - CK.P[1], z = s[2] - CK.P[2]; x = ((x % 4000) + 6000) % 4000 - 2000; y = ((y % 4000) + 6000) % 4000 - 2000; z = ((z % 4000) + 6000) % 4000 - 2000;
@@ -2840,7 +2841,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   const LX = ckLeftEd(), inS = new Set(CK.inL), outS = new Set(CK.outL);
   const merged = LX ? (() => { const rk = new Map(); CK.inL.forEach((j, q) => rk.set(j, q)); CK.outL.forEach((j, q) => rk.set(j, Math.min(rk.has(j) ? rk.get(j) : 1e9, q))); return [...rk.keys()].sort((a, b) => rk.get(a) - rk.get(b)); })() : null;
   CK.sideLists = merged ? [null, merged] : [CK.inL, CK.outL];
-  for (const [s, list0, lab] of merged ? [[1, merged, "LINKS · ← IN  → OUT"]] : [[-1, CK.inL, "IN · F"], [1, CK.outL, "OUT · R"]]) { const n_ = list0.length; if (!n_) continue; const cap = n_ > 22 ? 20 : n_, sk = s < 0 ? 0 : 1, off = Math.round(CK.sOff[sk] = Math.max(0, Math.min(n_ - cap, CK.sOff[sk] || 0))), list = list0.slice(off, off + cap), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* scrolls (0.8.115): wheel over the names, or click the last line */ Rx = W * .5, Ry = VH * .62, lh = Math.min(15.5, (VH - 90) / (rows + 1));
+  for (const [s, list0, lab] of merged ? [[1, merged, "LINKS"]] : [[-1, CK.inL, "IN"], [1, CK.outL, "OUT"]]) { const n_ = list0.length; if (!n_) continue; const cap = n_ > 22 ? 20 : n_, sk = s < 0 ? 0 : 1, off = Math.round(CK.sOff[sk] = Math.max(0, Math.min(n_ - cap, CK.sOff[sk] || 0))), list = list0.slice(off, off + cap), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* scrolls (0.8.115): wheel over the names, or click the last line */ Rx = W * .5, Ry = VH * .62, lh = Math.min(15.5, (VH - 90) / (rows + 1));
     const dim = CK.only && CK.only !== (s < 0 ? "in" : "out"); g.save(); g.font = `500 11px ${font}`; g.textBaseline = "middle";
     const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [cx + s * Rx * Math.sqrt(Math.max(0, 1 - u * u)) - s * 34, y, Math.asin(Math.max(-1, Math.min(1, u))) * .3]; };
     /* hover (Nick: "a dynamic feel"): the name under the pointer eases in toward the middle and grows, its neighbours make way, and a tether runs to its panel */
