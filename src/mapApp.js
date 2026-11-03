@@ -2853,6 +2853,9 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   if (CK.auto && it) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z), ay = Math.atan2(xc, zc), ap = Math.atan2(yc, Math.hypot(xc, zc)), s_ = Math.min(1, dt * 3.2);
     CK.yaw += ay * s_; CK.pitch += ap * s_; CK.roll += ay * s_ * .8;
     const dist = Math.hypot(xc, yc, zc); CK.v += (Math.min(CKW === "sf" ? 4200 : 1500, 160 + dist * 1.4) - CK.v) * Math.min(1, dt * 2.5); }
+  /* near a galaxy the ship eases off (0.8.149, Nick): flying by hand, top speed falls from full out in open space to a cruise inside a galaxy, so you can see where you are */
+  if (CKW === "sf" && !CK.auto && CK.v > 0) { let near = 1e9; for (const B of ckSF().B) { const d = Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]) / Math.max(1, B.r); if (d < near) near = d; }
+    const cap = 600 + 2600 * Math.min(1, Math.max(0, (near - 1.2) / 2.8)); if (CK.v > cap) CK.v += (cap - CK.v) * Math.min(1, dt * 3); }
   const f = ckFwd(); CK.P[0] += f[0] * CK.v * dt; CK.P[1] += f[1] * CK.v * dt; CK.P[2] += f[2] * CK.v * dt; CK.trav = (CK.trav || 0) + Math.abs(CK.v) * dt;
   if (CK.warp > 0) CK.warp = Math.max(0, CK.warp - dt * 1.6);
   /* fly into a panel (near it and roughly ahead) to make it the cockpit */
