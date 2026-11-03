@@ -4442,6 +4442,7 @@ function render(){
   if (emoView()) drawEmojis(lit, dim);
   if (chartOn()) drawChart();
   drawMini();   // Starfield's overview map, bottom right
+  drawHudLinks();
   drawContrails();
   drawLive();
   for (const o of Object.values(EDS)) o.place(); placeOrbs();
@@ -4910,6 +4911,35 @@ cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
     tx -= dx * (e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }
   const f = Math.min(1.35, Math.max(.74, Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)))); zoomAt(e.offsetX, e.offsetY, f); }, {passive:false});
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
+// ---------- HUD links (0.8.143, Nick): the Cockpit's list of the picked note's links, down the right of any map ----------
+// each linked note once (← links in, → links out, ↔ both), up links first, then by relevance; hover lights a name and draws a line to its note; click goes there.
+// Display → HUD links, with Relevance scores beneath it
+let HUDL = pref("iv-hudl", false) === true, HUDR = pref("iv-hudr", true) !== false, HUDH = [], HUDHOV = -1, HUDC = { i: -2, list: [], rel: null };
+function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && RADJ) return HUDC; const L = stripLists(i), inS = new Set(L.in), outS = new Set(L.out), upS = new Set(L.up); let rel = null; try { rel = relFrom(i); } catch (_) { rel = null; }
+  const all = [...new Set([...L.in, ...L.out])].filter(j => j !== i && vis[j]), rv = j => rel ? rel[j] : N[j].score / 1e3; let mx = 0; for (const j of all) mx = Math.max(mx, rv(j));
+  all.sort((a, b) => (upS.has(b) ? 1 : 0) - (upS.has(a) ? 1 : 0) || rv(b) - rv(a) || N[b].score - N[a].score);
+  return (HUDC = { i, rj: RADJ, list: all, inS, outS, upS, sc: new Map(all.map(j => [j, mx > 0 ? Math.round(100 * rv(j) / mx) : 0])) }); }
+function drawHudLinks(){ HUDH = []; if (!HUDL || sel < 0 || !vis[sel] || view === "cockpit" || isPhone()) return; const D_ = hudData(sel), n_ = D_.list.length; if (!n_) return;
+  let R_ = W - sideW(); try { if (EDS && !EDS.right.el.hidden && !EDS.right.col) R_ = Math.min(R_, edRect("right").x - 8); } catch (_) { /* no editors */ }
+  const top = 74, bot = H - 120, lh = 14.5, cap = Math.max(4, Math.min(n_, Math.floor((bot - top) / lh) - 1)), rows = cap + (n_ > cap ? 1 : 0), cy = (top + bot) / 2, Ry = Math.max(300, (bot - top) * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))));
+  ctx.save(); ctx.font = `500 11px ${css.body}`; ctx.textBaseline = "middle"; ctx.textAlign = "right"; const ink = css.ink || "#ddd", SL = (() => { try { return SPACELINK(); } catch (_) { return {}; } })();
+  const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [R_ - 30 - 60 * (1 - Math.sqrt(Math.max(0, 1 - u * u))), y, Math.asin(Math.max(-1, Math.min(1, u))) * .25]; };
+  const [hx, hy] = at(-1.3); ctx.globalAlpha = .6; ctx.font = `600 9.5px ${css.body}`; ctx.fillStyle = css.accent || "#7dffb0"; ctx.fillText(n_ > cap ? `LINKS · 1–${cap} of ${n_}` : `LINKS · ${n_}`, hx, hy); ctx.font = `500 11px ${css.body}`;
+  for (let r = 0; r < rows; r++) { const [x, y, tl] = at(r), more = r === cap, j = more ? -1 : D_.list[r], hv = j >= 0 && j === HUDHOV;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(tl * (hv ? 0 : 1)); if (hv) ctx.scale(1.15, 1.15);
+    if (more) { ctx.globalAlpha = .6; ctx.fillStyle = css.muted || ink; ctx.fillText(`+${n_ - cap} more`, 0, 0); ctx.restore(); continue; }
+    let tt = N[j].title; while (ctx.measureText(tt).width > 175 && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…"; tt = (D_.inS.has(j) && D_.outS.has(j) ? "↔ " : D_.inS.has(j) ? "← " : "→ ") + tt;
+    const tw = ctx.measureText(tt).width;
+    if (hv) { ctx.globalAlpha = .9; ctx.fillStyle = css.bg || "#111"; ctx.beginPath(); ctx.roundRect(-tw - 26, -9, tw + 30, 18, 9); ctx.fill(); }
+    ctx.globalAlpha = hv ? 1 : .78; ctx.fillStyle = D_.upS.has(j) ? (SL.upp || css.upp || ink) : (N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1) || ink; ctx.beginPath(); ctx.arc(-4, 0, 2.6, 0, 6.2832); ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = css.bg || "#111"; ctx.globalAlpha = hv ? 1 : .85; ctx.strokeText(tt, -12, 0); ctx.fillStyle = hv ? (css.accent || ink) : ink; ctx.fillText(tt, -12, 0);
+    if (HUDR) { const sc = String(D_.sc.get(j)); ctx.font = `600 9.5px ${css.mono || css.body}`; ctx.globalAlpha = .75; ctx.fillStyle = css.accent || "#7fe7ff"; ctx.fillText(sc, -tw - 18, 0); ctx.font = `500 11px ${css.body}`; }
+    ctx.restore(); HUDH.push([x - tw - 50, y - lh / 2, tw + 56, lh, j]);
+    if (hv && vis[j]) { ctx.save(); ctx.globalAlpha = .6; ctx.strokeStyle = css.accent || ink; ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - tw - 30, y); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); ctx.restore(); } }
+  ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
+const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
+cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
+cv.addEventListener("pointerdown", e => { if (!HUDL || e.button !== 0) return; const j = hudAt(e.offsetX, e.offsetY); if (j < 0) return; e.stopImmediatePropagation(); e.preventDefault(); HUDHOV = -1; navTo(j); toEditor(j); }, { capture: true });
 // ---------- Contrails (0.8.56, Nick): a breadcrumb trail you can see, subtle ----------
 // Each jump from one note to the next draws itself along a gentle arc (a small rocket can fly it: Display → Contrails → Rocket), leaving a vapor trail: a bright thin core inside a soft
 // cloud that widens, breaks into puffs and fades a step with each jump after it. The last 10 jumps stay. Display → Contrails.
@@ -7056,6 +7086,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); g.hidden = !EDITM; if (EDITM && sel >= 0) void openMain(sel); else closeEds(); syncOrbs(); draw(); }; }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
+  // HUD links (0.8.143): the picked note's links down the right, as in the Cockpit
+  { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = HUDL; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "HUD links" });
+    const l2 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = HUDR; l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Relevance scores" }); l2.hidden = !HUDL;
+    c2.onchange = () => { HUDR = c2.checked; save("iv-hudr", HUDR); draw(); };
+    cb.onchange = () => { HUDL = cb.checked; save("iv-hudl", HUDL); l2.hidden = !HUDL; draw(); }; }
   // Contrails (0.8.56, Nick): your path from note to note as a vapor trail behind a small airplane
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = CTRON; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Contrails" });
     const l2 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = CTRRK; l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Rocket" }); l2.hidden = !CTRON;
