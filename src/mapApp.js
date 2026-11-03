@@ -2703,7 +2703,7 @@ function ckLeftEd(){ try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) { co
 let CKPV = ["off", "one", "fewer", "natural", "max"].includes(pref("iv-ckpv", "")) ? pref("iv-ckpv", "") : (pref("iv-ckx", {}) || {}).pv === false ? "off" : "one";
 // a preview becomes a live editor where it is (0.8.136, Nick: "can these mini-previews be editable?"): click to edit, Esc or × to finish; Shift-click opens it as the support note
 function ckPvMake(p, title){ const e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ }
-  e.title = "Click to edit · Shift-click: open as the support note";
+  e.dataset.hint = "click to edit · shift-click: support note";   /* our own small hint on hover, not the system tooltip (0.8.145) */
   e.addEventListener("pointerenter", () => { CK.pvOver = p; }); e.addEventListener("pointerleave", () => { if (CK.pvOver === p) CK.pvOver = null; });
   e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return;
     if (ev.shiftKey && EDS) { void EDS.right.open(i); return; } const r = e.getBoundingClientRect(), pr = CK.el.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top); });

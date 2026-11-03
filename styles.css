@@ -1509,3 +1509,9 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .dtab.hudtab[hidden]{display:none}
 .ivm .ivm-card.ivm-pv.hudpv{position:absolute;left:var(--pvx);top:var(--pvy);pointer-events:none;z-index:5}
 .ivm .ivm-card.ivm-pv.hudpv[hidden]{display:none}
+/* the preview's hint, in the plugin's own small label style (0.8.145) */
+.ivm .ivm-cockpit .ivm-card.ivm-pv.ckpv{overflow:visible}
+.ivm .ivm-cockpit .ivm-card.ivm-pv.ckpv:hover::after{content:attr(data-hint);position:absolute;left:50%;top:100%;transform:translate(-50%,5px);white-space:nowrap;font:500 10px var(--body);letter-spacing:.01em;color:var(--text-muted);background:color-mix(in srgb,var(--background-primary) 90%,transparent);border:1px solid var(--background-modifier-border);border-radius:6px;padding:2px 7px;pointer-events:none}
+/* the preview editor uses the mini preview's font too (Obsidian's interface font) */
+.ivm .ivm-cockpit .ivm-card.ckedit{--font-text:var(--font-interface);font-family:var(--font-interface)}
+.ivm .ivm-cockpit .ivm-card.ckedit :is(.cm-content,.markdown-source-view,.inline-title,.metadata-container){font-family:var(--font-interface)}
