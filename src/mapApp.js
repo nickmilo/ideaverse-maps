@@ -2448,7 +2448,7 @@ EXP.kandinsky = {
 // Space: links in on the left, links out on the right, two-way links ahead; what the note links up to above the horizon, what sits below it beneath;
 // the strongest links (relevance from this note) nearest. F shows only links in, R only links out (Nick's swap). No S·T·I·R gauges yet (Nick: don't calculate them yet).
 const CK = { scHov: -1, scDots: [], hovS: -1, hv: new Map(), inL: [], outL: [], side: [], on: false, c: -1, items: [], lock: -1, sug: -1, P: [0, 0, 0], yaw: 0, pitch: 0, v: 0, keys: new Set(), only: "", t0: 0, warp: 0, auto: false, roll: 0, el: null, cv: null, g: null, w: 0, h: 0, stars: [], last: 0, drag: null, msg: "" };
-let CKFRAME = pref("iv-ckframe", false) === true;
+let CKFRAME = pref("iv-ckframe", false) === true, CKINV = pref("iv-ckinv", false) === true;   /* CKINV: drag the other way (0.8.153, Nick) */
 // World (0.8.90, Nick's "big kahuna"): "links" builds a scene from one note's links; "sf" flies through Starfield itself,
 // every note at its place in 3D Starfield, the galaxies as glowing disks and clouds in their own colours, the links as panels where those notes really are.
 let CKW = pref("iv-ckw", "links") === "sf" ? "sf" : "links";
@@ -2669,7 +2669,7 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
   c_.addEventListener("pointerdown", e => { if (CK.edit) { ckEditClose(); return; } if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false, star: CK.starHov };   /* the star under the pointer as you press: it stops being "hovered" the moment a press starts (0.8.109 fix) */ c_.setPointerCapture(e.pointerId); });
   c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); CK.hovS = ckSideHit(e.offsetX, e.offsetY); { let b_ = -1, bd = 64; for (const [px, py, j] of CK.scDots || []) { const dd = (px - e.offsetX) ** 2 + (py - e.offsetY) ** 2; if (dd < bd) { bd = dd; b_ = j; } } CK.scHov = b_; } CK.mouseOnPanel = h_ >= 0; CK.mouse = [e.offsetX, e.offsetY]; CK.mouseT = win.performance.now(); c_.classList.toggle("hot", h_ >= 0 || CK.hovS >= 0 || CK.hovS <= -10 || CK.scHov >= 0 || (CK.starHov || -1) >= 0); return; }
     const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) > 4) d.moved = true; d.x = e.clientX; d.y = e.clientY;
-    if (d.moved) { CK.auto = false; CK.yaw += dx * .0032 * ckUp(); CK.pitch += dy * .0032; CK.roll += dx * .004; } });
+    if (d.moved) { const iv = CKINV ? -1 : 1; CK.auto = false; CK.yaw += iv * dx * .0032 * ckUp(); CK.pitch += iv * dy * .0032; CK.roll += iv * dx * .004; } });
   c_.addEventListener("pointerleave", () => { CK.hovS = -1; CK.scHov = -1; CK.mouse = null; CK.starHov = -1; });
   c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return;
     /* Shift-click any note (a star, a name, a scope dot, a signpost, a panel) opens it in a new orb, as on the map (0.8.146, Nick) */
@@ -6894,6 +6894,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "kandinsky"; }; }
   // Cockpit: the canopy's frame (Nick: the structure bars from the mockup)
   { const fa = mo.createDiv({ cls: "mosec emoany ckany" }); fa.hidden = true;
+    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKINV; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Drag the other way (grab the sky)" });
+      c_.onchange = () => { CKINV = c_.checked; save("iv-ckinv", CKINV); }; }
     { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "World" }); const seg = sr.createDiv({ cls: "seg" });
       for (const [v, t_] of [["links", "One note's links"], ["sf", "Starfield"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKW === v) } });
         b.onclick = e => { e.stopPropagation(); if (CKW === v) return; CKW = v; save("iv-ckw", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); CK.sfIn = false; CK.c = -2; ckSync(); CK.warp = 1; FUI.emoany(); }; } }
