@@ -2741,11 +2741,17 @@ function ckGameNew(){ const c = CK.c, G = CK.gEl; if (!G) return; if (!CKG || c 
   const want = Math.random() < .5, q = tries.find(x => x.v === want) || tries[0]; if (!q) return;
   CK.gq = q; G.gc.hidden = false; G.gc.removeClass("ok"); G.gc.removeClass("no"); G.hd.setText(`True or false${CK.gs ? ` · streak ${CK.gs}` : ""}${CKBEST ? ` · best ${CKBEST}` : ""}`); G.tx.setText(q.s); G.bt.disabled = G.bf.disabled = false; ckLockNote(q.j); }
 function ckGameAnswer(v){ const q = CK.gq, G = CK.gEl; if (!q || !G || G.bt.disabled) return; G.bt.disabled = G.bf.disabled = true;
-  if (v === q.v) { CK.gs = (CK.gs || 0) + 1; if (CK.gs > CKBEST) { CKBEST = CK.gs; save("iv-ckbest", CKBEST); } G.gc.addClass("ok"); G.hd.setText(`Correct · streak ${CK.gs} · jumping to ${N[q.j].title}`); CK.gj = { j: q.j, t0: win.performance.now() }; }
+  if (v === q.v) { CK.gs = (CK.gs || 0) + 1; if (CK.gs > CKBEST) { CKBEST = CK.gs; save("iv-ckbest", CKBEST); } G.gc.addClass("ok"); G.hd.setText(`Correct · streak ${CK.gs} · flying to ${N[q.j].title}`); ckLockNote(q.j); CK.gj = { j: q.j, t0: win.performance.now(), phase: "look" }; }
   else { CK.gs = 0; G.gc.addClass("no"); G.hd.setText(`Not quite: it's ${q.v ? "true" : "false"}`); CK.shake = 1; win.setTimeout(() => { if (!dead && CKG) ckGameNew(); }, 2200); } }
 function ckGameTick(dt){ if (CK.shake > 0) { CK.shake = Math.max(0, CK.shake - dt * 2.2); CK.roll += (Math.random() - .5) * .18 * CK.shake; CK.yaw += (Math.random() - .5) * .012 * CK.shake; }
-  const gj = CK.gj; if (!gj) return; const el = (win.performance.now() - gj.t0) / 1000; CK.hyper = Math.min(1, el / .8); CK.v += (900 - CK.v) * Math.min(1, dt * 2);
-  if (el > 1) { CK.gj = null; CK.hyper = 0; CK.sfIn = false; if (vis[gj.j]) select(gj.j); win.setTimeout(ckSync, 0); CK.warp = 1; win.setTimeout(() => { if (!dead && CKG) ckGameNew(); }, 1300); } }
+  /* a right answer flies the whole way (0.8.110, Nick: "don't truncate the jump"): turn toward the note, then autopilot all the way, with the hyperspace streaks, as Wander's Drift does */
+  const gj = CK.gj; if (!gj) return; const now = win.performance.now(), el = (now - gj.t0) / 1000;
+  if (CK.c === gj.j) { CK.gj = null; CK.hyper = 0; win.setTimeout(() => { if (!dead && CKG && !CK.gj) ckGameNew(); }, 1500); return; }   /* arrived: the next question once the view settles */
+  if (gj.phase === "look") { const q_ = CK.items.findIndex(o => o.i === gj.j); if (q_ >= 0) CK.lock = q_; const it = CK.items[CK.lock]; CK.v += (0 - CK.v) * Math.min(1, dt * 2);
+    if (it) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z), ay = Math.atan2(xc, zc), ap = Math.atan2(yc, Math.hypot(xc, zc)), s_ = Math.min(1, dt * 2.6); ckUpright(); CK.yaw += ay * s_; CK.pitch += ap * s_; CK.roll += ay * s_ * .6; if (el > 2.4 || (el > .8 && Math.abs(ay) + Math.abs(ap) < .04)) { gj.phase = "fly"; gj.t0 = now; CK.auto = true; } }
+    else { gj.phase = "fly"; gj.t0 = now; } return; }
+  if (gj.phase === "fly" && el > 45) { CK.gj = null; CK.sfIn = false; if (vis[gj.j]) select(gj.j); win.setTimeout(ckSync, 0); CK.warp = 1; }   /* a safety net, if the flight never lands */
+  else if (gj.phase === "fly" && !CK.auto && el > .3) CK.gj = null; }   /* you took the stick: the game waits for you */
 function ckArrive(q){ const it = CK.items[q]; if (!it) return; CK.auto = false; CK.v = 0; const j = it.i; if (vis[j]) select(j); win.setTimeout(ckSync, 0); }
 function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK.last) / 1000); CK.last = t; RAF(ckTick);
   const K = CK.keys, turn = 1.3 * dt;
