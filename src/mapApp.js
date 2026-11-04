@@ -5214,7 +5214,7 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
   const box = RECEL.createDiv({ cls: "rcl" });
   /* laid out as Links is (0.8.239, Nick): 11px names on 14.5px rows, right-aligned, the age where Links shows its score, the emoji (or dot) at the end,
      and the rows bowed along the same gentle arc, tilting a little toward the top and bottom */
-  const RY = 300, LH = 14.5, mid = (Math.min(L.length, 24) - 1) / 2;
+  const LH = 15.5, nR = L.length, RY = Math.max(300, nR * LH * (.62 + .9 * Math.min(1, Math.max(0, (nR - 14) / 26)))) * 1.35, mid = (Math.min(nR, 24) - 1) / 2;   /* gentler (0.8.241, Nick: "a little bit less curve, not as tight"): Links' own radius rule, a little wider still */
   L.forEach((j, r_) => { const r = box.createEl("button", { cls: "rcr" + (j === sel ? " on" : ""), attr: { type: "button" } }), em = recEmoji(j);
     const u = Math.max(-1, Math.min(1, (r_ - mid) * LH / RY)); r.setCssProps({ "--rx": (-60 * (1 - Math.sqrt(1 - u * u))).toFixed(1) + "px", "--rr": (Math.asin(u) * .25).toFixed(4) + "rad" });
     r.createSpan({ cls: "rca", text: ago(N[j].mt) }); r.createSpan({ cls: "rcn", text: N[j].title });
@@ -5232,7 +5232,7 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
       return out_ + " Z"; })();
     let sv = RECEL.querySelector(":scope > svg.rcbg"); if (!sv) { sv = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); sv.setAttribute("class", "rcbg"); sv.setAttribute("aria-hidden", "true"); RECEL.prepend(sv); }
     sv.setAttribute("width", String(w)); sv.setAttribute("height", String(h)); sv.setAttribute("viewBox", `0 0 ${w} ${h}`); sv.empty(); const pa = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pa.setAttribute("d", d); sv.appendChild(pa);
-    hd.setCssProps({ "--rx": "0px", "padding-left": (sMax - sh(hd.offsetTop + hd.offsetHeight / 2) + 12).toFixed(1) + "px", "padding-right": (sh(hd.offsetTop + hd.offsetHeight / 2) + 12).toFixed(1) + "px" }); }); }
+    hd.setCssProps({ "--rx": "0px", "--rpl": (sMax - sh(hd.offsetTop + hd.offsetHeight / 2) + 12).toFixed(1) + "px", "--rpr": (sh(hd.offsetTop + hd.offsetHeight / 2) + 12).toFixed(1) + "px" }); }); }
 if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
 cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
