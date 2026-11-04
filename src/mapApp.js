@@ -5520,7 +5520,7 @@ function syncOrbs(){ for (const o of [EDS.left]) if (o.pb) { const on = !!(TABS[
   const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); if (!on) { orbKey = ""; return; }
   const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
     TABS.forEach((t, j) => { const i = PIDX.get(t.path), nm = i != null ? N[i].title : t.path.replace(/^.*\//, "").replace(/\.md$/, ""), lv = i != null ? N[i].level : 1;
-      const b = orbBar.createEl("button", { cls: "ivm-orb" + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""), attr: { type: "button", "data-name": nm, "data-i": String(j) } });   // no aria-label: Obsidian would add its own tooltip over ours (Nick, 0.8.33); the name is read from a hidden span
+      const b = orbBar.createEl("button", { cls: "ivm-orb lv" + lv + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""),   /* shaped like the note's dot (0.8.202, Nick): Level 5 a square, Level 4 a diamond, the rest round */ attr: { type: "button", "data-name": nm, "data-i": String(j) } });   // no aria-label: Obsidian would add its own tooltip over ours (Nick, 0.8.33); the name is read from a hidden span
       b.createSpan({ cls: "orbsr", text: nm });
       b.setCssProps({ "--o0": lv >= 3 ? GRAD[lv][0] : lv === 2 ? css.l2 : css.l1, "--o1": lv >= 3 ? GRAD[lv][1] : lv === 2 ? css.l2 : css.l1 });
       b.createSpan({ cls: "orbd" }); if (t.pin) setIcon(b.createSpan({ cls: "orbp" }), "pin");
@@ -6127,6 +6127,7 @@ function ldLink(t, j, up){ LDDONE = true; LDCTRL = false; const where = up ? "up
 cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.dataTransfer.getData("application/x-ivm-note"); if (!p) return; e.preventDefault(); const t = pick(e.offsetX, e.offsetY), j = PIDX.get(p);
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
+dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
 function drawLdrop(){ if (LDROP < 0 || !VV(LDROP)) return; const x = sx(X[LDROP]), y = sy(Y[LDROP]), r = rad(LDROP) + 10; ctx.save(); ctx.strokeStyle = css.accent; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
   const t = LDCTRL ? `→ up of ${N[LDROP].title}` : `→ ${N[LDROP].title}: ${LDPOS_T[LDPOS]}`; ctx.font = `600 12px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const w_ = ctx.measureText(t).width + 16; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - w_ / 2, y - r - 30, w_, 22, 11); ctx.fill(); ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = css.accent; ctx.fillText(t, x, y - r - 13); ctx.restore(); }   /* above the dot, clear of its name */
 /* One scheme for opening notes (0.8.189, Nick: "if Command-click is what users use in the rest of Obsidian to open a new tab…"), as in Obsidian:
