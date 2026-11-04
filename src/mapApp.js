@@ -1887,6 +1887,7 @@ let LCUIOK = false, LCR0 = +pref("iv-lcr0", 0) || 0, LCR1 = +pref("iv-lcr1", 0) 
 /* two more shapes (0.8.172, Nick): Life in weeks (a row per year, 52 week boxes; with a birth year, the 90 years from it) and Years stacked (a row per year, Jan to Dec on one line) */
 let LCSHAPE = pref("iv-lcshape", "") === "stack" ? "weeks" : ["weeks", "days"].includes(pref("iv-lcshape", "")) ? pref("iv-lcshape", "") : "months",   /* Years stacked is gone (0.8.182, Nick: "Life in weeks is superior"); it becomes Life in weeks */ LCBORN = +pref("iv-lcborn", 0) || 0;
 /* Last 30 days (0.8.181, Nick: "a rolling 30-day view… so we can really zoom in"): as one line, two rows of 15, or weeks (Monday to Sunday, the old standard) */
+let LC30OFF = 0, LC30ACC = 0, LC30T = 0;   /* weeks back from today (0.8.183, Nick: "scroll up and it would go backwards week by week") */
 let LC30 = ["line", "half", "weeks"].includes(pref("iv-lc30", "")) ? pref("iv-lc30", "") : "weeks";
 const lcGrid = () => LCSHAPE === "weeks" || LCSHAPE === "stack" || LCSHAPE === "days";
 /* how many names Linear Calendar shows (0.8.180, Nick): Natural, More, Many. Names still never overlap; More and Many let lower levels in sooner and take more of them */
@@ -2004,8 +2005,11 @@ function lcGridYears(){ const [ya, y1] = lcClamp(); let y0 = ya;
   if (LCSHAPE === "weeks" && LCR0 >= LCR1) { if (LCBORN > 1000) return Array.from({length: 90}, (_, j) => LCBORN + j); return Array.from({length: y1 - y0 + 1}, (_, j) => y0 + j); }   /* the Years range filters the rows (0.8.173, Nick: "I cannot filter the weeks"); set to one year, it's the whole life (or every year) */
   const a = LCR0 < LCR1 ? LCR0 : y0, b = LCR0 < LCR1 ? LCR1 : y1; return Array.from({length: b - a + 1}, (_, j) => a + j); }   /* Years stacked: the Years range, or every year when it's set to one */
 const DAY_MS = 864e5;
+function lc30Step(d){ const nv = Math.max(0, LC30OFF + d); if (nv === LC30OFF) return; LC30OFF = nv; morph(true, () => ({ k, tx, ty })); }   /* the boxes stay put; the notes slide a row */
+function lc30Wheel(dy){ const now = performance.now(); if (now - LC30T > 400) LC30ACC = 0; LC30T = now; LC30ACC += dy; const step = 90;
+  while (LC30ACC <= -step) { LC30ACC += step; lc30Step(1); } while (LC30ACC >= step) { LC30ACC -= step; lc30Step(-1); } }
 function lc30Pos(idx){ if (LC30 === "line") return [idx, 0]; if (LC30 === "half") return [idx % 15, Math.floor(idx / 15)]; const j = idx + LC.mo; return [j % 7, Math.floor(j / 7)]; }
-function layoutLc30(){ const now = new Date(), today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()), start = today - 29 * DAY_MS, C = 96, mo = (new Date(start).getUTCDay() + 6) % 7;   /* Monday first */
+function layoutLc30(){ const now = new Date(), today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()), start = today - (29 + 7 * LC30OFF) * DAY_MS, C = 96, mo = (new Date(start).getUTCDay() + 6) % 7;   /* Monday first */
   LC = { years: [], C: C * .55, shape: "days", start, cw: C, ch: C, mo };
   const cells = new Map();
   for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) { EHID[i] = 1; continue; } const d = new Date(TV[i]), idx = Math.round((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - start) / DAY_MS); if (idx < 0 || idx > 29) { EHID[i] = 1; continue; }
@@ -2014,9 +2018,13 @@ function layoutLc30(){ const now = new Date(), today = Date.UTC(now.getFullYear(
     const nI = ids.length, hw = C * .38, hh = C * .32, band = 2 * hh / nI, dk = String(start / DAY_MS + idx), slots = ids.map((_, j) => j).sort((a_, b_) => hash(dk + a_, 5) - hash(dk + b_, 5));
     ids.forEach((i, j) => { const u = hash(N[i].path, 11), v = hash(N[i].path, 17); EX[i] = cx + (u - .5) * 2 * hw * .9; EY[i] = cy - hh + (slots[j] + .25 + .5 * v) * band; }); }
   const [c1, r1] = LC30 === "line" ? [30, 1] : LC30 === "half" ? [15, 2] : [7, Math.ceil((mo + 30) / 7)];
-  expBox = { x0: -20, y0: -50, x1: c1 * C + 20, y1: r1 * C + 20 }; if (LCUIOK) syncLC(); }
+  expBox = { x0: -20, y0: -80, x1: c1 * C + 20, y1: r1 * C + 20 }; if (LCUIOK) syncLC(); }
 function lc30Guides(){ const { cw: C, start } = LC, now = new Date(), today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()), WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const fs = Math.max(9, Math.min(13, C * k * .13));
+  { const a = new Date(start), b = new Date(start + 29 * DAY_MS), f_ = d => `${MON3[d.getUTCMonth()]} ${d.getUTCDate()}`;
+    ctx.fillStyle = LC30OFF ? css.accent : css.ink; ctx.font = `600 ${Math.max(12, Math.min(22, C * k * .2))}px ${css.mono}`; ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+    const t_ = `${f_(a)} – ${f_(b)}${a.getUTCFullYear() !== now.getFullYear() ? " " + a.getUTCFullYear() : ""}`; ctx.fillText(t_, sx(0), sy(LC30 === "weeks" ? -34 : -12)); const tw = ctx.measureText(t_).width;
+    ctx.font = `500 ${fs}px ${css.body}`; ctx.fillStyle = css.muted; ctx.fillText(LC30OFF ? `${LC30OFF} week${LC30OFF > 1 ? "s" : ""} back · scroll down for today` : "scroll up to go back a week at a time", sx(0) + tw + 16, sy(LC30 === "weeks" ? -34 : -12)); }
   if (LC30 === "weeks") { ctx.fillStyle = css.muted; ctx.font = `600 ${fs}px ${css.mono}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; for (let c = 0; c < 7; c++) ctx.fillText(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][c], sx(c * C + C / 2), sy(-8)); }
   for (let idx = 0; idx < 30; idx++) { const t = start + idx * DAY_MS, d = new Date(t), [c, r] = lc30Pos(idx), x = sx(c * C) + 2, y = sy(r * C) + 2, w = C * k - 4, wd = d.getUTCDay();
     if (wd === 0 || wd === 6) { ctx.globalAlpha = .55; ctx.fillStyle = css.panel; ctx.fillRect(x, y, w, w); }
@@ -2068,7 +2076,7 @@ EXP.lincal = {
       ctx.textAlign = "left"; ctx.fillStyle = css.accent; ctx.font = `600 ${Math.max(14, Math.min(30, C*k*.7))}px ${css.mono}`; ctx.fillText(String(y), sx(0), sy(top - 46));
       if (LCTH) { const D = lcYear(y); if (D.theme) { const yw = ctx.measureText(String(y)).width, fs = Math.max(13, Math.min(26, C*k*.58)); ctx.font = `italic ${css.dw} ${fs}px ${css.display}`; ctx.fillStyle = css.ink; ctx.fillText("🎻 " + D.theme, sx(0) + yw + 18, sy(top - 46)); } }   /* the year's theme, from its Preview note (0.8.170) */
       ctx.textBaseline = "alphabetic"; lcYearUnder(yi, y, top); } },
-  legend: "Linear Calendar: a year as twelve rows, one per month, each day a box, with the weeks lined up down the page. The notes you made that day fill its box: maps and hubs first, in their level colors. Its menu: Years (drag the two handles; both on one year shows that year, ‹ › moves a year at a time; with several, the wheel scrolls through them and ⌘ + wheel zooms) and its shape: Whole or Half months (Half: each month on two rows, the 1st to the 15th and the 16th on, for a narrow pane), Life in weeks (a row a year, a box a week; with a birth year, the 90 years from it, the weeks lived shaded) or Last 30 days (up close: as weeks, two rows of 15, or one line).",
+  legend: "Linear Calendar: a year as twelve rows, one per month, each day a box, with the weeks lined up down the page. The notes you made that day fill its box: maps and hubs first, in their level colors. Its menu: Years (drag the two handles; both on one year shows that year, ‹ › moves a year at a time; with several, the wheel scrolls through them and ⌘ + wheel zooms) and its shape: Whole or Half months (Half: each month on two rows, the 1st to the 15th and the 16th on, for a narrow pane), Life in weeks (a row a year, a box a week; with a birth year, the 90 years from it, the weeks lived shaded) or Rolling 30 days (up close, ending today; scroll up to step back a week at a time; as weeks, two rows of 15, or one line).",
 };
 
 // Spiral: time as one line winding outward, a turn a year, starting at 12 o'clock and running clockwise, so the same date
@@ -5106,6 +5114,7 @@ function zoomAt(px, py, f){ if (domeOn() || sphOn()) { px = tx; py = ty; }   // 
   // big maps (a long Spiral or Lifeline) can always zoom out past their whole picture
   const lo = view === "stars" ? .04 : domeOn() ? .3 : .15, nk = Math.min(40, Math.max(expOn() ? Math.min(lo, fitTarget().k*.6) : lo, k*f)); f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
 cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
+  if (view === "lincal" && LCSHAPE === "days" && !e.ctrlKey && !e.metaKey && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) { lc30Wheel(e.deltaY * (e.deltaMode === 1 ? 16 : 1)); tip.hidden = true; return; }   /* Rolling 30 days: the wheel steps a week at a time (up = back) */
   if (view === "lincal" && !lcGrid() && LCR1 > LCR0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) { ty -= e.deltaY*(e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }   // all years: the wheel scrolls through them (⌘ or ctrl + wheel, or a pinch, zooms)
   if (!e.ctrlKey && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {   // shift + wheel (or a sideways swipe) pans left and right
     const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
@@ -5901,7 +5910,7 @@ let lcSegSync = () => {};
 const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) el.hidden = true; c.classList.add("lcctl2");
   const sh = c.createDiv({ cls: "seg lchalf", attr: { role: "group", "aria-label": "Months as" } });
   let bornR = null;
-  for (const [v, t, tip] of [[false, "Whole months", "A row a month, the weeks lined up"], [true, "Half months", "Two rows a month (the 1st to the 15th, the 16th on): half as wide, for a narrow pane"], ["weeks", "Life in weeks", "A row a year, a box a week; give a birth year and it shows the 90 years from it, the weeks lived shaded"], ["days", "Last 30 days", "The last 30 days, up close: in one line, two rows of 15, or weeks"]]) {
+  for (const [v, t, tip] of [[false, "Whole months", "A row a month, the weeks lined up"], [true, "Half months", "Two rows a month (the 1st to the 15th, the 16th on): half as wide, for a narrow pane"], ["weeks", "Life in weeks", "A row a year, a box a week; give a birth year and it shows the 90 years from it, the weeks lived shaded"], ["days", "Rolling 30 days", "30 days up close, ending today; scroll up to go back a week at a time: in one line, two rows of 15, or weeks"]]) {
     const pressed = () => typeof v === "string" ? LCSHAPE === v : LCSHAPE === "months" && LCHALF === v;
     const b = sh.createEl("button", { text: t, attr: { type: "button", title: tip, "aria-pressed": String(pressed()) } }); b.dataset.sh = String(v);
     b.onclick = e => { e.stopPropagation(); if (typeof v === "string") LCSHAPE = v; else { LCSHAPE = "months"; LCHALF = v; save("iv-lchalf", v); } save("iv-lcshape", LCSHAPE); lcSegSync(); if (view === "lincal") morph(true, () => fitTarget()); }; }
