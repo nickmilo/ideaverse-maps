@@ -6553,6 +6553,19 @@ function linkFx(o, e, x1, y1, x2, y2){ const col = view === "stars" ? "hsl(58,86
   for (let q = 0; q <= 48; q++) { const u = q / 48, w = Math.sin(u * Math.PI) * Math.sin(u * 3 * 6.2832 - ph) * amp, [px, py] = P(u), [nx, ny] = T(u); q ? ctx.lineTo(px + nx * w, py + ny * w) : ctx.moveTo(px + nx * w, py + ny * w); } ctx.stroke();
   if (e > .62 && e < .82) { const f = 1 - Math.abs(e - .72) / .1; ctx.globalAlpha = .7 * f; ctx.lineWidth = 5; ctx.shadowBlur = 26; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx, cy, x2, y2); ctx.stroke(); }   /* the twang */
   ctx.shadowBlur = 0; ctx.globalAlpha = 1; }
+/* a removed link unthreads (0.8.212, Nick: "the opposite of the thread"): the arc pulls taut and flashes once, snaps in the middle,
+   and the two halves go slack and curl back to their notes as they fade, dotted, in the map's quiet ink */
+function linkUnFx(o, e, x1, y1, x2, y2){ const len = Math.hypot(x2 - x1, y2 - y1) || 1, [cx, cy] = linkArc(o.a, o.b, x1, y1, x2, y2);
+  const P = u => { const v = 1 - u; return [v*v*x1 + 2*u*v*cx + u*u*x2, v*v*y1 + 2*u*v*cy + u*u*y2]; }, T = u => { const tx = 2*(1 - u)*(cx - x1) + 2*u*(x2 - cx), ty = 2*(1 - u)*(cy - y1) + 2*u*(y2 - cy), l = Math.hypot(tx, ty) || 1; return [-ty / l, tx / l]; };
+  const col = css.muted, k_ = Math.max(0, (e - .16) / .84), g = .96 * Math.pow(k_, 1.15), amp = Math.min(30, len * .14) * Math.min(1, g * 1.6), ph = e * 9, gap = .5 * g;
+  ctx.strokeStyle = col; ctx.shadowColor = col; ctx.lineCap = "round";
+  if (e < .16) { const f = e / .16; ctx.globalAlpha = .9; ctx.lineWidth = 1.6 + 2.4 * Math.sin(f * Math.PI); ctx.shadowBlur = 16 * Math.sin(f * Math.PI); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx, cy, x2, y2); ctx.stroke(); ctx.shadowBlur = 0; return; }   /* taut, one flash */
+  ctx.globalAlpha = .95 * Math.pow(1 - k_, .8); ctx.lineWidth = 1.8; ctx.setLineDash([3, 4]);
+  for (const [u0, u1, end] of [[0, .5 - gap, 0], [.5 + gap, 1, 1]]) { if (u1 - u0 < .004) continue; ctx.beginPath();   /* each half curls back toward its own note, looser at the torn end */
+    for (let q = 0; q <= 24; q++) { const u = u0 + (u1 - u0) * q / 24, fr = end ? (u - u0) / (1 - u0 || 1) : (u1 - u) / (u1 || 1), d = Math.abs(u - end), w = Math.sin(u * 5 * 6.2832 - ph) * amp * Math.min(1, d * 2.6) * (.4 + .6 * (1 - fr)), [px, py] = P(u), [nx, ny] = T(u);
+      q ? ctx.lineTo(px + nx * w, py + ny * w) : ctx.moveTo(px + nx * w, py + ny * w); } ctx.stroke(); }
+  ctx.setLineDash([]); if (k_ < .35) { ctx.globalAlpha = .7 * (1 - k_ / .35); ctx.fillStyle = col; for (const s_ of [-1, 1]) { const [qx, qy] = P(.5 + s_ * gap); ctx.beginPath(); ctx.arc(qx, qy, 1.8, 0, 6.2832); ctx.fill(); } }   /* the torn ends spark for a moment */
+  ctx.globalAlpha = 1; }
 function linkFxTry(add = true){ let a = sel >= 0 && VV(sel) ? sel : -1; if (a < 0) { for (const i of order) if (VV(i) && N[i].level >= 3) { const x = sx(X[i]), y = sy(Y[i]); if (x > 80 && x < W - 80 && y > 80 && y < H - 80) { a = i; break; } } } if (a < 0) return;
   let b = -1, bd = 0; for (const j of [...new Set([...out[a], ...inn[a]])]) { if (!VV(j) || j === a) continue; const d = Math.hypot(sx(X[j]) - sx(X[a]), sy(Y[j]) - sy(Y[a])); if (d > bd && d < Math.min(W, H) * .6) { bd = d; b = j; } }
   if (b < 0) return; LIVE.links.push({ a, b, t0: performance.now(), add }); draw(); }
@@ -6566,7 +6579,7 @@ function drawLive(){ if (!LIVE.links.length && !LIVE.rings.length) return; const
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(xm, ym); ctx.stroke();
       ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(x2, y2, Math.max(4, rad(o.b)) * (1 + 2.5*e), 0, 6.2832); ctx.lineWidth = 1.6; ctx.stroke(); }
     else { ctx.globalAlpha = .7*(1 - e); ctx.strokeStyle = css.muted; ctx.setLineDash([4, 5]); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x1, y1);   /* a removed link fades along the arc it had (0.8.206, Nick) */
-      if (sphOn()) ctx.lineTo(x2, y2); else { const [cx, cy] = linkArc(o.a, o.b, x1, y1, x2, y2); ctx.quadraticCurveTo(cx, cy, x2, y2); } ctx.stroke(); }
+      if (sphOn()) { ctx.lineTo(x2, y2); ctx.stroke(); } else { ctx.setLineDash([]); linkUnFx(o, e, x1, y1, x2, y2); } }
     ctx.restore(); }
   ctx.textAlign = "center"; ctx.textBaseline = "bottom";
   for (const o of LIVE.rings) { const i = o.i; if (now < o.t0 || !VV(i)) continue; const e = (now - o.t0)/LIVE_MS, x = sx(X[i]), y = sy(Y[i]), r = Math.max(4, rad(i)), lv = N[i].level;
