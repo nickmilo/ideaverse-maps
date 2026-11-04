@@ -5257,9 +5257,12 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
     const yTR = solve(hx, hy, aT, xrr), yTL = solve(hx, hy, aT, xl), yBR = solve(lx, ly, aB, xrr), yBL = solve(lx, ly, aB, xl);
     let d = `M${f(xl(yTL))} ${f(yTL)} L${f(xrr(yTR))} ${f(yTR)}`; for (let y = yTR; y <= yBR; y += 6) d += ` L${f(xrr(y))} ${f(y)}`;
     d += ` L${f(xrr(yBR))} ${f(yBR)} L${f(xl(yBL))} ${f(yBL)}`; for (let y = yBL; y >= yTL; y -= 6) d += ` L${f(xl(y))} ${f(y)}`; d += " Z";
-    const xr = y => xrr(y); void B; void yy; void inset;
+    const xr = y => xrr(y); void B; void yy; void inset; void xr;
+    /* the subtle divider under the title (0.8.254, Nick), at the title's tilt, from edge to edge */
+    const dy_ = hd.offsetTop + hd.offsetHeight + 3, dR = solve(hx, dy_, aT, xrr), dL = solve(hx, dy_, aT, xl), dv = `M${f(xl(dL) + 1)} ${f(dL)} L${f(xrr(dR) - 1)} ${f(dR)}`;
     let sv = RECEL.querySelector(":scope > svg.rcbg"); if (!sv) { sv = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); sv.setAttribute("class", "rcbg"); sv.setAttribute("aria-hidden", "true"); RECEL.prepend(sv); }
     sv.setAttribute("width", String(w)); sv.setAttribute("height", String(h)); sv.setAttribute("viewBox", `0 0 ${w} ${h}`); sv.empty(); const pa = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pa.setAttribute("d", d); sv.appendChild(pa);
+    const pv = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pv.setAttribute("d", dv); pv.setAttribute("class", "rcdiv"); sv.appendChild(pv);
     hd.setCssProps({ "--rx": "0px", "--rpl": (Math.max(16, xl(yTL) + 14)).toFixed(1) + "px", "--rpr": "16px", "--rh": aT.toFixed(4) + "rad" });   /* the title banner tilts with the top edge (0.8.250, Nick) */ }); }
 if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
