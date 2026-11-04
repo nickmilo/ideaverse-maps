@@ -1884,10 +1884,14 @@ const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oc
 // so the weeks line up down the page (the Year Map). The notes made that day fill its box.
 // Linear Calendar: the years shown (a range; both ends on one year shows one year) and the shape: Whole months (a row each, weeks lined up) or Half months (two rows each: the 1st to the 15th, then the 16th on, for a narrow pane)
 let LCUIOK = false, LCR0 = +pref("iv-lcr0", 0) || 0, LCR1 = +pref("iv-lcr1", 0) || 0, LCHALF = pref("iv-lchalf", true) !== false, LC = {years: [], C: 44};
+/* two more shapes (0.8.172, Nick): Life in weeks (a row per year, 52 week boxes; with a birth year, the 90 years from it) and Years stacked (a row per year, Jan to Dec on one line) */
+let LCSHAPE = ["weeks", "stack"].includes(pref("iv-lcshape", "")) ? pref("iv-lcshape", "") : "months", LCBORN = +pref("iv-lcborn", 0) || 0;
+const lcGrid = () => LCSHAPE === "weeks" || LCSHAPE === "stack";
 { const y_ = +pref("iv-lcyear", 0) || 0; if (!LCR0 && y_) { LCR0 = LCR1 = y_; } if (pref("iv-lcall", false) === true && !+pref("iv-lcr0", 0)) { LCR0 = 1; LCR1 = 9999; } }
 const LC_GAP = 150;
 function layoutLincal(){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
+  if (lcGrid()) { layoutLcGrid(); return; }
   lcClamp(); const years = Array.from({length: LCR1 - LCR0 + 1}, (_, j) => LCR0 + j), C = LC.C, half = LCHALF, MH = half ? 2*C + Math.round(C*.4) : C, H1 = 12*MH + LC_GAP, cells = new Map();
   for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) { EHID[i] = 1; continue; } const d = new Date(TV[i]), y = d.getUTCFullYear(), yi = years.indexOf(y); if (yi < 0) { EHID[i] = 1; continue; }
     const key = yi*400 + d.getUTCMonth()*32 + d.getUTCDate(); if (!cells.has(key)) cells.set(key, []); cells.get(key).push(i); }
@@ -1941,7 +1945,7 @@ function lcYearUnder(yi, y, top){ if (!(LCYP || LCGLOW)) return; const D = lcYea
   ctx.save(); ctx.fillStyle = css.accent; ctx.strokeStyle = css.accent; ctx.lineWidth = 2;
   for (const i of lit) { const b = box(i); if (!b) continue; const kk = b[0] + "," + b[1]; if (seen.has(kk)) continue; seen.add(kk); ctx.globalAlpha = .2; ctx.fillRect(b[0], b[1], b[2], b[2]); ctx.globalAlpha = .9; ctx.strokeRect(b[0], b[1], b[2], b[2]); }
   ctx.restore(); }
-function drawLcYear(){ LCYH = []; if (view !== "lincal" || !expOn() || !LCYP || isPhone() || morphing || !LC.years || !LC.years.length) return;
+function drawLcYear(){ LCYH = []; if (view !== "lincal" || lcGrid() || !expOn() || !LCYP || isPhone() || morphing || !LC.years || !LC.years.length) return;
   const { years, C, H1, MH, half } = LC, gw = (half ? 16 : 37) * C, hudR = HUDL && sel >= 0 && HUDBOX;
   const lx1 = sx(-58), lw = Math.min(250, lx1 - 14), rx0 = sx(gw + 26), rw = Math.min(270, W - 14 - rx0), canL = lw >= 170, canR = rw >= 170 && !hudR;
   if (!canL && !canR) return;
@@ -1986,9 +1990,42 @@ cv.addEventListener("pointerdown", e => { if (view !== "lincal" || e.button !== 
   if (h.k === "x") { LCXO = !LCXO; draw(); return; }
   const j = h.v; if (j >= 0) { if (e.shiftKey) TABNEW = true; if (vis[j]) navTo(j); if (following) toEditor(j); else if (host.openNote && !vis[j]) host.openNote(N[j].path, false, true); } }, { capture: true });
 cv.addEventListener("pointerleave", () => { if (LCYHOV) { LCYHOV = null; draw(); } });
+const lcLeap = y => new Date(Date.UTC(y, 1, 29)).getUTCMonth() === 1;
+const lcDoy = (y, m, d) => Math.round((Date.UTC(y, m, d) - Date.UTC(y, 0, 1)) / 864e5);   // 0 for Jan 1
+function lcGridYears(){ const [ya, y1] = lcClamp(); let y0 = ya;
+  { const cnt = new Map(); let tot = 0; for (let i = 0; i < n; i++) if (vis[i] && !isNaN(TV[i])) { const y = yOf(TV[i]); cnt.set(y, (cnt.get(y) || 0) + 1); tot++; }   /* skip the stray early years (a note dated 1984 shouldn't add 25 empty rows): start at the first year with a real share of notes */
+    const min = Math.max(3, tot * .004); while (y0 < y1 && (cnt.get(y0) || 0) < min) y0++; }
+  if (LCSHAPE === "weeks") { if (LCBORN > 1000) return Array.from({length: 90}, (_, j) => LCBORN + j); return Array.from({length: y1 - y0 + 1}, (_, j) => y0 + j); }
+  const a = LCR0 < LCR1 ? LCR0 : y0, b = LCR0 < LCR1 ? LCR1 : y1; return Array.from({length: b - a + 1}, (_, j) => a + j); }   /* Years stacked: the Years range, or every year when it's set to one */
+function layoutLcGrid(){ const st = LCSHAPE === "stack", years = lcGridYears(), C = 44, cw = st ? 16 : C, ch = st ? 58 : C, ncol = st ? 366 : 52, every = !st && LCBORN > 1000 ? 10 : 0, gap = C * .6;
+  const rowTop = yi => yi * ch + (every ? Math.floor(yi / every) * gap : 0), colOf = (y, m, d) => { const q = lcDoy(y, m, d); return st ? q + (!lcLeap(y) && m >= 2 ? 1 : 0) : Math.min(51, Math.floor(q / 7)); }, cells = new Map(), y0 = years[0];
+  for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) { EHID[i] = 1; continue; } const d = new Date(TV[i]), yi = d.getUTCFullYear() - y0; if (yi < 0 || yi >= years.length) { EHID[i] = 1; continue; }
+    const key = yi * 400 + colOf(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); if (!cells.has(key)) cells.set(key, []); cells.get(key).push(i); }
+  for (const [key, ids] of cells) { const yi = Math.floor(key / 400), c = key % 400, cx = c * cw + cw / 2, cy = rowTop(yi) + ch / 2; ids.sort(byRank);
+    const nI = ids.length, hw = cw * .36, hh = ch * .38, band = 2 * hh / nI, dk = String(years[yi] * 1000 + c), slots = ids.map((_, j) => j).sort((a_, b_) => hash(dk + a_, 5) - hash(dk + b_, 5));
+    ids.forEach((i, j) => { const u = hash(N[i].path, 11), v = hash(N[i].path, 17); EX[i] = cx + (u - .5) * 2 * hw * .9; EY[i] = cy - hh + (slots[j] + .25 + .5 * v) * band; }); }
+  LC = { years, C: Math.min(cw, ch) * (st ? 1.6 : 1), shape: LCSHAPE, cw, ch, rowTop, colOf, ncol, every, gap };
+  expBox = { x0: -110, y0: -40, x1: ncol * cw + 20, y1: rowTop(years.length - 1) + ch + 20 }; if (LCUIOK) syncLC(); }
+function lcGridGuides(){ const { years, cw, ch, rowTop, colOf, ncol } = LC, st = LCSHAPE === "stack", now = new Date(), nY = now.getUTCFullYear(), tc = colOf(nY, now.getUTCMonth(), now.getUTCDate()), small = Math.min(cw, ch) * k < 5;
+  const fs = Math.max(9, Math.min(13, ch * k * .32));
+  /* months along the top */
+  ctx.fillStyle = css.muted; ctx.textBaseline = "bottom"; ctx.textAlign = "left"; ctx.font = `600 ${fs}px ${css.mono}`; const ref = st ? 2024 : 2026;
+  for (let m = 0; m < 12; m++) { const x = sx(colOf(ref, m, 1) * cw); ctx.globalAlpha = .9; ctx.fillText(MON3[m].toUpperCase(), x + 2, sy(-8));
+    if (st) { ctx.globalAlpha = .5; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, sy(-4)); ctx.lineTo(x, sy(rowTop(years.length - 1) + ch)); ctx.stroke(); } }
+  for (let yi = 0; yi < years.length; yi++) { const y = years[yi], top = rowTop(yi); if (sy(top + ch) < -20 || sy(top) > H + 20) continue;
+    const days = st ? 366 : 52, noLeap = st && !lcLeap(y), past = LCSHAPE === "weeks" && LCBORN > 1000;
+    if (small) { ctx.globalAlpha = .35; ctx.fillStyle = css.panel; ctx.fillRect(sx(0), sy(top), days * cw * k, ch * k - 1); }
+    else for (let c = 0; c < days; c++) { if (noLeap && c === 59) continue; const x = sx(c * cw) + 1, yy = sy(top) + 1, w = cw * k - 2, h = ch * k - 2;
+      if (st) { const wd = new Date(Date.UTC(y, 0, 1 + c - (noLeap && c > 59 ? 1 : 0))).getUTCDay(); if (wd === 0 || wd === 6) { ctx.globalAlpha = .55; ctx.fillStyle = css.panel; ctx.fillRect(x, yy, w, h); } }
+      else if (past && (y < nY || (y === nY && c <= tc))) { ctx.globalAlpha = .6; ctx.fillStyle = css.panel; ctx.fillRect(x, yy, w, h); }   /* the weeks already lived */
+      ctx.globalAlpha = st ? .35 : .7; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.strokeRect(x, yy, w, h);
+      if (y === nY && c === tc) { ctx.globalAlpha = 1; ctx.strokeStyle = css.accent; ctx.lineWidth = 2; ctx.strokeRect(x, yy, w, h); } }
+    ctx.globalAlpha = 1; ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillStyle = y === nY ? css.accent : css.muted; ctx.font = `600 ${fs}px ${css.mono}`;
+    const lbl = LCSHAPE === "weeks" && LCBORN > 1000 ? `${yi} · ${y}` : String(y); if (!(LCSHAPE === "weeks" && LCBORN > 1000 && ch * k < 9 && yi % 5)) ctx.fillText(lbl, sx(-10), sy(top + ch / 2)); }
+  ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 EXP.lincal = {
   layout: layoutLincal, pick: (x, y) => dotPick(x, y), spinePick: true,   // like Bookshelf: the nearest dot wins and names never block, so you can glide along a row either way
-  guides(){ const {years, C, H1, col, rowY, MH, half} = LC, now = new Date();
+  guides(){ if (lcGrid()) { lcGridGuides(); return; } const {years, C, H1, col, rowY, MH, half} = LC, now = new Date();
     for (let yi = 0; yi < years.length; yi++) { const y = years[yi], top = yi*H1; if (sy(top + 12*MH) < -40 || sy(top - 70) > H + 40) continue;
       ctx.fillStyle = css.panel; ctx.globalAlpha = .55;
       if (!half) for (const wc of [5, 6, 12, 13, 19, 20, 26, 27, 33, 34]) ctx.fillRect(sx(wc*C), sy(top - 6), C*k, (12*C + 6)*k);   // weekend columns
@@ -2004,7 +2041,7 @@ EXP.lincal = {
       ctx.textAlign = "left"; ctx.fillStyle = css.accent; ctx.font = `600 ${Math.max(14, Math.min(30, C*k*.7))}px ${css.mono}`; ctx.fillText(String(y), sx(0), sy(top - 46));
       if (LCTH) { const D = lcYear(y); if (D.theme) { const yw = ctx.measureText(String(y)).width, fs = Math.max(13, Math.min(26, C*k*.58)); ctx.font = `italic ${css.dw} ${fs}px ${css.display}`; ctx.fillStyle = css.ink; ctx.fillText("🎻 " + D.theme, sx(0) + yw + 18, sy(top - 46)); } }   /* the year's theme, from its Preview note (0.8.170) */
       ctx.textBaseline = "alphabetic"; lcYearUnder(yi, y, top); } },
-  legend: "Linear Calendar: a year as twelve rows, one per month, each day a box, with the weeks lined up down the page. The notes you made that day fill its box: maps and hubs first, in their level colors. Its menu: Years (drag the two handles; both on one year shows that year, ‹ › moves a year at a time; with several, the wheel scrolls through them and ⌘ + wheel zooms) and Whole or Half months (Half: each month on two rows, the 1st to the 15th and the 16th on, for a narrow pane).",
+  legend: "Linear Calendar: a year as twelve rows, one per month, each day a box, with the weeks lined up down the page. The notes you made that day fill its box: maps and hubs first, in their level colors. Its menu: Years (drag the two handles; both on one year shows that year, ‹ › moves a year at a time; with several, the wheel scrolls through them and ⌘ + wheel zooms) and its shape: Whole or Half months (Half: each month on two rows, the 1st to the 15th and the 16th on, for a narrow pane), Life in weeks (a row a year, a box a week; with a birth year, the 90 years from it, the weeks lived shaded) or Years stacked (a row a year, January to December on one line, so seasons line up across years).",
 };
 
 // Spiral: time as one line winding outward, a turn a year, starting at 12 o'clock and running clockwise, so the same date
@@ -5041,7 +5078,7 @@ function zoomAt(px, py, f){ if (domeOn() || sphOn()) { px = tx; py = ty; }   // 
   // big maps (a long Spiral or Lifeline) can always zoom out past their whole picture
   const lo = view === "stars" ? .04 : domeOn() ? .3 : .15, nk = Math.min(40, Math.max(expOn() ? Math.min(lo, fitTarget().k*.6) : lo, k*f)); f = nk/k; tx = px - (px - tx)*f; ty = py - (py - ty)*f; k = nk; draw(); }
 cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
-  if (view === "lincal" && LCR1 > LCR0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) { ty -= e.deltaY*(e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }   // all years: the wheel scrolls through them (⌘ or ctrl + wheel, or a pinch, zooms)
+  if (view === "lincal" && !lcGrid() && LCR1 > LCR0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) { ty -= e.deltaY*(e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }   // all years: the wheel scrolls through them (⌘ or ctrl + wheel, or a pinch, zooms)
   if (!e.ctrlKey && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {   // shift + wheel (or a sideways swipe) pans left and right
     const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
     if (domeOn()) { domeYaw += dx*(e.deltaMode === 1 ? 16 : 1)/(k*DF_); domeProject(); X.set(DX); Y.set(DY); buildGrid(); domeKeep(); tip.hidden = true; draw(); return; }   // in a dome a sideways swipe turns you
@@ -5822,10 +5859,18 @@ function drawEmojis(lit, dim){ if (!emoView()) return; ctx.textAlign = "center";
     ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .3 : .75) : 1; ctx.font = `${f}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.fillText(e_, x, y + f*.04); }
   ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 // Linear Calendar's menu: Years (the slider, with ‹ › to move a year at a time) and Whole or Half months
+let lcSegSync = () => {};
 const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) el.hidden = true; c.classList.add("lcctl2");
   const sh = c.createDiv({ cls: "seg lchalf", attr: { role: "group", "aria-label": "Months as" } });
-  for (const [v, t, tip] of [[false, "Whole months", "A row a month, the weeks lined up"], [true, "Half months", "Two rows a month (the 1st to the 15th, the 16th on): half as wide, for a narrow pane"]]) {
-    const b = sh.createEl("button", { text: t, attr: { type: "button", title: tip, "aria-pressed": String(v === LCHALF) } }); b.onclick = e => { e.stopPropagation(); LCHALF = v; save("iv-lchalf", v); sh.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (view === "lincal") morph(true, () => fitTarget()); }; }
+  let bornR = null;
+  for (const [v, t, tip] of [[false, "Whole months", "A row a month, the weeks lined up"], [true, "Half months", "Two rows a month (the 1st to the 15th, the 16th on): half as wide, for a narrow pane"], ["weeks", "Life in weeks", "A row a year, a box a week; give a birth year and it shows the 90 years from it, the weeks lived shaded"], ["stack", "Years stacked", "A row a year, January to December on one line, so the same season lines up across years"]]) {
+    const pressed = () => typeof v === "string" ? LCSHAPE === v : LCSHAPE === "months" && LCHALF === v;
+    const b = sh.createEl("button", { text: t, attr: { type: "button", title: tip, "aria-pressed": String(pressed()) } }); b.dataset.sh = String(v);
+    b.onclick = e => { e.stopPropagation(); if (typeof v === "string") LCSHAPE = v; else { LCSHAPE = "months"; LCHALF = v; save("iv-lchalf", v); } save("iv-lcshape", LCSHAPE); lcSegSync(); if (view === "lincal") morph(true, () => fitTarget()); }; }
+  { bornR = c.createDiv({ cls: "lcborn" }); bornR.createSpan({ text: "Born" }); const inp = bornR.createEl("input", { type: "number", attr: { placeholder: "year", min: "1900", max: String(NOW_Y), "aria-label": "Birth year, for Life in weeks" } }); if (LCBORN) inp.value = String(LCBORN);
+    inp.onchange = () => { const v = +inp.value; LCBORN = v > 1000 && v <= NOW_Y ? v : 0; save("iv-lcborn", LCBORN); if (view === "lincal" && LCSHAPE === "weeks") morph(true, () => fitTarget()); }; }
+  lcSegSync = () => { sh.querySelectorAll("button").forEach(x => { const v = x.dataset.sh; x.setAttribute("aria-pressed", String(v === "weeks" || v === "stack" ? LCSHAPE === v : LCSHAPE === "months" && String(LCHALF) === v)); }); if (bornR) bornR.hidden = LCSHAPE !== "weeks"; };
+  lcSegSync();
   const { yc, hv } = dualEl(c, "Years", "lcyr"); const pv = $("#lcprev"), yv = $("#lcyear"), nx = $("#lcnext"); for (const el of [pv, yv, nx]) { el.hidden = false; hv.appendChild(el); }
   const [a, b] = yc.querySelectorAll(".dual input"); let t_ = 0;
   const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; LCR0 = p; LCR1 = q; syncLC(); win.clearTimeout(t_); if (commit) { save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); }
@@ -6364,7 +6409,7 @@ function snapView(name){
     s3d: view === "stars" ? {on: S3D, chart: STCH, chx: { ...CHL }, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
     // every filter (0.7.54): the years' edge strips, dating by modified time and its window, MOCs, properties and bases; and Linear Calendar's years and halves
     yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
-    lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF} : null,
+    lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF, shape: LCSHAPE, born: LCBORN || undefined} : null,
     emo: { ...EMON },   // Show emojis, map by map (0.7.58, Nick)
     // Base Builder and Posters (0.7.58): the layout (Rows, Scatter, Mosaic, Constellation, Timeline) and what each axis, row and size reads (Nick's movies Mosaic came back as Rows)
     pst: view === "builder" || view === "posters" ? (P_ => ({ across: P_.across, lanes: P_.lanes, size: P_.size, height: P_.height, mosaic: !!P_.mosaic, con: !!P_.con, tl: !!P_.tl, conSel: P_.conSel, conMax: P_.conMax, rng: JSON.parse(JSON.stringify(P_.rng || {})), lhide: JSON.parse(JSON.stringify(P_.lhide || {})) }))(view === "builder" ? PSTB : PSTP) : null,
@@ -6399,7 +6444,7 @@ function applySaved(v){
   MOCSEL = Array.isArray(v.mocs) ? v.mocs.filter(p_ => PIDX.has(p_)) : []; MDEG = v.mocDeg === 2 ? 2 : 1; save("iv-mocs", MOCSEL); save("iv-mocdeg", MDEG); computeMS();
   PSEL = v.props && typeof v.props === "object" && !Array.isArray(v.props) ? JSON.parse(JSON.stringify(v.props)) : {}; save("iv-props", PSEL); computePS();
   { const nb = Array.isArray(v.bq) ? v.bq : []; if (JSON.stringify(nb) !== JSON.stringify(BQ)) { BQ = nb; save("iv-bq", BQ); void applyBQ(); } }
-  if (v.lc && view === "lincal") { LCR0 = +v.lc.r0 || LCR0; LCR1 = +v.lc.r1 || LCR1; LCHALF = v.lc.half !== false; save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); save("iv-lchalf", LCHALF); root.querySelectorAll(".lchalf button").forEach((b_, j) => b_.setAttribute("aria-pressed", String((j === 1) === LCHALF))); if (typeof syncLC === "function") syncLC(); }
+  if (v.lc && view === "lincal") { LCR0 = +v.lc.r0 || LCR0; LCR1 = +v.lc.r1 || LCR1; LCHALF = v.lc.half !== false; LCSHAPE = ["weeks", "stack"].includes(v.lc.shape) ? v.lc.shape : "months"; if (+v.lc.born) LCBORN = +v.lc.born; save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); save("iv-lchalf", LCHALF); save("iv-lcshape", LCSHAPE); save("iv-lcborn", LCBORN); lcSegSync(); if (typeof syncLC === "function") syncLC(); }
   for (const f_ of Object.values(FUI)) try { f_(); } catch (e) { /* a list not built yet */ }
   if (v.lanes) { lanes = v.lanes; save("iv-lanes", lanes); } if (v.subOrder) { subOrder = v.subOrder; save("iv-suborder", subOrder); }
   showAll = !!v.links; $("#alllinks").setAttribute("aria-pressed", String(showAll));

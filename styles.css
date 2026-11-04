@@ -1526,3 +1526,6 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-embed-miss { position: absolute; left: 12px; bottom: 12px; z-index: 41; font: 500 11px var(--font-interface); color: var(--text-muted); background: var(--background-primary); border-radius: 6px; padding: 3px 8px; }
 .ivm-embed-wrap { display: block; width: 100%; }
 .ivm-embed.is-quiet #drawer { display: none; }
+/* Linear Calendar: the birth year for Life in weeks (0.8.172) */
+.ivm .lcborn { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); margin: 4px 0; }
+.ivm .lcborn input { width: 76px; }
