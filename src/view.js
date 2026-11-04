@@ -266,6 +266,9 @@ export async function mountInto(owner, el, opts) {
         c.checkCallback = checking => { for (const f of plugin.tabCmds || []) if (f(what, true)) { if (!checking) f(what, false); return true; } return oc ? oc.call(c, checking) : ob ? (checking || ob.call(c), true) : false; };
         if (ob) c.callback = undefined;
         plugin.register(() => { c.checkCallback = oc; c.callback = ob; plugin.tabCmdPatched = false; }); } },
+    linkTargets: path => { const f = app.vault.getAbstractFileByPath(path), c = f instanceof TFile ? app.metadataCache.getFileCache(f) : null, out = []; if (!c) return out;   /* what each link in a note shows, and the note it reaches (0.8.224: the editor colors links by relation) */
+      for (const l of [...(c.links || []), ...(c.embeds || []), ...(c.frontmatterLinks || [])]) { const base = String(l.link || "").split("#")[0], t = app.metadataCache.getFirstLinkpathDest(base, path); if (!(t instanceof TFile)) continue;
+        for (const key of [l.displayText, l.link, base, t.basename]) if (key) out.push([String(key).trim().toLowerCase(), t.path]); } return out; },
     onMove: cb => { events.registerEvent(app.vault.on("rename", (f, old) => { if (f instanceof TFile && f.extension === "md" && old) cb(old, f.path); })); },   // a note moved or renamed: the map moves it live
     onLinks: cb => { const st = plugin.settings, nm = (v, d) => (Array.isArray(v) ? v : String(v || d).split(",")).map(x => String(x).trim().toLowerCase()).filter(Boolean);
       events.registerEvent(app.metadataCache.on("changed", (f, _data, c) => { if (!(f instanceof TFile) || !c) return;

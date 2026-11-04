@@ -925,7 +925,7 @@ function senseLabels(){
   // archetype names, with the share of notes in view (and, while the timeline runs, the share of the last 90 days)
   const all = [0,0,0,0], recent = [0,0,0,0]; let ta = 0, tr = 0;
   for (let i=0;i<n;i++) { if (!VV(i)) continue; const qd = quadOf(i); all[qd]++; ta++; if (senseT != null && TV[i] > senseT - SENSE_WIN) { recent[qd]++; tr++; } }
-  ARCH4.forEach(([name, qx, qy, col0, colD], j) => { const col = root.dataset.theme === "dark" || root.dataset.theme === "lyt" ? col0 : colD;
+  ARCH4.forEach(([name, qx, qy, col0, colD], j) => { const col = root.dataset.theme === "dark" || root.dataset.theme === "lyt" || root.dataset.theme === "starfield" ? col0 : colD;
     const x = cx + qx*R*.5, y = cy - qy*(R + 42);   // names sit just outside the box, clear of the notes
     put(name, x, y, `${css.dw} ${Math.max(15, Math.min(26, R/18))}px ${css.display}`, css.ink);
     const pc = ta ? Math.round(all[j]*100/ta) : 0;
@@ -4354,7 +4354,7 @@ let probe = null;   // colors go through the browser once, so the canvas gets pl
 // Display → Starfield link colors (0.8.7, Nick): blue above, red below (since 0.8.208), gold up, lilac related, slate other, on every map and in the note panel
 let SFLINKS = pref("iv-sflinks", false) === true;
 const SFDARK = { up: "#6fd3ff", down: "#ff6f61", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }, SFLIGHT = { up: "#1f86c4", down: "#d0453f", rel: "#8a3ff0", upp: "#b8860b", prop: "#6b7c93" };   // blue above, red below (swapped in 0.8.208, Nick: blue above is a nod to the Architect's blue); up is gold, clear of both
-function applySfLinks(){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || (th === "obsidian" && doc.body.classList.contains("theme-dark"));
+function applySfLinks(){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || th === "starfield" || (th === "obsidian" && doc.body.classList.contains("theme-dark"));
   const P = dark ? SFDARK : SFLIGHT; for (const kk of Object.keys(P)) { if (SFLINKS) root.style.setProperty("--" + kk, P[kk]); else root.style.removeProperty("--" + kk); }
   let t = null; try { t = tip; } catch { t = null; } if (t) for (const kk of Object.keys(P)) { if (SFLINKS) t.style.setProperty("--" + kk, P[kk]); else t.style.removeProperty("--" + kk); } }
 function readCss(){ applySfLinks(); const s = win.getComputedStyle(root);
@@ -5365,12 +5365,29 @@ const EDV = (bg, panel, ink, muted, line, acc, accS) => { const faint = `color-m
     "--code-background": panel, "--code-normal": ink, "--blockquote-border-color": acc, "--hr-color": line, "--checkbox-color": acc, "--checkbox-border-color": muted, "--list-marker-color": muted,
     "--tag-color": acc, "--tag-background": accS, "--tag-color-hover": acc, "--tag-background-hover": accS, "--pill-color": muted, "--pill-border-color": line, "--metadata-label-text-color": muted, "--metadata-input-text-color": ink,
     "--table-border-color": line, "--table-header-background": panel, "--callout-border-opacity": ".25", "--scrollbar-thumb-bg": `color-mix(in srgb,${muted} 35%,transparent)` }; };
-function edLook(el){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || (th === "obsidian" && doc.body.classList.contains("theme-dark")), m = CARDTH === "map" && th !== "obsidian";
+function edLook(el){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || th === "starfield" || (th === "obsidian" && doc.body.classList.contains("theme-dark")), m = CARDTH === "map" && th !== "obsidian";
   el.classList.toggle("theme-dark", m && dark); el.classList.toggle("theme-light", m && !dark);
   const bv = bodyVars(); el.setCssProps(Object.fromEntries(Object.keys(bv).map(nm => [nm, m ? bv[nm] : ""])));
   const cs = win.getComputedStyle(root), g = nm => cs.getPropertyValue(nm).trim(), V = EDV(g("--bg"), g("--panel"), g("--ink"), g("--muted"), g("--line"), g("--accent"), g("--accent-soft"));
   el.setCssProps(Object.fromEntries(Object.keys(V).map(nm => [nm, m ? V[nm] : ""])));
-  el.setCssProps({ "--cardop": CARDOP + "%", "--upp": g("--upp"), "--rel": g("--rel"), "--up": g("--up"), "--down": g("--down") }); }   /* the link colors always come along (the up/related pills) */
+  el.setCssProps({ "--cardop": CARDOP + "%", "--upp": g("--upp"), "--rel": g("--rel"), "--up": g("--up"), "--down": g("--down"), "--prop": g("--prop") });
+  /* the Starfield theme's editor (0.8.224, from Nick's Nebula mockup): pink for the chrome (no link line uses it), headings in nebula colors, H6 as small capitals,
+     properties in a dark panel with mono labels, and every link in its relation's color (edTint) */
+  const sf = m && th === "starfield"; el.classList.toggle("sf-th", sf);
+  const H = { "--h1-color": "#fff4ec", "--inline-title-color": "#fff4ec", "--h2-color": "#ff8fc0", "--h3-color": "#c9b8ff", "--h4-color": "#ffd9ea", "--h5-color": "#c9b8ff", "--h6-color": "#8fc3ff",
+    "--blockquote-border-color": "#ff8fc0", "--blockquote-color": "#ffd9ea", "--tag-color": "#ffa8cf", "--tag-background": "rgba(255,122,182,.14)", "--tag-color-hover": "#ffc4de", "--tag-background-hover": "rgba(255,122,182,.22)",
+    "--link-color": "#f0e6ff", "--link-color-hover": "#ffffff", "--link-unresolved-color": "#a59fc4", "--text-selection": "rgba(255,143,192,.28)", "--interactive-accent": "#ff8fc0", "--interactive-accent-hover": "#ffa8cf", "--checkbox-color": "#ff8fc0", "--caret-color": "#ff8fc0" };
+  if (sf) el.setCssProps(H); else if (m) { const V2 = V; el.setCssProps(Object.fromEntries(Object.keys(H).map(nm => [nm, V2[nm] || ""]))); } else el.setCssProps(Object.fromEntries(Object.keys(H).map(nm => [nm, ""])));
+  win.setTimeout(() => { try { for (const o of Object.values(EDS)) if (o && o.el === el) edTint(o); } catch (_) { /* editors not made yet */ } }, 0); }
+/* a link's color in the editor says how the note it points to relates to this one (0.8.224, Nick: "what if every single link is colored based on whether it's an up, related, above, or below link?"):
+   up property gold, related violet, above blue, below green, any other property slate. Starfield theme for now (the rule lives on .sf-th) */
+function edTint(o){ if (!o || !o.el || o.el.hidden || !o.path || !host.linkTargets) return; const sf = o.el.classList.contains("sf-th"), i = PIDX.get(o.path);
+  const els = o.el.querySelectorAll("a.internal-link, .cm-hmd-internal-link, .multi-select-pill-content, .internal-link");
+  if (!sf || i == null) { for (const e of els) if (e.dataset.ivk) delete e.dataset.ivk; return; }
+  const M = new Map(); for (const [t, p] of host.linkTargets(o.path)) if (!M.has(t)) M.set(t, p);
+  const kindOf = p => { const j = PIDX.get(p); if (j == null || j === i) return ""; const kk = EKIND.get(i*n + j); if (kk === undefined && !out[i].includes(j)) return ""; return kk === 1 ? "upp" : kk === 4 ? "rel" : kk === 5 ? "prop" : upOf(i, j) ? "up" : "down"; };
+  for (const e of els) { const key = String(e.getAttribute("data-href") || e.textContent || "").trim().toLowerCase(); if (!key) continue;
+    const p = M.get(key) || M.get(key.split("|")[0].split("#")[0].trim()) || M.get(key.split("|").pop().trim()); const kd = p ? kindOf(p) : ""; if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } }   /* the link colors always come along (the up/related pills) */
 const clampN = (v, a, b) => Math.round(Math.max(a, Math.min(b, v)));
 // the side editors' widths can be dragged at their inner edge (0.8.31); otherwise a share of the map
 const EDW = (() => { const o = pref("iv-edw", null); return o && typeof o === "object" ? o : {}; })();
@@ -5392,6 +5409,7 @@ function makeEd(kind){
   const strip = el.createDiv({ cls: "cardstrip" }), drop = el.createDiv({ cls: "carddrop" }); drop.hidden = true;
   setIcon(ob, "square-arrow-out-up-right");   // an icon since 0.8.51 (Nick: less weight, more room for the name)
   const body = el.createDiv({ cls: "cardbody" });
+  { let tt = 0; new MutationObserver(() => { win.clearTimeout(tt); tt = win.setTimeout(() => { try { edTint(o); } catch (_) { /* o not ready */ } }, 150); }).observe(el, { childList: true, subtree: true, characterData: true }); }   /* links keep their colors as you type (0.8.224) */
   for (const ty of ["pointerdown", "wheel", "click"]) el.addEventListener(ty, e => e.stopPropagation());
   // the side editors tuck away to a tab on their edge, like the legend and the note panel; the note stays open in them
   const side = kind !== "center", cb = side ? hd.createEl("button", { cls: "cardbtn cardcol", text: kind === "left" ? "‹" : "›", attr: { type: "button", "aria-label": "Tuck away", title: "Tuck away" } }) : null;
@@ -7782,7 +7800,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const rx = $("#recx"); if (rx) TO.w.insertBefore(rx, TO.p);
     TO.p.classList.add("tourpop"); opener(TO, () => renderTourList()); syncRec(); }
   { const TH = popBtn("theme", "Theme", "star"); TH.b.empty(); TH.b.classList.add("tbi", "thorb"); TH.b.setAttribute("aria-label", "Theme"); TH.b.createEl("i"); TH.p.classList.add("thpop"); TH.p.createDiv({ cls: "pt", text: "Theme" });
-    const seg = $("#themeseg"); TH.p.appendChild(seg); const THN = { paper: "Play", softpaper: "Soft Paper", lyt: "LYT Mode", obsidian: "Match Obsidian" };
+    const seg = $("#themeseg"); TH.p.appendChild(seg); const THN = { paper: "Play", softpaper: "Soft Paper", lyt: "LYT Mode", starfield: "Starfield", obsidian: "Match Obsidian" };
+    if (!seg.querySelector('button[data-th="starfield"]')) { const b = doc.createElement("button"); b.dataset.th = "starfield"; b.setAttribute("aria-description", "Starfield"); b.appendChild(doc.createElement("i")); const ly = seg.querySelector('button[data-th="lyt"]'); if (ly) ly.after(b); else seg.appendChild(b);
+      b.setAttribute("aria-pressed", String(root.dataset.theme === "starfield")); b.onclick = () => setTheme("starfield", true); }   /* the Starfield theme (0.8.224, Nick) */
     for (const b of seg.querySelectorAll("button")) if (!b.querySelector(".thn")) b.createSpan({ cls: "thn", text: THN[b.dataset.th] || b.dataset.th });
     const sync = () => { const on = seg.querySelector('button[aria-pressed="true"]'); TH.b.dataset.th = on ? on.dataset.th : ""; const t = "Theme: " + (on ? THN[on.dataset.th] || on.dataset.th : ""); TH.b.setAttribute("aria-label", t); };
     sync(); new MutationObserver(sync).observe(seg, { attributes: true, subtree: true, attributeFilter: ["aria-pressed"] });
