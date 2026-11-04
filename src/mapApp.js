@@ -1124,7 +1124,7 @@ function morph(animate, cam){
   RAF(step);
 }
 let camBusy = 0;
-function setView(v){ win.setTimeout(() => { ckView(); if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
+function setView(v){ win.setTimeout(() => { ckView(); if (typeof sfSwSync === "function") sfSwSync(); if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
@@ -2624,6 +2624,10 @@ let CKAUTO = pref("iv-ckauto", true) !== false, CKFRAME = pref("iv-ckframe", fal
 // World (0.8.90, Nick's "big kahuna"): "links" builds a scene from one note's links; "sf" flies through Starfield itself,
 // every note at its place in 3D Starfield, the galaxies as glowing disks and clouds in their own colours, the links as panels where those notes really are.
 let CKW = pref("iv-ckw", "links") === "sf" ? "sf" : "links";
+/* Starfield, one place with two vantage points (0.8.218, an experiment, Nick: "see what it would look like to move between Starfield > Chart and Starfield > Starship"):
+   from Starfield's Chart you board the Starship among the same galaxies, and Chart brings you back to the star you were at. Starship on its own (the maps menu)
+   is left exactly as it is: its world is borrowed for the trip (not saved) and handed back. 3D Starfield steps aside for the trial (SFMERGE = false brings it back) */
+const SFMERGE = false; let SFSHIP = null;
 const CKSF = { ver: -1, P: null, sc: 1, B: [] };
 function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), turn = CKX.turn;
   if (CKSF.ver === starVer && CKSF.P && (!turn || now - (CKSF.tc || 0) < 30)) return CKSF; CKSF.tc = now;
@@ -2963,7 +2967,7 @@ function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0 
   CK.lock = q; CK.auto = false; }
 function ckHit(x, y){ let b = -1, bz = 1e9; CK.items.forEach((it, q) => { if (it.zc <= 1 || !ckShows(it)) return; if (x >= it.sx - it.sw / 2 && x <= it.sx + it.sw / 2 && y >= it.sy - it.sh / 2 && y <= it.sy + it.sh / 2 && it.zc < bz) { b = q; bz = it.zc; } }); return b; }
 win.setTimeout(() => { if (!dead) ckView(); }, 0);
-function ckView(){ ckEl(); if (view !== "cockpit") ckEditClose(); if (view !== "cockpit" && CK.wd) ckWander(false); if (CKX.emo && !EMOI) void loadEmo(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
+function ckView(){ ckEl(); if (view !== "cockpit" && SFSHIP) { CKW = SFSHIP.ckw; SFSHIP = null; } if (view !== "cockpit") ckEditClose(); if (view !== "cockpit" && CK.wd) ckWander(false); if (CKX.emo && !EMOI) void loadEmo(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
   if (want) { CK.c = -2; ckSync(); CK.last = win.performance.now(); RAF(ckTick); } }
 // Wander Mode in the Cockpit (0.8.103, Nick: "bounce around to pointing at different notes, flying around, then jumping to the next note"):
 //   Links: turn toward a linked note, fly there on autopilot, linger, then the next link (a trail that backtracks at dead ends)
@@ -4226,7 +4230,7 @@ function chordLabels(){
 // Drag to orbit, right-drag (or Shift-drag) to pan, scroll to fly in. Notes keep their places inside their galaxy's disk;
 // nebulae and the old elliptical are puffy clouds. The projection is written into the map's own X/Y, so picking, labels,
 // links, focus and the time-lapse all work unchanged.
-let S3D = pref("iv-s3d", false) === true, yaw3 = .55, pitch3 = .62, s3dVer = -1;
+let S3D = !SFMERGE && pref("iv-s3d", false) === true, yaw3 = .55, pitch3 = .62, s3dVer = -1;
 const P3X = new Float32Array(n), P3Y = new Float32Array(n), DS3 = new Float32Array(n).fill(1), L3 = new Float32Array(3*n);
 let B3 = [], SPAN3 = 1;
 function build3D(){
@@ -5534,6 +5538,15 @@ function orbFlash(p){ win.setTimeout(() => { const j = TABS.findIndex(t => t.pat
 function edCloseTab(){ const o = EDS.left; if (o.path) { CLOSED.push(o.path); if (CLOSED.length > 30) CLOSED.shift(); } if (TABS[TCUR] && TABS[TCUR].path === o.path) { tabClose(TCUR); if (!TABS.length || EDS.left.el.hidden) { select(-1); panBack(); } } else { o.close(); panBack(); } }
 function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
   TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); arenaSync(); syncNav(); }
+function sfShip(on){ if (on) { if (view !== "stars" || SFSHIP) return; SFSHIP = { ckw: CKW }; CKW = "sf"; CK.sfIn = false; closePops(); setView("cockpit"); }
+  else { if (!SFSHIP) return; const c = CK.c; CKW = SFSHIP.ckw; SFSHIP = null; setView("stars"); if (c >= 0 && vis[c]) win.setTimeout(() => { if (!dead) { select(c); navTo(c); } }, 60); }
+  win.setTimeout(sfSwSync, 0); }
+const sfSw = (() => { const w = $("#main").createDiv({ cls: "ivm-sfsw seg" }); w.hidden = true;
+  for (const [m, t] of [["chart", "Chart"], ["ship", "Starship"]]) { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); sfShip(m === "ship"); }; }
+  for (const ty of ["pointerdown", "wheel", "click"]) w.addEventListener(ty, ev => ev.stopPropagation()); win.setTimeout(() => sfSwSync(), 0); return w; })();
+function sfSwSync(){ const on = SFMERGE && !dead && (view === "stars" || (view === "cockpit" && !!SFSHIP)); sfSw.hidden = !on; if (!on) return; sfSw.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.m === "ship") === (view === "cockpit")))); }
+onKey(e => { if (!SFMERGE || e.metaKey || e.ctrlKey || e.altKey || e.key.toLowerCase() !== "c") return; const a = doc.activeElement; if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable)) return;
+  if (view === "cockpit" && SFSHIP) { e.preventDefault(); sfShip(false); } });   /* C: back to the Chart from the Starship */
 /* ⌘T: a new, empty tab, as in Obsidian (0.8.211, Nick): an orb of its own, and the primary note waits as a quiet placeholder until you pick a note.
    Nothing is lost: the other orbs keep their notes */
 function tabNew(){ const at = TCUR >= 0 && TABS[TCUR] ? TCUR + 1 : TABS.length; TABS.splice(at, 0, { path: "" }); TCUR = at; tabsSave(); select(-1); EDS.left.close(); if (EDS.left.el) EDS.left.el.hidden = true; syncOrbs(); draw();
@@ -7280,7 +7293,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       sel_.onchange = () => { PSC()[key] = sel_.value; if (key === "height" && sel_.value) PSC().lastHeight = sel_.value; save(PK(key), sel_.value); morph(true, () => fitTarget()); legend(); };
       const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
-  const VN = () => ({ cockpit: "Starship", kandinsky: "Kandinsky", arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
+  const VN = () => view === "cockpit" && SFSHIP ? "Starfield · Starship" : ({ cockpit: "Starship", kandinsky: "Kandinsky", arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
     chord: CSPH === "out" || CSPH === "in" ? "Tesla / Corona" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
     shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars", "sense"]);
@@ -7303,8 +7316,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const chl = doc.createElement("label"); chl.className = "mini lcemo chartsw"; const chc = doc.createElement("input"); chc.type = "checkbox"; const chs = doc.createElement("i"); chs.className = "sw"; const cht = doc.createElement("span"); cht.textContent = "Star Chart: rings and signposts around a hub"; chl.append(chc, chs, cht);
     const sync = () => { const cur = S3D ? "3d" : "2d"; seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === cur))); desc.textContent = DESC[cur]; chc.checked = STCH; };
     chc.onchange = () => { STCH = chc.checked; save("iv-schart", STCH); syncCh2(); orbWake(); legend(); draw(); };
-    for (const [m, t] of [["2d", "2D"], ["3d", "3D"]]) { const b = doc.createElement("button"); b.type = "button"; b.dataset.m = m; b.textContent = t; seg.appendChild(b);
-      b.onclick = e => { e.stopPropagation(); if ((m === "3d") === S3D) return; S3D = m === "3d"; save("iv-s3d", S3D); syncS3D(); placePlaybar(); morph(true, () => fitTarget()); sync(); syncCh2(); orbWake(); }; }
+    if (SFMERGE) DESC["ship"] = "Board the Starship at the note you're on and fly among these galaxies. Chart brings you back to the star you're at.";
+    for (const [m, t] of SFMERGE ? [["2d", "Chart"], ["ship", "Starship"]] : [["2d", "2D"], ["3d", "3D"]]) { const b = doc.createElement("button"); b.type = "button"; b.dataset.m = m; b.textContent = t; seg.appendChild(b);
+      b.onclick = e => { e.stopPropagation(); if (m === "ship") { sfShip(true); return; } if ((m === "3d") === S3D) return; S3D = m === "3d"; save("iv-s3d", S3D); syncS3D(); placePlaybar(); morph(true, () => fitTarget()); sync(); syncCh2(); orbWake(); }; }
     if (rows.length) { rows[0].before(seg); seg.after(desc); desc.after(chl); const cb_ = sp.querySelector(".chxbox"); if (cb_) chl.after(cb_); for (const r of rows) r.hidden = true; } if (note) note.hidden = true;
     sp.querySelectorAll('input[name="s3d"]').forEach(r => r.addEventListener("change", sync)); FUI.sfseg = sync; sync();
     const list = doc.createElement("div"); list.className = "sflist"; sp.appendChild(list); for (const el of [...sp.querySelectorAll(":scope > label.sfsw"), ...sp.querySelectorAll(":scope > label.minisw")]) list.appendChild(el); }
@@ -7954,6 +7968,8 @@ return {
   async showSaved(spec){ await savedReady; if (dead) return false; const v = spec && typeof spec === "object" ? spec : views.find(x => x.name.toLowerCase() === String(spec || "").trim().toLowerCase());
     if (!v) return false; win.setTimeout(() => { if (!dead) applySaved(host.embed ? { ...v, cam: null } : v); }, 60); return true; },   /* an embed is smaller than the map the view was saved on: fit it instead of the saved zoom */
   // the commands "Open note in Emergence / Starfield" (0.8.27, Nick: so they can be hotkeyed): that map, Edit mode on, the note in the primary note
+  /** a note opened elsewhere while the map is in front: show it as the primary note (0.8.218). False when the map can't (not in the map, or filtered out) */
+  openPrimary(path){ const i = PIDX.get(path); if (i == null || dead || !edOn() || !vis[i]) return false; if (EDS.left.col) EDS.left.collapse(false); select(i); navTo(i); draw(); return true; },
   editIn(path, which){ const i = PIDX.get(path); if (i == null || dead) return false;
     if (!EDITM) { EDITM = true; save("iv-editm", true);
       const cb = root.querySelector(".editm input"); if (cb) cb.checked = true; const g = root.querySelector(".editopts"); if (g) g.hidden = false;

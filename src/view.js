@@ -50,7 +50,23 @@ export class MapView extends ItemView {
   getDisplayText() { return "Maps of the Ideaverse"; }
   getIcon() { return "orbit"; }
 
-  async onOpen() { await this.reload(); }
+  async onOpen() { await this.reload(); this.keepNotesIn(); }
+
+  /* Stay in the map (0.8.218, Nick: ⌘D opened the daily note in a new Obsidian tab when the map's toolbar had focus): while the map is the active tab,
+     a note that a command opens in a brand-new tab (⌘D for today's note, the quick switcher, a template…) opens as the primary note instead, and the new tab goes.
+     Tabs that already existed, notes the map itself opens, and the map's own editors are left alone; a note the map doesn't have yet opens as usual */
+  keepNotesIn() { const app = this.app; let prev = null, known = new WeakSet();
+    const snap = () => { known = new WeakSet(); app.workspace.iterateAllLeaves(l => known.add(l)); };
+    this.registerEvent(app.workspace.on("active-leaf-change", leaf => { const was = prev; prev = leaf;
+      if (leaf === this.leaf) { snap(); return; }
+      if (!leaf || was !== this.leaf || known.has(leaf) || !this.map || !this.map.openPrimary) return;
+      if (this.plugin.ownOpenT && Date.now() - this.plugin.ownOpenT < 1500) return;
+      const tryIt = (k_) => { const v = leaf.view; if (!v || (v.containerEl && this.contentEl.contains(v.containerEl))) return;
+        const f = v.getViewType && v.getViewType() === "markdown" ? v.file : null; if (!f) { if (k_ < 6) window.setTimeout(() => tryIt(k_ + 1), 60); return; }
+        if (!this.map || !this.map.openPrimary(f.path)) return;
+        leaf.detach(); app.workspace.setActiveLeaf(this.leaf, { focus: true }); };
+      tryIt(0); }));
+    if (app.workspace.getActiveViewOfType(MapView) === this) { prev = this.leaf; snap(); } }
   async onClose() { this.unmount(); }
 
   unmount() {
@@ -73,7 +89,7 @@ export class MapView extends ItemView {
     return normalizePath(d ? `${d}/${SAVED_NAME}` : SAVED_NAME);
   }
 
-  openNote(path, newTab, background) { this.noteLeaf = openBeside(this.app, this.leaf, this.noteLeaf, path, newTab, background); }
+  openNote(path, newTab, background) { this.plugin.ownOpenT = Date.now(); this.noteLeaf = openBeside(this.app, this.leaf, this.noteLeaf, path, newTab, background); }
 }
 
 /** Open a note from the map: in one note pane beside it, reused (a new tab when asked). Returns the pane used. */
