@@ -219,6 +219,7 @@ export async function mountInto(owner, el, opts) {
       await MarkdownRenderer.render(app, txt, el, path, events); },
     // the map reacting as you write (0.8.23): when Obsidian has re-read a note's links, hand the map that note's links, resolved, each with its kind
     // (0 in the text, 1 up, 4 related, 5 any other property; collections are left to a rescan)
+    onMove: cb => { events.registerEvent(app.vault.on("rename", (f, old) => { if (f instanceof TFile && f.extension === "md" && old) cb(old, f.path); })); },   // a note moved or renamed: the map moves it live
     onLinks: cb => { const st = plugin.settings, nm = (v, d) => (Array.isArray(v) ? v : String(v || d).split(",")).map(x => String(x).trim().toLowerCase()).filter(Boolean);
       events.registerEvent(app.metadataCache.on("changed", (f, _data, c) => { if (!(f instanceof TFile) || !c) return;
         const UP = nm(st.upProps, "up"), RL = nm(st.relatedProps, "related"), CL = nm(st.collectionProps, "collections"), L = [];

@@ -2838,14 +2838,14 @@ function ckPvMake(p, title){ const e = CK.el.createDiv({ cls: "ivm-card ivm-pv c
   e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return;
     if (ev.shiftKey && EDS) { void EDS.right.open(i); return; } const r = e.getBoundingClientRect(), pr = CK.el.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top); });
   return e; }
-async function ckEdit(p, x, y){ if (!host.editCard) return; ckEditClose(); const i = PIDX.get(p); if (i == null) return;
-  const W = CK.el.clientWidth, H = CK.el.clientHeight, w = 380, h = Math.min(360, H - 40), cx = Math.max(8, Math.min(W - w - 8, x - 40)), cy = Math.max(8, Math.min(H - h - 8, y - 20));
-  const el = CK.el.createDiv({ cls: "ivm-card ckedit" }); el.setCssProps({ "--pvx": cx + "px", "--pvy": cy + "px", "--pvw": w + "px", "--pvh": h + "px" });
+async function ckEdit(p, x, y, hostEl){ if (!host.editCard) return; ckEditClose(); const i = PIDX.get(p); if (i == null) return; const HE = hostEl || CK.el;   /* hostEl: Compass's previews too (0.8.175) */
+  const W = HE.clientWidth, H = HE.clientHeight, w = 380, h = Math.min(360, H - 40), cx = Math.max(8, Math.min(W - w - 8, x - 40)), cy = Math.max(8, Math.min(H - h - 8, y - 20));
+  const el = HE.createDiv({ cls: "ivm-card ckedit" }); el.setCssProps({ "--pvx": cx + "px", "--pvy": cy + "px", "--pvw": w + "px", "--pvh": h + "px" });
   const hd = el.createDiv({ cls: "cardhd" }); hd.createSpan({ cls: "cardt", text: N[i].title }); const xb = hd.createEl("button", { cls: "cardbtn cardx", text: "×", attr: { type: "button", "aria-label": "Done" } }); xb.onclick = ev => { ev.stopPropagation(); ckEditClose(); };
   const body = el.createDiv({ cls: "cardbody" }); for (const ty of ["pointerdown", "wheel", "click"]) el.addEventListener(ty, ev => ev.stopPropagation());
   el.addEventListener("keydown", ev => { if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); ckEditClose(); } }, true);
   try { edLook(el); } catch (_) { /* theme only */ }
-  const ed = host.editCard(); body.appendChild(ed.el); CK.edit = { el, ed, p }; await ed.open(p); ed.resize(); propKeep(el); try { ed.el.querySelector(".cm-content")?.focus(); } catch (_) { /* fine */ } }
+  const ed = host.editCard(); body.appendChild(ed.el); CK.edit = { el, ed, p, host: HE }; await ed.open(p); ed.resize(); propKeep(el); try { ed.el.querySelector(".cm-content")?.focus(); } catch (_) { /* fine */ } }
 function ckEditClose(){ const E_ = CK.edit; if (!E_) return; CK.edit = null; try { E_.ed.close(); } catch (_) { /* gone */ } E_.el.remove();
   CK.pvOver = null;   /* previews are rebuilt, so they show what was written */
   if (CK.pvEl) { CK.pvEl.remove(); CK.pvEl = null; CK.pvP = null; } if (CK.pvM) { for (const e of CK.pvM.values()) e.remove(); CK.pvM.clear(); } }
@@ -5347,6 +5347,8 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   bar(); chip("in", `${d.body_in} in`, "spill"); chip("out", `${d.body_out} out`, "spill");
   bar();
   const rk = scoreRank(i); chip("score", rk ? `#${rk.toLocaleString()}` : d.score.toFixed(1), "spill sscore");
+  { const dir = d.path.includes("/") ? d.path.slice(0, d.path.lastIndexOf("/")) : "", f_ = o.strip.createSpan({ cls: "sfold", text: dir ? dir.split("/").pop() : "Vault root" });   /* its folder (0.8.175, Nick); the full path on hover */
+    f_.setAttribute("aria-description", dir || "the top of the vault"); const ic = createSpan({ cls: "sfold-i" }); setIcon(ic, "folder"); f_.prepend(ic); }
   o.drop.empty();
   if (o.open_ === "score") { o.drop.hidden = false; o.drop.createDiv({ cls: "sdh", text: `#${rk.toLocaleString()} IN ${d.archive ? "THE ARCHIVE" : "THE IDEAVERSE"} · SCORE ${f2(d.score)}` });
     // the score's details stay put when "above" or "below" opens: the list grows below them and the whole list scrolls, from where you were (0.8.55, Nick)
@@ -5469,7 +5471,7 @@ function placeOrbs(){ if (orbBar.hidden) return; const L = !EDS.left.el.hidden ?
 // Starfield: a small read-only preview of each galaxy's hub note, above it
 const pvLayer = doc.createElement("div"); pvLayer.className = "ivm-pvl"; root.after(pvLayer); const HPV = new Map();
 function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap = cmp ? PVL_C[PVLV] : PVN_(), on = cap > 0 && (cmp || (EDITM && view === "stars" && !S3D_ON())) && !!host.preview && W > 0;
-  if (!on) { if (pvLayer.childElementCount) { pvLayer.empty(); HPV.clear(); } return; }
+  if (!on) { if (CK.edit && CK.edit.host === pvLayer) ckEditClose(); if (pvLayer.childElementCount) { pvLayer.empty(); HPV.clear(); } return; }
   const c = cv.getBoundingClientRect(), pr = pvLayer.getBoundingClientRect(), ox = c.left - pr.left, oy = c.top - pr.top, want = new Set();
   const L_ = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w : 0, R_ = !EDS.right.el.hidden ? edRect("right").x : W - sideW();
   const top_ = orbBar.hidden ? 8 : orbBar.getBoundingClientRect().bottom - c.top + (ORBN ? 70 : 8);   // below the orbs (and their names)
@@ -5498,9 +5500,13 @@ function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap 
     for (const g of gals) { const qx = Math.max(g.px, Math.min(g.px + pw, g.x)), qy = Math.max(g.py, Math.min(g.py + ph, g.y)); if (Math.hypot(qx - g.x, qy - g.y) < 30) continue; ctx.beginPath(); ctx.moveTo(g.x, g.y); ctx.lineTo(qx, qy); ctx.stroke(); }
     ctx.restore(); }
   for (const g of gals) { const p = N[g.i].path; want.add(p); let e = HPV.get(p);
-    if (!e) { e = pvLayer.createDiv({ cls: "ivm-card ivm-pv" }); e.createDiv({ cls: "pvt", text: N[g.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); HPV.set(p, e); }
+    if (!e) { e = pvLayer.createDiv({ cls: "ivm-card ivm-pv" + (cmp ? " pved" : "") }); e.createDiv({ cls: "pvt", text: N[g.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); HPV.set(p, e);
+      if (cmp) { e.dataset.hint = "click to edit · shift-click: support note";   /* Compass's previews are editable too (0.8.175, Nick), as the Cockpit's */
+        e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return; if (ev.shiftKey && EDS) { void EDS.right.open(i); return; }
+          const r = e.getBoundingClientRect(), pr = pvLayer.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top, pvLayer); }); } }
     edLook(e); e.setCssProps({ "--pvw": pw + "px", "--pvh": ph + "px" }); e.style.left = Math.round(ox + g.px) + "px"; e.style.top = Math.round(oy + g.py) + "px"; }
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
+cv.addEventListener("pointerdown", () => { if (CK.edit && CK.edit.host === pvLayer) ckEditClose(); });   /* a click on the map finishes a Compass edit */
 function select(i, fromTrail){
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
   if (view === "compass" && !LIVEQ) win.setTimeout(cmpSync, 0);
@@ -6360,6 +6366,21 @@ function drawLive(){ if (!LIVE.links.length && !LIVE.rings.length) return; const
   ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   draw(); }   // keep drawing until the last flare fades
 if (host.onLinks) host.onLinks((p_, list) => liveLinks(p_, list));
+/* a note moved or renamed (0.8.175, Nick: Cmd-M a note to Atlas and watch it go): its path, folder and name change in place and the map glides it to its new spot, no rescan */
+const ftAdd = (dir, dlt) => { if (!dir) return; const parts = dir.split("/"); let p = "";
+  for (let j = 0; j < parts.length; j++) { const parent = p; p = p ? p + "/" + parts[j] : parts[j]; if (!FT.has(p)) { FT.set(p, { path: p, name: parts[j], kids: [], direct: 0, total: 0 }); if (parent && FT.has(parent)) FT.get(parent).kids.push(p); } FT.get(p).total += dlt; }
+  FT.get(dir).direct += dlt; };
+function liveMove(oldP, newP){ const i = PIDX.get(oldP); if (i == null || dead || PIDX.has(newP)) return; const d = N[i];
+  const base = q => q.split("/").pop().replace(/\.md$/i, ""), parts = newP.split("/");
+  PIDX.delete(oldP); PIDX.set(newP, i); if (d.title === base(oldP)) d.title = base(newP); d.path = newP;
+  d.ace = newP.includes("/") ? parts[0] : "(root)"; d.sub = parts.length > 2 ? parts.slice(0, 2).join("/") : parts[0];
+  if (DIRN[i]) ftAdd(DIRN[i], -1); DIRN[i] = !d.archive && FOLD.includes(d.ace) ? (newP.includes("/") ? newP.slice(0, newP.lastIndexOf("/")) : d.ace) : null; if (DIRN[i]) ftAdd(DIRN[i], 1);
+  FMC.delete(i); subCompute(); starsDirty = true; glowKey = "";
+  for (const o of Object.values(EDS)) if (o.path === oldP) { o.path = newP; fillStrip(o, i); }
+  for (const t of TABS) if (t.path === oldP) t.path = newP;
+  relayout(true, false, () => ({ k, tx, ty }));   /* the camera holds still; the note flies */
+  if (sel === i) win.setTimeout(() => { if (dead || sel !== i) return; const st0 = drawer.scrollTop; LIVEQ = true; try { select(i, true); } finally { LIVEQ = false; } drawer.scrollTop = st0; }, 820); }   /* the panel shows the new path once it lands */
+if (host.onMove) host.onMove((a, b) => liveMove(a, b));
 
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).

@@ -1541,3 +1541,28 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .dlist .ctrrk input:checked + .sw{background:var(--accent)}
 .ivm .dlist .ctrrk input:checked + .sw::after{left:13px;background:var(--bg)}
 .ivm .dlist .ctrrk input:focus-visible + .sw{outline:2px solid var(--accent);outline-offset:2px}
+/* the editor strip: the note's folder (0.8.175) */
+.ivm-card .cardstrip .sfold{display:inline-flex;align-items:center;gap:4px;font-size:11px;line-height:1;color:var(--text-muted);padding:3px 2px 3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;cursor:default}
+.ivm-card .cardstrip .sfold-i{display:inline-flex;flex:none}
+.ivm-card .cardstrip .sfold-i svg{width:12px;height:12px}
+
+/* Compass's previews, editable (0.8.175): the Cockpit's edit card, in the preview layer */
+.ivm-pvl .ivm-card.ivm-pv.pved{pointer-events:auto;cursor:text;overflow:visible}
+.ivm-pvl .ivm-card.ckedit{pointer-events:auto}
+.ivm-pvl .ivm-card.ivm-pv.pved:hover{box-shadow:0 0 0 1.5px rgba(127,231,255,.7),0 4px 14px rgba(0,0,0,.3)}
+.ivm-pvl .ivm-card.ckedit{position:absolute;left:var(--pvx);top:var(--pvy);width:var(--pvw);height:var(--pvh);z-index:5;display:flex;flex-direction:column;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.45),0 0 0 1.5px rgba(127,231,255,.6)}
+.ivm-pvl .ivm-card.ckedit .cardbody{flex:1;min-height:0;overflow:auto}
+.ivm-pvl .ivm-card.ckedit{--font-text-size:11px;--font-ui-small:10.5px;--font-ui-smaller:10px;--inline-title-size:15px;--h1-size:14px;--h2-size:13px;--h3-size:12px;--h4-size:11.5px;--h5-size:11px;--h6-size:11px;--line-height-normal:1.4;--file-margins:8px 12px;--metadata-property-height:22px;--metadata-label-font-size:10.5px;--metadata-input-font-size:10.5px}
+.ivm-pvl .ivm-card.ckedit .cardhd .cardt{font-size:11.5px;font-weight:700}
+.ivm-pvl .ivm-card.ckedit .cm-content,.ivm-pvl .ivm-card.ckedit .markdown-source-view{font-size:11px}
+.ivm-pvl .ivm-card.ckedit .inline-title{font-size:15px;margin-bottom:4px}
+.ivm-pvl .ivm-card.ckedit :is(.metadata-property-key,.metadata-property-value,.metadata-add-button,.metadata-property-key-input,.metadata-input-text,.multi-select-pill,.metadata-input-longtext){font-size:10.5px}
+.ivm-pvl .ivm-card.ckedit .metadata-property{--metadata-property-height:22px;min-height:22px;padding-top:0;padding-bottom:0}
+.ivm-pvl .ivm-card.ckedit .metadata-property-icon svg{width:12px;height:12px}
+.ivm-pvl .ivm-card.ckedit .metadata-properties-heading{font-size:11px}
+.ivm-pvl .ivm-card.ivm-card.ckedit :is(.cm-editor,.cm-scroller,.cm-content,.cm-sizer,.markdown-source-view,.view-content,.workspace-leaf,.workspace-leaf-content,.workspace-split),
+.ivm-pvl .ivm-card.ivm-card.ckedit :is(.cm-editor,.cm-scroller,.cm-content,.cm-sizer,.markdown-source-view,.view-content,.workspace-leaf,.workspace-leaf-content,.workspace-split):is(:focus,:focus-visible,:focus-within){outline:none;box-shadow:none;border-color:transparent}
+.ivm-pvl .ivm-card.ivm-pv.pved:hover::after{content:attr(data-hint);position:absolute;left:50%;top:100%;transform:translate(-50%,5px);white-space:nowrap;font:500 10px var(--body);letter-spacing:.01em;color:var(--text-muted);background:color-mix(in srgb,var(--background-primary) 90%,transparent);border:1px solid var(--background-modifier-border);border-radius:6px;padding:2px 7px;pointer-events:none}
+.ivm-pvl .ivm-card.ckedit{--font-text:var(--font-interface);font-family:var(--font-interface)}
+.ivm-pvl .ivm-card.ckedit :is(.cm-content,.markdown-source-view,.inline-title,.metadata-container){font-family:var(--font-interface)}
+.ivm-pvl .ivm-card.ivm-card.ckedit{z-index:60}
