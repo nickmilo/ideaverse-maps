@@ -72,7 +72,11 @@ const TV = new Float64Array(n);
 let BYMT = host.store.get("iv-mtime") === true;
 // with Organize by most recently modified on, a window back from right now: the last day, week, month or year (or all); Emergence and Space-Time stretch it across the timeline
 const MTW = { day: DAY, week: 7*DAY, month: 30.44*DAY, year: YEAR }; let MTWIN = host.store.get("iv-mtwin") || "all"; if (!MTW[MTWIN]) MTWIN = "all";
-let NOWMS = Date.now(); const winSpan = () => BYMT && MTW[MTWIN] ? MTW[MTWIN] : 0, winStart = () => NOWMS - winSpan();
+/* the same window by the Date property too (0.8.191, Nick: "I wish I had that same ability for By Date Created"): its own choice, so each switch keeps its own */
+let CTWIN = host.store.get("iv-ctwin") || "all"; if (!MTW[CTWIN]) CTWIN = "all";
+const WINV = () => BYMT ? MTWIN : CTWIN;
+let NOWMS = Date.now(); const todayU = () => { const d = new Date(NOWMS); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); };
+const winSpan = () => MTW[WINV()] ? MTW[WINV()] : 0, winEnd = () => BYMT ? NOWMS : todayU() + DAY, winStart = () => winEnd() - (BYMT ? winSpan() : Math.round(winSpan() / DAY) * DAY);   /* by the Date property a window is whole days, ending tonight */
 const fillTV = () => N.forEach((d,i) => TV[i] = BYMT ? (d.mt || NaN) : /^\d{4}-\d{2}-\d{2}$/.test(d.date||"") ? Date.parse(d.date) : NaN); fillTV();
 const ARCH = Uint8Array.from(N, d => d.archive ? 1 : 0), hasArch = ARCH.some(v => v);
 // the years always come from the Date property, even when the map opened with Organize by most recently modified on (0.7.58: opened that way,
@@ -129,7 +133,7 @@ let YRALL = pref("iv-yrall", true) !== false;   // on by default (Nick, Oct 24)
 // (the first layout runs before the map's view is set up, so it reads the saved one)
 const curV = () => { try { return view; } catch (e) { return pref("iv-view", "emergence"); } };
 const yrEnd = () => YRV.has(curV()) ? YR1 : NOW_Y;
-const yrNarrow = () => !BYMT && (YR0 > SLMIN || YR1 < NOW_Y), yrOn = () => YRV.has(curV()) && yrNarrow();
+const yrNarrow = () => !BYMT && !winSpan() && (YR0 > SLMIN || YR1 < NOW_Y), yrOn = () => YRV.has(curV()) && yrNarrow();
 let subOff = new Set(Array.isArray(pref("iv-subsoff", null)) ? pref("iv-subsoff", null) : []);   // subfolders switched off inside a shown folder (the buried › in Folders)
 let folders = pref("iv-folders", null); if (!Array.isArray(folders)) folders = [...FOLD]; folders = folders.filter(f => FOLD.includes(f));
 // Bases (Filter → Bases): the base views picked, as "path::view name"; BQS marks the notes they hold (null: no base filter)
@@ -363,7 +367,7 @@ function layoutTime(){ const WIN = winTL();
   TF = WIN ? winStart() : Date.UTC(fromY,0,1); TS = WIN ? TF : Date.UTC(fullY,0,1);
   let tmin = Infinity; for (let i=0;i<n;i++) if (TV[i] < tmin && (vis[i] || !(yrOn() || (WIN && !YRALL)))) tmin = TV[i];
   ER = tmin < TF ? [140, 300] : null; X0T = ER ? 340 : 170;
-  const TE = WIN ? NOWMS : YRV.has(curV()) && YR1 < NOW_Y ? Date.UTC(YR1 + 1, 0, 1) : T1; UT = WIN ? Math.max(units(TE), 1e-9) : Math.max(units(TE), .5);
+  const TE = WIN ? winEnd() : YRV.has(curV()) && YR1 < NOW_Y ? Date.UTC(YR1 + 1, 0, 1) : T1; UT = WIN ? Math.max(units(TE), 1e-9) : Math.max(units(TE), .5);
   let tmax = -Infinity; if (TE < T1) for (let i=0;i<n;i++) if (vis[i] && TV[i] >= TE && TV[i] > tmax) tmax = TV[i];
   AR = isFinite(tmax) ? [WW - 160, WW] : null; AFW = AR ? 190 : 0;
   const d1 = dayFull();
@@ -4819,11 +4823,11 @@ function propLabels(yTop){
 // the window's marks, in your own time zone: every 3 hours (a day), each day (a week), each Monday (a month), each month (a year)
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 function winTicks(){ const t0 = winStart(), out_ = [], d = new Date(t0);
-  if (MTWIN === "day") { d.setMinutes(0, 0, 0); d.setHours(Math.ceil((d.getHours() + (t0 > d.getTime() ? 1 : 0))/3)*3);
-    for (; d.getTime() <= NOWMS; d.setHours(d.getHours() + 3)) { const h = d.getHours(); out_.push({ t: d.getTime(), major: h === 0, label: h === 0 ? `${DOW[d.getDay()]} ${d.getDate()}` : `${h % 12 || 12}${h < 12 ? "am" : "pm"}` }); } }
-  else if (MTWIN === "week") { d.setHours(24, 0, 0, 0); for (; d.getTime() <= NOWMS; d.setDate(d.getDate() + 1)) out_.push({ t: d.getTime(), major: true, label: `${DOW[d.getDay()]} ${d.getDate()}` }); }
-  else if (MTWIN === "month") { d.setHours(24, 0, 0, 0); while (d.getDay() !== 1) d.setDate(d.getDate() + 1); for (; d.getTime() <= NOWMS; d.setDate(d.getDate() + 7)) out_.push({ t: d.getTime(), major: true, label: `${MON[d.getMonth()]} ${d.getDate()}` }); }
-  else { d.setHours(0, 0, 0, 0); d.setDate(1); d.setMonth(d.getMonth() + 1); for (; d.getTime() <= NOWMS; d.setMonth(d.getMonth() + 1)) out_.push({ t: d.getTime(), major: d.getMonth() === 0, label: d.getMonth() === 0 ? String(d.getFullYear()) : MON[d.getMonth()] }); }
+  if (WINV() === "day") { d.setMinutes(0, 0, 0); d.setHours(Math.ceil((d.getHours() + (t0 > d.getTime() ? 1 : 0))/3)*3);
+    for (; d.getTime() <= winEnd(); d.setHours(d.getHours() + 3)) { const h = d.getHours(); out_.push({ t: d.getTime(), major: h === 0, label: h === 0 ? `${DOW[d.getDay()]} ${d.getDate()}` : `${h % 12 || 12}${h < 12 ? "am" : "pm"}` }); } }
+  else if (WINV() === "week") { d.setHours(24, 0, 0, 0); for (; d.getTime() <= winEnd(); d.setDate(d.getDate() + 1)) out_.push({ t: d.getTime(), major: true, label: `${DOW[d.getDay()]} ${d.getDate()}` }); }
+  else if (WINV() === "month") { d.setHours(24, 0, 0, 0); while (d.getDay() !== 1) d.setDate(d.getDate() + 1); for (; d.getTime() <= winEnd(); d.setDate(d.getDate() + 7)) out_.push({ t: d.getTime(), major: true, label: `${MON[d.getMonth()]} ${d.getDate()}` }); }
+  else { d.setHours(0, 0, 0, 0); d.setDate(1); d.setMonth(d.getMonth() + 1); for (; d.getTime() <= winEnd(); d.setMonth(d.getMonth() + 1)) out_.push({ t: d.getTime(), major: d.getMonth() === 0, label: d.getMonth() === 0 ? String(d.getFullYear()) : MON[d.getMonth()] }); }
   return out_; }
 function timeGuides(){
   const v = x => Math.round(sx(x))+.5, top = sy(0)-6, bot = sy(view === "spacetime" ? STH : WH);
@@ -5650,7 +5654,7 @@ function syncYr(){ const yc = $("#ycol") || $("#yrctl"); if (!yc) return; const 
     if (!h0.hidden && !h1.hidden && f(YR1) - f(YR0) < near) { h0.classList.add("lft"); h1.classList.add("rgt"); } else { h0.classList.remove("lft"); h1.classList.remove("rgt"); }
     e0.style.visibility = (!h0.hidden && f(YR0) < near) || (!h1.hidden && f(YR1) < near) ? "hidden" : "";
     e1.style.visibility = (!h1.hidden && f(YR1) > 1 - near) || (!h0.hidden && f(YR0) > 1 - near) ? "hidden" : ""; }
-  ($("#yrv0") || yc.querySelector(".yrv")).setText(BYMT ? (winSpan() ? "Last " + MTWIN : "All, by modified") : !yrNarrow() ? `${SLMIN}–${NOW_Y} (All)` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
+  ($("#yrv0") || yc.querySelector(".yrv")).setText(BYMT ? (winSpan() ? "Last " + MTWIN : "All, by modified") : winSpan() ? "Last " + CTWIN : !yrNarrow() ? `${SLMIN}–${NOW_Y} (All)` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
 function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
@@ -6539,7 +6543,7 @@ function snapView(name){
     geo: view === "quincunx" ? GEO : null,
     s3d: view === "stars" ? {on: S3D, chart: STCH, chx: { ...CHL }, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
     // every filter (0.7.54): the years' edge strips, dating by modified time and its window, MOCs, properties and bases; and Linear Calendar's years and halves
-    yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
+    yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, ctwin: CTWIN, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
     lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF, shape: LCSHAPE, born: LCBORN || undefined, names: LCNAMES, d30: LCSHAPE === "days" ? LC30 : undefined} : null,
     emo: { ...EMON },   // Show emojis, map by map (0.7.58, Nick)
     // Base Builder and Posters (0.7.58): the layout (Rows, Scatter, Mosaic, Constellation, Timeline) and what each axis, row and size reads (Nick's movies Mosaic came back as Rows)
@@ -6571,7 +6575,7 @@ function applySaved(v){
   colls = (v.colls || []).filter(c => COLLNAME[c]); collMode = v.collMode === "all" ? "all" : "any"; save("iv-coll", colls); save("iv-collmode", collMode);
   // every filter comes from the view (views saved before 0.7.54 had none of these: no MOCs, properties or bases, dated by the Date property)
   if (typeof v.yrAll === "boolean") { YRALL = v.yrAll; save("iv-yrall", YRALL); }
-  { const bm = v.bymt === true; if (bm !== BYMT) { BYMT = bm; fillTV(); } save("iv-mtime", BYMT); MTWIN = MTW[v.mtwin] || v.mtwin === "all" ? v.mtwin || "all" : "all"; save("iv-mtwin", MTWIN); NOWMS = Date.now(); }
+  { const bm = v.bymt === true; if (bm !== BYMT) { BYMT = bm; fillTV(); } save("iv-mtime", BYMT); MTWIN = MTW[v.mtwin] || v.mtwin === "all" ? v.mtwin || "all" : "all"; save("iv-mtwin", MTWIN); CTWIN = MTW[v.ctwin] ? v.ctwin : "all"; save("iv-ctwin", CTWIN); NOWMS = Date.now(); }
   MOCSEL = Array.isArray(v.mocs) ? v.mocs.filter(p_ => PIDX.has(p_)) : []; MDEG = v.mocDeg === 2 ? 2 : 1; save("iv-mocs", MOCSEL); save("iv-mocdeg", MDEG); computeMS();
   PSEL = v.props && typeof v.props === "object" && !Array.isArray(v.props) ? JSON.parse(JSON.stringify(v.props)) : {}; save("iv-props", PSEL); computePS();
   { const nb = Array.isArray(v.bq) ? v.bq : []; if (JSON.stringify(nb) !== JSON.stringify(BQ)) { BQ = nb; save("iv-bq", BQ); void applyBQ(); } }
@@ -7104,8 +7108,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     // the window back from right now, in place of the years slider while the switch is on
     const wr = yc.createDiv({ cls: "mtwin" }); wr.createSpan({ cls: "mtl", text: "Last" }); const wsg = wr.createDiv({ cls: "seg", attr: { role: "group", "aria-label": "Show the notes modified in the last…" } });
     const wbs = [["day", "Day"], ["week", "Week"], ["month", "Month"], ["year", "Year"], ["all", "All"]].map(([v, t]) => { const b_ = wsg.createEl("button", { text: t, attr: { type: "button" } });
-      b_.onclick = e => { e.stopPropagation(); MTWIN = v; save("iv-mtwin", v); NOWMS = Date.now(); syncMT(); relayout(true, false, () => fitTarget()); if (typeof syncTB === "function") syncTB(); }; return [b_, v]; });
-    const syncMT = () => { for (const [b_, v] of wbs) b_.setAttribute("aria-pressed", String(v === MTWIN)); wr.hidden = !BYMT; const ycol = $("#ycol") || yc; const rg = ycol.querySelector(".prng"); if (rg) rg.hidden = BYMT; syncYr(); };
+      b_.onclick = e => { e.stopPropagation(); if (BYMT) { MTWIN = v; save("iv-mtwin", v); } else { CTWIN = v; save("iv-ctwin", v); } NOWMS = Date.now(); syncMT(); relayout(true, false, () => fitTarget()); if (typeof syncTB === "function") syncTB(); }; return [b_, v]; });
+    const syncMT = () => { for (const [b_, v] of wbs) b_.setAttribute("aria-pressed", String(v === WINV())); wr.hidden = false; const ycol = $("#ycol") || yc; const rg = ycol.querySelector(".prng"); if (rg) rg.hidden = BYMT || winSpan() > 0; syncYr(); };   /* Last … is there either way now; the years slider steps aside while a window is picked */
     win.setTimeout(syncMT, 0); FUI.years = () => { cb.checked = YRALL; cm.checked = BYMT; syncMT(); };
     cm.onchange = () => { BYMT = cm.checked; save("iv-mtime", BYMT); NOWMS = Date.now(); fillTV(); syncMT(); if (LCUIOK) syncLC(); if (typeof syncTB === "function") syncTB(); relayout(true, false, () => fitTarget()); legend(); };
     let t_ = 0; const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; SY0 = YR0; SY1 = YR1; syncYr();
