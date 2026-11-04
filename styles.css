@@ -1635,14 +1635,14 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm.ivm header #disppop{min-width:330px}
 .ivm #disppop .tchoice input[type=range]{width:110px;position:static;opacity:1;height:auto}
 /* Starfield: Chart ⇄ Starship (0.8.218, an experiment) */
-.ivm .ivm-sfsw{position:absolute;left:50%;top:44px;transform:translateX(-50%);z-index:8;display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(8,10,22,.72);border:1px solid rgba(160,180,255,.22);backdrop-filter:blur(6px)}
+.ivm .ivm-sfsw{position:absolute;left:50%;top:44px;transform:translateX(-50%);z-index:4;display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(8,10,22,.72);border:1px solid rgba(160,180,255,.22);backdrop-filter:blur(6px)}
 .ivm .ivm-sfsw[hidden]{display:none}
 .ivm .ivm-sfsw button{appearance:none;box-shadow:none;border:0;height:auto;background:none;border-radius:999px;padding:4px 14px;font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#9fb0e0;cursor:pointer}
 .ivm .ivm-sfsw button[aria-pressed="true"]{background:rgba(185,166,255,.18);color:#eef1ff}
 .ivm .ivm-sfsw button:hover{color:#eef1ff}
 .ivm .ivm-sfsw .sfk{align-self:center;margin:0 8px 0 4px;padding:1px 5px;border:1px solid rgba(160,180,255,.3);border-radius:4px;font:600 9.5px var(--mono);color:#8f98b8}
 /* the dark of space between Star Chart and Starship (0.8.223) */
-.ivm .ivm-sfveil{position:absolute;inset:0;z-index:7;background:#04060d;opacity:0;pointer-events:none}
+.ivm .ivm-sfveil{position:absolute;inset:0;z-index:3;background:#04060d;opacity:0;pointer-events:none}
 .ivm .ivm-sfveil[hidden]{display:none}
 /* ---------- Starfield theme (0.8.224, Nick, from the Nebula mockup): deep space, pink for the chrome, link colors that say how notes relate ---------- */
 .ivm[data-theme="starfield"],.ivm-tip[data-theme="starfield"]{--g5a:#ffcf5a; --g5b:#ff8fc0; --g4a:#b9a6ff; --g4b:#6f7dff; --g3a:#6fd3ff; --g3b:#4b6cd6;
