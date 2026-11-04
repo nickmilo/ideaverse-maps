@@ -58,22 +58,33 @@ export class MapView extends ItemView {
      Tabs that already existed, notes the map itself opens, and the map's own editors are left alone; a note the map doesn't have yet opens as usual */
   keepNotesIn() { const app = this.app; let prev = null, known = new WeakSet();
     const snap = () => { known = new WeakSet(); app.workspace.iterateAllLeaves(l => known.add(l)); };
+    /* route a note the map should show: as the primary note; one the map doesn't have yet (⌘D, ⌘N) after a quick rescan (only changed notes are read) */
+    const route = f => { if (!this.map) return false; if (this.map.openPrimary(f.path)) return true; if (!this.map.hasNote || this.map.hasNote(f.path)) return false;   /* in the map but filtered out: leave it be */
+      void this.plugin.rescan().then(async () => { for (let t = 0; t < 100 && !(this.map && this.map.openPrimary); t++) await new Promise(r => window.setTimeout(r, 100));
+        if (this.map && !this.map.openPrimary(f.path)) { this.openNote(f.path, true); return; }
+        /* a note just made (⌘N, say): put the cursor in its title, ready to name it, as Obsidian does (0.8.221) */
+        if (Date.now() - f.stat.ctime < 8000) for (let t = 0; t < 30; t++) { await new Promise(r => window.setTimeout(r, 100)); const it = this.contentEl.ownerDocument.querySelector(".ivm-card-left:not([hidden]) .inline-title");
+          if (it instanceof HTMLElement) { it.focus(); const sel = window.getSelection(), rg = document.createRange(); rg.selectNodeContents(it); if (sel) { sel.removeAllRanges(); sel.addRange(rg); } break; } } });
+      return true; };
+    const wants = (leaf, f) => !!f && !leaf.ivmCard && f instanceof TFile && f.extension === "md" && !!this.map && !!this.map.openPrimary && !known.has(leaf) && app.workspace.getActiveViewOfType(MapView) === this
+      && !(this.plugin.ownOpenT && Date.now() - this.plugin.ownOpenT < 1500) && !(leaf.view && leaf.view.containerEl && this.contentEl.contains(leaf.view.containerEl));
+    /* no tug-of-war (0.8.226, Nick: ⌘N "bounces out of the app for a moment"): a brand-new tab about to open a note while the map is in front is caught before it opens,
+       so Obsidian never switches to it; the note goes to the map instead and the empty tab goes. Patched once, for every map */
+    const P = Object.getPrototypeOf(this.leaf); if (P && !this.plugin.openPatched && typeof P.openFile === "function") { this.plugin.openPatched = true; const orig = P.openFile, plugin = this.plugin;
+      P.openFile = function (file, st) { for (const l of plugin.app.workspace.getLeavesOfType(VIEW_TYPE)) { const mv = l.view; if (mv instanceof MapView && mv.catchOpen && mv.catchOpen(this, file)) return Promise.resolve(); } return orig.call(this, file, st); };
+      /* and the empty tab Obsidian makes first is not brought to the front while the map is: it waits, unseen, for its note (caught above, or opened as usual) */
+      const W = plugin.app.workspace, oSet = W.setActiveLeaf;
+      W.setActiveLeaf = function (leaf, ...rest) { const mv = this.getActiveViewOfType(MapView); if (leaf && mv && mv.holdBack && mv.holdBack(leaf)) return; return oSet.call(this, leaf, ...rest); };
+      plugin.register(() => { P.openFile = orig; W.setActiveLeaf = oSet; plugin.openPatched = false; }); }
+    this.holdBack = leaf => !leaf.ivmCard && !known.has(leaf) && leaf !== this.leaf && !!leaf.view && leaf.view.getViewType() === "empty" && !(this.plugin.ownOpenT && Date.now() - this.plugin.ownOpenT < 1500);
+    this.catchOpen = (leaf, f) => { if (!wants(leaf, f)) return false; if (!route(f)) return false; window.setTimeout(() => { try { leaf.detach(); } catch { /* gone */ } app.workspace.setActiveLeaf(this.leaf, { focus: true }); }, 0); return true; };
     this.registerEvent(app.workspace.on("active-leaf-change", leaf => { const was = prev; prev = leaf;
       if (leaf === this.leaf) { snap(); return; }
       if (!leaf || was !== this.leaf || known.has(leaf) || !this.map || !this.map.openPrimary) return;
       if (this.plugin.ownOpenT && Date.now() - this.plugin.ownOpenT < 1500) return;
       const tryIt = (k_) => { const v = leaf.view; if (!v || (v.containerEl && this.contentEl.contains(v.containerEl))) return;
         const f = v.getViewType && v.getViewType() === "markdown" ? v.file : null; if (!f) { if (k_ < 6) window.setTimeout(() => tryIt(k_ + 1), 60); return; }
-        if (!this.map) return;
-        if (!this.map.openPrimary(f.path)) { if (!this.map.hasNote || this.map.hasNote(f.path)) return;   /* in the map but filtered out: leave it be */
-          /* a note the map doesn't have yet (⌘D making today's note, say): pick it up with a quick rescan (only changed notes are read), then open it (0.8.219, Nick) */
-          leaf.detach(); app.workspace.setActiveLeaf(this.leaf, { focus: true });
-          void this.plugin.rescan().then(async () => { for (let t = 0; t < 100 && !(this.map && this.map.openPrimary); t++) await new Promise(r => window.setTimeout(r, 100));
-            if (this.map && !this.map.openPrimary(f.path)) { this.openNote(f.path, true); return; }
-            /* a note just made (⌘N, say): put the cursor in its title, ready to name it, as Obsidian does (0.8.221) */
-            if (Date.now() - f.stat.ctime < 8000) for (let t = 0; t < 30; t++) { await new Promise(r => window.setTimeout(r, 100)); const it = this.contentEl.ownerDocument.querySelector(".ivm-card-left:not([hidden]) .inline-title");
-              if (it instanceof HTMLElement) { it.focus(); const sel = window.getSelection(), rg = document.createRange(); rg.selectNodeContents(it); if (sel) { sel.removeAllRanges(); sel.addRange(rg); } break; } } }); return; }
-        leaf.detach(); app.workspace.setActiveLeaf(this.leaf, { focus: true }); };
+        if (!route(f)) return; leaf.detach(); app.workspace.setActiveLeaf(this.leaf, { focus: true }); };
       tryIt(0); }));
     if (app.workspace.getActiveViewOfType(MapView) === this) { prev = this.leaf; snap(); } }
   async onClose() { this.unmount(); }
@@ -206,7 +217,7 @@ export async function mountInto(owner, el, opts) {
       const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
       if (dir && !app.vault.getAbstractFileByPath(dir)) await app.vault.createFolder(dir);
       await app.vault.createBinary(path, buf); return path; },
-    openFile: path => { const f = app.vault.getAbstractFileByPath(path); if (f instanceof TFile) void app.workspace.getLeaf("tab").openFile(f); },
+    openFile: path => { const f = app.vault.getAbstractFileByPath(path); if (f instanceof TFile) { plugin.ownOpenT = Date.now(); void app.workspace.getLeaf("tab").openFile(f); } },
     // Edit mode (experimental): a real Obsidian editor (Live Preview, links, other plugins) in the map's card. The leaf lives in a split of
     // our own that isn't part of the workspace layout, so it's never saved there (the technique the Hover Editor plugin uses)
     onCardLink: cb => { cardLinkCb = cb; },
@@ -226,7 +237,7 @@ export async function mountInto(owner, el, opts) {
       // Shift-click on a link is the editor's own again (it extends the selection): ⌘-click opens a new orb, ⌘⌥-click the support note (0.8.189)
       return { el: split.containerEl,
         open: async path => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return false;
-          if (!leaf) leaf = W.createLeafInParent(split, 0);
+          if (!leaf) { leaf = W.createLeafInParent(split, 0); leaf.ivmCard = true; }   // the map's own editor: never caught by keepNotesIn
           await leaf.openFile(f, { state: { mode: "source", source: false }, active: false }); return true; },
         resize: () => { if (leaf && leaf.view && typeof leaf.view.onResize === "function") leaf.view.onResize(); },
         focus: () => { const ed = leaf && leaf.view && leaf.view.editor; if (ed) ed.focus(); },   // straight to the editor: our leaf has no tab group, so it can't be the workspace's active leaf

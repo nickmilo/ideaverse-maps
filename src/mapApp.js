@@ -4655,8 +4655,8 @@ function render(){
   for (const lv of [3,4,5]) {
     for (let i=0;i<n;i++) {
       if (N[i].level !== lv || !VV(i) || (EMOD && emoAt(i))) continue;
-      const x = sx(X[i]), y = sy(Y[i]); if (x<vx0||x>vx1||y<vy0||y>vy1) continue;
-      const r = rad(i), g = ctx.createLinearGradient(x-r,y-r,x+r,y+r);
+      const x = sx(X[i]), y = sy(Y[i]); if (!(x >= vx0 && x <= vx1 && y >= vy0 && y <= vy1)) continue;   /* also skips a spot not placed yet (NaN), e.g. a note picked up by a rescan mid-frame */
+      const r = rad(i); if (!(r > 0)) continue; const g = ctx.createLinearGradient(x-r,y-r,x+r,y+r);
       g.addColorStop(0, GRAD[lv][0]); g.addColorStop(1, GRAD[lv][1]);
       ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .3 : .75) : 1;
       ctx.beginPath(); shape(lv, x, y, r);
