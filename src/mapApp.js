@@ -4689,7 +4689,7 @@ function render(){
   if (chartOn() && CHRO.length) { ctx.save(); RODONE = []; for (const [i, x, y, r] of CHRO) chartReadout(i, x, y, r); ctx.restore(); }
   if (BACON) drawBacon();
   axisLabels();
-  drawRecent(); drawHudLinks();   /* over the names and the years, so the HUDs always read */
+  drawHudLinks();   /* over the names and the years, so it always reads */ recSync();
   if (GROWV() && senseT != null) drawGrowth();
   capGuide();
   if (swap) Object.assign(css, swap);
@@ -5171,10 +5171,9 @@ function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && RADJ) return HUDC; 
 function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hudPv(-1); return; } if (!HUDL || sel < 0 || !vis[sel] || isPhone()) { hudTab(0); hudPv(-1); return; } const D_ = hudData(sel), n_ = D_.list.length; hudTab(n_); if (!n_ || HUDCOL) { hudPv(-1); return; }
   if (HUDC.offFor !== sel) { HUDC.offFor = sel; HUDOFF = 0; }
   let R_ = W - sideW(); try { if (EDS && !EDS.right.el.hidden && !EDS.right.col) R_ = Math.min(R_, edRect("right").x - 8); } catch (_) { /* no editors */ }
-  const top = 74 + RECDY, bot = H - 120, lh = 14.5, arc = hudArc(R_), cap = Math.max(4, Math.min(n_, Math.floor((bot - top) / lh) - 1)), off = HUDOFF = Math.max(0, Math.min(n_ - cap, Math.round(HUDOFF))), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* the wheel scrolls it (0.8.144) */ cy = (top + bot) / 2, Ry = Math.max(300, (bot - top) * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))));
+  const top = 74, bot = H - 120, lh = 14.5, cap = Math.max(4, Math.min(n_, Math.floor((bot - top) / lh) - 1)), off = HUDOFF = Math.max(0, Math.min(n_ - cap, Math.round(HUDOFF))), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* the wheel scrolls it (0.8.144) */ cy = (top + bot) / 2, Ry = Math.max(300, (bot - top) * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))));
   ctx.save(); ctx.font = `500 11px ${css.body}`; ctx.textBaseline = "middle"; ctx.textAlign = "right"; const ink = css.ink || "#ddd", SL = (() => { try { return SPACELINK(); } catch (_) { return {}; } })();
-  const y0 = RECDY > 0 ? top + 18 : cy - (rows - 1) / 2 * lh;   /* under Recent: straight on from it; alone: centred as before */ void Ry;
-  const at = r => { const y = y0 + r * lh, [x, tl] = arc(y); return [x, y, tl]; };
+  const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [R_ - 30 - 60 * (1 - Math.sqrt(Math.max(0, 1 - u * u))), y, Math.asin(Math.max(-1, Math.min(1, u))) * .25]; };
   const [hx, hy] = at(-1.3); ctx.globalAlpha = .6; ctx.font = `600 9.5px ${css.body}`; ctx.fillStyle = css.accent || "#7dffb0"; const htx = (n_ > cap ? `LINKS · ${off + 1}–${off + cap} of ${n_}` : `LINKS · ${n_}`) + "  ›"; ctx.fillText(htx, hx, hy); HUDH.push([hx - ctx.measureText(htx).width - 4, hy - 9, ctx.measureText(htx).width + 8, 18, -5]);   /* the header tucks the list away */ ctx.font = `500 11px ${css.body}`;
   for (let r = 0; r < rows; r++) { const [x, y, tl] = at(r), more = r === cap, j = more ? -1 : D_.list[off + r], hv = j >= 0 && j === HUDHOV;
     ctx.save(); ctx.translate(x, y); ctx.rotate(tl * (hv ? 0 : 1)); if (hv) ctx.scale(1.13, 1.13);
@@ -5193,46 +5192,31 @@ function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hud
 /* ---------- Recent (0.8.235, Nick: "my absolute favorite base… the recent space"): the notes changed most lately, newest first, in the upper right,
    in the HUD's own style (the same gentle arc, a hairline border round it). About ten show; the wheel scrolls on to thirty. A note's emoji (Display → Assign emojis,
    or the base column) leads its row, its age trails it. Click to open it as the primary note; the header tucks it away. Above the Links HUD when both are on */
-/* one arc for the whole HUD column (0.8.236, Nick: "Recent needs to curve WITH Links, like a unified HUD"): Recent and Links sit on the same curve, top to bottom */
-const hudArc = R_ => { const t = 74, b = H - 120, cy = (t + b) / 2, Ry = Math.max(300, (b - t) * .75); return y => { const u = Math.max(-1, Math.min(1, (y - cy) / Ry)); return [R_ - 30 - 60 * (1 - Math.sqrt(Math.max(0, 1 - u * u))), Math.asin(u) * .25]; }; };
-let RECON = pref("iv-recent", true) !== false, RECCOL = pref("iv-reccol", false) === true, RECH = [], RECHOV = -1, RECOFF = 0, RECBOX = null, RECDY = 0, RECV = 0, RECC = { v: -1, list: [] };
+/* ---------- Recents (0.8.237, Nick: "my absolute favorite base… the recent space"; rethought so Links stays as it was): the notes changed most lately,
+   newest first, behind a tab on the map's right edge, above the Links tab. It opens a small panel (a hairline border, its own scroll): each row its emoji
+   (a mini switch, on by default), its name and its age. Click a row to open it as the primary note (⌘ a new orb, Shift links it in); the panel stays open. */
+let RECON = pref("iv-recent", true) !== false, RECOPEN = pref("iv-recopen", false) === true, RECEMO = pref("iv-recemo", true) !== false, RECV = 0, RECC = { v: "", list: [] }, RECEL = null, RECTAB = null, RECKEY = "";
 const ago = ms => { const s_ = Math.max(0, (Date.now() - ms) / 1000); return s_ < 60 ? "now" : s_ < 3600 ? Math.floor(s_ / 60) + "m" : s_ < 86400 ? Math.floor(s_ / 3600) + "h" : s_ < 86400 * 30 ? Math.floor(s_ / 86400) + "d" : s_ < 86400 * 365 ? Math.floor(s_ / 86400 / 30) + "mo" : Math.floor(s_ / 86400 / 365) + "y"; };
 function recList(){ const key = RECV + ":" + VISV; if (RECC.v === key) return RECC.list; const L = []; for (let i = 0; i < n; i++) if (vis[i] && N[i].mt > 0 && !ARCH[i]) L.push(i);
   L.sort((a, b) => N[b].mt - N[a].mt); RECC = { v: key, list: L.slice(0, 30) }; return RECC.list; }
-function drawRecent(){ RECH = []; RECBOX = null; RECDY = 0; if (!RECON || view === "cockpit" || isPhone()) return; const L = recList(); if (!L.length) return;
-  let R_ = W - sideW(); try { if (EDS && !EDS.right.el.hidden && !EDS.right.col) R_ = Math.min(R_, edRect("right").x - 8); } catch (_) { /* no editors */ }
-  const top = 74, lh = 15, cap = RECCOL ? 0 : Math.min(10, L.length), off = RECOFF = Math.max(0, Math.min(L.length - cap, Math.round(RECOFF))), rows = cap, Ry = 300;
-  ctx.save(); ctx.textBaseline = "middle"; ctx.textAlign = "right"; const ink = css.ink || "#ddd";
-  const arc = hudArc(R_), at = r => { const y = top + 18 + r * lh, [x, tl] = arc(y); return [x, y, tl]; };
-  ctx.font = `600 9.5px ${css.body}`; ctx.globalAlpha = .6; ctx.fillStyle = css.accent || "#7dffb0"; const htx = "◷  " + (RECCOL ? "RECENT  ‹" : (L.length > cap ? `RECENT · ${off + 1}–${off + cap} of ${L.length}` : `RECENT · ${L.length}`) + "  ›"); const hy = top, hx = arc(hy)[0];
-  ctx.fillText(htx, hx, hy); const hw = ctx.measureText(htx).width; RECH.push([hx - hw - 4, hy - 9, hw + 8, 18, -15]);
-  let minX = hx - hw - 12; ctx.font = `500 11px ${css.body}`;
-  /* measure first, so the veil and the border go down before the names */
-  for (let r = 0; r < rows; r++) { const j = L[off + r]; if (!N[j]) continue; let tt = N[j].title; while (ctx.measureText(tt).width > 170 && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…";
-    const em = EMOI && EMOI[j] && !/^\p{Extended_Pictographic}/u.test(N[j].title); ctx.font = `600 9.5px ${css.mono || css.body}`; const aw = ctx.measureText(ago(N[j].mt)).width; ctx.font = `500 11px ${css.body}`; minX = Math.min(minX, at(r)[0] - aw - ctx.measureText(tt).width - (em ? 16 : 8) - 18); }
-  { const bx = minX - 8, by = top - 12, bw = R_ - 30 - bx + 14, bh = (rows ? at(rows - 1)[1] + 11 : top + 10) - by;   /* a veil of the map's ground, so the names read over the map, and the hairline border round it */
-    ctx.globalAlpha = .62; ctx.fillStyle = css.bg || "#111"; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 10); ctx.fill(); ctx.globalAlpha = .55; ctx.strokeStyle = css.line || "rgba(160,170,200,.4)"; ctx.lineWidth = 1; ctx.stroke();
-    RECBOX = [bx, by, bw, bh]; RECDY = by + bh - 74 + 22; }
-  ctx.globalAlpha = .6; ctx.font = `600 9.5px ${css.body}`; ctx.fillStyle = css.accent || "#7dffb0"; ctx.fillText(htx, hx, hy); ctx.font = `500 11px ${css.body}`;
-  for (let r = 0; r < rows; r++) { const [x, y, tl] = at(r), j = L[off + r], hv = j === RECHOV; if (!N[j]) continue;
-    let tt = N[j].title; while (ctx.measureText(tt).width > 170 && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…"; const em = EMOI && EMOI[j] && !/^\p{Extended_Pictographic}/u.test(N[j].title) ? EMOI[j] : "";
-    const age = ago(N[j].mt); ctx.font = `600 9.5px ${css.mono || css.body}`; const aw = ctx.measureText(age).width; ctx.font = `500 11px ${css.body}`; const tw = ctx.measureText(tt).width, ew = em ? 16 : 8;
-    ctx.save(); ctx.translate(x, y); ctx.rotate(tl * (hv ? 0 : 1)); if (hv) ctx.scale(1.1, 1.1);
-    if (hv) { ctx.globalAlpha = .9; ctx.fillStyle = css.bg || "#111"; ctx.beginPath(); ctx.roundRect(-tw - ew - aw - 22, -9, tw + ew + aw + 26, 18, 9); ctx.fill(); }
-    ctx.font = `600 9.5px ${css.mono || css.body}`; ctx.globalAlpha = .7; ctx.fillStyle = css.muted || ink; ctx.fillText(age, 0, 0);
-    ctx.font = `500 11px ${css.body}`; ctx.lineWidth = 3; ctx.strokeStyle = css.bg || "#111"; ctx.globalAlpha = hv ? 1 : .88; ctx.strokeText(tt, -aw - 8, 0); ctx.fillStyle = hv ? (css.accent || ink) : ink; ctx.fillText(tt, -aw - 8, 0);
-    if (em) { ctx.globalAlpha = 1; ctx.fillText(em, -aw - 12 - tw, 0); } else { ctx.globalAlpha = .85; ctx.strokeStyle = N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(-aw - 14 - tw, 0, 2.6, 0, 6.2832); ctx.stroke(); }   /* a hollow ring: Recent's rows, apart from Links' filled dots */
-    ctx.restore(); const x0 = x - aw - tw - ew - 18; RECH.push([x0, y - lh / 2, x - x0 + 4, lh, j]);
-    if (hv) hudPv(j, x0 + 6, y, CMDK);
-    if (hv && vis[j]) { ctx.save(); ctx.globalAlpha = .55; ctx.strokeStyle = css.accent || ink; ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); ctx.restore(); } }
-  if (!(RECHOV >= 0 && L.includes(RECHOV)) && !(HUDHOV >= 0)) hudPv(-1);
-  ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
-const recAt = (x, y) => { for (const [hx, hy, hw, hh, j] of RECH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
-cv.addEventListener("pointermove", e => { if (!RECON) return; const j = recAt(e.offsetX, e.offsetY); if (j !== RECHOV) { RECHOV = j; cv.classList.toggle("hot", j >= 0 || j === -15); draw(); } });
-cv.addEventListener("pointerdown", e => { if (!RECON || e.button !== 0) return; const j = recAt(e.offsetX, e.offsetY); if (j === -1) return; e.stopImmediatePropagation(); e.preventDefault(); RECHOV = -1;
-  if (j === -15) { RECCOL = !RECCOL; save("iv-reccol", RECCOL); draw(); return; } if (j >= 0 && shiftLink(j, e)) return; if (j >= 0 && openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); }, { capture: true });
-cv.addEventListener("wheel", e => { const b = RECBOX; if (!RECON || RECCOL || !b || e.offsetX < b[0] || e.offsetX > b[0] + b[2] || e.offsetY < b[1] || e.offsetY > b[1] + b[3]) return; e.preventDefault(); e.stopImmediatePropagation(); RECOFF += e.deltaY / 18; draw(); }, { capture: true, passive: false });
-cv.addEventListener("pointerleave", () => { if (RECHOV >= 0) { RECHOV = -1; draw(); } });
+const recEmoji = i => { if (!RECEMO || !EMOI || !EMOI[i]) return ""; return /^\p{Extended_Pictographic}/u.test(N[i].title) ? "" : EMOI[i]; };
+function recBuild(){ if (RECEL) return; const st = e => e.stopPropagation();
+  RECTAB = $("#main").createEl("button", { cls: "dtab rectab", attr: { type: "button" } }); RECTAB.hidden = true; RECTAB.addEventListener("pointerdown", st); RECTAB.onclick = e => { e.stopPropagation(); RECOPEN = !RECOPEN; save("iv-recopen", RECOPEN); RECKEY = ""; recSync(); };
+  RECEL = $("#main").createDiv({ cls: "ivm-recents" }); RECEL.hidden = true; for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) RECEL.addEventListener(ty, st); }
+function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPhone() && edOn(); let R_ = 0; try { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); R_ = Math.max(0, Math.round(mr.right - c.right + sideW())); } catch (_) { /* not laid out yet */ }
+  RECTAB.hidden = !on || RECOPEN; RECEL.hidden = !on || !RECOPEN; RECTAB.setCssProps({ "--hr": R_ + "px" }); RECEL.setCssProps({ "--hr": R_ + "px" }); if (!on) return;
+  const L = recList(); if (!RECOPEN) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); return; }
+  const key = L.join(",") + "|" + RECEMO + "|" + (EMOI ? 1 : 0) + "|" + Math.floor(Date.now() / 60000); if (key === RECKEY) return; RECKEY = key; RECEL.empty();
+  const hd = RECEL.createDiv({ cls: "rch" }); hd.createSpan({ cls: "rct", text: `◷  RECENTS · ${L.length}` });
+  const sw = hd.createEl("label", { cls: "mini lcemo rcemo" }); const cb = sw.createEl("input", { type: "checkbox" }); cb.checked = RECEMO; sw.createEl("i", { cls: "sw" }); sw.createSpan({ text: "Emojis" });
+  cb.onchange = () => { RECEMO = cb.checked; save("iv-recemo", RECEMO); if (RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; recSync(); }); RECKEY = ""; recSync(); };
+  const x = hd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Recents away" } }); x.onclick = e => { e.stopPropagation(); RECOPEN = false; save("iv-recopen", false); RECKEY = ""; recSync(); };
+  const box = RECEL.createDiv({ cls: "rcl" });
+  for (const j of L) { const r = box.createEl("button", { cls: "rcr" + (j === sel ? " on" : ""), attr: { type: "button" } }); const em = recEmoji(j);
+    if (em) r.createSpan({ cls: "rce", text: em }); else { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1 }); }
+    r.createSpan({ cls: "rcn", text: N[j].title }); r.createSpan({ cls: "rca", text: ago(N[j].mt) });
+    r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); RECKEY = ""; }; } }
+if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
 cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
 cv.addEventListener("pointerdown", e => { if (!HUDL || e.button !== 0) return; const j = hudAt(e.offsetX, e.offsetY); if (j === -1) return; e.stopImmediatePropagation(); e.preventDefault(); HUDHOV = -1;
@@ -6706,7 +6690,7 @@ function drawLive(){ if (!LIVE.links.length && !LIVE.rings.length) return; const
     ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.strokeText(t_, x, y - r - 8); ctx.fillStyle = css.ink; ctx.fillText(t_, x, y - r - 8); }
   ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   draw(); }   // keep drawing until the last flare fades
-if (host.onLinks) host.onLinks((p_, list) => { const i_ = PIDX.get(p_); if (i_ != null) { N[i_].mt = Date.now(); RECV++; } liveLinks(p_, list); });   /* a note just changed moves to the top of Recent (0.8.235) */
+if (host.onLinks) host.onLinks((p_, list) => { const i_ = PIDX.get(p_); if (i_ != null) { N[i_].mt = Date.now(); RECV++; } liveLinks(p_, list); recSync(); });   /* a note just changed moves to the top of Recents (0.8.235) */
 /* a note moved or renamed (0.8.175, Nick: Cmd-M a note to Atlas and watch it go): its path, folder and name change in place and the map glides it to its new spot, no rescan */
 const ftAdd = (dir, dlt) => { if (!dir) return; const parts = dir.split("/"); let p = "";
   for (let j = 0; j < parts.length; j++) { const parent = p; p = p ? p + "/" + parts[j] : parts[j]; if (!FT.has(p)) { FT.set(p, { path: p, name: parts[j], kids: [], direct: 0, total: 0 }); if (parent && FT.has(parent)) FT.get(parent).kids.push(p); } FT.get(p).total += dlt; }
@@ -7677,9 +7661,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const l3 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c3 = l3.createEl("input", { type: "checkbox" }); c3.checked = HUDPV; l3.createEl("i", { cls: "sw" }); l3.createSpan({ text: "Automatically see mini-preview on hover" }); l3.hidden = !HUDL;
     c3.onchange = () => { HUDPV = c3.checked; save("iv-hudpv", HUDPV); if (!HUDPV) hudPv(-1); };
     cb.onchange = () => { HUDL = cb.checked; save("iv-hudl", HUDL); l2.hidden = l3.hidden = !HUDL; if (!HUDL) hudPv(-1); draw(); }; }
-  /* Recent (0.8.235, Nick): the notes changed most lately, in the upper right */
-  { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = RECON; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Recent" });
-    cb.onchange = () => { RECON = cb.checked; save("iv-recent", RECON); draw(); }; }
+  /* Recents (0.8.237, Nick): the notes changed most lately, behind a tab on the right edge */
+  { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = RECON; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Recents" });
+    cb.onchange = () => { RECON = cb.checked; save("iv-recent", RECON); recSync(); }; }
   /* Color all links by Idea Emergence (0.8.234, Nick: "color ALL links in all Obsidian windows by Idea Emergence") */
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = pref("iv-linkcolor", false) === true; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Color all links by Idea Emergence" });
     cb.onchange = () => { save("iv-linkcolor", cb.checked); if (host.linkColors) host.linkColors(); for (const o of Object.values(EDS)) edTint(o); }; }
