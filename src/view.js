@@ -215,7 +215,8 @@ export async function mountInto(owner, el, opts) {
         close: () => { if (leaf) { leaf.detach(); leaf = null; } split.containerEl.remove(); } }; },
     // a read-only preview of a note (Starfield's hub previews): its text without the properties, the start of it, rendered as Obsidian would
     preview: async (path, el) => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return;
-      const txt = (await app.vault.cachedRead(f)).replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").slice(0, 1200);
+      const txt = (await app.vault.cachedRead(f)).replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "")
+        .replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, "").replace(/!\[\[[^\]\n]*?\.base(?:[#|][^\]\n]*)?\]\]/g, "").replace(/\n{3,}/g, "\n\n").trim().slice(0, 1200);   // a preview opens on words: embedded bases, queries and code blocks are left out (they ran full queries in every small preview, 0.8.178)
       await MarkdownRenderer.render(app, txt, el, path, events); },
     // the map reacting as you write (0.8.23): when Obsidian has re-read a note's links, hand the map that note's links, resolved, each with its kind
     // (0 in the text, 1 up, 4 related, 5 any other property; collections are left to a rescan)

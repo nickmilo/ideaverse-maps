@@ -5507,7 +5507,8 @@ function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap 
       if (cmp) { e.dataset.hint = "click to edit · ⇧ new orb · ⌘ support note";   /* Compass's previews are editable too (0.8.175, Nick), as the Cockpit's */
         e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return; if ((ev.metaKey || ev.ctrlKey) && EDS) { void EDS.right.open(i); return; } if (ev.shiftKey) { TABNEW = true; if (vis[i]) { navTo(i); toEditor(i); } return; }   /* the same keys as everywhere else (0.8.177, Nick): ⇧ a new orb, ⌘ the support note */
           const r = e.getBoundingClientRect(), pr = pvLayer.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top, pvLayer); }); } }
-    edLook(e); e.setCssProps({ "--pvw": pw + "px", "--pvh": ph + "px" }); e.style.left = Math.round(ox + g.px) + "px"; e.style.top = Math.round(oy + g.py) + "px"; }
+    { const lk = `${root.dataset.theme}|${CARDTH}|${CARDOP}|${pw}`; if (e.dataset.lk !== lk) { e.dataset.lk = lk; edLook(e); e.setCssProps({ "--pvw": pw + "px", "--pvh": ph + "px" }); } }   /* the look only when it changes, not every frame (0.8.178, Nick: Compass slow on the desktop) */
+    { const L = Math.round(ox + g.px) + "px", T = Math.round(oy + g.py) + "px"; if (e.style.left !== L) e.style.left = L; if (e.style.top !== T) e.style.top = T; } }
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
 cv.addEventListener("pointerdown", () => { if (CK.edit && CK.edit.host === pvLayer) ckEditClose(); });   /* a click on the map finishes a Compass edit */
 function select(i, fromTrail){
