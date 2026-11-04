@@ -3279,7 +3279,7 @@ EXP.cockpit = {
       "I shows only the links in, O only the links out (press again for both); the names down each side list them. The two scopes, as in X-Wing: the left one shows every panel ahead of you, the right one every panel behind you; the middle is dead ahead (or dead behind), the rim is square to your side.",
       "The message line names the closest relative it doesn't yet link up or related to; it starts locked on. The centre display: level, rank, score, links, and what the next level takes. The left dial is links made this year, the right one its age. Eject unpins the editor."
     ]; },
-  get legend(){ return "Cockpit: fly through a note's links. Fly into a panel (or a named star) to make it the cockpit." + (CK.sug >= 0 && N[CK.sug] ? ` Suggestion: the closest relative not yet in its up or related is “${N[CK.sug].title}”${CK.items.find(it => it.i === CK.sug && it.none) ? " (no link yet)" : ""}. It starts locked on: Space flies you there.` : ""); },   /* the suggestion lives in the legend now (0.8.119, Nick) */
+  get legend(){ return "Starship: fly through a note's links. Fly into a panel (or a named star) to make it the cockpit." + (CK.sug >= 0 && N[CK.sug] ? ` Suggestion: the closest relative not yet in its up or related is “${N[CK.sug].title}”${CK.items.find(it => it.i === CK.sug && it.none) ? " (no link yet)" : ""}. It starts locked on: Space flies you there.` : ""); },   /* the suggestion lives in the legend now (0.8.119, Nick) */
 };
 
 // ---------- Posters: a targeted dataset (a base's view, a filter) laid out by its own properties ----------
@@ -6177,9 +6177,10 @@ function drawLdrop(){ if (LDROP < 0 || !VV(LDROP)) return; const x = sx(X[LDROP]
    Ctrl stands in for ⌘ on Windows and Linux. Shift-click links the note into the primary note (0.8.215). */
 const MODK = e => !!e && (Platform.isMacOS ? e.metaKey : e.ctrlKey);
 /* Shift-click a note: link it into the primary note, under the small heading at the top, as ⌥-drop does (0.8.215, Nick). With no primary note open,
-   or on the primary note itself, Shift-click is a plain click. Only on the map and the HUD list; Shift-click on a link inside an editor still opens a new orb */
-function shiftLink(i, e){ if (!e || !e.shiftKey || MODK(e) || e.altKey || !edOn() || !EDS || EDS.left.el.hidden || !EDS.left.path) return false;
-  const t = PIDX.get(EDS.left.path); if (t == null || t === i) return false; ldLink(t, i, false); return true; }
+   or on the primary note itself, Shift-click does nothing (0.8.216). Only on the map and the HUD list; Shift-click on a link inside an editor still opens a new orb */
+function shiftLink(i, e){ if (!e || !e.shiftKey || MODK(e) || e.altKey) return false;
+  if (!edOn() || !EDS || EDS.left.el.hidden || !EDS.left.path) return true;   /* nothing to link into: Shift-click does nothing at all, so it never surprises (0.8.216, Nick) */
+  const t = PIDX.get(EDS.left.path); if (t == null || t === i) return true; ldLink(t, i, false); return true; }
 const openKind = e => MODK(e) && e.altKey ? "side" : MODK(e) ? "tab" : "";
 function openAs(i, kind){ if (i == null || i < 0 || !N[i]) return false;
   if (kind === "side") { if (edOn() && EDS) void EDS.right.open(i); else { if (vis[i]) select(i); if (host.openNote) host.openNote(N[i].path, "split"); } return true; }
@@ -6614,7 +6615,7 @@ if (host.onMove) host.onMove((a, b) => liveMove(a, b));
 
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
-const VIEW_NAME = {cockpit:"Cockpit", kandinsky:"Kandinsky", arena:"Arena", compass:"Compass", posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {cockpit:"Starship", kandinsky:"Kandinsky", arena:"Arena", compass:"Compass", posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
@@ -7180,7 +7181,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       gc.after(ga); ga.onclick = () => { closePops(); driftStop(); setView("arena"); };
       const gk = doc.createElement("button"); gk.className = "chip"; gk.id = "gokandinsky"; gk.textContent = "Kandinsky"; gk.setAttribute("aria-label", "One note and its links as a painting, after Kandinsky's Composition VIII");
       ga.after(gk); gk.onclick = () => { closePops(); driftStop(); setView("kandinsky"); };
-      const gp = doc.createElement("button"); gp.className = "chip"; gp.id = "gocockpit"; gp.textContent = "Cockpit"; gp.setAttribute("aria-label", "Fly through a note's links from its cockpit");
+      const gp = doc.createElement("button"); gp.className = "chip"; gp.id = "gocockpit"; gp.textContent = "Starship"; gp.setAttribute("aria-label", "Fly through a note's links from the bridge of your starship");
       gk.after(gp); gp.onclick = () => { closePops(); driftStop(); setView("cockpit"); }; }
     // Mosaic: every note a tile, after Treemap
     const gm = doc.createElement("button"); gm.className = "chip"; gm.id = "gomosaic"; gm.textContent = "Mosaic"; gm.setAttribute("aria-label", "Every note a tile, set like stones: Level 5 at the heart, each level a frame around it");
@@ -7278,7 +7279,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       sel_.onchange = () => { PSC()[key] = sel_.value; if (key === "height" && sel_.value) PSC().lastHeight = sel_.value; save(PK(key), sel_.value); morph(true, () => fitTarget()); legend(); };
       const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
-  const VN = () => ({ cockpit: "Cockpit", kandinsky: "Kandinsky", arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
+  const VN = () => ({ cockpit: "Starship", kandinsky: "Kandinsky", arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
     chord: CSPH === "out" || CSPH === "in" ? "Tesla / Corona" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
     shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars", "sense"]);
