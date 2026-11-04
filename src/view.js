@@ -66,7 +66,13 @@ export class MapView extends ItemView {
         if (Date.now() - f.stat.ctime < 8000) for (let t = 0; t < 30; t++) { await new Promise(r => window.setTimeout(r, 100)); const it = this.contentEl.ownerDocument.querySelector(".ivm-card-left:not([hidden]) .inline-title");
           if (it instanceof HTMLElement) { it.focus(); const sel = window.getSelection(), rg = document.createRange(); rg.selectNodeContents(it); if (sel) { sel.removeAllRanges(); sel.addRange(rg); } break; } } });
       return true; };
-    const wants = (leaf, f) => !!f && !leaf.ivmCard && f instanceof TFile && f.extension === "md" && !!this.map && !!this.map.openPrimary && !known.has(leaf) && app.workspace.getActiveViewOfType(MapView) === this
+    /* only a command does this (0.8.259, Nick: clicking an ordinary Obsidian tab got taken over): a command run while the map is in front (⌘N, ⌘D, ⌘O, a template…)
+       arms it for a minute, and one note is caught; clicking tabs, or anything else, never is */
+    const intent = () => !!this.plugin.cmdIntent && Date.now() - this.plugin.cmdIntent < 60000;
+    if (!this.plugin.cmdPatched) { const C = /** @type {any} */ (app).commands, plugin = this.plugin; if (C && typeof C.executeCommand === "function") { plugin.cmdPatched = true; const oc = C.executeCommand;
+      C.executeCommand = function (cmd, ...rest) { try { const id = cmd && cmd.id ? String(cmd.id) : ""; if (id && !id.startsWith("ideaverse-maps:") && !id.startsWith("workspace:") && app.workspace.getActiveViewOfType(MapView)) plugin.cmdIntent = Date.now(); } catch { /* never in the way */ } return oc.call(this, cmd, ...rest); };
+      plugin.register(() => { C.executeCommand = oc; plugin.cmdPatched = false; }); } }
+    const wants = (leaf, f) => intent() && !!f && !leaf.ivmCard && f instanceof TFile && f.extension === "md" && !!this.map && !!this.map.openPrimary && !known.has(leaf) && app.workspace.getActiveViewOfType(MapView) === this
       && !(this.plugin.ownOpenT && Date.now() - this.plugin.ownOpenT < 1500) && !(leaf.view && leaf.view.containerEl && this.contentEl.contains(leaf.view.containerEl));
     /* no tug-of-war (0.8.226, Nick: ⌘N "bounces out of the app for a moment"): a brand-new tab about to open a note while the map is in front is caught before it opens,
        so Obsidian never switches to it; the note goes to the map instead and the empty tab goes. Patched once, for every map */
@@ -76,15 +82,15 @@ export class MapView extends ItemView {
       const W = plugin.app.workspace, oSet = W.setActiveLeaf;
       W.setActiveLeaf = function (leaf, ...rest) { const mv = this.getActiveViewOfType(MapView); if (leaf && mv && mv.holdBack && mv.holdBack(leaf)) return; return oSet.call(this, leaf, ...rest); };
       plugin.register(() => { P.openFile = orig; W.setActiveLeaf = oSet; plugin.openPatched = false; }); }
-    this.holdBack = leaf => !leaf.ivmCard && !known.has(leaf) && leaf !== this.leaf && !!leaf.view && leaf.view.getViewType() === "empty" && !(this.plugin.ownOpenT && Date.now() - this.plugin.ownOpenT < 1500);
-    this.catchOpen = (leaf, f) => { if (!wants(leaf, f)) return false; if (!route(f)) return false; window.setTimeout(() => { try { leaf.detach(); } catch { /* gone */ } app.workspace.setActiveLeaf(this.leaf, { focus: true }); }, 0); return true; };
+    this.holdBack = leaf => intent() && !leaf.ivmCard && !known.has(leaf) && leaf !== this.leaf && !!leaf.view && leaf.view.getViewType() === "empty" && !(this.plugin.ownOpenT && Date.now() - this.plugin.ownOpenT < 1500);
+    this.catchOpen = (leaf, f) => { if (!wants(leaf, f)) return false; if (!route(f)) return false; this.plugin.cmdIntent = 0; window.setTimeout(() => { try { leaf.detach(); } catch { /* gone */ } app.workspace.setActiveLeaf(this.leaf, { focus: true }); }, 0); return true; };
     this.registerEvent(app.workspace.on("active-leaf-change", leaf => { const was = prev; prev = leaf;
       if (leaf === this.leaf) { snap(); return; }
-      if (!leaf || was !== this.leaf || known.has(leaf) || !this.map || !this.map.openPrimary) return;
+      if (!intent() || !leaf || was !== this.leaf || known.has(leaf) || !this.map || !this.map.openPrimary) return;
       if (this.plugin.ownOpenT && Date.now() - this.plugin.ownOpenT < 1500) return;
       const tryIt = (k_) => { const v = leaf.view; if (!v || (v.containerEl && this.contentEl.contains(v.containerEl))) return;
         const f = v.getViewType && v.getViewType() === "markdown" ? v.file : null; if (!f) { if (k_ < 6) window.setTimeout(() => tryIt(k_ + 1), 60); return; }
-        if (!route(f)) return; leaf.detach(); app.workspace.setActiveLeaf(this.leaf, { focus: true }); };
+        if (!route(f)) return; this.plugin.cmdIntent = 0; leaf.detach(); app.workspace.setActiveLeaf(this.leaf, { focus: true }); };
       tryIt(0); }));
     if (app.workspace.getActiveViewOfType(MapView) === this) { prev = this.leaf; snap(); } }
   async onClose() { this.unmount(); }
