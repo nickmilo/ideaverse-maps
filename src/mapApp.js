@@ -5219,7 +5219,20 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
     const u = Math.max(-1, Math.min(1, (r_ - mid) * LH / RY)); r.setCssProps({ "--rx": (-60 * (1 - Math.sqrt(1 - u * u))).toFixed(1) + "px", "--rr": (Math.asin(u) * .25).toFixed(4) + "rad" });
     r.createSpan({ cls: "rca", text: ago(N[j].mt) }); r.createSpan({ cls: "rcn", text: N[j].title });
     if (em) r.createSpan({ cls: "rce", text: em }); else { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1 }); }
-    r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); RECKEY = ""; }; }); }
+    r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); RECKEY = ""; }; });
+  /* the background bends with the rows (0.8.240, Nick: "can you curve the Recents background"): both edges follow the arc, drawn as one shape with its hairline border */
+  win.requestAnimationFrame(() => { if (!RECEL || RECEL.hidden) return; const w = RECEL.clientWidth, h = RECEL.clientHeight; if (!w || !h) return;
+    const bxr = box.getBoundingClientRect(), pr = RECEL.getBoundingClientRect(), y0 = bxr.top - pr.top + 6, hc = y0 + mid * LH, sh = y => { const u = Math.max(-1, Math.min(1, (y - hc) / RY)); return 60 * (1 - Math.sqrt(1 - u * u)); };
+    const sMax = Math.max(sh(0), sh(h)), pts = []; for (let y = 0; y <= h; y += 6) pts.push(y); if (pts[pts.length - 1] !== h) pts.push(h);
+    const R = pts.map(y => [w - 1 - sh(y), y]), Lf = pts.slice().reverse().map(y => [1 + sMax - sh(y), y]);
+    const P_ = [...R, ...Lf], rad_ = 12, d = (() => { const n_ = P_.length, at_ = q => P_[(q + n_) % n_]; let out_ = ""; const corners = new Set([0, R.length - 1, R.length, n_ - 1]);   /* round the four corners */
+      for (let q = 0; q < n_; q++) { const [x, y] = at_(q); if (!corners.has(q)) { out_ += (out_ ? " L" : "M") + x.toFixed(1) + " " + y.toFixed(1); continue; }
+        const [px, py] = at_(q - 1), [nx, ny] = at_(q + 1), a1 = Math.hypot(px - x, py - y) || 1, a2 = Math.hypot(nx - x, ny - y) || 1, r1 = Math.min(rad_, a1 / 2), r2 = Math.min(rad_, a2 / 2);
+        const sx_ = x + (px - x) / a1 * r1, sy_ = y + (py - y) / a1 * r1, ex = x + (nx - x) / a2 * r2, ey = y + (ny - y) / a2 * r2; out_ += (out_ ? " L" : "M") + sx_.toFixed(1) + " " + sy_.toFixed(1) + " Q" + x.toFixed(1) + " " + y.toFixed(1) + " " + ex.toFixed(1) + " " + ey.toFixed(1); }
+      return out_ + " Z"; })();
+    let sv = RECEL.querySelector(":scope > svg.rcbg"); if (!sv) { sv = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); sv.setAttribute("class", "rcbg"); sv.setAttribute("aria-hidden", "true"); RECEL.prepend(sv); }
+    sv.setAttribute("width", String(w)); sv.setAttribute("height", String(h)); sv.setAttribute("viewBox", `0 0 ${w} ${h}`); sv.empty(); const pa = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pa.setAttribute("d", d); sv.appendChild(pa);
+    hd.setCssProps({ "--rx": "0px", "padding-left": (sMax - sh(hd.offsetTop + hd.offsetHeight / 2) + 12).toFixed(1) + "px", "padding-right": (sh(hd.offsetTop + hd.offsetHeight / 2) + 12).toFixed(1) + "px" }); }); }
 if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
 cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
