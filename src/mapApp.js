@@ -7421,7 +7421,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   { const l = DI.p.createEl("label", { cls: "pmaps drow editm" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = EDITM; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Edit mode (experimental)" });
     const g = DI.p.createDiv({ cls: "editopts" }); g.hidden = !EDITM;
     const tr = g.createDiv({ cls: "eorow" }); tr.createSpan({ cls: "eol", text: "Editor theme" }); const seg = tr.createDiv({ cls: "seg" });
-    for (const [v, t] of [["obsidian", "Obsidian"], ["map", "Map"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDTH === v) } });
+    for (const [v, t] of [["obsidian", "Obsidian"], ["map", "MOTI"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDTH === v) } });
       b.onclick = e => { e.stopPropagation(); CARDTH = v; save("iv-cardth", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; }
     const or_ = g.createEl("label", { cls: "eorow" }); or_.createSpan({ cls: "eol", text: "Opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
     sl.oninput = () => { CARDOP = +sl.value; ov.setText(CARDOP + "%"); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
@@ -7700,6 +7700,29 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const KEYED = () => { const m_ = new Map(), cs = KEYMAPS().filter(c_ => !QPIN[c_.id]); cs.slice(0, QK.length).forEach((c_, j) => m_.set(QK[j], c_));
       for (const [id, k_] of Object.entries(QPIN)) { const el = MP.querySelector("#" + id); if (el) m_.set(k_, el); } return m_; };
     const KEYMAPS = () => [...MP.querySelectorAll(":scope > .chip")].filter(c_ => !c_.hidden);
+    /* your own order (0.8.190, Nick): drag a map up or down the menu; "Reset order" at the bottom puts them back. The quick keys follow the order (0 and \\ stay pinned) */
+    { const div = MP.querySelector(":scope > .vfold:not(.vfold0)"), exd_ = MP.querySelector(":scope > details"), SEP = "|";
+      const cur = () => [...MP.children].filter(c_ => c_ === div || (c_.classList.contains("chip") && c_.id)).map(c_ => c_ === div ? SEP : c_.id);
+      const endDiv = exd_ && exd_.previousElementSibling && exd_.previousElementSibling.classList.contains("vfold") && exd_.previousElementSibling !== div ? exd_.previousElementSibling : null, END = endDiv || exd_ || null;   /* the divider above Experimental stays put */
+      const apply = ord => { const anchor = END; for (const id of ord) { const el = id === SEP ? div : MP.querySelector(":scope > #" + id); if (el) MP.insertBefore(el, anchor); } };
+      const DEF = cur(); { const o = pref("iv-maporder", null); if (Array.isArray(o) && o.length) { const have = new Set(DEF); apply([...o.filter(x => have.has(x)), ...DEF.filter(x => !o.includes(x))]); } }
+      const keys = () => { if (MP.hidden) return; MP.querySelectorAll(".mkey").forEach(x => x.remove()); for (const [k_, ch] of KEYED()) ch.createSpan({ cls: "mkey", text: k_, attr: { "aria-hidden": "true" } }); };
+      let dragEl = null; const mark = MP.createDiv({ cls: "vdropmark" }); mark.hidden = true;
+      for (const ch of MP.querySelectorAll(":scope > .chip")) { if (!ch.id) continue; ch.draggable = true;
+        ch.addEventListener("dragstart", e => { dragEl = ch; ch.classList.add("vdragging"); if (e.dataTransfer) { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", ch.id); } });
+        ch.addEventListener("dragend", () => { ch.classList.remove("vdragging"); dragEl = null; mark.hidden = true; }); }
+      const spot = e => { const els = [...MP.children].filter(c_ => (c_.classList.contains("chip") && c_.id && c_ !== dragEl) || c_ === div); let best = null;
+        for (const el of els) { const r = el.getBoundingClientRect(); if (e.clientY < r.top + r.height / 2) { best = el; break; } } return best || END; };
+      MP.addEventListener("dragover", e => { if (!dragEl) return; e.preventDefault(); const b = spot(e), pr = MP.getBoundingClientRect(); const r = b ? b.getBoundingClientRect() : null;
+        mark.hidden = false; mark.setCssProps({ "--my": Math.round((r ? r.top : pr.bottom - 40) - pr.top + MP.scrollTop - 1) + "px" }); });
+      MP.addEventListener("drop", e => { if (!dragEl) return; e.preventDefault(); const b = spot(e); MP.insertBefore(dragEl, b); mark.hidden = true; save("iv-maporder", cur()); keys(); rst.hidden = false; });
+      /* Reset order: small, at the very bottom, with a confirmation */
+      const rw = MP.createDiv({ cls: "vreset" }), rst = rw.createEl("button", { cls: "vresetb", text: "Reset order", attr: { type: "button" } }), cf = rw.createDiv({ cls: "vresetc" }); cf.hidden = true;
+      cf.createSpan({ text: "Are you sure you want to return to the default ordering?" }); const yes = cf.createEl("button", { text: "Reset", attr: { type: "button" } }), no = cf.createEl("button", { text: "Cancel", attr: { type: "button" } });
+      rst.hidden = !Array.isArray(pref("iv-maporder", null));
+      rst.onclick = e => { e.stopPropagation(); rst.hidden = true; cf.hidden = false; };
+      no.onclick = e => { e.stopPropagation(); cf.hidden = true; rst.hidden = false; };
+      yes.onclick = e => { e.stopPropagation(); apply(DEF); save("iv-maporder", undefined); cf.hidden = true; rst.hidden = true; keys(); }; }
     const chipFor = () => { const id = { gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", lincal: "golincal", spiral: "gospiral", lifeline: "golifeline",
         tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" ? "gocso" : CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
       return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };

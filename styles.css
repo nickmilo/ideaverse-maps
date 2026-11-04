@@ -1578,3 +1578,15 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 /* Posters lanes: "only" on hover (0.8.189, was ⌥/⌘-click) */
 .ivm .pchip .ponly{display:none;font-style:normal;font-size:10px;margin-left:6px;color:var(--accent);text-decoration:underline;cursor:pointer}
 .ivm .pchip:hover .ponly{display:inline}
+/* Maps menu: your own order (0.8.190) */
+.ivm #vmorepop > .chip[draggable="true"]{cursor:grab}
+.ivm #vmorepop > .chip.vdragging{opacity:.4}
+.ivm #vmorepop .vdropmark{position:absolute;left:10px;right:10px;top:var(--my,0);height:2px;border-radius:2px;background:var(--accent);pointer-events:none;z-index:2}
+.ivm #vmorepop .vdropmark[hidden]{display:none}
+.ivm #vmorepop .vreset{display:flex;justify-content:flex-end;padding:2px 4px 0}
+.ivm #vmorepop .vresetb{appearance:none;background:none;border:0;box-shadow:none;padding:2px 4px;height:auto;font:500 10.5px var(--body);color:var(--muted);cursor:pointer}
+.ivm #vmorepop .vresetb:hover{color:var(--ink);text-decoration:underline}
+.ivm #vmorepop .vresetb[hidden],.ivm #vmorepop .vresetc[hidden]{display:none}
+.ivm #vmorepop .vresetc{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font:500 11px var(--body);color:var(--ink);padding:4px 2px}
+.ivm #vmorepop .vresetc span{flex:1 1 100%}
+.ivm #vmorepop .vresetc button{height:auto;padding:3px 10px;font:600 11px var(--body);border-radius:999px}
