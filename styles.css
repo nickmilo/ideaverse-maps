@@ -1654,7 +1654,16 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .thorb[data-th="starfield"] i,.ivm #themeseg button[data-th="starfield"] i{background:radial-gradient(circle at 70% 30%,rgba(255,143,192,.9) 0 2px,transparent 4px),radial-gradient(circle at 30% 70%,#fff 0 1px,transparent 1.5px),#06070f;box-shadow:inset 0 0 0 1px #3a2f5c}
 /* its editor: a nebula glow in the corners and a few stars behind the note */
 .ivm-card.sf-th{background-image:radial-gradient(420px 300px at 108% -6%,rgba(255,122,182,.20),transparent 70%),radial-gradient(360px 280px at -10% 104%,rgba(255,170,80,.12),transparent 70%),radial-gradient(1px 1px at 52px 180px,rgba(255,240,220,.7),transparent),radial-gradient(1px 1px at 88% 56%,rgba(255,240,220,.5),transparent),radial-gradient(1.5px 1.5px at 38% 76%,rgba(185,166,255,.7),transparent),radial-gradient(1px 1px at 93% 86%,rgba(255,240,220,.45),transparent)}
-.ivm-card.sf-th .inline-title,.ivm-card.sf-th h1,.ivm-card.sf-th .HyperMD-header-1{text-shadow:0 0 24px rgba(255,122,182,.45)}
+/* headings (0.8.229, from the mockup Nick signed off): near-white, with a glow of color at the top left of the first letter and, a third softer, the bottom right of the last.
+   H1 and the title gold, H2 purple, H3 blue, H4 green, H5 pink; H6 stays the small-caps label */
+.ivm-card.sf-th :is(.inline-title,h1,.cm-header-1){--hg:#ffcf5a;--hb:#fbf6ee}
+.ivm-card.sf-th :is(h2,.cm-header-2){--hg:#c9a2ff;--hb:#f6f3fd}
+.ivm-card.sf-th :is(h3,.cm-header-3){--hg:#6fd3ff;--hb:#f3f8fd}
+.ivm-card.sf-th :is(h4,.cm-header-4){--hg:#5fe0a8;--hb:#f2fbf6}
+.ivm-card.sf-th :is(h5,.cm-header-5){--hg:#ff8fc0;--hb:#fbf3f7}
+.ivm-card.sf-th :is(.inline-title,h1,h2,h3,h4,h5,.cm-header-1,.cm-header-2,.cm-header-3,.cm-header-4,.cm-header-5){color:var(--hb);-webkit-text-fill-color:transparent;background-image:radial-gradient(2.3em 1.25em at 0 0,var(--hg),transparent 80%),radial-gradient(2.3em 1.25em at 100% 78%,color-mix(in srgb,var(--hg) 67%,transparent),transparent 80%),linear-gradient(var(--hb),var(--hb));-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 9px color-mix(in srgb,var(--hg) 24%,transparent))}
+.ivm-card.sf-th :is(.inline-title,h1,h2,h3,h4,h5){width:fit-content;max-width:100%}
+.ivm-card.sf-th :is(h1,h2,h3,h4,h5) :is(a,span,em,strong,code){-webkit-text-fill-color:currentColor}
 .ivm-card.sf-th h6,.ivm-card.sf-th .HyperMD-header-6,.ivm-card.sf-th .cm-header-6{font-family:var(--font-monospace);font-size:.8em;letter-spacing:.12em;text-transform:uppercase}
 .ivm-card.sf-th .metadata-container{background:rgba(20,16,38,.72);border:1px solid rgba(185,166,255,.18);border-radius:10px;padding:8px 12px}
 .ivm-card.sf-th .metadata-property-key,.ivm-card.sf-th .metadata-property-key-input{font-family:var(--font-monospace);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#a59fc4}

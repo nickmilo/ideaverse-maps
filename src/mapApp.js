@@ -5342,7 +5342,7 @@ const PVN_ = () => PVL[PVLV];
 const CARDMAPS = new Set(["stars", "emergence", "spacetime", "compass", "arena"]);
 const edOn = () => EDITM && !!host.editCard && !isPhone();   // every map since 0.8.68 (Nick); maps you turn keep their camera (edCam)
 const edCam = () => !(S3D_ON() || sphOn() || domeOn() || geo3On() || csphOn() || (typeof globeOn === "function" && globeOn()));
-let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84;   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
+let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84, CARDFS = Math.max(70, Math.min(120, +pref("iv-cardfs", 100) || 100));   /* CARDFS: the editors' text size, % of Obsidian's (0.8.229, Nick) */   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
 // Editor theme → Map: Obsidian works out its colors once, on the page body (--background-primary: var(--color-base-00)…), so a dark or light
 // class alone changes nothing; each editor re-declares those body colors itself, so they resolve with its own dark or light base colors
 let BODYV = null;
@@ -5370,6 +5370,7 @@ function edLook(el){ const th = root.dataset.theme, dark = th === "lyt" || th ==
   const bv = bodyVars(); el.setCssProps(Object.fromEntries(Object.keys(bv).map(nm => [nm, m ? bv[nm] : ""])));
   const cs = win.getComputedStyle(root), g = nm => cs.getPropertyValue(nm).trim(), V = EDV(g("--bg"), g("--panel"), g("--ink"), g("--muted"), g("--line"), g("--accent"), g("--accent-soft"));
   el.setCssProps(Object.fromEntries(Object.keys(V).map(nm => [nm, m ? V[nm] : ""])));
+  { const bs = parseFloat(win.getComputedStyle(doc.body).getPropertyValue("--font-text-size")) || 16; el.setCssProps({ "--font-text-size": CARDFS === 100 ? "" : (bs * CARDFS / 100).toFixed(1) + "px" }); }
   el.setCssProps({ "--cardop": CARDOP + "%", "--upp": g("--upp"), "--rel": g("--rel"), "--up": g("--up"), "--down": g("--down"), "--prop": g("--prop") });
   /* the Starfield theme's editor (0.8.224, from Nick's Nebula mockup): pink for the chrome (no link line uses it), headings in nebula colors, H6 as small capitals,
      properties in a dark panel with mono labels, and every link in its relation's color (edTint) */
@@ -7608,6 +7609,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       b.onclick = e => { e.stopPropagation(); CARDTH = v; save("iv-cardth", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; }
     const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
     sl.oninput = () => { CARDOP = +sl.value; ov.setText(CARDOP + "%"); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
+    /* Editor text size (0.8.229, Nick: "a little large… a slider to make it smaller"): 70–120% of Obsidian's text size; double-click it for 100% */
+    const fr_ = g.createDiv({ cls: "drow eorow tchoice" }); fr_.createSpan({ cls: "eol", text: "Editor text size" }); const fs = fr_.createEl("input", { type: "range", attr: { min: "70", max: "120", step: "5" } }); fs.value = String(CARDFS); const fv = fr_.createSpan({ cls: "eov", text: CARDFS + "%" });
+    const fsSet = v => { CARDFS = v; fs.value = String(v); fv.setText(v + "%"); for (const o of Object.values(EDS)) { edLook(o.el); if (o.ed) o.ed.resize(); } };
+    fs.oninput = () => fsSet(+fs.value); fs.onchange = () => save("iv-cardfs", CARDFS); fs.onclick = e => e.stopPropagation(); fs.ondblclick = e => { e.stopPropagation(); fsSet(100); save("iv-cardfs", 100); };
     { const r_ = g.createDiv({ cls: "drow eorow tchoice", attr: { "aria-description": "Small read-only glimpses of notes: in Starfield its biggest hubs, in Compass the closest notes" } }); r_.createSpan({ cls: "eol", text: "Note mini-previews" }); const seg = r_.createDiv({ cls: "seg" });
       for (const [v, t_] of [["off", "Off"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(PVLV === v) } });
         b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
