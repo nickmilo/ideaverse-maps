@@ -5538,8 +5538,31 @@ function orbFlash(p){ win.setTimeout(() => { const j = TABS.findIndex(t => t.pat
 function edCloseTab(){ const o = EDS.left; if (o.path) { CLOSED.push(o.path); if (CLOSED.length > 30) CLOSED.shift(); } if (TABS[TCUR] && TABS[TCUR].path === o.path) { tabClose(TCUR); if (!TABS.length || EDS.left.el.hidden) { select(-1); panBack(); } } else { o.close(); panBack(); } }
 function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
   TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); arenaSync(); syncNav(); }
-function sfShip(on){ if (on) { if (view !== "stars" || SFSHIP) return; SFSHIP = { ckw: CKW }; CKW = "sf"; CK.sfIn = false; closePops(); setView("cockpit"); }
-  else { if (!SFSHIP) return; const c = CK.c; CKW = SFSHIP.ckw; SFSHIP = null; setView("stars"); if (c >= 0 && vis[c]) win.setTimeout(() => { if (!dead) { select(c); navTo(c); } }, 60); }
+/* the trip between them (0.8.223, Nick: "zooms in and maybe orbits and arcs into position"): a faux flight. Boarding, the chart dives at the note along a gentle arc
+   while the dark of space closes in, and the Starship opens on it with its warp; leaving, the Starship fades and the chart starts close on the star you were at and pulls back out */
+const sfVeil = (() => { const v = $("#main").createDiv({ cls: "ivm-sfveil" }); v.hidden = true; return v; })();
+const veilTo = (a, ms) => { sfVeil.hidden = false; sfVeil.style.transition = `opacity ${ms}ms ease`; void sfVeil.offsetWidth; sfVeil.style.opacity = String(a); if (!a) win.setTimeout(() => { if (sfVeil.style.opacity === "0") sfVeil.hidden = true; }, ms + 30); };
+let SFTRIP = 0;
+function sfCam(from, to, ms, ease, arc, done){ const id = ++SFTRIP, t0 = performance.now(), lk0 = Math.log(from.k), lk1 = Math.log(to.k), tok = -1e6 - id; camBusy = tok;
+  const step = now => { if (id !== SFTRIP || dead) { if (camBusy === tok) camBusy = 0; return; } const p = Math.min(1, (now - t0) / ms), e = ease(p);
+    const kk = Math.exp(lk0 + (lk1 - lk0) * e), cx = from.cx + (to.cx - from.cx) * e + arc[0] * Math.sin(Math.PI * e), cy = from.cy + (to.cy - from.cy) * e + arc[1] * Math.sin(Math.PI * e);   /* the screen point the world spot (from.wx, wy) sits at, bowed sideways: the arc */
+    const wx = from.wx + (to.wx - from.wx) * e, wy = from.wy + (to.wy - from.wy) * e; k = kk; tx = cx - wx * kk; ty = cy - wy * kk; render();
+    if (p < 1) RAF(step); else { if (camBusy === tok) camBusy = 0; if (done) done(); } };
+  RAF(step); }
+function sfShip(on){ const [fl, fr] = freeLR(), mx = (fl + fr) / 2, my = (isPhone() ? H * .48 : H) / 2;
+  if (on) { if (view !== "stars" || SFSHIP) return; closePops(); const i = sel >= 0 && vis[sel] ? sel : ckCentre(); SFSHIP = { ckw: CKW, cam: { k, tx, ty } };
+    const board = () => { if (!SFSHIP) return; CKW = "sf"; CK.sfIn = false; setView("cockpit"); win.setTimeout(() => { veilTo(0, 520); sfSwSync(); }, 120); };
+    if (i < 0 || S3D) { veilTo(1, 260); win.setTimeout(board, 280); return; }
+    const sx0 = X[i] * k + tx, sy0 = Y[i] * k + ty, side = sx0 < mx ? 1 : -1;
+    sfCam({ k, cx: sx0, cy: sy0, wx: X[i], wy: Y[i] }, { k: Math.min(60, k * 16), cx: mx, cy: my, wx: X[i], wy: Y[i] }, 820, p => p * p * (3 - 2 * p) * (.35 + .65 * p), [side * Math.min(160, (fr - fl) * .12), -60], board);
+    win.setTimeout(() => veilTo(1, 380), 430); }
+  else { if (!SFSHIP) return; const c = CK.c, back = SFSHIP.cam; veilTo(1, 240);
+    win.setTimeout(() => { CKW = SFSHIP ? SFSHIP.ckw : CKW; SFSHIP = null; setView("stars"); sfSwSync();
+      const land = (t_) => { if (dead) return; if (morphing && t_ < 30) { win.setTimeout(() => land(t_ + 1), 50); return; }
+        if (!(c >= 0 && vis[c])) { veilTo(0, 400); return; } select(c); const k1 = back ? back.k : k, k0 = Math.min(60, k1 * 16);
+        k = k0; tx = mx - X[c] * k0; ty = my - Y[c] * k0; render(); veilTo(0, 700);
+        sfCam({ k: k0, cx: mx, cy: my, wx: X[c], wy: Y[c] }, { k: k1, cx: mx, cy: my, wx: X[c], wy: Y[c] }, 1100, p => 1 - Math.pow(1 - p, 3), [0, 0], null); };
+      win.setTimeout(() => land(0), 40); }, 260); }
   win.setTimeout(sfSwSync, 0); }
 const sfSw = (() => { const w = $("#main").createDiv({ cls: "ivm-sfsw seg" }); w.hidden = true;
   for (const [m, t] of [["chart", "Chart"], ["ship", "Starship"]]) { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); sfShip(m === "ship"); }; }
