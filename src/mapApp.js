@@ -5473,11 +5473,11 @@ if (host.onCardLink) host.onCardLink((path, mode) => { const i = PIDX.get(path);
 // the current tab's note (unless it's pinned: then the note opens as the support note); Shift-click, on the map or on a link in an editor,
 // opens a new tab. The orbs sit along the top of the map; hover one for its name; Display → Edit mode → Show orbs (tabs), Show orb names.
 let TABS = (() => { const t = pref("iv-tabs", null); return Array.isArray(t) ? t.filter(x => x && typeof x.path === "string").map(x => ({ path: x.path, pin: !!x.pin })) : []; })();
-let TCUR = Math.min(Math.max(0, pref("iv-tabcur", 0) | 0), Math.max(0, TABS.length - 1)), TABNEW = false;
+let TCUR = (pref("iv-tabcur", 0) | 0) === -1 ? -1 : Math.min(Math.max(0, pref("iv-tabcur", 0) | 0), Math.max(0, TABS.length - 1)), TABNEW = false;   /* -1: no orb is current (you clicked away), so the next note gets an orb of its own (0.8.192) */
 let ORBS = pref("iv-orbs", true) !== false, ORBN = pref("iv-orbn", false) === true;
 const tabsSave = () => { save("iv-tabs", TABS); save("iv-tabcur", TCUR); };
 function tabTake(i){ const p = N[i].path, nw = TABNEW; TABNEW = false; const cur = TABS[TCUR];
-  if (!cur) { TABS.push({ path: p }); TCUR = TABS.length - 1; }
+  if (!cur) { const ex = TABS.findIndex(t => t.path === p); if (ex >= 0) TCUR = ex; else { TABS.push({ path: p }); TCUR = TABS.length - 1; } }
   else if (cur.path === p) return syncOrbs();
   else if (cur.pin && !nw) return syncOrbs();   // pinned: the note stays and the pick opens as the support note, even one open in another tab (0.8.60, Nick)
   else { const ex = TABS.findIndex(t => t.path === p);
@@ -5493,7 +5493,7 @@ function tabGo(j){ const t = TABS[j]; if (!t) return; const i = PIDX.get(t.path)
   if (j !== TCUR && TABS[TCUR] && TABS[TCUR].pin) { void EDS.right.open(i); return; }
   TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }
 function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j === TCUR; if (j < TCUR) TCUR--;
-  TCUR = Math.max(0, Math.min(TCUR, TABS.length - 1)); tabsSave();
+  if (TCUR >= 0 || was) TCUR = Math.max(0, Math.min(TCUR, TABS.length - 1)); tabsSave();
   if (was) { if (TABS[TCUR]) tabGo(TCUR); else { EDS.center.close(); EDS.left.close(); } } syncOrbs(); }
 const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; win.setTimeout(() => { if (!dead) syncOrbs(); }, 0);   // saved tabs show from the start
 let orbKey = "", orbDragged = false;
@@ -5523,7 +5523,7 @@ function syncOrbs(){ for (const o of [EDS.center, EDS.left]) if (o.pb) { const o
           orbDragged = true; win.setTimeout(() => { orbDragged = false; }, 0); b.classList.remove("drag"); b.setCssProps({ "--odx": "0px" });
           const order = [...orbBar.querySelectorAll(".ivm-orb")].map(o => o.dataset.i == null ? -1 : +o.dataset.i), cur = TABS[TCUR];
           if (order.every((v, q) => v === q)) { orbKey = ""; syncOrbs(); return; }
-          TABS = order.map(q => TABS[q]).filter(Boolean); TCUR = Math.max(0, TABS.indexOf(cur)); tabsSave(); orbKey = ""; syncOrbs(); };
+          TABS = order.map(q => TABS[q]).filter(Boolean); TCUR = cur ? Math.max(0, TABS.indexOf(cur)) : -1; tabsSave(); orbKey = ""; syncOrbs(); };
         win.addEventListener("pointermove", mv, true); win.addEventListener("pointerup", upf, true); win.addEventListener("pointercancel", upf, true); }); }); }
   placeOrbs(); }
 function placeOrbs(){ if (orbBar.hidden) return; const L = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 12, R = (!EDS.right.el.hidden ? edRect("right").x : W - sideW()) - 12;
@@ -5570,6 +5570,7 @@ function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap 
 cv.addEventListener("pointerdown", () => { if (CK.edit && CK.edit.host === pvLayer) ckEditClose(); });   /* a click on the map finishes a Compass edit */
 function select(i, fromTrail){
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
+  else if (!LIVEQ && i < 0 && edOn() && TABS[TCUR] && !TABS[TCUR].pin) { TCUR = -1; tabsSave(); syncOrbs(); }   /* clicking away lets go of the orb: it stays, and the next note you pick opens in a new one (0.8.192, Nick) */
   if (view === "compass" && !LIVEQ) win.setTimeout(cmpSync, 0);
   if (view === "arena" && !LIVEQ) win.setTimeout(arenaSync, 0);
   if (view === "cockpit" && !LIVEQ) win.setTimeout(ckSync, 0);
