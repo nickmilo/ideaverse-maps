@@ -7816,6 +7816,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     /* and everything inside a menu too (0.8.214, Nick hovered "Show the way home" and got Obsidian's pop-up): any aria-label or title under the pointer turns quiet before Obsidian or the system can show it */
     const POP = '.mspop, .tbpop, [role="dialog"]', hush = el => { const t_ = el.getAttribute("title"); if (t_ != null) { if (!el.getAttribute("aria-description")) el.setAttribute("aria-description", t_); el.removeAttribute("title"); } if (el.hasAttribute("aria-label")) quiet(el); };
     root.querySelectorAll(MENU).forEach(quiet); on(root, "pointerover", e => { if (!(e.target instanceof Element)) return; const el = e.target.closest(MENU); if (el && root.contains(el)) quiet(el);
+    /* and on everything of the map's that sits outside it (0.8.249, Nick, "for the 1000th time"): the editors' headers and buttons, Recents, the edge tabs, the previews.
+       Obsidian turns an aria-label into its beige tooltip and the system turns a title into its own; both go quiet the moment the pointer arrives */
+    const OUT = ".ivm-card, .ivm-recents, .ivm-orbs, .dtab, .ivm-sfsw", hushAll = el => { if (el.hasAttribute("title")) { if (!el.getAttribute("aria-description")) el.setAttribute("aria-description", el.getAttribute("title")); el.removeAttribute("title"); }
+      if (el.hasAttribute("aria-label")) { if (!el.getAttribute("aria-description")) el.setAttribute("aria-description", el.getAttribute("aria-label")); el.removeAttribute("aria-label"); } };
+    on(doc, "pointerover", e => { if (!(e.target instanceof Element)) return; const box_ = e.target.closest(OUT); if (!box_ || box_.closest(".markdown-source-view, .markdown-reading-view, .cm-editor, .metadata-container")) return;
+      for (let x = e.target; x && x !== box_.parentElement; x = x.parentElement) { if (x.closest(".cm-editor, .markdown-reading-view, .metadata-container")) break; hushAll(x); } }, true);
+    for (const el of doc.querySelectorAll(".ivm-card [aria-label], .ivm-card [title], .dtab[aria-label], .dtab[title]")) if (!el.closest(".cm-editor, .markdown-reading-view, .metadata-container")) hushAll(el);
       if (e.target.closest(POP)) for (let x = e.target; x && x !== root && !x.matches(POP); x = x.parentElement) if (x.hasAttribute("aria-label") || x.hasAttribute("title")) hush(x); }, true); }
   // Capture: a picture (PNG) or a short clip (MP4, or WebM where MP4 can't be recorded) of the map, saved to the vault's attachments,
   // then a small card to copy it, open it, or post it with a ready caption
