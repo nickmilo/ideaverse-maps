@@ -2,6 +2,7 @@ import { Plugin, TFile, normalizePath } from "obsidian";
 import { MapView, VIEW_TYPE } from "./view.js";
 import { registerBases } from "./bases.js";
 import { registerEmbeds } from "./embed.js";
+import { registerDevLayout } from "./devlayout.js";
 import { MapsSettingTab, detectDefaults } from "./settings.js";
 import { DEFAULTS, EXTRACT_VERSION, scanVault } from "./scan.js";
 
@@ -28,6 +29,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
     this.addCommand({ id: "rescan", name: "Rescan the vault", callback: () => { void this.rescan(); } });
     this.addSettingTab(new MapsSettingTab(this.app, this));
     registerBases(this);   // the map as a view inside any base (Obsidian 1.10+)
+    registerDevLayout(this);   // ⌘⌥⌃K: move any map anywhere in the maps menu (0.8.205)
     registerEmbeds(this);   // a map inside a note: a ```moti code block, or ![[name.moti]] (0.8.171)
 
     // offer a rescan when notes change (watched only once the vault has loaded, so startup doesn't count)

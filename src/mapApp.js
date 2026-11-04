@@ -5412,7 +5412,7 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
     b.onclick = e => { e.stopPropagation(); o.open_ = o.open_ === key ? "" : key; fillStrip(o, i); }; };
   // Nick's order (0.8.42; in before out since 0.8.46; above and below inside the rank since 0.8.47): level, up, related | in, out | the rank; the rank's pill opens the score, how it adds up, and why
   const bar = () => o.strip.createSpan({ cls: "sbar" });
-  if (L.up.length) chip("up", `${L.up.length} up`, "spill"); if (L.related.length) chip("related", `${L.related.length} related`, "spill");
+  if (L.up.length) chip("up", `${L.up.length} up`, "spill sup"); if (L.related.length) chip("related", `${L.related.length} related`, "spill srel");   /* tinted like the note panel's Uplinks and Related (0.8.205, Nick) */
   bar(); chip("in", `${d.body_in} in`, "spill"); chip("out", `${d.body_out} out`, "spill");
   bar();
   const rk = scoreRank(i); chip("score", rk ? `#${rk.toLocaleString()}` : d.score.toFixed(1), "spill sscore");
@@ -5444,7 +5444,7 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
       } }
     return; }
   const list = o.open_ ? L[o.open_] || [] : []; o.drop.hidden = !list.length; if (!list.length) { o.open_ = ""; return; }
-  o.drop.createDiv({ cls: "sdh", text: `${o.open_.toUpperCase()} · ${list.length}` }); const rows = o.drop.createDiv({ cls: "sdl" });
+  o.drop.createDiv({ cls: "sdh" + (o.open_ === "up" ? " sdh-up" : o.open_ === "related" ? " sdh-rel" : ""), text: `${o.open_.toUpperCase()} · ${list.length}` }); const rows = o.drop.createDiv({ cls: "sdl" });
   for (const j of list) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
     r.onclick = e => { e.stopPropagation(); if (!openAs(j, openKind(e))) select(j); }; } }
 // the main editor's history: back and forward move through it without adding to it; a pinned editor keeps its note, so they wait
