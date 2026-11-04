@@ -5251,7 +5251,7 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
     let sv = RECEL.querySelector(":scope > svg.rcbg"); if (!sv) { sv = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); sv.setAttribute("class", "rcbg"); sv.setAttribute("aria-hidden", "true"); RECEL.prepend(sv); }
     sv.setAttribute("width", String(w)); sv.setAttribute("height", String(h)); sv.setAttribute("viewBox", `0 0 ${w} ${h}`); sv.empty(); const pa = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pa.setAttribute("d", d); sv.appendChild(pa);
     const pb = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pb.setAttribute("d", brk); pb.setAttribute("class", "rcbrk"); sv.appendChild(pb);
-    hd.setCssProps({ "--rx": "0px", "--rpl": (sMax - sh(hd.offsetTop + hd.offsetHeight / 2) + 16).toFixed(1) + "px", "--rpr": "16px" }); }); }
+    hd.setCssProps({ "--rx": "0px", "--rpl": (Math.max(16, xl(T) + 14)).toFixed(1) + "px", "--rpr": "16px", "--rh": Math.atan2(m - T, xr(m) - xl(T)).toFixed(4) + "rad" });   /* the title banner tilts with the top edge (0.8.250, Nick) */ }); }
 if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
 cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
