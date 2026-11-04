@@ -6067,22 +6067,25 @@ $("#efx").onclick = closeEff; $("#effbtn").hidden = !EFF.length;
 /* Link by dragging (0.8.185, Nick: "option drag… pulling the link of a note from the graph"): hold ⌥ (Alt) and drag a note.
    Drop it in any editor and its [[link]] lands where you let go. Drop it on another note's dot and it goes into that note's related property;
    hold Control (at the start or as you drop) and it goes into up instead. */
-let LDRAG = -1, LDCTRL = false, LDROP = -1, LDGHOST = null;
+let LDRAG = -1, LDCTRL = false, LDROP = -1, LDGHOST = null, LDDONE = false, LDSRC = -1;
 const ldOK = () => !["cockpit", "arena", "kandinsky"].includes(view) && !!host.addLink;
 cv.addEventListener("pointerdown", e => { if (e.button !== 0 || !(e.altKey || e.ctrlKey) || e.metaKey || !ldOK()) return; const i = pick(e.offsetX, e.offsetY); if (i < 0) return;
   LDRAG = i; LDCTRL = e.ctrlKey; cv.draggable = true; e.stopImmediatePropagation(); }, { capture: true });
 cv.addEventListener("pointerup", () => { if (LDRAG >= 0 && cv.draggable) { cv.draggable = false; LDRAG = -1; } }, { capture: true });
 cv.addEventListener("contextmenu", e => { if (LDRAG >= 0) e.preventDefault(); }, { capture: true });   /* Control-click on a Mac is a right-click */
 cv.addEventListener("dragstart", e => { if (LDRAG < 0 || !e.dataTransfer) { e.preventDefault(); return; } const i = LDRAG;
-  e.dataTransfer.setData("text/plain", wl(i)); e.dataTransfer.setData("application/x-ivm-note", N[i].path); e.dataTransfer.effectAllowed = "copyLink";
+  e.dataTransfer.setData("text/plain", wl(i)); e.dataTransfer.setData("application/x-ivm-note", N[i].path); e.dataTransfer.effectAllowed = "all"; LDDONE = false; LDSRC = i;
   LDGHOST = doc.body.createDiv({ cls: "ivm-ldghost", text: "🔗 " + N[i].title }); e.dataTransfer.setDragImage(LDGHOST, -8, -8); });
-cv.addEventListener("dragend", () => { cv.draggable = false; LDRAG = -1; LDROP = -1; if (LDGHOST) { LDGHOST.remove(); LDGHOST = null; } draw(); });
+cv.addEventListener("dragend", e => { /* if the system refused the drop over a note on the map, do it anyway: the pointer says where it ended */
+  if (!LDDONE && LDSRC >= 0 && e.dataTransfer && e.dataTransfer.dropEffect === "none") { const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top; if (px >= 0 && py >= 0 && px <= r.width && py <= r.height && doc.elementFromPoint(e.clientX, e.clientY) === cv) { const t = pick(px, py); if (t >= 0 && t !== LDSRC) ldLink(t, LDSRC, LDCTRL || e.ctrlKey); } }
+  LDSRC = -1; cv.draggable = false; LDRAG = -1; LDROP = -1; if (LDGHOST) { LDGHOST.remove(); LDGHOST = null; } draw(); });
 cv.addEventListener("dragover", e => { if (!e.dataTransfer || !e.dataTransfer.types.includes("application/x-ivm-note")) return; const t = pick(e.offsetX, e.offsetY), ok = t >= 0 && t !== LDRAG;
-  if (ok) { e.preventDefault(); e.dataTransfer.dropEffect = "link"; } const nt = ok ? t : -1; LDCTRL = LDCTRL || e.ctrlKey; if (nt !== LDROP || LDCTRL !== e.ctrlKey) { LDROP = nt; draw(); } });
+  if (ok) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }   /* copy, not link: on a Mac, holding ⌥ forces a copy, and a "link" drop was refused (0.8.186, Nick: the note glided back) */ const nt = ok ? t : -1; LDCTRL = LDCTRL || e.ctrlKey; if (nt !== LDROP || LDCTRL !== e.ctrlKey) { LDROP = nt; draw(); } });
 cv.addEventListener("dragleave", () => { if (LDROP >= 0) { LDROP = -1; draw(); } });
+function ldLink(t, j, up){ LDDONE = true; LDCTRL = false;
+  void host.addLink(N[t].path, N[j].path, up ? "up" : "related").then(r => { new Notice(r === "dup" ? `${N[j].title} is already in ${N[t].title}'s ${up ? "up" : "related"}.` : r ? `Linked: ${N[j].title} → ${N[t].title}'s ${up ? "up" : "related"}` : `Couldn't add the link.`); }); }
 cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.dataTransfer.getData("application/x-ivm-note"); if (!p) return; e.preventDefault(); const t = pick(e.offsetX, e.offsetY), j = PIDX.get(p);
-  LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; const up = LDCTRL || e.ctrlKey; LDCTRL = false;
-  void host.addLink(N[t].path, N[j].path, up ? "up" : "related").then(r => { new Notice(r === "dup" ? `${N[j].title} is already in ${N[t].title}'s ${up ? "up" : "related"}.` : r ? `Linked: ${N[j].title} → ${N[t].title}'s ${up ? "up" : "related"}` : `Couldn't add the link.`); }); });
+  LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 function drawLdrop(){ if (LDROP < 0 || !VV(LDROP)) return; const x = sx(X[LDROP]), y = sy(Y[LDROP]), r = rad(LDROP) + 10; ctx.save(); ctx.strokeStyle = css.accent; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
   const t = `→ ${LDCTRL ? "up" : "related"} of ${N[LDROP].title}`; ctx.font = `600 12px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const w_ = ctx.measureText(t).width + 16; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - w_ / 2, y - r - 30, w_, 22, 11); ctx.fill(); ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = css.accent; ctx.fillText(t, x, y - r - 13); ctx.restore(); }   /* above the dot, clear of its name */
