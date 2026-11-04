@@ -6112,7 +6112,7 @@ $("#efx").onclick = closeEff; $("#effbtn").hidden = !EFF.length;
    Drop it in any editor and its [[link]] lands where you let go. Drop it on another note's dot and it goes into that note's related property;
    hold Control (at the start or as you drop) and it goes into up instead. */
 /* where a link dropped on a note goes (0.8.189, Nick: to try them out, then keep one): its related property, the top of the note, the top as a bullet, or the bottom. Control still sends it to up */
-let LDPOS = pref("iv-ldpos", "") === "bullet" ? "bullet" : "head";   /* two left (0.8.197, Nick): • Top, or under its own small heading (the default); ⌥⌃ still sends it to up */
+const LDPOS = "head";   /* a dropped link goes under its own small heading at the top; the only choice since 0.8.209 (Nick), so the Display row is gone. ⌥⌃ still sends it to up */
 const LDPOS_T = { bullet: "top, as a bullet", head: "top, under its heading" };
 let LDRAG = -1, LDCTRL = false, LDROP = -1, LDGHOST = null, LDDONE = false, LDSRC = -1;
 const ldOK = () => view !== "cockpit" && !!host.addLink;
@@ -7498,9 +7498,6 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const r_ = g.createDiv({ cls: "eorow" }); r_.createSpan({ cls: "eol", text: "Previews" }); const seg = r_.createDiv({ cls: "seg" });
       for (const [v, t_] of [["off", "Off"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(PVLV === v) } });
         b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
-    { const r_ = g.createDiv({ cls: "eorow" }); r_.createSpan({ cls: "eol", text: Platform.isMacOS ? "⌥-drop" : "Alt-drop" }); const seg = r_.createDiv({ cls: "seg" });
-      for (const [v, t_] of [["bullet", "• Top"], ["head", "H6 • Top"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(LDPOS === v), "aria-label": "A link dropped on a note goes to its " + LDPOS_T[v] } });
-        b.onclick = e => { e.stopPropagation(); LDPOS = v; save("iv-ldpos", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); }; } }
     sw("Show orbs (tabs)", () => ORBS, v => { ORBS = v; save("iv-orbs", v); const n_ = g.querySelector(".orbnsw"); if (n_) n_.hidden = !v; syncOrbs(); });
     sw("Show orb names", () => ORBN, v => { ORBN = v; save("iv-orbn", v); syncOrbs(); }); { const ls = g.querySelectorAll(".eosw"); const l_ = ls[ls.length - 1]; l_.classList.add("orbnsw", "sub"); l_.hidden = !ORBS; }
     g.createDiv({ cls: "eonote", text: "Previews: small read-only glimpses of notes, in Starfield (its biggest hubs) and Compass (the closest notes). ⌘-click a note to open it in a new tab (an orb); ⌘⌥-click opens it as the support note on the right. Pin the editor to keep its note: what you pick then opens as the support note." });
