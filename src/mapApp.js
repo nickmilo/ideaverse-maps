@@ -5365,10 +5365,12 @@ const EDV = (bg, panel, ink, muted, line, acc, accS) => { const faint = `color-m
     "--code-background": panel, "--code-normal": ink, "--blockquote-border-color": acc, "--hr-color": line, "--checkbox-color": acc, "--checkbox-border-color": muted, "--list-marker-color": muted,
     "--tag-color": acc, "--tag-background": accS, "--tag-color-hover": acc, "--tag-background-hover": accS, "--pill-color": muted, "--pill-border-color": line, "--metadata-label-text-color": muted, "--metadata-input-text-color": ink,
     "--table-border-color": line, "--table-header-background": panel, "--callout-border-opacity": ".25", "--scrollbar-thumb-bg": `color-mix(in srgb,${muted} 35%,transparent)` }; };
-function edLook(el){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || th === "starfield" || (th === "obsidian" && doc.body.classList.contains("theme-dark")), m = CARDTH === "map" && th !== "obsidian";
+/* Editor theme → Starfield (0.8.232, Nick): the Starfield look in the editors whatever the map wears; its palette, as on .ivm[data-theme="starfield"] */
+const SFPAL = { "--bg": "#06070f", "--panel": "#0e0c1d", "--ink": "#e4e2f5", "--muted": "#a59fc4", "--line": "#231f3d", "--accent": "#ff8fc0", "--accent-soft": "rgba(255,143,192,.14)", "--upp": "#ffcf5a", "--rel": "#c9a2ff", "--up": "#6fd3ff", "--down": "#5fe0a8", "--prop": "#a9b4c8" };
+function edLook(el){ const SFE = CARDTH === "starfield", th = SFE ? "starfield" : root.dataset.theme, dark = th === "lyt" || th === "dark" || th === "starfield" || (th === "obsidian" && doc.body.classList.contains("theme-dark")), m = SFE || (CARDTH === "map" && th !== "obsidian");
   el.classList.toggle("theme-dark", m && dark); el.classList.toggle("theme-light", m && !dark);
   const bv = bodyVars(); el.setCssProps(Object.fromEntries(Object.keys(bv).map(nm => [nm, m ? bv[nm] : ""])));
-  const cs = win.getComputedStyle(root), g = nm => cs.getPropertyValue(nm).trim(), V = EDV(g("--bg"), g("--panel"), g("--ink"), g("--muted"), g("--line"), g("--accent"), g("--accent-soft"));
+  const cs = win.getComputedStyle(root), g = nm => SFE ? SFPAL[nm] || "" : cs.getPropertyValue(nm).trim(), V = EDV(g("--bg"), g("--panel"), g("--ink"), g("--muted"), g("--line"), g("--accent"), g("--accent-soft"));
   el.setCssProps(Object.fromEntries(Object.keys(V).map(nm => [nm, m ? V[nm] : ""])));
   { const bs = parseFloat(win.getComputedStyle(doc.body).getPropertyValue("--font-text-size")) || 16; el.setCssProps({ "--font-text-size": CARDFS === 100 ? "" : (bs * CARDFS / 100).toFixed(1) + "px" }); }
   el.setCssProps({ "--cardop": CARDOP + "%", "--upp": g("--upp"), "--rel": g("--rel"), "--up": g("--up"), "--down": g("--down"), "--prop": g("--prop") });
@@ -7606,7 +7608,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
      the editor's theme and opacity together, note mini-previews, and orb tab names (orb tabs themselves are always on) */
   { const g = DI.p;
     const tr = g.createDiv({ cls: "drow eorow tchoice" }); tr.createSpan({ cls: "eol", text: "Editor theme" }); const seg = tr.createDiv({ cls: "seg" });
-    for (const [v, t] of [["obsidian", "Obsidian"], ["map", "MOTI"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDTH === v) } });
+    for (const [v, t] of [["obsidian", "Obsidian"], ["map", "MOTI"], ["starfield", "Starfield"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDTH === v) } });
       b.onclick = e => { e.stopPropagation(); CARDTH = v; save("iv-cardth", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; }
     const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
     sl.oninput = () => { CARDOP = +sl.value; ov.setText(CARDOP + "%"); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
