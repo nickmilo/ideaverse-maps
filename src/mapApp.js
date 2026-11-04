@@ -4344,7 +4344,7 @@ let k = 1, tx = 0, ty = 0, W = 0, H = 0, dpr = 1;
 let hover = -1, sel = -1, showAll = false;
 // hold ⌘ (Ctrl on Windows and Linux) over a note for a mini preview, as Obsidian does for links (0.8.159, Nick)
 let CMDK = false, CMDPT = null;
-const cmdPvSync = () => { if (view === "cockpit") return; if (HUDHOV >= 0) { if (!CMDK && !HUDPV) hudPv(-1); draw(); return; } if (!CMDK || hover < 0 || !vis[hover] || isPhone()) { if (!(HUDHOV >= 0 && HUDPV)) hudPv(-1); return; }
+const cmdPvSync = () => { if (view === "cockpit") return; if (typeof RECHV !== "undefined" && RECHV >= 0) { recPv(); return; } if (HUDHOV >= 0) { if (!CMDK && !HUDPV) hudPv(-1); draw(); return; } if (!CMDK || hover < 0 || !vis[hover] || isPhone()) { if (!(HUDHOV >= 0 && HUDPV)) hudPv(-1); return; }
   const x = sx(X[hover]), y = sy(Y[hover]), pw = 230; hudPv(hover, x + 18 + pw + 14 <= W - 8 ? x + 18 + pw + 14 : x - 18, y, true); try { tip.hidden = true; } catch (_) { /* no tip yet */ } };   /* the preview takes the hover label's place */
 on(doc, "keydown", e => { if ((e.key === "Meta" || e.key === "Control") && !CMDK && host.isActive()) { CMDK = true; cmdPvSync(); } });
 on(doc, "keyup", e => { if (e.key === "Meta" || e.key === "Control") { CMDK = false; cmdPvSync(); } });
@@ -5159,7 +5159,8 @@ function hudTab(nLinks){ if (!HUDTAB) { HUDTAB = $("#main").createEl("button", {
     HUDTAB.addEventListener("pointerdown", e => e.stopPropagation()); HUDTAB.onclick = e => { e.stopPropagation(); hudCol(false); }; }
   const on_ = HUDCOL && nLinks > 0; HUDTAB.hidden = !on_; if (on_) { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); HUDTAB.setCssProps({ "--hr": Math.max(0, Math.round(mr.right - c.right + (view === "cockpit" ? 0 : sideW()))) + "px" }); }   /* at the map's right edge, beside the note panel */ if (on_) { const t_ = `‹  Links · ${nLinks}`; if (HUDTAB.textContent !== t_) HUDTAB.setText(t_); } }
 function hudCol(c){ HUDCOL = c; save("iv-hudcol", c); draw(); }
-function hudPv(j, x, y, force){ if (!(HUDPV || force) || j < 0 || !host.preview) { if (HUDPVE) HUDPVE.hidden = true; return; } const p = N[j].path;
+function hudPv(j, x, y, force){ if (j < 0 && typeof RECHV !== "undefined" && RECHV >= 0 && (CMDK || HUDPV)) return;   /* a Recents row is showing its preview: the map's redraws leave it be */
+  if (!(HUDPV || force) || j < 0 || !host.preview) { if (HUDPVE) HUDPVE.hidden = true; return; } const p = N[j].path;
   if (!HUDPVE || HUDPVP !== p) { if (HUDPVE) HUDPVE.remove(); const e = $("#main").createDiv({ cls: "ivm-card ivm-pv hudpv" }); e.createDiv({ cls: "pvt", text: N[j].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } HUDPVE = e; HUDPVP = p; }
   const c = cv.getBoundingClientRect(), pr = $("#main").getBoundingClientRect(), pw = 230, ph = 140; HUDPVE.hidden = false;
   HUDPVE.setCssProps({ "--pvx": Math.round(c.left - pr.left + Math.max(8, x - pw - 14)) + "px", "--pvy": Math.round(c.top - pr.top + Math.max(8, Math.min(H - ph - 8, y - ph / 2))) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); }
@@ -5195,14 +5196,17 @@ function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hud
 /* ---------- Recents (0.8.237, Nick: "my absolute favorite base… the recent space"; rethought so Links stays as it was): the notes changed most lately,
    newest first, behind a tab on the map's right edge, above the Links tab. It opens a small panel (a hairline border, its own scroll): each row its emoji
    (a mini switch, on by default), its name and its age. Click a row to open it as the primary note (⌘ a new orb, Shift links it in); the panel stays open. */
+let RECN = Math.max(5, Math.min(50, +pref("iv-recn", 30) || 30)), RECHV = -1, RECHVEL = null;   /* how many Recents show (Display, 5–50, 0.8.244); the row under the pointer, for ⌘ previews */
 let RECON = pref("iv-recent", true) !== false, RECOPEN = pref("iv-recopen", false) === true, RECEMO = pref("iv-recemo", true) !== false, RECV = 0, RECC = { v: "", list: [] }, RECEL = null, RECTAB = null, RECKEY = "";
 const ago = ms => { const s_ = Math.max(0, (Date.now() - ms) / 1000); return s_ < 60 ? "now" : s_ < 3600 ? Math.floor(s_ / 60) + "m" : s_ < 86400 ? Math.floor(s_ / 3600) + "h" : s_ < 86400 * 30 ? Math.floor(s_ / 86400) + "d" : s_ < 86400 * 365 ? Math.floor(s_ / 86400 / 30) + "mo" : Math.floor(s_ / 86400 / 365) + "y"; };
-function recList(){ const key = RECV + ":" + VISV; if (RECC.v === key) return RECC.list; const L = []; for (let i = 0; i < n; i++) if (vis[i] && N[i].mt > 0 && !ARCH[i]) L.push(i);
-  L.sort((a, b) => N[b].mt - N[a].mt); RECC = { v: key, list: L.slice(0, 30) }; return RECC.list; }
+function recList(){ const key = RECV + ":" + VISV + ":" + RECN; if (RECC.v === key) return RECC.list; const L = []; for (let i = 0; i < n; i++) if (vis[i] && N[i].mt > 0 && !ARCH[i]) L.push(i);
+  L.sort((a, b) => N[b].mt - N[a].mt); RECC = { v: key, list: L.slice(0, RECN) }; return RECC.list; }
 const recEmoji = i => { if (!RECEMO || !EMOI || !EMOI[i]) return ""; return /^\p{Extended_Pictographic}/u.test(N[i].title) ? "" : EMOI[i]; };
 function recBuild(){ if (RECEL) return; const st = e => e.stopPropagation();
   RECTAB = $("#main").createEl("button", { cls: "dtab rectab", attr: { type: "button" } }); RECTAB.hidden = true; RECTAB.addEventListener("pointerdown", st); RECTAB.onclick = e => { e.stopPropagation(); RECOPEN = !RECOPEN; save("iv-recopen", RECOPEN); RECKEY = ""; recSync(); };
   RECEL = $("#main").createDiv({ cls: "ivm-recents" }); RECEL.hidden = true; for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) RECEL.addEventListener(ty, st); }
+function recPv(){ if (RECHV < 0 || !RECHVEL || !(CMDK || HUDPV)) { if (!(HUDHOV >= 0) && !(CMDK && hover >= 0)) hudPv(-1); return; } const c = cv.getBoundingClientRect(), r = RECHVEL.getBoundingClientRect(), pe = RECEL.getBoundingClientRect();
+  hudPv(RECHV, pe.left - c.left - 6, r.top + r.height / 2 - c.top, true); }
 function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPhone() && edOn(); let R_ = 0; try { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); R_ = Math.max(0, Math.round(mr.right - c.right + sideW())); } catch (_) { /* not laid out yet */ }
   RECTAB.hidden = !on || RECOPEN; RECEL.hidden = !on || !RECOPEN; RECTAB.setCssProps({ "--hr": R_ + "px" }); RECEL.setCssProps({ "--hr": R_ + "px" }); if (!on) return;
   const L = recList(); if (!RECOPEN) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); return; }
@@ -5216,12 +5220,14 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
   const box = RECEL.createDiv({ cls: "rcl" });
   /* laid out as Links is (0.8.239, Nick): 11px names on 14.5px rows, right-aligned, the age where Links shows its score, the emoji (or dot) at the end,
      and the rows bowed along the same gentle arc, tilting a little toward the top and bottom */
-  const LH = 15.5, nR = L.length, RY = Math.max(300, nR * LH * (.62 + .9 * Math.min(1, Math.max(0, (nR - 14) / 26)))) * 1.35, mid = (Math.min(nR, 24) - 1) / 2;   /* gentler (0.8.241, Nick: "a little bit less curve, not as tight"): Links' own radius rule, a little wider still */
+  const LH = 19, nR = L.length, RY = Math.max(300, nR * LH * (.62 + .9 * Math.min(1, Math.max(0, (nR - 14) / 26)))) * 1.35, mid = (Math.min(nR, 24) - 1) / 2;   /* gentler (0.8.241, Nick: "a little bit less curve, not as tight"): Links' own radius rule, a little wider still */
   L.forEach((j, r_) => { const r = box.createEl("button", { cls: "rcr" + (j === sel ? " on" : ""), attr: { type: "button" } }), em = recEmoji(j);
     const u = Math.max(-1, Math.min(1, (r_ - mid) * LH / RY)); r.setCssProps({ "--rx": (-60 * (1 - Math.sqrt(1 - u * u))).toFixed(1) + "px", "--rr": (Math.asin(u) * .25).toFixed(4) + "rad" });
     r.createSpan({ cls: "rca", text: ago(N[j].mt) }); r.createSpan({ cls: "rcn", text: N[j].title });
     if (em) r.createSpan({ cls: "rce", text: em }); else { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1 }); }
-    r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); RECKEY = ""; }; });
+    r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); RECKEY = ""; };
+    /* hold ⌘ over a row for its mini preview, as on Links (0.8.244, Nick); with "Automatically see mini-preview on hover" on, it shows on hover alone */
+    r.addEventListener("pointerenter", () => { RECHV = j; RECHVEL = r; recPv(); }); r.addEventListener("pointerleave", () => { if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } }); });
   /* the background bends with the rows (0.8.240, Nick: "can you curve the Recents background"): both edges follow the arc, drawn as one shape with its hairline border */
   win.requestAnimationFrame(() => { if (!RECEL || RECEL.hidden) return; const w = RECEL.clientWidth, h = RECEL.clientHeight; if (!w || !h) return;
     const bxr = box.getBoundingClientRect(), pr = RECEL.getBoundingClientRect(), y0 = bxr.top - pr.top + 6, hc = y0 + mid * LH, sh = y => { const u = Math.max(-1, Math.min(1, (y - hc) / RY)); return 60 * (1 - Math.sqrt(1 - u * u)); };
@@ -7688,7 +7694,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     cb.onchange = () => { HUDL = cb.checked; save("iv-hudl", HUDL); l2.hidden = l3.hidden = !HUDL; if (!HUDL) hudPv(-1); draw(); }; }
   /* Recents (0.8.237, Nick): the notes changed most lately, behind a tab on the right edge */
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = RECON; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Recents" });
-    cb.onchange = () => { RECON = cb.checked; save("iv-recent", RECON); recSync(); }; }
+    const r2 = DI.p.createDiv({ cls: "eorow ctrrk tchoice" }); r2.createSpan({ cls: "eol", text: "Show" }); const sl = r2.createEl("input", { type: "range", attr: { min: "5", max: "50", step: "1", "aria-label": "How many recent notes to show" } }); sl.value = String(RECN); const sv = r2.createSpan({ cls: "eov", text: String(RECN) }); r2.hidden = !RECON;
+    sl.oninput = () => { RECN = +sl.value; sv.setText(String(RECN)); RECKEY = ""; recSync(); }; sl.onchange = () => save("iv-recn", RECN); sl.onclick = e => e.stopPropagation();
+    cb.onchange = () => { RECON = cb.checked; save("iv-recent", RECON); r2.hidden = !RECON; recSync(); }; }
   /* Color all links by Idea Emergence (0.8.234, Nick: "color ALL links in all Obsidian windows by Idea Emergence") */
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = pref("iv-linkcolor", false) === true; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Color all links by Idea Emergence" });
     cb.onchange = () => { save("iv-linkcolor", cb.checked); if (host.linkColors) host.linkColors(); for (const o of Object.values(EDS)) edTint(o); }; }
