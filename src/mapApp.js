@@ -5236,12 +5236,18 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
     /* the HUD shape as Nick drew it (0.8.247): narrow on the left, opening out to the right. The left edge follows the rows' own arc and stands shorter;
        the top rises and the bottom falls toward the right, out to the full-height right edge; small brackets mark the four corners */
     const sMax = Math.max(sh(0), sh(h)), m = 4, inset = Math.min(26, h * .06), T = m + inset, B = h - m - inset, yy = []; for (let y = T; y <= B; y += 6) yy.push(y); if (yy[yy.length - 1] !== B) yy.push(B);
-    let base = m + 2; for (const rr of box.querySelectorAll(".rcr")) { const q = rr.getBoundingClientRect(); if (!q.height || q.bottom < bxr.top || q.top > bxr.bottom) continue; const cy_ = q.top + q.height / 2 - pr.top; base = Math.min(base, q.left - pr.left - 10 - (sMax - sh(cy_))); }   /* the left edge clears every name */
-    const xl = y => Math.max(1, base + sMax - sh(y)), xr = () => w - m, f = v => v.toFixed(1);
-    let d = `M${f(xl(T))} ${f(T)} Q${f((xl(T) + xr()) / 2)} ${f(T - inset * .55)} ${f(xr())} ${f(m)} L${f(xr())} ${f(h - m)} Q${f((xl(B) + xr()) / 2)} ${f(B + inset * .55)} ${f(xl(B))} ${f(B)}`;
+    /* 0.8.248 (Nick's second drawing): a curved band like ")". The left edge bends well along the rows' arc (its ends further out than its middle), the right edge bows out the same way,
+       and the right side runs taller than the left */
+    const s3 = y => { const u = Math.max(-1, Math.min(1, (y - h / 2) / (h * .62))); return 90 * (1 - Math.sqrt(1 - u * u)); }, s3Max = Math.max(s3(0), s3(h));
+    let base = 1e9; for (const rr of box.querySelectorAll(".rcr")) { const q = rr.getBoundingClientRect(); if (!q.height || q.bottom < bxr.top || q.top > bxr.bottom) continue; const cy_ = q.top + q.height / 2 - pr.top; base = Math.min(base, q.left - pr.left - 10 - (s3Max - s3(cy_))); }   /* the left edge clears every name */
+    if (base > 1e8) base = m;
+    const xl = y => base + s3Max - s3(y), xrr = y => w - m - s3(y) * .35, f = v => v.toFixed(1);
+    let d = `M${f(xl(T))} ${f(T)} Q${f((xl(T) + xrr(m)) / 2)} ${f(T - inset * .55)} ${f(xrr(m))} ${f(m)}`; for (let y = m; y <= h - m; y += 6) d += ` L${f(xrr(y))} ${f(y)}`;
+    d += ` L${f(xrr(h - m))} ${f(h - m)} Q${f((xl(B) + xrr(h - m)) / 2)} ${f(B + inset * .55)} ${f(xl(B))} ${f(B)}`;
     for (const y of yy.slice().reverse()) d += ` L${f(xl(y))} ${f(y)}`; d += " Z";
+    const xr = y => xrr(y);
     const br = (x, y, dx, dy) => `M${f(x + dx * 12)} ${f(y)} L${f(x)} ${f(y)} L${f(x)} ${f(y + dy * 12)}`;
-    const brk = [br(xl(T) - 4, T - 4, 1, 1), br(xr() + 3, m - 3, -1, 1), br(xr() + 3, h - m + 3, -1, -1), br(xl(B) - 4, B + 4, 1, -1)].join(" ");
+    const brk = [br(xl(T) - 4, T - 4, 1, 1), br(xr(m) + 3, m - 3, -1, 1), br(xr(h - m) + 3, h - m + 3, -1, -1), br(xl(B) - 4, B + 4, 1, -1)].join(" ");
     let sv = RECEL.querySelector(":scope > svg.rcbg"); if (!sv) { sv = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); sv.setAttribute("class", "rcbg"); sv.setAttribute("aria-hidden", "true"); RECEL.prepend(sv); }
     sv.setAttribute("width", String(w)); sv.setAttribute("height", String(h)); sv.setAttribute("viewBox", `0 0 ${w} ${h}`); sv.empty(); const pa = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pa.setAttribute("d", d); sv.appendChild(pa);
     const pb = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pb.setAttribute("d", brk); pb.setAttribute("class", "rcbrk"); sv.appendChild(pb);
