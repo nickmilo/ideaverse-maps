@@ -5127,6 +5127,7 @@ const end = e => { pts.delete(e.pointerId);
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
     { const h = chartPostAt(e.offsetX, e.offsetY); if (h >= 0) { if (focus >= 0 || focusArmed) navTo(h); else { select(h); if (!S3D) flyTo(h, true); } drag = null; return; } }   // in Focus, the signpost's note becomes the focus, with all its links   // Star Chart: a signpost takes you to its hub
+  if (i >= 0 && shiftLink(i, e)) { drag = null; return; }
   if (i >= 0 && openKind(e)) { openAs(i, openKind(e)); drag = null; return; }   // ⌘-click a new tab (orb), ⌘⌥-click the support note (0.8.189)
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (Platform.isMobile || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); else if (i >= 0) nudgeTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
@@ -5185,7 +5186,7 @@ function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hud
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
 cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
 cv.addEventListener("pointerdown", e => { if (!HUDL || e.button !== 0) return; const j = hudAt(e.offsetX, e.offsetY); if (j === -1) return; e.stopImmediatePropagation(); e.preventDefault(); HUDHOV = -1;
-  if (j === -5) { hudCol(true); return; } if (j >= 0 && openKind(e)) { openAs(j, openKind(e)); return; }
+  if (j === -5) { hudCol(true); return; } if (j >= 0 && shiftLink(j, e)) return; if (j >= 0 && openKind(e)) { openAs(j, openKind(e)); return; }
   if (j === -6) { const n_ = HUDC.list.length, cap = HUDH.filter(q => q[4] >= 0).length; HUDOFF = HUDOFF + cap >= n_ ? 0 : HUDOFF + cap; draw(); return; } navTo(j); toEditor(j); }, { capture: true });
 cv.addEventListener("wheel", e => { const b = HUDBOX; if (!HUDL || HUDCOL || !b || e.offsetX < b[0] || e.offsetX > b[0] + b[2] || e.offsetY < b[1] || e.offsetY > b[1] + b[3]) return; e.preventDefault(); e.stopImmediatePropagation(); HUDOFF += e.deltaY / 18; draw(); }, { capture: true, passive: false });
 cv.addEventListener("pointerleave", () => { if (HUDHOV >= 0) { HUDHOV = -1; hudPv(-1); draw(); } });
@@ -6173,8 +6174,12 @@ function drawLdrop(){ if (LDROP < 0 || !VV(LDROP)) return; const x = sx(X[LDROP]
   const t = LDCTRL ? `→ up of ${N[LDROP].title}` : `→ ${N[LDROP].title}: ${LDPOS_T[LDPOS]}`; ctx.font = `600 12px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const w_ = ctx.measureText(t).width + 16; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - w_ / 2, y - r - 30, w_, 22, 11); ctx.fill(); ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = css.accent; ctx.fillText(t, x, y - r - 13); ctx.restore(); }   /* above the dot, clear of its name */
 /* One scheme for opening notes (0.8.189, Nick: "if Command-click is what users use in the rest of Obsidian to open a new tab…"), as in Obsidian:
    click picks (the primary note follows in Edit mode) · ⌘-click a new tab (an orb, when orbs are on) · ⌘⌥-click the support note (Obsidian's split to the right) · ⌥-drag a link.
-   Ctrl stands in for ⌘ on Windows and Linux. Shift-click is left free. */
+   Ctrl stands in for ⌘ on Windows and Linux. Shift-click links the note into the primary note (0.8.215). */
 const MODK = e => !!e && (Platform.isMacOS ? e.metaKey : e.ctrlKey);
+/* Shift-click a note: link it into the primary note, under the small heading at the top, as ⌥-drop does (0.8.215, Nick). With no primary note open,
+   or on the primary note itself, Shift-click is a plain click. Only on the map and the HUD list; Shift-click on a link inside an editor still opens a new orb */
+function shiftLink(i, e){ if (!e || !e.shiftKey || MODK(e) || e.altKey || !edOn() || !EDS || EDS.left.el.hidden || !EDS.left.path) return false;
+  const t = PIDX.get(EDS.left.path); if (t == null || t === i) return false; ldLink(t, i, false); return true; }
 const openKind = e => MODK(e) && e.altKey ? "side" : MODK(e) ? "tab" : "";
 function openAs(i, kind){ if (i == null || i < 0 || !N[i]) return false;
   if (kind === "side") { if (edOn() && EDS) void EDS.right.open(i); else { if (vis[i]) select(i); if (host.openNote) host.openNote(N[i].path, "split"); } return true; }
@@ -7902,7 +7907,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         sec("Maps", [...KEYED()].map(([k_, ch]) => [k_, [...ch.childNodes].filter(x => !(x.classList && x.classList.contains("mkey"))).map(x => x.textContent).join("").trim()]).sort((a_, b_) => "1234567890-=[]\\".indexOf(a_[0]) - "1234567890-=[]\\".indexOf(b_[0])));
         sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["Z", "Zoom: Normal or Close-Up on the note"], ["V", "Saved views"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]);
         const M_ = Platform.isMacOS ? "⌘" : "Ctrl", A_ = Platform.isMacOS ? "⌥" : "Alt", C_ = Platform.isMacOS ? "⌃" : "Ctrl";   /* the mouse, the same everywhere (0.8.189) */
-        sec("With the mouse", [["Click", "Pick a note (in Edit mode it opens as the primary note, on the left)"], [`${M_} click`, "Open in a new tab (an orb)"], [`${M_} ${A_} click`, "Open as the support note, on the right"], [`hold ${M_}`, "Mini preview of the note under the pointer"], [`${A_} drag`, `Drag a link: into an editor, or onto a note (${LDPOS_T[LDPOS]}; Display → Edit mode to change)`], [`${A_} drag ${C_}`, "Onto a note: adds it to up instead"]]); };
+        sec("With the mouse", [["Click", "Pick a note (in Edit mode it opens as the primary note, on the left)"], [`${M_} click`, "Open in a new tab (an orb)"], [`${M_} ${A_} click`, "Open as the support note, on the right"], [Platform.isMacOS ? "⇧ click" : "Shift click", "Link it into the primary note (under the small heading at the top)"], [`hold ${M_}`, "Mini preview of the note under the pointer"], [`${A_} drag`, `Drag a link: into an editor, or onto a note (${LDPOS_T[LDPOS]}; Display → Edit mode to change)`], [`${A_} drag ${C_}`, "Onto a note: adds it to up instead"]]); };
       const toggleCard = () => { if (card.hidden) { closePops(); fillCard(); } card.hidden = !card.hidden; return true; };
       LK["?"] = toggleCard; on(doc, "pointerdown", e => { if (!card.hidden && !card.contains(e.target)) card.hidden = true; });
       onKey(e => { if (e.key === "Escape" && !card.hidden) card.hidden = true; });
