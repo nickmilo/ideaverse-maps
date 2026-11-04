@@ -5668,7 +5668,7 @@ function syncRange(){
   $("#subctl").hidden = mode !== "ace";
   const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters" || view === "builder", msv = view === "mosaic", ppv = view === "people", gv = GRV(), lay = gv || sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view)));   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs", "#tmby", "#tmtags"]) { const el_ = $(id); if (el_) el_.hidden = true; } { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv;  const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } const gf = $("#gfctl"); if (gf) gf.hidden = !gv; }
-  if (lay) { $("#startms").hidden = true; $("#sensems").hidden = true; $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; $("#sensems").hidden = true; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv || tmTagsOn(); { const tb_ = $("#tmby"); if (tb_) { tb_.hidden = !tmv || !HASTAGS; syncTmBy(); } } if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
+  if (lay) { $("#startms").hidden = true; $("#sensems").hidden = true; $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; { const tl = $("#tclook"); if (tl) { tl.hidden = !csv; syncTL(); } } $("#sensems").hidden = true; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv || tmTagsOn(); { const tb_ = $("#tmby"); if (tb_) { tb_.hidden = !tmv || !HASTAGS; syncTmBy(); } } if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
   $("#sy0").value = SY0; $("#sy1").value = SY1; $("#syv").textContent = syFull() ? `All years (${SLMIN}–${NOW_Y})` : SY0 === SY1 ? `${SY0} only` : `${SY0 <= SLMIN ? `up to ${SY1}` : `${SY0} – ${SY1}`}`;
   { const f = y => (y - SLMIN)/Math.max(1, NOW_Y - SLMIN), el = $("#syfill"); el.style.left = `calc(9px + (100% - 18px)*${f(SY0)})`; el.style.width = `calc((100% - 18px)*${f(SY1) - f(SY0)})`; }
@@ -5814,7 +5814,7 @@ const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.
   cb.onchange = async () => { setEmoOn("sense", cb.checked); st.setText(""); if (cb.checked && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
 root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if (!r.checked) return; if (r.value === "spacetime") { goMap("spacetime", false); syncEmd(); return; } if (view === "spacetime") { closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); setView("emergence"); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); morph(true, () => fitTarget()); syncEmd(); });
 syncEmd();
-function goChord(m){ closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
+function goChord(m){ const keep = $("#tclook") && !$("#tclook").hidden && (m === "in" || m === "out"); if (!keep) closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (m === "in" || m === "out") { TCLOOK = m; save("iv-tclook", m); if (typeof syncTL === "function") syncTL(); } if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
 $("#gochord").onclick = () => goChord("");
 function syncCB(){ root.querySelectorAll("#chordby button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cb === chordBy))); }
 root.querySelectorAll("#chordby button").forEach(b => b.onclick = () => { if (b.dataset.cb === chordBy) return; chordBy = b.dataset.cb; save("iv-chordby", chordBy); syncCB(); chSetCats(); chPin = -1; chArc = -1; if (typeof tmTagUI === "function") tmTagUI(); if (view === "chord") { if (TMOFF.size) relayout(true, false, () => fitTarget()); else morph(true, () => fitTarget()); legend(); } });
@@ -6006,8 +6006,13 @@ root.querySelectorAll("#shelfsort button").forEach(b => b.onclick = () => { shel
 syncSS();
 for (const g of ["square", "hex", "mandala", "octa", "shells"]) { const b = root.querySelector("#gogeo" + g); if (b) b.onclick = () => { closePops(); driftStop(); GEO = g; save("iv-geo", g); if (view === "quincunx") { morph(true, () => fitTarget()); legend(); } else setView("quincunx"); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : ""; placePlaybar(); }; }
 for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
+/* Tesla and Corona are one map now, Tesla / Corona, with its look picked in the gear menu (0.8.197, Nick) */
+let TCLOOK = pref("iv-tclook", "in") === "out" ? "out" : "in";
 $("#gocso").onclick = () => goChord("out");
-$("#gocsi").onclick = () => goChord("in");
+$("#gocsi").onclick = () => goChord(TCLOOK);
+{ const cb_ = $("#chordby"), tl = doc.createElement("div"); tl.className = "seg"; tl.id = "tclook"; tl.setAttribute("role", "group"); tl.setAttribute("aria-label", "Look"); tl.hidden = true; cb_.before(tl);
+  for (const [v, t] of [["in", "Tesla"], ["out", "Corona"]]) { const b = tl.createEl("button", { text: t, attr: { type: "button" } }); b.dataset.tl = v; b.onclick = e => { e.stopPropagation(); if (CSPH !== v) goChord(v); syncTL(); }; } }
+function syncTL(){ root.querySelectorAll("#tclook button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tl === CSPH))); }
 
 root.querySelectorAll("#vseg button[data-v]").forEach(b => b.onclick = e => {
   if (b.dataset.v === view || (b.dataset.v === "emergence" && view === "spacetime")) { e.stopPropagation(); toggleMapOpts(b); return; }   // the current map's tab opens its own menu: variants and options
@@ -6085,8 +6090,8 @@ $("#efx").onclick = closeEff; $("#effbtn").hidden = !EFF.length;
    Drop it in any editor and its [[link]] lands where you let go. Drop it on another note's dot and it goes into that note's related property;
    hold Control (at the start or as you drop) and it goes into up instead. */
 /* where a link dropped on a note goes (0.8.189, Nick: to try them out, then keep one): its related property, the top of the note, the top as a bullet, or the bottom. Control still sends it to up */
-let LDPOS = ["related", "top", "bullet", "head", "bottom"].includes(pref("iv-ldpos", "")) ? pref("iv-ldpos", "") : "related";
-const LDPOS_T = { related: "related", top: "top of the note", bullet: "top, as a bullet", head: "top, under its heading", bottom: "bottom of the note" };
+let LDPOS = pref("iv-ldpos", "") === "bullet" ? "bullet" : "head";   /* two left (0.8.197, Nick): • Top, or under its own small heading (the default); ⌥⌃ still sends it to up */
+const LDPOS_T = { bullet: "top, as a bullet", head: "top, under its heading" };
 let LDRAG = -1, LDCTRL = false, LDROP = -1, LDGHOST = null, LDDONE = false, LDSRC = -1;
 const ldOK = () => view !== "cockpit" && !!host.addLink;
 cv.addEventListener("pointerdown", e => { if (e.button !== 0 || !e.altKey || e.metaKey || e.ctrlKey || !ldOK()) return;   /* only ⌥/Alt starts a drag (0.8.187): Ctrl-click is the support note on Windows; Control while dropping still means up */ const i = pick(e.offsetX, e.offsetY); if (i < 0) return;
@@ -6108,7 +6113,7 @@ cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.data
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 function drawLdrop(){ if (LDROP < 0 || !VV(LDROP)) return; const x = sx(X[LDROP]), y = sy(Y[LDROP]), r = rad(LDROP) + 10; ctx.save(); ctx.strokeStyle = css.accent; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
-  const t = LDCTRL ? `→ up of ${N[LDROP].title}` : LDPOS === "related" ? `→ related of ${N[LDROP].title}` : `→ ${N[LDROP].title}: ${LDPOS_T[LDPOS]}`; ctx.font = `600 12px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const w_ = ctx.measureText(t).width + 16; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - w_ / 2, y - r - 30, w_, 22, 11); ctx.fill(); ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = css.accent; ctx.fillText(t, x, y - r - 13); ctx.restore(); }   /* above the dot, clear of its name */
+  const t = LDCTRL ? `→ up of ${N[LDROP].title}` : `→ ${N[LDROP].title}: ${LDPOS_T[LDPOS]}`; ctx.font = `600 12px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const w_ = ctx.measureText(t).width + 16; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - w_ / 2, y - r - 30, w_, 22, 11); ctx.fill(); ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = css.accent; ctx.fillText(t, x, y - r - 13); ctx.restore(); }   /* above the dot, clear of its name */
 /* One scheme for opening notes (0.8.189, Nick: "if Command-click is what users use in the rest of Obsidian to open a new tab…"), as in Obsidian:
    click picks (the left editor follows in Edit mode) · ⌘-click a new tab (an orb, when orbs are on) · ⌘⌥-click the support note (Obsidian's split to the right) · ⌥-drag a link.
    Ctrl stands in for ⌘ on Windows and Linux. Shift-click is left free. */
@@ -7065,7 +7070,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const gg = doc.createElement("button"); gg.className = "chip"; gg.id = "gograph"; gg.textContent = "Obsidian"; gg.setAttribute("aria-label", "Like Obsidian's graph view: notes pulled together by their links, drawn with the emergence symbols");
     for (const [id, v, label, tip] of [["gogravity", "gravity", "Gravity", "The five levels as rings: hubs at the center, unlinked notes on the rim"]]) {
       const b = doc.createElement("button"); b.className = "chip"; b.id = id; b.textContent = label; b.setAttribute("aria-label", tip); $("#gochord").before(b); b.onclick = () => { closePops(); driftStop(); setView(v); }; }
-    { const co = $("#gocso"); if (co) co.textContent = "Corona"; const te = $("#gocsi"); if (te) { te.textContent = "Tesla"; te.hidden = false; te.classList.remove("gone"); } }
+    { const co = $("#gocso"); if (co) { co.textContent = "Corona"; co.hidden = true; } const te = $("#gocsi"); if (te) { te.textContent = "Tesla / Corona"; te.hidden = false; te.classList.remove("gone"); } }
     $("#gochord").before(gg); gg.onclick = () => { closePops(); driftStop(); setView("graph"); };
     // Compass (0.8.32): one note at the centre, after Chord
     { const gc = doc.createElement("button"); gc.className = "chip"; gc.id = "gocompass"; gc.textContent = "Compass"; gc.setAttribute("aria-label", "One note at the centre: above it what it links up to, below what links up to it, time left to right");
@@ -7168,7 +7173,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
   const VN = () => ({ cockpit: "Cockpit", kandinsky: "Kandinsky", arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
-    chord: CSPH === "out" ? "Corona" : CSPH === "in" ? "Tesla" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
+    chord: CSPH === "out" || CSPH === "in" ? "Tesla / Corona" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
     shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars", "sense"]);
   // the current map's menu: its variants (Emergence, Starfield) and the options that belong to it alone
@@ -7304,7 +7309,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Group: only on maps that group (Bookshelf, Chord, Treemap)
   const GR = popBtn("grp", "Group", "group");
   const gsec = (title, id) => { const w = GR.p.createDiv({ cls: "gsec" }); w.createDiv({ cls: "pt", text: title }); w.appendChild($(id)); return [w, $(id)]; };
-  const GS = [gsec("Shelve books by", "#shelfsort"), gsec("Arcs by", "#chordby"), gsec("Boxes by", "#tmby"), gsec("Subfolders", "#tmsubs")];
+  const GS = [gsec("Shelve books by", "#shelfsort"), gsec("Look", "#tclook"), gsec("Arcs by", "#chordby"), gsec("Boxes by", "#tmby"), gsec("Subfolders", "#tmsubs")];
   opener(GR);
   // Filter: folders, collections, Efforts
   const FI = popBtn("filt", "Filter", "filter"); const badge = FI.b.createSpan({ cls: "tbadge" });
@@ -7441,7 +7446,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       for (const [v, t_] of [["off", "Off"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(PVLV === v) } });
         b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
     { const r_ = g.createDiv({ cls: "eorow" }); r_.createSpan({ cls: "eol", text: Platform.isMacOS ? "⌥-drop" : "Alt-drop" }); const seg = r_.createDiv({ cls: "seg" });
-      for (const [v, t_] of [["related", "Related"], ["top", "Top"], ["bullet", "• Top"], ["head", "H6 • Top"], ["bottom", "End"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(LDPOS === v), "aria-label": "A link dropped on a note goes to its " + LDPOS_T[v] } });
+      for (const [v, t_] of [["bullet", "• Top"], ["head", "H6 • Top"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(LDPOS === v), "aria-label": "A link dropped on a note goes to its " + LDPOS_T[v] } });
         b.onclick = e => { e.stopPropagation(); LDPOS = v; save("iv-ldpos", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); }; } }
     sw("Show orbs (tabs)", () => ORBS, v => { ORBS = v; save("iv-orbs", v); const n_ = g.querySelector(".orbnsw"); if (n_) n_.hidden = !v; syncOrbs(); });
     sw("Show orb names", () => ORBN, v => { ORBN = v; save("iv-orbn", v); syncOrbs(); }); { const ls = g.querySelectorAll(".eosw"); const l_ = ls[ls.length - 1]; l_.classList.add("orbnsw", "sub"); l_.hidden = !ORBS; }
@@ -7709,31 +7714,37 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const KEYED = () => { const m_ = new Map(), cs = KEYMAPS().filter(c_ => !QPIN[c_.id]); cs.slice(0, QK.length).forEach((c_, j) => m_.set(QK[j], c_));
       for (const [id, k_] of Object.entries(QPIN)) { const el = MP.querySelector("#" + id); if (el) m_.set(k_, el); } return m_; };
     const KEYMAPS = () => [...MP.querySelectorAll(":scope > .chip")].filter(c_ => !c_.hidden);
-    /* your own order (0.8.190, Nick): drag a map up or down the menu; "Reset order" at the bottom puts them back. The quick keys follow the order (0 and \\ stay pinned) */
+    /* your own order (0.8.190, Nick): drag a map up or down the menu (and within Experimental's groups, 0.8.197); "Reset order" at the bottom puts them back. The quick keys follow the order */
     { const div = MP.querySelector(":scope > .vfold:not(.vfold0)"), exd_ = MP.querySelector(":scope > details"), SEP = "|";
       const cur = () => [...MP.children].filter(c_ => c_ === div || (c_.classList.contains("chip") && c_.id)).map(c_ => c_ === div ? SEP : c_.id);
       const endDiv = exd_ && exd_.previousElementSibling && exd_.previousElementSibling.classList.contains("vfold") && exd_.previousElementSibling !== div ? exd_.previousElementSibling : null, END = endDiv || exd_ || null;   /* the divider above Experimental stays put */
       const apply = ord => { const anchor = END; for (const id of ord) { const el = id === SEP ? div : MP.querySelector(":scope > #" + id); if (el) MP.insertBefore(el, anchor); } };
       const DEF = cur(); { const o = pref("iv-maporder", null); if (Array.isArray(o) && o.length) { const have = new Set(DEF); apply([...o.filter(x => have.has(x)), ...DEF.filter(x => !o.includes(x))]); } }
       const keys = () => { if (MP.hidden) return; MP.querySelectorAll(".mkey").forEach(x => x.remove()); for (const [k_, ch] of KEYED()) ch.createSpan({ cls: "mkey", text: k_, attr: { "aria-hidden": "true" } }); };
+      /* Experimental's groups: each keeps its own order */
+      const GS = [...MP.querySelectorAll("details")].filter(d => d.querySelector(":scope > .chip[id]")), gkey = d => ((d.querySelector(":scope > summary") || {}).textContent || "").trim();
+      const gids = d => [...d.children].filter(c_ => c_.classList.contains("chip") && c_.id).map(c_ => c_.id);
+      const gapply = (d, ord) => { const rest = gids(d).filter(x => !ord.includes(x)); for (const id of [...ord, ...rest]) { const el = d.querySelector(":scope > #" + id); if (el) d.appendChild(el); } };
+      const DEFX = new Map(GS.map(d => [d, gids(d)])); { const o = pref("iv-maporderx", null); if (o && typeof o === "object") for (const d of GS) if (Array.isArray(o[gkey(d)])) gapply(d, o[gkey(d)]); }
+      const saveX = () => { const o = {}; for (const d of GS) { const ids = gids(d); if (ids.join() !== DEFX.get(d).join()) o[gkey(d)] = ids; } save("iv-maporderx", Object.keys(o).length ? o : undefined); };
       let dragEl = null; const mark = MP.createDiv({ cls: "vdropmark" }); mark.hidden = true;
-      for (const ch of MP.querySelectorAll(":scope > .chip")) { if (!ch.id) continue; ch.draggable = true;
+      for (const ch of [...MP.querySelectorAll(":scope > .chip"), ...GS.flatMap(d => [...d.querySelectorAll(":scope > .chip")])]) { if (!ch.id) continue; ch.draggable = true;
         ch.addEventListener("dragstart", e => { dragEl = ch; ch.classList.add("vdragging"); if (e.dataTransfer) { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", ch.id); } });
         ch.addEventListener("dragend", () => { ch.classList.remove("vdragging"); dragEl = null; mark.hidden = true; }); }
-      const spot = e => { const els = [...MP.children].filter(c_ => (c_.classList.contains("chip") && c_.id && c_ !== dragEl) || c_ === div); let best = null;
-        for (const el of els) { const r = el.getBoundingClientRect(); if (e.clientY < r.top + r.height / 2) { best = el; break; } } return best || END; };
+      const spot = e => { const C = dragEl.parentElement, top = C === MP, els = [...C.children].filter(c_ => (c_.classList.contains("chip") && c_.id && c_ !== dragEl) || (top && c_ === div)); let best = null;
+        for (const el of els) { const r = el.getBoundingClientRect(); if (e.clientY < r.top + r.height / 2) { best = el; break; } } return best || (top ? END : null); };   /* a map moves within its own group */
       MP.addEventListener("dragover", e => { if (!dragEl) return; e.preventDefault(); const b = spot(e), pr = MP.getBoundingClientRect(); const r = b ? b.getBoundingClientRect() : null;
         mark.hidden = false; mark.setCssProps({ "--my": Math.round((r ? r.top : pr.bottom - 40) - pr.top + MP.scrollTop - 1) + "px" }); });
-      MP.addEventListener("drop", e => { if (!dragEl) return; e.preventDefault(); const b = spot(e); MP.insertBefore(dragEl, b); mark.hidden = true; save("iv-maporder", cur()); keys(); rst.hidden = false; });
+      MP.addEventListener("drop", e => { if (!dragEl) return; e.preventDefault(); const b = spot(e), C = dragEl.parentElement; C.insertBefore(dragEl, b); mark.hidden = true; if (C === MP) save("iv-maporder", cur()); else saveX(); keys(); rst.hidden = false; });
       /* Reset order: small, at the very bottom, with a confirmation */
       const rw = MP.createDiv({ cls: "vreset" }), rst = rw.createEl("button", { cls: "vresetb", text: "Reset order", attr: { type: "button" } }), cf = rw.createDiv({ cls: "vresetc" }); cf.hidden = true;
       cf.createSpan({ text: "Are you sure you want to return to the default ordering?" }); const yes = cf.createEl("button", { text: "Reset", attr: { type: "button" } }), no = cf.createEl("button", { text: "Cancel", attr: { type: "button" } });
-      rst.hidden = !Array.isArray(pref("iv-maporder", null));
+      rst.hidden = !Array.isArray(pref("iv-maporder", null)) && !pref("iv-maporderx", null);
       rst.onclick = e => { e.stopPropagation(); rst.hidden = true; cf.hidden = false; };
       no.onclick = e => { e.stopPropagation(); cf.hidden = true; rst.hidden = false; };
-      yes.onclick = e => { e.stopPropagation(); apply(DEF); save("iv-maporder", undefined); cf.hidden = true; rst.hidden = true; keys(); }; }
+      yes.onclick = e => { e.stopPropagation(); apply(DEF); save("iv-maporder", undefined); for (const d of GS) gapply(d, DEFX.get(d)); save("iv-maporderx", undefined); cf.hidden = true; rst.hidden = true; keys(); }; }
     const chipFor = () => { const id = { gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", lincal: "golincal", spiral: "gospiral", lifeline: "golifeline",
-        tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" ? "gocso" : CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
+        tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" || CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
       return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };
     // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
     // every map's gear in Starfield's tighter look (0.8.13, Nick: "apply to the other map settings"): a group of choices becomes one row with

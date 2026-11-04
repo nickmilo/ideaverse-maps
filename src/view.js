@@ -216,14 +216,13 @@ export async function mountInto(owner, el, opts) {
     // (0 in the text, 1 up, 4 related, 5 any other property; collections are left to a rescan)
     // a link dragged onto a note's dot (0.8.185): into its related (or up) property, as a quoted [[link]], once
     addLink: async (targetPath, linkPath, kind) => { const t = app.vault.getAbstractFileByPath(targetPath), l = app.vault.getAbstractFileByPath(linkPath); if (!(t instanceof TFile) || !(l instanceof TFile)) return false;
-      if (kind === "top" || kind === "bullet" || kind === "head" || kind === "bottom") { const lt = app.metadataCache.fileToLinktext(l, t.path, true), link = `[[${lt}]]`; let dup = false;   // in the note's text (0.8.189): top (after the properties), top as a bullet, or bottom
+      if (kind === "bullet" || kind === "head") { const lt = app.metadataCache.fileToLinktext(l, t.path, true), link = `[[${lt}]]`; let dup = false;   // in the note's text (0.8.189): top (after the properties), top as a bullet, or bottom
         await app.vault.process(t, txt => { const m = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(txt), head = m ? m[0] : "", body = txt.slice(head.length);
           if (body.includes(`[[${lt}]]`) || body.includes(`[[${lt}|`)) { dup = true; return txt; }
-          if (kind === "bottom") return txt.replace(/\s*$/, "") + "\n\n" + link + "\n";
           if (kind === "head") { const H = "###### Links added via Maps of the Ideaverse", at = body.search(/^###### Links added via Maps of the Ideaverse[ \t]*$/m);   // one small heading at the top, the newest link first under it (0.8.195, Nick)
             if (at >= 0) { const e_ = body.indexOf("\n", at); return head + (e_ < 0 ? body + "\n- " + link : body.slice(0, e_ + 1) + `- ${link}\n` + body.slice(e_ + 1)); }
             const b = body.replace(/^\n+/, ""); return head + `${H}\n- ${link}\n` + (b ? "\n" + b : ""); }
-          const line = kind === "bullet" ? `- ${link}` : link, b = body.replace(/^\n+/, ""), joinB = kind === "bullet" && /^- /.test(b) ? "\n" : "\n\n";
+          const line = `- ${link}`, b = body.replace(/^\n+/, ""), joinB = /^- /.test(b) ? "\n" : "\n\n";
           return head + line + (b ? joinB + b : "\n"); }); return dup ? "dup" : true; }
       const st = plugin.settings, names = v => (Array.isArray(v) ? v : String(v || "").split(",")).map(x => String(x).trim()).filter(Boolean), key = (kind === "up" ? names(st.upProps)[0] : names(st.relatedProps)[0]) || kind;
       const link = `[[${app.metadataCache.fileToLinktext(l, t.path, true)}]]`, base = s_ => String(s_).replace(/^\[\[|\]\]$/g, "").split("|")[0].trim();
