@@ -5246,16 +5246,21 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
     let base = 1e9; for (const rr of rowsAll) { const q = rr.getBoundingClientRect(); if (!q.height || q.bottom < bxr.top || q.top > bxr.bottom) continue; const cy_ = q.top + q.height / 2 - pr.top; base = Math.min(base, q.left - pr.left - 10 - (s3Max - s3(cy_))); }   /* the left edge clears every name */
     if (base > 1e8) base = m;
     const xl = y => base + s3Max - s3(y), xrr = y => w - m - s3(y) * .6 + 2, f = v => v.toFixed(1);
-    let d = `M${f(xl(T))} ${f(T)} Q${f((xl(T) + xrr(m)) / 2)} ${f(T - inset * .55)} ${f(xrr(m))} ${f(m)}`; for (let y = m; y <= h - m; y += 6) d += ` L${f(xrr(y))} ${f(y)}`;
-    d += ` L${f(xrr(h - m))} ${f(h - m)} Q${f((xl(B) + xrr(h - m)) / 2)} ${f(B + inset * .55)} ${f(xl(B))} ${f(B)}`;
-    for (const y of yy.slice().reverse()) d += ` L${f(xl(y))} ${f(y)}`; d += " Z";
-    const xr = y => xrr(y);
-    const br = (x, y, dx, dy) => `M${f(x + dx * 12)} ${f(y)} L${f(x)} ${f(y)} L${f(x)} ${f(y + dy * 12)}`;
-    const brk = [br(xl(T) - 4, T - 4, 1, 1), br(xr(m) + 3, m - 3, -1, 1), br(xr(h - m) + 3, h - m + 3, -1, -1), br(xl(B) - 4, B + 4, 1, -1)].join(" ");
+    /* top and bottom edges run parallel to the first and last rows (0.8.253, Nick: "the top and bottom curves don't match the top-most and bottom-most Recent note"):
+       the top edge sits just above the title banner, at the first row's tilt; the bottom edge just under the last row, at its tilt. No corner brackets (Nick) */
+    const rrs = rowsAll.filter(rr => rr.getBoundingClientRect().height), ang = rr => parseFloat(win.getComputedStyle(rr).getPropertyValue("--rr")) || 0;
+    const aT = rrs.length ? ang(rrs[0]) : 0, aB = rrs.length ? ang(rrs[rrs.length - 1]) : 0, hr = hd.getBoundingClientRect(), last = rrs.length ? rrs[rrs.length - 1].getBoundingClientRect() : null;
+    void hr; hd.setCssProps({ "--rh": aT.toFixed(4) + "rad" });   /* tilt the banner first: it turns about its right end, so that end's top stays at offsetTop */
+    const hx = hd.offsetLeft + hd.offsetWidth, hy = hd.offsetTop - 6, lx = last ? last.right - pr.left : w, ly = last ? (aB > 0 ? last.bottom - LH / 2 : last.top + LH / 2) - pr.top + 13 : h - m;   /* the row turns about its right end: that end's middle sits half a row from the box's lower (or upper) side */
+    const lineY = (ax, ay, a, x) => ay - Math.tan(a) * (ax - x);   /* a line through (ax, ay) at angle a */
+    const solve = (ax, ay, a, xf) => { let y = ay; for (let k_ = 0; k_ < 4; k_++) y = lineY(ax, ay, a, xf(y)); return y; };
+    const yTR = solve(hx, hy, aT, xrr), yTL = solve(hx, hy, aT, xl), yBR = solve(lx, ly, aB, xrr), yBL = solve(lx, ly, aB, xl);
+    let d = `M${f(xl(yTL))} ${f(yTL)} L${f(xrr(yTR))} ${f(yTR)}`; for (let y = yTR; y <= yBR; y += 6) d += ` L${f(xrr(y))} ${f(y)}`;
+    d += ` L${f(xrr(yBR))} ${f(yBR)} L${f(xl(yBL))} ${f(yBL)}`; for (let y = yBL; y >= yTL; y -= 6) d += ` L${f(xl(y))} ${f(y)}`; d += " Z";
+    const xr = y => xrr(y); void B; void yy; void inset;
     let sv = RECEL.querySelector(":scope > svg.rcbg"); if (!sv) { sv = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); sv.setAttribute("class", "rcbg"); sv.setAttribute("aria-hidden", "true"); RECEL.prepend(sv); }
     sv.setAttribute("width", String(w)); sv.setAttribute("height", String(h)); sv.setAttribute("viewBox", `0 0 ${w} ${h}`); sv.empty(); const pa = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pa.setAttribute("d", d); sv.appendChild(pa);
-    const pb = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pb.setAttribute("d", brk); pb.setAttribute("class", "rcbrk"); sv.appendChild(pb);
-    hd.setCssProps({ "--rx": "0px", "--rpl": (Math.max(16, xl(T) + 14)).toFixed(1) + "px", "--rpr": "16px", "--rh": Math.atan2(m - T, xr(m) - xl(T)).toFixed(4) + "rad" });   /* the title banner tilts with the top edge (0.8.250, Nick) */ }); }
+    hd.setCssProps({ "--rx": "0px", "--rpl": (Math.max(16, xl(yTL) + 14)).toFixed(1) + "px", "--rpr": "16px", "--rh": aT.toFixed(4) + "rad" });   /* the title banner tilts with the top edge (0.8.250, Nick) */ }); }
 if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
 cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
