@@ -1702,7 +1702,7 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 /* Recents (0.8.237): a tab on the map's right edge, above the Links tab, and the small panel it opens */
 .ivm .dtab.rectab{top:30%;right:var(--hr,0px)}
 .ivm .dtab.rectab[hidden]{display:none}
-.ivm .ivm-recents{position:absolute;top:58px;padding:6px 6px 4px 0;right:calc(var(--hr,0px) + 14px);z-index:6;width:300px;max-height:min(420px,calc(100% - 140px));display:flex;flex-direction:column;overflow:visible;filter:drop-shadow(0 8px 18px rgba(0,0,0,.25))}
+.ivm .ivm-recents{position:absolute;top:50px;padding:22px 6px 22px 0;right:calc(var(--hr,0px) + 14px);z-index:6;width:max-content;max-width:340px;max-height:calc(100% - 120px);display:flex;flex-direction:column;overflow:visible;filter:drop-shadow(0 8px 18px rgba(0,0,0,.25))}
 /* the curved background: an SVG shape behind the rows (0.8.240) */
 .ivm .ivm-recents > svg.rcbg{position:absolute;inset:0;pointer-events:none}
 .ivm .ivm-recents > svg.rcbg path{fill:color-mix(in srgb,var(--bg) 90%,transparent);stroke:var(--line);stroke-width:1}

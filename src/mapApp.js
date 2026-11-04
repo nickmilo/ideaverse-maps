@@ -5221,7 +5221,7 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
   const box = RECEL.createDiv({ cls: "rcl" });
   /* laid out as Links is (0.8.239, Nick): 11px names on 14.5px rows, right-aligned, the age where Links shows its score, the emoji (or dot) at the end,
      and the rows bowed along the same gentle arc, tilting a little toward the top and bottom */
-  const LH = 17.5, nR = L.length, RY = Math.max(300, nR * LH * (.62 + .9 * Math.min(1, Math.max(0, (nR - 14) / 26)))) * 1.35, mid = (Math.min(nR, 24) - 1) / 2;   /* gentler (0.8.241, Nick: "a little bit less curve, not as tight"): Links' own radius rule, a little wider still */
+  const LH = 17.5, nR = L.length, RY = Math.max(420, nR * LH * .9),   /* the arc opens up as the list grows, so more notes never crowd it (0.8.247) */ mid = (Math.min(nR, 24) - 1) / 2;   /* gentler (0.8.241, Nick: "a little bit less curve, not as tight"): Links' own radius rule, a little wider still */
   L.forEach((j, r_) => { const r = box.createEl("button", { cls: "rcr" + (j === sel ? " on" : ""), attr: { type: "button" } }), em = recEmoji(j);
     const u = Math.max(-1, Math.min(1, (r_ - mid) * LH / RY)); r.setCssProps({ "--rx": (-60 * (1 - Math.sqrt(1 - u * u))).toFixed(1) + "px", "--rr": (Math.asin(u) * .25).toFixed(4) + "rad" });
     const mark = () => { if (em) r.createSpan({ cls: "rce", text: em }); else { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1 }); } };
@@ -5233,19 +5233,19 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
   /* the background bends with the rows (0.8.240, Nick: "can you curve the Recents background"): both edges follow the arc, drawn as one shape with its hairline border */
   win.requestAnimationFrame(() => { if (!RECEL || RECEL.hidden) return; const w = RECEL.clientWidth, h = RECEL.clientHeight; if (!w || !h) return;
     const bxr = box.getBoundingClientRect(), pr = RECEL.getBoundingClientRect(), y0 = bxr.top - pr.top + 6, hc = y0 + mid * LH, sh = y => { const u = Math.max(-1, Math.min(1, (y - hc) / RY)); return 60 * (1 - Math.sqrt(1 - u * u)); };
-    /* a HUD lens (0.8.245, Nick: "more shape… a sense of a HUD"): the left edge on the arc, the top and bottom bowed in, the right side flaring to sharp corners,
-       and small corner brackets round it */
-    const sh2 = y => sh(y) * 2.2, sMax = Math.max(sh2(0), sh2(h)), m = 4, T = m + 10, B = h - m - 10, yy = []; for (let y = T; y <= B; y += 6) yy.push(y); if (yy[yy.length - 1] !== B) yy.push(B);
-    const bow = y => { const t = (y - h / 2) / (h / 2); return 1 - t * t; }, xl = y => m + 18 - 16 * bow(y), xr = y => w - m - 10 + 8 * bow(y); void sMax;   /* a lens: both sides bow out at the middle, the top and bottom bow out too */
-    const f = v => v.toFixed(1); let d = `M${f(xl(T) + 10)} ${f(T)} Q${f((xl(T) + xr(m)) / 2)} ${f(T - 12)} ${f(xr(m))} ${f(m)}`;   /* the top: bowed in, out to a sharp top-right corner */
-    for (const y of yy) d += ` L${f(xr(y))} ${f(y)}`; d += ` L${f(xr(h - m))} ${f(h - m)} Q${f((xl(B) + xr(h - m)) / 2)} ${f(B + 12)} ${f(xl(B) + 10)} ${f(B)}`;   /* down the right, then the bottom bowed in */
-    d += ` Q${f(xl(B))} ${f(B)} ${f(xl(B))} ${f(B - 10)}`; for (const y of yy.slice().reverse()) if (y < B - 10 && y > T + 10) d += ` L${f(xl(y))} ${f(y)}`; d += ` L${f(xl(T))} ${f(T + 10)} Q${f(xl(T))} ${f(T)} ${f(xl(T) + 10)} ${f(T)} Z`;   /* up the arc, rounded left corners */
-    const br = (x, y, dx, dy) => `M${f(x + dx * 12)} ${f(y)} L${f(x)} ${f(y)} L${f(x)} ${f(y + dy * 12)}`;   /* corner brackets, just outside */
-    const brk = [br(xl(T) - 3, T - 3, 1, 1), br(xr(m) + 2, m - 2 + 0, -1, 1), br(xr(h - m) + 2, h - m + 2, -1, -1), br(xl(B) - 3, B + 3, 1, -1)].join(" ");
+    /* the HUD shape as Nick drew it (0.8.247): narrow on the left, opening out to the right. The left edge follows the rows' own arc and stands shorter;
+       the top rises and the bottom falls toward the right, out to the full-height right edge; small brackets mark the four corners */
+    const sMax = Math.max(sh(0), sh(h)), m = 4, inset = Math.min(26, h * .06), T = m + inset, B = h - m - inset, yy = []; for (let y = T; y <= B; y += 6) yy.push(y); if (yy[yy.length - 1] !== B) yy.push(B);
+    let base = m + 2; for (const rr of box.querySelectorAll(".rcr")) { const q = rr.getBoundingClientRect(); if (!q.height || q.bottom < bxr.top || q.top > bxr.bottom) continue; const cy_ = q.top + q.height / 2 - pr.top; base = Math.min(base, q.left - pr.left - 10 - (sMax - sh(cy_))); }   /* the left edge clears every name */
+    const xl = y => Math.max(1, base + sMax - sh(y)), xr = () => w - m, f = v => v.toFixed(1);
+    let d = `M${f(xl(T))} ${f(T)} Q${f((xl(T) + xr()) / 2)} ${f(T - inset * .55)} ${f(xr())} ${f(m)} L${f(xr())} ${f(h - m)} Q${f((xl(B) + xr()) / 2)} ${f(B + inset * .55)} ${f(xl(B))} ${f(B)}`;
+    for (const y of yy.slice().reverse()) d += ` L${f(xl(y))} ${f(y)}`; d += " Z";
+    const br = (x, y, dx, dy) => `M${f(x + dx * 12)} ${f(y)} L${f(x)} ${f(y)} L${f(x)} ${f(y + dy * 12)}`;
+    const brk = [br(xl(T) - 4, T - 4, 1, 1), br(xr() + 3, m - 3, -1, 1), br(xr() + 3, h - m + 3, -1, -1), br(xl(B) - 4, B + 4, 1, -1)].join(" ");
     let sv = RECEL.querySelector(":scope > svg.rcbg"); if (!sv) { sv = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); sv.setAttribute("class", "rcbg"); sv.setAttribute("aria-hidden", "true"); RECEL.prepend(sv); }
     sv.setAttribute("width", String(w)); sv.setAttribute("height", String(h)); sv.setAttribute("viewBox", `0 0 ${w} ${h}`); sv.empty(); const pa = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pa.setAttribute("d", d); sv.appendChild(pa);
     const pb = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pb.setAttribute("d", brk); pb.setAttribute("class", "rcbrk"); sv.appendChild(pb);
-    hd.setCssProps({ "--rx": "0px", "--rpl": "26px", "--rpr": "20px" }); }); }
+    hd.setCssProps({ "--rx": "0px", "--rpl": (sMax - sh(hd.offsetTop + hd.offsetHeight / 2) + 16).toFixed(1) + "px", "--rpr": "16px" }); }); }
 if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
 cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
