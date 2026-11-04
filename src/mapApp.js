@@ -7161,16 +7161,18 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const tm = yc.createEl("label", { cls: "pmaps yrall", attr: { "aria-label": "Date each note by when its file was last modified, instead of the Date property" } });
     const cm = tm.createEl("input", { type: "checkbox", attr: { id: "bymt" } }); cm.checked = BYMT; tm.createEl("i", { cls: "sw" }); tm.createSpan({ text: "Organize by most recently modified" });
     // the window back from right now, in place of the years slider while the switch is on
-    const wr = yc.createDiv({ cls: "mtwin mtslide" }); wr.createSpan({ cls: "mtl", text: "Window" }); const wsl = wr.createEl("input", { type: "range", attr: { min: "0", max: String(WSTOPS.length - 1), step: "1", "aria-label": "How far back to show" } }), wv = wr.createSpan({ cls: "mtv" });
+    const wr = yc.createDiv({ cls: "mtwin mtslide" }); wr.createSpan({ cls: "mtl", text: "Recent" }); const wsl = wr.createEl("input", { type: "range", attr: { min: "0", max: String(WSTOPS.length - 1), step: "1", "aria-label": "How far back to show" } }), wv = wr.createSpan({ cls: "mtv" });
     wsl.onclick = e => e.stopPropagation(); let wt = 0;
-    const wset = commit => { const v = WSTOPS[+wsl.value][0]; if (BYMT) MTWIN = v; else CTWIN = v; wv.setText(v === "all" ? "All" : wLabel(v)); win.clearTimeout(wt);
+    const wset = commit => { const v = WSTOPS[WSTOPS.length - 1 - +wsl.value][0];   /* All on the left, 1 day on the right (0.8.200, Nick) */ if (BYMT) MTWIN = v; else CTWIN = v; wv.setText(v === "all" ? "All" : wLabel(v)); win.clearTimeout(wt);
       const go = () => { if (BYMT) save("iv-mtwin", v); else save("iv-ctwin", v); NOWMS = Date.now(); syncMT(); relayout(true, false, () => fitTarget()); if (typeof syncTB === "function") syncTB(); }; if (commit) go(); else wt = win.setTimeout(go, 160); };
     wsl.oninput = () => wset(false); wsl.onchange = () => wset(true);
+    { const ends = wr.createDiv({ cls: "mtends" }); ends.createSpan({ text: "All" }); ends.createSpan({ text: "1 day" }); }
+    box.after(wr);   /* right under the years, so the two read as one choice: a span of years, or how recent */
 
-    const syncMT = () => { const k_ = WSTOPS.findIndex(q => q[0] === WINV()); wsl.value = String(k_ < 0 ? WSTOPS.length - 1 : k_); wv.setText(WINV() === "all" ? "All" : wLabel(WINV())); wr.hidden = false; const ycol = $("#ycol") || yc; const rg = ycol.querySelector(".prng"); if (rg) rg.hidden = BYMT || winSpan() > 0; syncYr(); };   /* Last … is there either way now; the years slider steps aside while a window is picked */
+    const syncMT = () => { const k_ = WSTOPS.findIndex(q => q[0] === WINV()); wsl.value = String(WSTOPS.length - 1 - (k_ < 0 ? WSTOPS.length - 1 : k_)); wv.setText(WINV() === "all" ? "All" : wLabel(WINV())); wr.hidden = false; box.hidden = BYMT; box.classList.toggle("yrdim", winSpan() > 0); syncYr(); };   /* the years stay in view, faded while a recent window is picked; touch them and the window lets go */   /* Last … is there either way now; the years slider steps aside while a window is picked */
     win.setTimeout(syncMT, 0); FUI.years = () => { cb.checked = YRALL; cm.checked = BYMT; syncMT(); };
     cm.onchange = () => { BYMT = cm.checked; save("iv-mtime", BYMT); NOWMS = Date.now(); fillTV(); syncMT(); if (LCUIOK) syncLC(); if (typeof syncTB === "function") syncTB(); relayout(true, false, () => fitTarget()); legend(); };
-    let t_ = 0; const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; SY0 = YR0; SY1 = YR1; syncYr();
+    let t_ = 0; const upd = commit => { if (winSpan()) { if (BYMT) { MTWIN = "all"; save("iv-mtwin", "all"); } else { CTWIN = "all"; save("iv-ctwin", "all"); } syncMT(); } let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; SY0 = YR0; SY1 = YR1; syncYr();
       if (view === "sense" && typeof senseSteps === "function") { senseStop(); senseT = null; senseTrail = []; SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; $("#tldate").textContent = "All time"; }
       win.clearTimeout(t_); if (commit) { save("iv-yr0", YR0); save("iv-yr1", YR1); } t_ = win.setTimeout(() => { relayout(false); if (typeof syncTB === "function") syncTB(); }, commit ? 0 : 90); };
     a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true); }

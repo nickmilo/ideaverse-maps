@@ -1592,3 +1592,9 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm #disppop .ctrrk.tchoice .eol{font-size:11.5px;color:var(--muted)}
 .ivm #disppop .lfxrow .lfxtry{appearance:none;background:none;border:1px solid var(--line);box-shadow:none;border-radius:999px;padding:1px 8px;height:auto;font:600 10px var(--body);color:var(--muted);cursor:pointer;margin-left:auto}
 .ivm #disppop .lfxrow .lfxtry:hover{color:var(--ink);border-color:var(--accent)}
+/* Years: the recent window under the years, and the years faded while it's on (0.8.200) */
+.ivm .mtwin.mtslide{flex-wrap:wrap;margin-top:6px}
+.ivm .mtwin.mtslide .mtends{flex-basis:100%;display:flex;justify-content:space-between;padding:0 calc(96px + 10px) 0 calc(var(--mtl-w, 54px) + 10px);font:500 9.5px var(--mono);color:var(--muted);margin-top:-2px}
+.ivm .prng.yrdim{opacity:.35}
+.ivm .prng.yrdim:hover{opacity:.7}
+.ivm .mtwin.mtslide .mtl{min-width:44px}
