@@ -2006,8 +2006,13 @@ function lcGridYears(){ const [ya, y1] = lcClamp(); let y0 = ya;
   const a = LCR0 < LCR1 ? LCR0 : y0, b = LCR0 < LCR1 ? LCR1 : y1; return Array.from({length: b - a + 1}, (_, j) => a + j); }   /* Years stacked: the Years range, or every year when it's set to one */
 const DAY_MS = 864e5;
 function lc30Step(d){ const nv = Math.max(0, LC30OFF + d); if (nv === LC30OFF) return; LC30OFF = nv; morph(true, () => ({ k, tx, ty })); }   /* the boxes stay put; the notes slide a row */
-function lc30Wheel(dy){ const now = performance.now(); if (now - LC30T > 400) LC30ACC = 0; LC30T = now; LC30ACC += dy; const step = 90;
-  while (LC30ACC <= -step) { LC30ACC += step; lc30Step(1); } while (LC30ACC >= step) { LC30ACC -= step; lc30Step(-1); } }
+function lc30Wheel(dy){ const now = performance.now(), fresh = now - LC30T > 350; LC30T = now; if (fresh && Math.abs(dy) > 2) lc30Step(dy < 0 ? 1 : -1); }   /* one week per scroll, however hard (0.8.184, Nick: "too sensitive or not sensitive enough"): a new step needs a pause */
+let LC30H = [];   /* the Earlier / Later / Today buttons above the grid */
+dbg.__lc30 = () => [LC30OFF, LC30H.map(q => [q[0] + q[2] / 2, q[1] + q[3] / 2, q[4]])];
+cv.addEventListener("pointerdown", e => { if (view !== "lincal" || LCSHAPE !== "days" || e.button !== 0) return; const h = LC30H.find(q => e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3]); if (!h) return;
+  e.stopImmediatePropagation(); e.preventDefault(); if (h[4] === "today") { if (LC30OFF) { LC30OFF = 0; morph(true, () => ({ k, tx, ty })); } } else lc30Step(h[4]); }, { capture: true });
+cv.addEventListener("pointermove", e => { if (view !== "lincal" || LCSHAPE !== "days") return; const on_ = LC30H.some(q => e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3]); cv.classList.toggle("hot", on_); });
+onKey(e => { if (view !== "lincal" || LCSHAPE !== "days" || e.metaKey || e.ctrlKey || e.altKey) return; if (e.key === "ArrowUp") { e.preventDefault(); lc30Step(1); } else if (e.key === "ArrowDown") { e.preventDefault(); lc30Step(-1); } else if (e.key === "t" || e.key === "T") { if (LC30OFF) { LC30OFF = 0; morph(true, () => ({ k, tx, ty })); } } });   /* ↑ a week back, ↓ a week on, T today */
 function lc30Pos(idx){ if (LC30 === "line") return [idx, 0]; if (LC30 === "half") return [idx % 15, Math.floor(idx / 15)]; const j = idx + LC.mo; return [j % 7, Math.floor(j / 7)]; }
 function layoutLc30(){ const now = new Date(), today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()), start = today - (29 + 7 * LC30OFF) * DAY_MS, C = 96, mo = (new Date(start).getUTCDay() + 6) % 7;   /* Monday first */
   LC = { years: [], C: C * .55, shape: "days", start, cw: C, ch: C, mo };
@@ -2024,7 +2029,11 @@ function lc30Guides(){ const { cw: C, start } = LC, now = new Date(), today = Da
   { const a = new Date(start), b = new Date(start + 29 * DAY_MS), f_ = d => `${MON3[d.getUTCMonth()]} ${d.getUTCDate()}`;
     ctx.fillStyle = LC30OFF ? css.accent : css.ink; ctx.font = `600 ${Math.max(12, Math.min(22, C * k * .2))}px ${css.mono}`; ctx.textAlign = "left"; ctx.textBaseline = "bottom";
     const t_ = `${f_(a)} – ${f_(b)}${a.getUTCFullYear() !== now.getFullYear() ? " " + a.getUTCFullYear() : ""}`; ctx.fillText(t_, sx(0), sy(LC30 === "weeks" ? -34 : -12)); const tw = ctx.measureText(t_).width;
-    ctx.font = `500 ${fs}px ${css.body}`; ctx.fillStyle = css.muted; ctx.fillText(LC30OFF ? `${LC30OFF} week${LC30OFF > 1 ? "s" : ""} back · scroll down for today` : "scroll up to go back a week at a time", sx(0) + tw + 16, sy(LC30 === "weeks" ? -34 : -12)); }
+    const by = sy(LC30 === "weeks" ? -34 : -12); LC30H = []; let bx = sx(0) + tw + 16; ctx.font = `600 12px ${css.body}`; ctx.textBaseline = "middle";
+    for (const [lbl, act, off] of [["↑ Earlier", 1, false], ["↓ Later", -1, !LC30OFF], ["Today", "today", !LC30OFF]]) { const w_ = ctx.measureText(lbl).width + 18, h_ = 22, y_ = by - h_ - 1;
+      ctx.globalAlpha = off ? .35 : 1; ctx.fillStyle = css.panel; ctx.beginPath(); ctx.roundRect(bx, y_, w_, h_, 11); ctx.fill(); ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = css.ink; ctx.fillText(lbl, bx + 9, y_ + h_ / 2);
+      if (!off) LC30H.push([bx, y_, w_, h_, act]); bx += w_ + 6; }
+    ctx.globalAlpha = 1; ctx.font = `500 11px ${css.body}`; ctx.fillStyle = css.muted; ctx.fillText(LC30OFF ? `${LC30OFF} week${LC30OFF > 1 ? "s" : ""} back · ↑ ↓ keys or scroll` : "↑ ↓ keys or scroll", bx + 6, by - 12); ctx.textBaseline = "bottom"; }
   if (LC30 === "weeks") { ctx.fillStyle = css.muted; ctx.font = `600 ${fs}px ${css.mono}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; for (let c = 0; c < 7; c++) ctx.fillText(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][c], sx(c * C + C / 2), sy(-8)); }
   for (let idx = 0; idx < 30; idx++) { const t = start + idx * DAY_MS, d = new Date(t), [c, r] = lc30Pos(idx), x = sx(c * C) + 2, y = sy(r * C) + 2, w = C * k - 4, wd = d.getUTCDay();
     if (wd === 0 || wd === 6) { ctx.globalAlpha = .55; ctx.fillStyle = css.panel; ctx.fillRect(x, y, w, w); }
@@ -5910,7 +5919,7 @@ let lcSegSync = () => {};
 const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) el.hidden = true; c.classList.add("lcctl2");
   const sh = c.createDiv({ cls: "seg lchalf", attr: { role: "group", "aria-label": "Months as" } });
   let bornR = null;
-  for (const [v, t, tip] of [[false, "Whole months", "A row a month, the weeks lined up"], [true, "Half months", "Two rows a month (the 1st to the 15th, the 16th on): half as wide, for a narrow pane"], ["weeks", "Life in weeks", "A row a year, a box a week; give a birth year and it shows the 90 years from it, the weeks lived shaded"], ["days", "Rolling 30 days", "30 days up close, ending today; scroll up to go back a week at a time: in one line, two rows of 15, or weeks"]]) {
+  for (const [v, t, tip] of [[false, "Whole months", "A row a month, the weeks lined up"], [true, "Half months", "Two rows a month (the 1st to the 15th, the 16th on): half as wide, for a narrow pane"], ["weeks", "Life in weeks", "A row a year, a box a week; give a birth year and it shows the 90 years from it, the weeks lived shaded"], ["days", "Rolling 30 days", "30 days up close, ending today; step back a week at a time with Earlier, the ↑ key or a scroll: in one line, two rows of 15, or weeks"]]) {
     const pressed = () => typeof v === "string" ? LCSHAPE === v : LCSHAPE === "months" && LCHALF === v;
     const b = sh.createEl("button", { text: t, attr: { type: "button", title: tip, "aria-pressed": String(pressed()) } }); b.dataset.sh = String(v);
     b.onclick = e => { e.stopPropagation(); if (typeof v === "string") LCSHAPE = v; else { LCSHAPE = "months"; LCHALF = v; save("iv-lchalf", v); } save("iv-lcshape", LCSHAPE); lcSegSync(); if (view === "lincal") morph(true, () => fitTarget()); }; }
