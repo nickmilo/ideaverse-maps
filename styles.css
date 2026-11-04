@@ -1640,3 +1640,4 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .ivm-sfsw button{appearance:none;box-shadow:none;border:0;height:auto;background:none;border-radius:999px;padding:4px 14px;font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#9fb0e0;cursor:pointer}
 .ivm .ivm-sfsw button[aria-pressed="true"]{background:rgba(185,166,255,.18);color:#eef1ff}
 .ivm .ivm-sfsw button:hover{color:#eef1ff}
+.ivm .ivm-sfsw .sfk{align-self:center;margin:0 8px 0 4px;padding:1px 5px;border:1px solid rgba(160,180,255,.3);border-radius:4px;font:600 9.5px var(--mono);color:#8f98b8}

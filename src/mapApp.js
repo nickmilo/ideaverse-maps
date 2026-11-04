@@ -5543,10 +5543,11 @@ function sfShip(on){ if (on) { if (view !== "stars" || SFSHIP) return; SFSHIP = 
   win.setTimeout(sfSwSync, 0); }
 const sfSw = (() => { const w = $("#main").createDiv({ cls: "ivm-sfsw seg" }); w.hidden = true;
   for (const [m, t] of [["chart", "Chart"], ["ship", "Starship"]]) { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); sfShip(m === "ship"); }; }
+  w.createSpan({ cls: "sfk", text: "C", attr: { "aria-hidden": "true" } });   /* the key that toggles them */
   for (const ty of ["pointerdown", "wheel", "click"]) w.addEventListener(ty, ev => ev.stopPropagation()); win.setTimeout(() => sfSwSync(), 0); return w; })();
 function sfSwSync(){ const on = SFMERGE && !dead && (view === "stars" || (view === "cockpit" && !!SFSHIP)); sfSw.hidden = !on; if (!on) return; sfSw.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.m === "ship") === (view === "cockpit")))); }
 onKey(e => { if (!SFMERGE || e.metaKey || e.ctrlKey || e.altKey || e.key.toLowerCase() !== "c") return; const a = doc.activeElement; if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable)) return;
-  if (view === "cockpit" && SFSHIP) { e.preventDefault(); sfShip(false); } });   /* C: back to the Chart from the Starship */
+  if (view === "cockpit" && SFSHIP) { e.preventDefault(); sfShip(false); } else if (view === "stars") { e.preventDefault(); sfShip(true); } });   /* C toggles Chart ⇄ Starship (0.8.222, Nick); no other map uses C */
 /* ⌘T: a new, empty tab, as in Obsidian (0.8.211, Nick): an orb of its own, and the primary note waits as a quiet placeholder until you pick a note.
    Nothing is lost: the other orbs keep their notes */
 function tabNew(){ const at = TCUR >= 0 && TABS[TCUR] ? TCUR + 1 : TABS.length; TABS.splice(at, 0, { path: "" }); TCUR = at; tabsSave(); select(-1); EDS.left.close(); if (EDS.left.el) EDS.left.el.hidden = true; syncOrbs(); draw();
@@ -7316,7 +7317,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const chl = doc.createElement("label"); chl.className = "mini lcemo chartsw"; const chc = doc.createElement("input"); chc.type = "checkbox"; const chs = doc.createElement("i"); chs.className = "sw"; const cht = doc.createElement("span"); cht.textContent = "Star Chart: rings and signposts around a hub"; chl.append(chc, chs, cht);
     const sync = () => { const cur = S3D ? "3d" : "2d"; seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === cur))); desc.textContent = DESC[cur]; chc.checked = STCH; };
     chc.onchange = () => { STCH = chc.checked; save("iv-schart", STCH); syncCh2(); orbWake(); legend(); draw(); };
-    if (SFMERGE) DESC["ship"] = "Board the Starship at the note you're on and fly among these galaxies. Chart brings you back to the star you're at.";
+    if (SFMERGE) { DESC["ship"] = "Board the Starship at the note you're on and fly among these galaxies. C (or Chart) brings you back to the star you're at."; DESC["2d"] = "The flat map of galaxies. C boards the Starship at the note you're on."; }
     for (const [m, t] of SFMERGE ? [["2d", "Chart"], ["ship", "Starship"]] : [["2d", "2D"], ["3d", "3D"]]) { const b = doc.createElement("button"); b.type = "button"; b.dataset.m = m; b.textContent = t; seg.appendChild(b);
       b.onclick = e => { e.stopPropagation(); if (m === "ship") { sfShip(true); return; } if ((m === "3d") === S3D) return; S3D = m === "3d"; save("iv-s3d", S3D); syncS3D(); placePlaybar(); morph(true, () => fitTarget()); sync(); syncCh2(); orbWake(); }; }
     if (rows.length) { rows[0].before(seg); seg.after(desc); desc.after(chl); const cb_ = sp.querySelector(".chxbox"); if (cb_) chl.after(cb_); for (const r of rows) r.hidden = true; } if (note) note.hidden = true;
