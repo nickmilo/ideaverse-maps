@@ -5255,9 +5255,9 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
     for (const rr of rowsAll) { const q = rr.getBoundingClientRect(); if (!q.height) continue; const cy_ = q.top + q.height / 2 - pr.top, dy = 4, sl = (s3(cy_ + dy) - s3(cy_ - dy)) / (2 * dy) * .6;
       const lim = 7 / Math.max(40, q.width), ta = Math.max(-lim, Math.min(lim, Math.atan(sl)));   /* a wide row tilts less, so its far end never drifts into the next row (0.8.260) */
       rr.setCssProps({ "--rx": (-s3(cy_) * .6).toFixed(1) + "px", "--rr": ta.toFixed(4) + "rad" }); }
-    let base = 1e9; for (const rr of rowsAll) { const q = rr.getBoundingClientRect(); if (!q.height || q.bottom < bxr.top || q.top > bxr.bottom) continue; const cy_ = q.top + q.height / 2 - pr.top; base = Math.min(base, q.left - pr.left - 10 - (s3Max - s3(cy_))); }   /* the left edge clears every name */
+    let base = 1e9; for (const rr of rowsAll) { const q = rr.getBoundingClientRect(); if (!q.height || q.bottom < bxr.top || q.top > bxr.bottom) continue; const cy_ = q.top + q.height / 2 - pr.top; base = Math.min(base, q.left - pr.left - 12 - (s3Max - s3(cy_)) * .6); }   /* the left edge clears every name */
     if (base > 1e8) base = m;
-    const xl = y => base + s3Max - s3(y), xrr = y => w - m - s3(y) * .6 + 2, f = v => v.toFixed(1);
+    const xl = y => base + (s3Max - s3(y)) * .6, xrr = y => w - m - s3(y) * .6 + 2,   /* the left edge bends exactly as the rows shift (0.8.261, Nick): the same gap to the emojis top, middle and bottom */ f = v => v.toFixed(1);
     /* top and bottom edges run parallel to the first and last rows (0.8.253, Nick: "the top and bottom curves don't match the top-most and bottom-most Recent note"):
        the top edge sits just above the title banner, at the first row's tilt; the bottom edge just under the last row, at its tilt. No corner brackets (Nick) */
     const rrs = rowsAll.filter(rr => rr.getBoundingClientRect().height), ang = rr => parseFloat(win.getComputedStyle(rr).getPropertyValue("--rr")) || 0;
