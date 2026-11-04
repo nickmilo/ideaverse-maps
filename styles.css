@@ -812,17 +812,6 @@ body.is-phone .ivm .wm-name{display:none}
 
 .ivm #vmorepop .chip[hidden]{display:none}
 /* Display → Show more map names: a small two-row grid between the tabs and More, on wide windows only */
-.ivm header.tb2 #vsegms > .vgrid{display:none}
-.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{order:1;display:grid;grid-template-columns:repeat(4,auto);grid-auto-rows:13px;gap:1px 10px;align-content:center;margin:0 4px 0 8px}
-.ivm header.tb2 .vgrid .vg{text-align:left;appearance:none;background:none;border:0;box-shadow:none;margin:0;padding:0;height:auto;font:500 10px var(--mono);letter-spacing:.02em;color:var(--muted);cursor:pointer;line-height:13px;white-space:nowrap}
-.ivm header.tb2 .vgrid .vg:hover,.ivm header.tb2 .vgrid .vg[aria-pressed="true"]{color:var(--ink)}
-.ivm header.tb2 .vgrid .vg[aria-pressed="true"]{text-decoration:underline;text-underline-offset:2px}
-.ivm[data-vgrid="1"] header.tb2 #vsegms > .vcurseg{order:2}
-.ivm[data-vgrid="1"] header.tb2 #vsegms > #vmore{order:3}
-.ivm[data-vgrid="1"] header.tb2 #vsegms > #vseg,.ivm[data-vgrid="1"] header.tb2 #vsegms{flex:none}
-.ivm[data-vgrid="1"] header.tb2 .tbl{flex:0 0 auto}
-@container ivm (min-width:761px){.ivm[data-vgrid="1"] header.tb2 .tbr{flex:0 1 auto;min-width:0}.ivm[data-vgrid="1"] header.tb2 .search{flex:0 1 200px;min-width:120px}}
-@container ivm (max-width:1199px){.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{display:none}.ivm[data-vgrid="1"] header.tb2 .tbl{flex:1 1 auto}.ivm[data-vgrid="1"] header.tb2 #vsegms{flex:0 1 auto}}
 
 /* Orbit: Wobble like the Earth (shown with Earth, Spinning and LYT) */
 .ivm #driftbar .pmaps{flex-basis:100%;order:10;contain:inline-size;display:flex;align-items:center;gap:7px;font:500 10px var(--mono);letter-spacing:.06em;color:var(--muted);cursor:pointer;padding:0 0 3px;line-height:1}
@@ -841,10 +830,6 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm.ivm #driftbar .dwob[hidden]{display:none}
 /* Show more map names on narrower windows (1200–1320px): tighter tabs, the Arrange/Group button down to its icon, a narrower Find box */
 @container ivm (max-width:1320px){
-.ivm[data-vgrid="1"] header.tb2 #vsegms .seg button,.ivm[data-vgrid="1"] header.tb2 #vmore{padding-left:7px;padding-right:7px}
-.ivm[data-vgrid="1"] header.tb2 .tbr .tbb b{display:none}
-.ivm[data-vgrid="1"] header.tb2 .search{flex:0 1 150px;min-width:100px}
-.ivm[data-vgrid="1"] header.tb2 #vsegms > .vgrid{gap:1px 8px;margin:0 2px 0 6px}
 }
 .ivm .yrctl .prng .srange{position:relative}
 .ivm .yrctl .srange .yrh{position:absolute;top:0;transform:translateX(-50%);color:var(--ink);font-weight:600}
@@ -853,7 +838,6 @@ body.is-phone .ivm .wm-name{display:none}
 .ivm .yrctl .srange .yrh.lft{transform:translateX(-100%)}
 .ivm .yrctl .srange .yrh.rgt{transform:none}
 /* Show more map names: Filter and Display keep their words while there's room, then drop to icons together */
-@container ivm (max-width:1479px){.ivm[data-vgrid="1"] header.tb2 .tbb .tbl2{display:none}}
 .ivm #vmorepop details > .chip{margin-left:16px}
 /* Orbit: maps you turn like a globe show Earth, Spinning and LYT Speed only; Starfield shows Calm, Slow and Lively only */
 .ivm.ivm.ivm[data-view="ideaverse"] #driftseg .dflat,.ivm.ivm.ivm[data-view="chord"][data-dome="1"] #driftseg .dflat,.ivm.ivm.ivm[data-view="quincunx"][data-dome="1"] #driftseg .dflat,.ivm.ivm.ivm[data-view="planet"][data-dome="1"] #driftseg .dflat{display:none}
@@ -1082,8 +1066,6 @@ body:not(.is-mobile) .ivm .wm-lyt{bottom:38px}
 /* the number key of each map, at the end of its row in the maps menu */
 .ivm #vmorepop .chip .mkey{margin-left:auto;padding-left:14px;font:500 10px var(--mono);color:var(--muted);opacity:.7}
 /* Show more maps in the header: shown whenever the row has room (the toolbar code drops it first) */
-.ivm.ivm.ivm[data-vgrid="1"]:not([data-vgoff="1"]) header.tb2 #vsegms > .vgrid{display:grid}
-.ivm.ivm.ivm[data-vgoff="1"] header.tb2 #vsegms > .vgrid{display:none}
 /* 0.7.23 · Group's choices under the gear, styled like Starfield's settings: a small label, then a compact switch, a thin line between rows */
 .ivm.ivm header.tb2 #mapopts > .pt:first-child{border:0;padding-bottom:0}
 .ivm.ivm header.tb2 #mapopts .gsec{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:6px;padding-top:8px;border-top:1px solid var(--line)}
@@ -1597,3 +1579,4 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .mtwin.mtslide{display:flex;align-items:center;gap:10px}
 .ivm .mtwin.mtslide input[type=range]{flex:1;min-width:120px}
 .ivm .mtwin.mtslide .mtv{min-width:96px;text-align:right;font:600 12px var(--mono);color:var(--ink)}
+.ivm .editopts .eorow .seg{flex-wrap:wrap}

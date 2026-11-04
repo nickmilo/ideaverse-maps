@@ -1424,7 +1424,7 @@ function quinSeeds(m){
 // at its center, the emptiest first, which splits it in four. Other notes gather in a small cloud around their top note.
 // the Obsidian map in 3D uses the same turntable camera as the 3D Geometric sketches
 // Obsidian (flat, draggable) and Ideaverse (the same graph in 3D) share the graph engine
-let GR3F = 2000, VGRID = pref("iv-vgrid", false) === true;
+let GR3F = 2000;
 // which main tab a map lights: Space-Time is Emergence's, Tesla is the chord map turned inside a glass globe
 function tabOf(){ return view === "spacetime" ? "emergence" : view; }
 function GRV(){ return view === "graph" || view === "ideaverse"; }
@@ -5312,9 +5312,9 @@ function renderTrail(){
   addTrailGrip(el);
 }
 // ---------- Edit mode (experimental, the road to 1.0): edit notes right on the map ----------
-// Three editors, each a real Obsidian editor (host.editCard): the main one, in a card under the picked note (the centre) or on the left side;
+// Two editors, each a real Obsidian editor (host.editCard): the main one on the left side (the centre card is gone since 0.8.195);
 // and a support note on the right for any note you ⌘-click. One theme and one opacity for all three. Starfield first, Emergence as the stress test.
-let EDITM = pref("iv-editm", false) === true, EDLEFT = pref("iv-edleft", false) === true, HUBPV = pref("iv-hubpv", false) === true;
+let EDITM = pref("iv-editm", false) === true, HUBPV = pref("iv-hubpv", false) === true;
 // how many mini previews: Starfield's biggest hubs and Compass's closest notes. 0.8.48 (Nick): Fewer, Natural or Max, never a free number,
 // and one governor for both maps: a preview only shows where it covers no other preview, the note you're on, the orbs, the editors or the edges
 const PVL = { off: 0, fewer: 3, natural: 6, max: 12 }, PVL_C = { off: 0, fewer: 5, natural: 10, max: 18 };   // Compass shows more: previews are its point (Nick, 0.8.57)
@@ -5340,9 +5340,7 @@ const EDW = (() => { const o = pref("iv-edw", null); return o && typeof o === "o
 const edW = (kind, def, lo, hi, vw) => clampN(EDW[kind] > 0 ? EDW[kind] : clampN(vw*def, lo, hi), 260, Math.max(260, vw*.7));
 function edRect(kind){ const vw = W - sideW();
   if (kind === "left") { const w = edW("left", .34, 340, 560, vw); return { x: 8, y: 8, w, h: H - 16 }; }
-  if (kind === "right") { const w = edW("right", .3, 320, 520, vw); return { x: vw - w - 8, y: 8, w, h: H - 16 }; }
-  const R = EDS && !EDS.right.el.hidden ? edRect("right").x - 8 : vw, L = EDS && !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 8 : 0;   // the centre card sits between the side editors
-  const fw = R - L, cw = clampN(fw*.42, 360, 640), y = Math.round(H*.33); return { x: Math.round(L + (fw - cw)/2), y, w: cw, h: H - y - 12 }; }
+  const w = edW("right", .3, 320, 520, vw); return { x: vw - w - 8, y: 8, w, h: H - 16 }; }
 // the editors remember whether you folded the properties (0.8.166, Nick: "i collapsed but then in the next note it was open again")
 let PROPCOL = pref("iv-propcol", false) === true;
 function propKeep(el){ const go = (k_) => { const mc = el.querySelector(".metadata-container"); if (!mc) { if (k_ < 8) win.setTimeout(() => go(k_ + 1), 60); return; }
@@ -5388,8 +5386,8 @@ function makeEd(kind){
   xb.onclick = () => { o.close(); panBack(); }; if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
   return o; }
 let LIVEQ = false;   // the map reacting as you write refreshes the note panel quietly: no camera move, no editor reload
-let EDS = null; EDS = { center: makeEd("center"), left: makeEd("left"), right: makeEd("right") };
-const edMain = () => EDLEFT ? EDS.left : EDS.center;
+let EDS = null; EDS = { left: makeEd("left"), right: makeEd("right") };   /* the editor in the middle is gone (0.8.195, Nick): the main editor is always on the left */
+const edMain = () => EDS.left;
 function stripLists(i){ const d = N[i], L = { above: [], below: [], up: [], related: [], out: [...new Set(out[i])].filter(j => j !== i && vis[j]), in: [...new Set(inn[i])].filter(j => j !== i && vis[j]) };
   for (const j of new Set([...out[i], ...inn[i]])) { if (!vis[j] || j === i) continue; const kk = EKIND.get(i*n + j);
     if (kk === 1) L.up.push(j); else if (kk === 4) L.related.push(j); else if (kk === 5) continue; else (N[j].level > d.level || (N[j].level === d.level && upOf(i, j)) ? L.above : L.below).push(j); }
@@ -5445,14 +5443,14 @@ function histNote(p){ if (HNAV === p) { HNAV = null; return; } HNAV = null;
   if (HIST[HPOS + 1] === p) { HPOS++; return; } if (HIST[HPOS - 1] === p) { HPOS--; return; }
   HIST = HIST.slice(0, HPOS + 1); HIST.push(p); if (HIST.length > 100) HIST.shift(); HPOS = HIST.length - 1; }
 function syncNav(){ let pin = false; try { pin = !!(TABS[TCUR] && TABS[TCUR].pin); } catch (_) { /* not ready yet */ }
-  for (const o of [EDS.center, EDS.left]) if (o && o.nav) { o.nav[0].disabled = pin || HPOS <= 0; o.nav[1].disabled = pin || HPOS >= HIST.length - 1; } }
+  for (const o of [EDS.left]) if (o && o.nav) { o.nav[0].disabled = pin || HPOS <= 0; o.nav[1].disabled = pin || HPOS >= HIST.length - 1; } }
 function histGo(d_){ const q = HPOS + d_; if (q < 0 || q >= HIST.length) return; const i = PIDX.get(HIST[q]); if (i == null) return;
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map.`); return; } HPOS = q; HNAV = HIST[q]; select(i); syncNav(); }
 function edFree(){ EDLW = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 0; for (const o of Object.values(EDS)) { o.key = ""; o.place(); } }
-function panBack(){ if (PANAUTO && EDS.center.el.hidden && EDS.left.el.hidden) { PANAUTO = false; setCollapsed(false, true); } }   // the note panel returns when the main editor closes
+function panBack(){ if (PANAUTO && EDS.left.el.hidden) { PANAUTO = false; setCollapsed(false, true); } }   // the note panel returns when the main editor closes
 function closeEds(){ for (const o of Object.values(EDS)) o.close(); panBack(); }
-async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(); EDS.left.close(); if (!edOn()) EDS.right.close(); if (PANAUTO) { PANAUTO = false; setCollapsed(false, true); } return; }
-  const m = edMain(); (m === EDS.left ? EDS.center : EDS.left).close();
+async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.left.close(); if (!edOn()) EDS.right.close(); if (PANAUTO) { PANAUTO = false; setCollapsed(false, true); } return; }
+  const m = edMain();
   if (m.el.hidden && !m.col && !drawerCollapsed) { PANAUTO = true; setCollapsed(true, true); }   // the editor shows the note: the note panel tucks away (its tab brings it back)
   const tp = TABS[TCUR], pj = tp && tp.pin && tp.path !== N[i].path ? PIDX.get(tp.path) : null;
   if (pj != null) { const p0 = m.open(pj); void EDS.right.open(i); syncOrbs(); if (view === "compass" || view === "arena") refitSoon(); await p0; return; }   // pinned: the main editor keeps its note, the one you picked opens beside it
@@ -5461,7 +5459,6 @@ async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(
   const p = m.open(i);
   if (view === "compass" || view === "arena") refitSoon();   // they frame themselves between the editors, once any move has finished   // Compass frames itself, clear of the editors
   else if (!edCam()) { /* a globe or 3D map keeps its own camera */ }
-  else if (m === EDS.center) { const r = edRect("center"); animateTo({ k, tx: r.x + r.w/2 - X[i]*k, ty: Math.round(H*.17) - Y[i]*k }); }   // the note above the card, in the top third
   else if (performance.now() - FLYT > 700) { const L = EDS.left.col ? 0 : edRect("left").x + edRect("left").w, R = EDS.right.el.hidden ? W - sideW() : edRect("right").x; animateTo({ k, tx: (L + R)/2 - X[i]*k, ty: H/2 - Y[i]*k }); }   /* a fly-to that just ran already framed it in the free space */   // the note in the free middle
   await p; }
 // a link clicked inside a card: the map picks that note (the main editor follows); ⌘-click (or a modifier Obsidian reads as "new tab") opens it as the support note.
@@ -5501,10 +5498,10 @@ function tabGo(j){ const t = TABS[j]; if (!t) return; const i = PIDX.get(t.path)
   TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }
 function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j === TCUR; if (j < TCUR) TCUR--;
   if (TCUR >= 0 || was) TCUR = Math.max(0, Math.min(TCUR, TABS.length - 1)); tabsSave();
-  if (was) { if (TABS[TCUR]) tabGo(TCUR); else { EDS.center.close(); EDS.left.close(); } } syncOrbs(); }
+  if (was) { if (TABS[TCUR]) tabGo(TCUR); else EDS.left.close(); } syncOrbs(); }
 const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; win.setTimeout(() => { if (!dead) syncOrbs(); }, 0);   // saved tabs show from the start
 let orbKey = "", orbDragged = false;
-function syncOrbs(){ for (const o of [EDS.center, EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
+function syncOrbs(){ for (const o of [EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
   const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); if (!on) { orbKey = ""; return; }
   const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
     TABS.forEach((t, j) => { const i = PIDX.get(t.path), nm = i != null ? N[i].title : t.path.replace(/^.*\//, "").replace(/\.md$/, ""), lv = i != null ? N[i].level : 1;
@@ -5582,7 +5579,7 @@ function select(i, fromTrail){
   if (view === "arena" && !LIVEQ) win.setTimeout(arenaSync, 0);
   if (view === "cockpit" && !LIVEQ) win.setTimeout(ckSync, 0);
   if (view === "kandinsky" && KSTY === "comp" && !LIVEQ) win.setTimeout(() => { if (!dead && view === "kandinsky" && KSTY === "comp" && sel >= 0 && sel !== KC.c && !KC.ids.includes(sel) && (KFOCUS = sel, true)) morph(true, () => fitTarget()); }, 0);   // a note outside the painting becomes its centre
-  if (!LIVEQ && (EDITM || (EDS && (!EDS.center.el.hidden || !EDS.left.el.hidden || EDS.left.col && EDS.left.path)))) win.setTimeout(() => { void openMain(sel); }, 0);
+  if (!LIVEQ && (EDITM || (EDS && (!EDS.left.el.hidden || EDS.left.col && EDS.left.path)))) win.setTimeout(() => { void openMain(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
   if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
   if (rec && i >= 0 && rec.notes[rec.notes.length - 1] !== N[i].path) { rec.notes.push(N[i].path); syncRec(); }   // recording a tour
@@ -6086,8 +6083,8 @@ $("#efx").onclick = closeEff; $("#effbtn").hidden = !EFF.length;
    Drop it in any editor and its [[link]] lands where you let go. Drop it on another note's dot and it goes into that note's related property;
    hold Control (at the start or as you drop) and it goes into up instead. */
 /* where a link dropped on a note goes (0.8.189, Nick: to try them out, then keep one): its related property, the top of the note, the top as a bullet, or the bottom. Control still sends it to up */
-let LDPOS = ["related", "top", "bullet", "bottom"].includes(pref("iv-ldpos", "")) ? pref("iv-ldpos", "") : "related";
-const LDPOS_T = { related: "related", top: "top of the note", bullet: "top, as a bullet", bottom: "bottom of the note" };
+let LDPOS = ["related", "top", "bullet", "head", "bottom"].includes(pref("iv-ldpos", "")) ? pref("iv-ldpos", "") : "related";
+const LDPOS_T = { related: "related", top: "top of the note", bullet: "top, as a bullet", head: "top, under its heading", bottom: "bottom of the note" };
 let LDRAG = -1, LDCTRL = false, LDROP = -1, LDGHOST = null, LDDONE = false, LDSRC = -1;
 const ldOK = () => view !== "cockpit" && !!host.addLink;
 cv.addEventListener("pointerdown", e => { if (e.button !== 0 || !e.altKey || e.metaKey || e.ctrlKey || !ldOK()) return;   /* only ⌥/Alt starts a drag (0.8.187): Ctrl-click is the support note on Windows; Control while dropping still means up */ const i = pick(e.offsetX, e.offsetY); if (i < 0) return;
@@ -7042,10 +7039,6 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // it sits outside the scrolling tabs, beside More, so it never scrolls out of sight
   // every main tab gets the ▾ when its map has a menu (Gravity and Sensemaking have Years shown)
   for (const v_ of ["sense"]) { const b_ = root.querySelector(`#vseg button[data-v="${v_}"]`); if (b_ && !b_.querySelector(".vcar")) { b_.createSpan({ cls: "vcar", text: " ▾" }); b_.setAttribute("aria-haspopup", "true"); } }
-  // the more-maps grid: the next eight map names in small type, two rows of four, between the tabs and More (Display → Show more map names)
-  const vgrid = $("#vsegms").createDiv({ cls: "vgrid", attr: { role: "group", "aria-label": "More maps" } });
-  for (const [v, t, go] of [["gravity", "Gravity", () => setView("gravity")], ["graph", "Obsidian", () => setView("graph")], ["chord", "Chord", () => goChord("")], ["corona", "Corona", () => goChord("out")], ["tesla", "Tesla", () => goChord("in")], ["treemap", "Treemap", () => setView("treemap")], ["mosaic", "Mosaic", () => setView("mosaic")], ["shelf", "Bookshelf", () => setView("shelf")]]) {
-    const b = vgrid.createEl("button", { text: t, cls: "vg", attr: { type: "button" } }); b.dataset.vg = v; b.onclick = e => { e.stopPropagation(); closePops(); driftStop(); go(); if (typeof syncTB === "function") syncTB(); }; }
   const vcurSeg = $("#vsegms").createDiv({ cls: "seg vcurseg" }), vcur = vcurSeg.createEl("button", { cls: "vcur", attr: { id: "vcur", type: "button", "aria-haspopup": "true", "aria-expanded": "false" } });
   // every map, one click away: a ☰ before the tabs opens the full list (the four main maps first, then the rest)
   { const mo = $("#vmore"); mo.empty(); setIcon(mo, "menu"); const sv = mo.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } mo.setAttribute("aria-label", "All maps"); mo.title = "All maps"; mo.classList.add("vham"); }
@@ -7429,8 +7422,6 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Display: a short list, no headings: a switch for every link, then how scoring works
   DI.p.classList.add("dlist"); const hold = DI.p.createDiv({ cls: "dhold" }); hold.hidden = true; hold.appendChild($("#alllinks"));
   // Show more map names: the grid beside the tabs (wide windows), with the themes moved in here
-  const vgSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Show eight more maps by name, in small type, in the header (when there's room)" } }); const vgCb = vgSw.createEl("input", { type: "checkbox" }); vgSw.createEl("i", { cls: "sw" }); vgSw.createSpan({ text: "Show more maps in the header" });
-  vgCb.checked = VGRID; vgCb.onchange = () => { VGRID = vgCb.checked; save("iv-vgrid", VGRID); syncTB(); };
   const alSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Draw every link on the map, faintly" } }); const alCb = alSw.createEl("input", { type: "checkbox" }); alSw.createEl("i", { cls: "sw" }); alSw.createSpan({ text: "Show all links" });
   alCb.onchange = () => { if (alCb.checked !== showAll) $("#alllinks").click(); };
   { const l = DI.p.createEl("label", { cls: "pmaps drow editm" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = EDITM; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Edit mode (experimental)" });
@@ -7441,12 +7432,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const or_ = g.createEl("label", { cls: "eorow" }); or_.createSpan({ cls: "eol", text: "Opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
     sl.oninput = () => { CARDOP = +sl.value; ov.setText(CARDOP + "%"); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
     const sw = (txt, get, set) => { const l_ = g.createEl("label", { cls: "mini lcemo eosw" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = get(); l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: txt }); c_.onchange = () => set(c_.checked); };
-    sw("Open the editor on the left side", () => EDLEFT, v => { EDLEFT = v; save("iv-edleft", v); if (sel >= 0) void openMain(sel); });
     { const r_ = g.createDiv({ cls: "eorow" }); r_.createSpan({ cls: "eol", text: "Previews" }); const seg = r_.createDiv({ cls: "seg" });
       for (const [v, t_] of [["off", "Off"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(PVLV === v) } });
         b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
     { const r_ = g.createDiv({ cls: "eorow" }); r_.createSpan({ cls: "eol", text: Platform.isMacOS ? "⌥-drop" : "Alt-drop" }); const seg = r_.createDiv({ cls: "seg" });
-      for (const [v, t_] of [["related", "Related"], ["top", "Top"], ["bullet", "• Top"], ["bottom", "End"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(LDPOS === v), "aria-label": "A link dropped on a note goes to its " + LDPOS_T[v] } });
+      for (const [v, t_] of [["related", "Related"], ["top", "Top"], ["bullet", "• Top"], ["head", "H6 • Top"], ["bottom", "End"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(LDPOS === v), "aria-label": "A link dropped on a note goes to its " + LDPOS_T[v] } });
         b.onclick = e => { e.stopPropagation(); LDPOS = v; save("iv-ldpos", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); }; } }
     sw("Show orbs (tabs)", () => ORBS, v => { ORBS = v; save("iv-orbs", v); const n_ = g.querySelector(".orbnsw"); if (n_) n_.hidden = !v; syncOrbs(); });
     sw("Show orb names", () => ORBN, v => { ORBN = v; save("iv-orbn", v); syncOrbs(); }); { const ls = g.querySelectorAll(".eosw"); const l_ = ls[ls.length - 1]; l_.classList.add("orbnsw", "sub"); l_.hidden = !ORBS; }
@@ -7667,20 +7657,20 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     // they move down one at a time, from the end, so the first row stays full and nothing runs off the edge (0.7.51; Nick: "one should only move down when it runs out of space")
     const MOV = ["#arrms", "#follownote", "#focusmode", "#viewms", "#dispms"].map(id => $(id)).filter(Boolean), tr = root.querySelector("header .tbr");
     if (MOV.some(el => el.parentElement !== tl)) for (const el of MOV) tl.appendChild(el);
-    root.dataset.tbone = Platform.isMobile ? "" : "1"; root.dataset.tbwrap = ""; root.dataset.findmini = ""; root.dataset.vgoff = ""; fold();
-    // Show more maps in the header: Find shrinks to its magnifying glass first, then the small map names go
+    root.dataset.tbone = Platform.isMobile ? "" : "1"; root.dataset.tbwrap = ""; root.dataset.findmini = ""; fold();
+    // a tight header: Find shrinks to its magnifying glass first
     if (over()) { root.dataset.findmini = "1"; fold(); }
-    if (VGRID && over()) { root.dataset.vgoff = "1"; fold(); }
-    if (over()) { root.dataset.tbwrap = "1"; root.dataset.findmini = ""; root.dataset.vgoff = "1"; fold();
+
+    if (over()) { root.dataset.tbwrap = "1"; root.dataset.findmini = ""; fold();
       if (tr) for (let q = MOV.length - 1; q >= 0 && over(); q--) tr.insertBefore(MOV[q], tr.firstChild); }
     $("#vmorepop").querySelectorAll(":scope > .vfoldb").forEach(x => x.remove()); vfold.hidden = false;
     for (const b of MAIN) { const c = $("#vmorepop").createEl("button", { cls: "chip", text: [...b.childNodes].filter(nd => !(nd instanceof Element && nd.classList.contains("ivm-sr"))).map(nd => nd.textContent).join("").replace(/\s*▾\s*$/, "").trim(), attr: { type: "button" } });   // the tab's own name, not its hidden label (0.8.66) if (tabV(view) === b.dataset.v) c.classList.add("on");
       c.classList.add("vfoldb"); c.dataset.v = b.dataset.v; micon(c, MICON[b.dataset.v]); vfold.before(c);
       c.onclick = e => { e.stopPropagation(); closePops(); driftStop(); if (tabV(view) !== b.dataset.v) setView(b.dataset.v); syncTB(); }; } };
   // refit only when the toolbar's width or the map changes: refitting on every redraw let a borderline width flip back and forth
-  let fitRaf = 0, fitKey = "", fitT2 = 0, fitRe = false; const fitSoon = () => { const k_ = root.querySelector("header").clientWidth + "|" + view + "|" + (sel >= 0 ? 1 : 0) + "|" + VGRID; if (k_ === fitKey || fitRaf) return; fitKey = k_; fitRaf = RAF(() => { fitRaf = 0; const was = [...FOLD_T].join(); fitTabs(); if ([...FOLD_T].join() !== was) syncTB();
+  let fitRaf = 0, fitKey = "", fitT2 = 0, fitRe = false; const fitSoon = () => { const k_ = root.querySelector("header").clientWidth + "|" + view + "|" + (sel >= 0 ? 1 : 0);  if (k_ === fitKey || fitRaf) return; fitKey = k_; fitRaf = RAF(() => { fitRaf = 0; const was = [...FOLD_T].join(); fitTabs(); if ([...FOLD_T].join() !== was) syncTB();
     // a fit made mid-change (a panel opening, a font loading) can drop the map names for good: check once more when things settle
-    if (fitRe) fitRe = false; else if (root.dataset.vgoff === "1" || root.dataset.findmini === "1") { win.clearTimeout(fitT2); fitT2 = win.setTimeout(() => { if (!dead) { fitKey = ""; fitRe = true; fitSoon(); } }, 700); } }); };
+    if (fitRe) fitRe = false; else if (root.dataset.findmini === "1") { win.clearTimeout(fitT2); fitT2 = win.setTimeout(() => { if (!dead) { fitKey = ""; fitRe = true; fitSoon(); } }, 700); } }); };
   { const ro_ = new ResizeObserver(() => { if (!dead) fitSoon(); }); ro_.observe(root.querySelector("header")); }
   syncTB = () => { syncDrift(); fitSoon();
     const core = CORE.has(view) && !FOLD_T.has(tabV(view)); vcur.hidden = true; vcurSeg.hidden = true; vcur.setAttribute("aria-pressed", String(!core)); vcur.textContent = VN() + " "; vcur.createSpan({ cls: "vcar", text: "▾" }); mbName.setText(VN());
@@ -7692,7 +7682,6 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     turnSync(); twWake();
     // the theme buttons live in Display (since 0.6.49), keeping the toolbar short
     thSec.hidden = true;
-    root.dataset.vgrid = VGRID ? "1" : ""; vgrid.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.vg === (view === "chord" ? (CSPH === "out" ? "corona" : CSPH === "in" ? "tesla" : "chord") : view))));
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }
     { const yc_ = $("#ycol"); if (yc_) yc_.hidden = !YRV.has(view); } $("#yrctl").hidden = !YRV.has(view); syncYr();
@@ -7709,7 +7698,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         // Compass, Arena and Kandinsky wait under Experimental → Unfinished for now (Nick, 0.8.67)
         { let at = MP.querySelector("#goskyline"); for (const id of ["gocompass", "goarena", "gokandinsky", "gocockpit"]) { const el = MP.querySelector("#" + id); if (el && at) { at.after(el); at = el; } } }
         { const uf = MP.querySelector("#goskyline"), ud = uf && uf.closest("details"), es = ex.querySelector(":scope > summary"); if (ud && ud !== ex && es) es.after(ud); }   /* Unfinished first under Experimental (Nick, 0.8.80) */
-        for (const v of ["gravity", "graph", "treemap", "mosaic", "shelf", "tesla", "corona", "chord"]) { const g_ = vgrid.querySelector(`[data-vg="${v}"]`); if (g_) vgrid.appendChild(g_); } const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
+        const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
     // the quick keys in list order: 1–9, 0, then - = [ ] \
     const QK = [..."1234567890-=[]\\"], QPIN = {};   /* the quick keys simply follow the list now, nothing pinned (0.8.193, Nick) */
     const KEYED = () => { const m_ = new Map(), cs = KEYMAPS().filter(c_ => !QPIN[c_.id]); cs.slice(0, QK.length).forEach((c_, j) => m_.set(QK[j], c_));
@@ -7845,9 +7834,9 @@ return {
     if (!v) return false; win.setTimeout(() => { if (!dead) applySaved(host.embed ? { ...v, cam: null } : v); }, 60); return true; },   /* an embed is smaller than the map the view was saved on: fit it instead of the saved zoom */
   // the commands "Open note in Emergence / Starfield" (0.8.27, Nick: so they can be hotkeyed): that map, Edit mode on, the note in the left editor
   editIn(path, which){ const i = PIDX.get(path); if (i == null || dead) return false;
-    if (!EDITM || !EDLEFT) { EDITM = true; EDLEFT = true; save("iv-editm", true); save("iv-edleft", true);
+    if (!EDITM) { EDITM = true; save("iv-editm", true);
       const cb = root.querySelector(".editm input"); if (cb) cb.checked = true; const g = root.querySelector(".editopts"); if (g) g.hidden = false;
-      for (const l_ of root.querySelectorAll(".editopts .eosw")) if (/left side/.test(l_.textContent)) { const c_ = l_.querySelector("input"); if (c_) c_.checked = true; } }
+    }
     const hop = new Map(HOPS).get(which === "stars" ? "stars2d" : "emergence"); if (hop && !(which === "stars" ? view === "stars" : view === "emergence")) hop();
     if (EDS.left.col) EDS.left.collapse(false);
     win.setTimeout(() => { if (dead) return; if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
