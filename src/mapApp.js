@@ -2684,7 +2684,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
     let dir = [away[0] / la - fw[0] * .3, away[1] / la - fw[1] * .3 - .35, away[2] / la - fw[2] * .3]; const l = Math.hypot(...dir) || 1; dir = dir.map(v => v / l);
     CK.settle = { flow: (CK.arrV || 0) > 150, vin: Math.min(CK.arrV || 0, 1800), aF: CK.arrF, _r: (CK.arrV = 0), P0: CK.P.slice(), P1: [T[0] + dir[0] * D, T[1] + dir[1] * D, T[2] + dir[2] * D], T, t0: win.performance.now() }; CK.lookT = null; }
   CK.kind = new Map(); for (const [k_, key] of [["above", "up"], ["below", "down"], ["up", "upp"], ["related", "rel"]]) for (const j of L[k_]) CK.kind.set(j, key);
-  try { CK.SL = SPACELINK(); } catch (_) { CK.SL = { up: "#ff7a6b", down: "#6fd3ff", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }; }
+  try { CK.SL = SPACELINK(); } catch (_) { CK.SL = { up: "#6fd3ff", down: "#ff7a6b", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }; }
   CK.sOff = [0, 0]; CK.upL = L.up.filter(j => vis[j]); if (view === "cockpit") win.setTimeout(() => { if (!dead && view === "cockpit") legend(); }, 0);
   const upS = new Set(L.up), ord = (a, b) => (upS.has(b) ? 1 : 0) - (upS.has(a) ? 1 : 0) || rv(b) - rv(a) || N[b].score - N[a].score;   /* up links always first (0.8.122, Nick) */
   CK.inL = [...L.in].sort(ord); CK.outL = [...L.out].sort(ord);
@@ -4346,9 +4346,9 @@ on(win, "blur", () => { CMDK = false; cmdPvSync(); });
 const css = {};
 const COLORS = ["bg","panel","line","ink","muted","accent","accent-soft","up","down","band-a","band-b","l2","l1","sl2","sl1","rel","upp","prop","edge-faint"];
 let probe = null;   // colors go through the browser once, so the canvas gets plain rgb() even when a theme writes color-mix() or Obsidian's own variables
-// Display → Starfield link colors (0.8.7, Nick): red above, blue below, gold up, lilac related, slate other, on every map and in the note panel
+// Display → Starfield link colors (0.8.7, Nick): blue above, red below (since 0.8.208), gold up, lilac related, slate other, on every map and in the note panel
 let SFLINKS = pref("iv-sflinks", false) === true;
-const SFDARK = { up: "#ff6f61", down: "#6fd3ff", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }, SFLIGHT = { up: "#d0453f", down: "#1f86c4", rel: "#8a3ff0", upp: "#b8860b", prop: "#6b7c93" };   // red above, blue below (a Doppler pair, 0.8.12, Nick); up is gold, clear of both
+const SFDARK = { up: "#6fd3ff", down: "#ff6f61", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }, SFLIGHT = { up: "#1f86c4", down: "#d0453f", rel: "#8a3ff0", upp: "#b8860b", prop: "#6b7c93" };   // blue above, red below (swapped in 0.8.208, Nick: blue above is a nod to the Architect's blue); up is gold, clear of both
 function applySfLinks(){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || (th === "obsidian" && doc.body.classList.contains("theme-dark"));
   const P = dark ? SFDARK : SFLIGHT; for (const kk of Object.keys(P)) { if (SFLINKS) root.style.setProperty("--" + kk, P[kk]); else root.style.removeProperty("--" + kk); }
   let t = null; try { t = tip; } catch { t = null; } if (t) for (const kk of Object.keys(P)) { if (SFLINKS) t.style.setProperty("--" + kk, P[kk]); else t.style.removeProperty("--" + kk); } }
