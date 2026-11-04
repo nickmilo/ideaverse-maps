@@ -5415,7 +5415,7 @@ function edLook(el){ const SFE = CARDTH === "starfield", th = SFE ? "starfield" 
   if (sf) el.setCssProps(H); else if (m) { const V2 = V; el.setCssProps(Object.fromEntries(Object.keys(H).map(nm => [nm, V2[nm] || ""]))); } else el.setCssProps(Object.fromEntries(Object.keys(H).map(nm => [nm, ""])));
   win.setTimeout(() => { try { for (const o of Object.values(EDS)) if (o && o.el === el) edTint(o); } catch (_) { /* editors not made yet */ } }, 0); }
 /* a link's color in the editor says how the note it points to relates to this one (0.8.224, Nick: "what if every single link is colored based on whether it's an up, related, above, or below link?"):
-   up property gold, related violet, above blue, below green, any other property slate. Starfield theme for now (the rule lives on .sf-th) */
+   up property gold, related purple, above blue, below green, any other property slate. Starfield theme for now (the rule lives on .sf-th) */
 function edTint(o){ if (!o || !o.el || o.el.hidden) return;
   if (!o.path || !host.linkTargets) return; const sf = o.el.classList.contains("sf-th"), i = PIDX.get(o.path);
   const els = o.el.querySelectorAll("a.internal-link, .cm-hmd-internal-link, .multi-select-pill-content, .internal-link");
