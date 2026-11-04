@@ -5164,7 +5164,7 @@ function hudPv(j, x, y, force){ if (!(HUDPV || force) || j < 0 || !host.preview)
   HUDPVE.setCssProps({ "--pvx": Math.round(c.left - pr.left + Math.max(8, x - pw - 14)) + "px", "--pvy": Math.round(c.top - pr.top + Math.max(8, Math.min(H - ph - 8, y - ph / 2))) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); }
 let HUDL = pref("iv-hudl", false) === true, HUDR = pref("iv-hudr", true) !== false, HUDH = [], HUDHOV = -1, HUDC = { i: -2, list: [], rel: null };
 function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && RADJ) return HUDC; const L = stripLists(i), inS = new Set(L.in), outS = new Set(L.out), upS = new Set(L.up); let rel = null; try { rel = relFrom(i); } catch (_) { rel = null; }
-  const all = [...new Set([...L.in, ...L.out])].filter(j => j !== i && vis[j]), rv = j => rel ? rel[j] : N[j].score / 1e3; let mx = 0; for (const j of all) mx = Math.max(mx, rv(j));
+  const all = [...new Set([...L.in, ...L.out])].filter(j => j !== i && N[j] && vis[j]), rv = j => rel ? rel[j] : N[j].score / 1e3; let mx = 0; for (const j of all) mx = Math.max(mx, rv(j));
   all.sort((a, b) => (upS.has(b) ? 1 : 0) - (upS.has(a) ? 1 : 0) || rv(b) - rv(a) || N[b].score - N[a].score);
   return (HUDC = { i, rj: RADJ, list: all, inS, outS, upS, sc: new Map(all.map(j => [j, mx > 0 ? Math.round(100 * rv(j) / mx) : 0])) }); }
 function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hudPv(-1); return; } if (!HUDL || sel < 0 || !vis[sel] || isPhone()) { hudTab(0); hudPv(-1); return; } const D_ = hudData(sel), n_ = D_.list.length; hudTab(n_); if (!n_ || HUDCOL) { hudPv(-1); return; }
@@ -5177,7 +5177,7 @@ function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hud
   for (let r = 0; r < rows; r++) { const [x, y, tl] = at(r), more = r === cap, j = more ? -1 : D_.list[off + r], hv = j >= 0 && j === HUDHOV;
     ctx.save(); ctx.translate(x, y); ctx.rotate(tl * (hv ? 0 : 1)); if (hv) ctx.scale(1.13, 1.13);
     if (more) { ctx.globalAlpha = .6; ctx.fillStyle = css.muted || ink; ctx.fillText(below > 0 ? `+${below} more  ↓` : "↑  back to the top", 0, 0); ctx.restore(); HUDH.push([x - 120, y - lh / 2, 126, lh, -6]); continue; }
-    let tt = N[j].title; while (ctx.measureText(tt).width > 175 && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…"; tt = (D_.inS.has(j) && D_.outS.has(j) ? "↔ " : D_.inS.has(j) ? "← " : "→ ") + tt;
+    if (!N[j]) continue; let tt = N[j].title; while (ctx.measureText(tt).width > 175 && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…"; tt = (D_.inS.has(j) && D_.outS.has(j) ? "↔ " : D_.inS.has(j) ? "← " : "→ ") + tt;
     const tw = ctx.measureText(tt).width;
     if (hv) { ctx.globalAlpha = .9; ctx.fillStyle = css.bg || "#111"; ctx.beginPath(); ctx.roundRect(-tw - 26, -9, tw + 30, 18, 9); ctx.fill(); }
     ctx.globalAlpha = hv ? 1 : .78; ctx.fillStyle = D_.upS.has(j) ? (SL.upp || css.upp || ink) : (N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1) || ink; ctx.beginPath(); ctx.arc(-4, 0, 2.6, 0, 6.2832); ctx.fill();
@@ -7969,6 +7969,7 @@ return {
     if (!v) return false; win.setTimeout(() => { if (!dead) applySaved(host.embed ? { ...v, cam: null } : v); }, 60); return true; },   /* an embed is smaller than the map the view was saved on: fit it instead of the saved zoom */
   // the commands "Open note in Emergence / Starfield" (0.8.27, Nick: so they can be hotkeyed): that map, Edit mode on, the note in the primary note
   /** a note opened elsewhere while the map is in front: show it as the primary note (0.8.218). False when the map can't (not in the map, or filtered out) */
+  hasNote(path){ return PIDX.has(path); },
   openPrimary(path){ const i = PIDX.get(path); if (i == null || dead || !edOn() || !vis[i]) return false; if (EDS.left.col) EDS.left.collapse(false); select(i); navTo(i); draw(); return true; },
   editIn(path, which){ const i = PIDX.get(path); if (i == null || dead) return false;
     if (!EDITM) { EDITM = true; save("iv-editm", true);

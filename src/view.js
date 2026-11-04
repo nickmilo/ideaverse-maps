@@ -45,6 +45,7 @@ export class MapView extends ItemView {
     this.plugin = plugin;
     this.map = null;
     this.noteLeaf = null;   // where notes open from the map: one tab beside it, reused
+    this.navigation = false;   // a note opened "here" (the quick switcher, ⌘D) never replaces the map itself
   }
   getViewType() { return VIEW_TYPE; }
   getDisplayText() { return "Maps of the Ideaverse"; }
@@ -63,7 +64,12 @@ export class MapView extends ItemView {
       if (this.plugin.ownOpenT && Date.now() - this.plugin.ownOpenT < 1500) return;
       const tryIt = (k_) => { const v = leaf.view; if (!v || (v.containerEl && this.contentEl.contains(v.containerEl))) return;
         const f = v.getViewType && v.getViewType() === "markdown" ? v.file : null; if (!f) { if (k_ < 6) window.setTimeout(() => tryIt(k_ + 1), 60); return; }
-        if (!this.map || !this.map.openPrimary(f.path)) return;
+        if (!this.map) return;
+        if (!this.map.openPrimary(f.path)) { if (!this.map.hasNote || this.map.hasNote(f.path)) return;   /* in the map but filtered out: leave it be */
+          /* a note the map doesn't have yet (⌘D making today's note, say): pick it up with a quick rescan (only changed notes are read), then open it (0.8.219, Nick) */
+          leaf.detach(); app.workspace.setActiveLeaf(this.leaf, { focus: true });
+          void this.plugin.rescan().then(async () => { for (let t = 0; t < 100 && !(this.map && this.map.openPrimary); t++) await new Promise(r => window.setTimeout(r, 100));
+            if (this.map && !this.map.openPrimary(f.path)) this.openNote(f.path, true); }); return; }
         leaf.detach(); app.workspace.setActiveLeaf(this.leaf, { focus: true }); };
       tryIt(0); }));
     if (app.workspace.getActiveViewOfType(MapView) === this) { prev = this.leaf; snap(); } }
