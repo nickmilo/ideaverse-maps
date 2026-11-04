@@ -69,7 +69,10 @@ export class MapView extends ItemView {
           /* a note the map doesn't have yet (⌘D making today's note, say): pick it up with a quick rescan (only changed notes are read), then open it (0.8.219, Nick) */
           leaf.detach(); app.workspace.setActiveLeaf(this.leaf, { focus: true });
           void this.plugin.rescan().then(async () => { for (let t = 0; t < 100 && !(this.map && this.map.openPrimary); t++) await new Promise(r => window.setTimeout(r, 100));
-            if (this.map && !this.map.openPrimary(f.path)) this.openNote(f.path, true); }); return; }
+            if (this.map && !this.map.openPrimary(f.path)) { this.openNote(f.path, true); return; }
+            /* a note just made (⌘N, say): put the cursor in its title, ready to name it, as Obsidian does (0.8.221) */
+            if (Date.now() - f.stat.ctime < 8000) for (let t = 0; t < 30; t++) { await new Promise(r => window.setTimeout(r, 100)); const it = this.contentEl.ownerDocument.querySelector(".ivm-card-left:not([hidden]) .inline-title");
+              if (it instanceof HTMLElement) { it.focus(); const sel = window.getSelection(), rg = document.createRange(); rg.selectNodeContents(it); if (sel) { sel.removeAllRanges(); sel.addRange(rg); } break; } } }); return; }
         leaf.detach(); app.workspace.setActiveLeaf(this.leaf, { focus: true }); };
       tryIt(0); }));
     if (app.workspace.getActiveViewOfType(MapView) === this) { prev = this.leaf; snap(); } }
