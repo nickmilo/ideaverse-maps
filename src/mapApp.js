@@ -5197,7 +5197,7 @@ function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hud
    newest first, behind a tab on the map's right edge, above the Links tab. It opens a small panel (a hairline border, its own scroll): each row its emoji
    (a mini switch, on by default), its name and its age. Click a row to open it as the primary note (⌘ a new orb, Shift links it in); the panel stays open. */
 let RECN = Math.max(5, Math.min(50, +pref("iv-recn", 30) || 30)), RECHV = -1, RECHVEL = null;   /* how many Recents show (Display, 5–50, 0.8.244); the row under the pointer, for ⌘ previews */
-let RECW = +pref("iv-recw", 0) || 0;   /* Recents width, dragged at its left edge (0.8.257, Nick); 0 = as wide as its names */
+let RECW = +pref("iv-recw", 0) || 0, RECLAY = null, RECLT = 0;   /* RECLAY: lays the rows on the curve and draws the shape; re-run live while the edge is dragged (0.8.260) */   /* Recents width, dragged at its left edge (0.8.257, Nick); 0 = as wide as its names */
 let RECEFRONT = pref("iv-recefront", false) === true, RECLEFT = pref("iv-recleft", false) === true;   /* RECLEFT: titles left-aligned, so the emojis line up (still on the curve) (0.8.255, Nick) */   /* Recents: the emoji before the name and the age at the end (0.8.246, Nick, to try) */
 let RECON = pref("iv-recent", true) !== false, RECOPEN = pref("iv-recopen", false) === true, RECEMO = pref("iv-recemo", true) !== false, RECV = 0, RECC = { v: "", list: [] }, RECEL = null, RECTAB = null, RECKEY = "";
 const ago = ms => { const s_ = Math.max(0, (Date.now() - ms) / 1000); return s_ < 60 ? "now" : s_ < 3600 ? Math.floor(s_ / 60) + "m" : s_ < 86400 ? Math.floor(s_ / 3600) + "h" : s_ < 86400 * 30 ? Math.floor(s_ / 86400) + "d" : s_ < 86400 * 365 ? Math.floor(s_ / 86400 / 30) + "mo" : Math.floor(s_ / 86400 / 365) + "y"; };
@@ -5212,7 +5212,7 @@ function recBuild(){ if (RECEL) return; const st = e => e.stopPropagation();
 /* the left-edge grip: drag to widen or narrow Recents (0.8.257, Nick); double-click for its own width again */
 function recGrip(){ const gr = RECEL.createDiv({ cls: "rcgrip" }); let d_ = null;
   gr.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); gr.setPointerCapture(e.pointerId); d_ = { x: e.clientX, w: RECEL.getBoundingClientRect().width }; RECEL.classList.add("resizing"); });
-  gr.addEventListener("pointermove", e => { if (!d_) return; RECW = Math.round(Math.max(180, Math.min(640, d_.w + (d_.x - e.clientX)))); RECEL.setCssProps({ "--rcw": RECW + "px" }); RECEL.classList.add("sized"); });
+  gr.addEventListener("pointermove", e => { if (!d_) return; RECW = Math.round(Math.max(180, Math.min(640, d_.w + (d_.x - e.clientX)))); RECEL.setCssProps({ "--rcw": RECW + "px" }); RECEL.classList.add("sized"); if (!RECLT) RECLT = win.requestAnimationFrame(() => { RECLT = 0; if (RECLAY) RECLAY(); }); });   /* the shape and the rows follow the edge as you drag, not after */
   const up = () => { if (!d_) return; d_ = null; RECEL.classList.remove("resizing"); save("iv-recw", RECW); RECKEY = ""; recSync(); };
   gr.addEventListener("pointerup", up); gr.addEventListener("pointercancel", up);
   gr.addEventListener("dblclick", e => { e.stopPropagation(); RECW = 0; save("iv-recw", 0); RECEL.classList.remove("sized"); RECKEY = ""; recSync(); }); }
@@ -5242,7 +5242,7 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
     /* hold ⌘ over a row for its mini preview, as on Links (0.8.244, Nick); with "Automatically see mini-preview on hover" on, it shows on hover alone */
     r.addEventListener("pointerenter", () => { RECHV = j; RECHVEL = r; recPv(); }); r.addEventListener("pointerleave", () => { if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } }); });
   /* the background bends with the rows (0.8.240, Nick: "can you curve the Recents background"): both edges follow the arc, drawn as one shape with its hairline border */
-  win.requestAnimationFrame(() => { if (!RECEL || RECEL.hidden) return; const w = RECEL.clientWidth, h = RECEL.clientHeight; if (!w || !h) return;
+  RECLAY = () => { if (!RECEL || RECEL.hidden) return; const w = RECEL.clientWidth, h = RECEL.clientHeight; if (!w || !h) return;
     const bxr = box.getBoundingClientRect(), pr = RECEL.getBoundingClientRect(), y0 = bxr.top - pr.top + 6, hc = y0 + mid * LH, sh = y => { const u = Math.max(-1, Math.min(1, (y - hc) / RY)); return 60 * (1 - Math.sqrt(1 - u * u)); };
     /* the HUD shape as Nick drew it (0.8.247): narrow on the left, opening out to the right. The left edge follows the rows' own arc and stands shorter;
        the top rises and the bottom falls toward the right, out to the full-height right edge; small brackets mark the four corners */
@@ -5253,7 +5253,8 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
     /* the rows ride the same bend as the panel's edges (0.8.252): each row shifts by the band's own curve and tilts with it, so nothing floats in empty corners */
     const rowsAll = [...box.querySelectorAll(".rcr")]; for (const rr of rowsAll) { rr.setCssProps({ "--rx": "0px", "--rr": "0rad" }); }
     for (const rr of rowsAll) { const q = rr.getBoundingClientRect(); if (!q.height) continue; const cy_ = q.top + q.height / 2 - pr.top, dy = 4, sl = (s3(cy_ + dy) - s3(cy_ - dy)) / (2 * dy) * .6;
-      rr.setCssProps({ "--rx": (-s3(cy_) * .6).toFixed(1) + "px", "--rr": Math.atan(sl).toFixed(4) + "rad" }); }
+      const lim = 7 / Math.max(40, q.width), ta = Math.max(-lim, Math.min(lim, Math.atan(sl)));   /* a wide row tilts less, so its far end never drifts into the next row (0.8.260) */
+      rr.setCssProps({ "--rx": (-s3(cy_) * .6).toFixed(1) + "px", "--rr": ta.toFixed(4) + "rad" }); }
     let base = 1e9; for (const rr of rowsAll) { const q = rr.getBoundingClientRect(); if (!q.height || q.bottom < bxr.top || q.top > bxr.bottom) continue; const cy_ = q.top + q.height / 2 - pr.top; base = Math.min(base, q.left - pr.left - 10 - (s3Max - s3(cy_))); }   /* the left edge clears every name */
     if (base > 1e8) base = m;
     const xl = y => base + s3Max - s3(y), xrr = y => w - m - s3(y) * .6 + 2, f = v => v.toFixed(1);
@@ -5274,7 +5275,7 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
     let sv = RECEL.querySelector(":scope > svg.rcbg"); if (!sv) { sv = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); sv.setAttribute("class", "rcbg"); sv.setAttribute("aria-hidden", "true"); RECEL.prepend(sv); }
     sv.setAttribute("width", String(w)); sv.setAttribute("height", String(h)); sv.setAttribute("viewBox", `0 0 ${w} ${h}`); sv.empty(); const pa = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pa.setAttribute("d", d); sv.appendChild(pa);
     const pv = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pv.setAttribute("d", dv); pv.setAttribute("class", "rcdiv"); sv.appendChild(pv);
-    hd.setCssProps({ "--rx": "0px", "--rpl": (Math.max(16, xl(yTL) + 14)).toFixed(1) + "px", "--rpr": "16px", "--rh": aT.toFixed(4) + "rad" });   /* the title banner tilts with the top edge (0.8.250, Nick) */ }); }
+    hd.setCssProps({ "--rx": "0px", "--rpl": (Math.max(16, xl(yTL) + 14)).toFixed(1) + "px", "--rpr": "16px", "--rh": aT.toFixed(4) + "rad" });   /* the title banner tilts with the top edge (0.8.250, Nick) */ }; win.requestAnimationFrame(RECLAY); }
 if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
 cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
