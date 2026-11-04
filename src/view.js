@@ -235,6 +235,13 @@ export async function mountInto(owner, el, opts) {
       const d = dir === "/" ? "" : normalizePath(dir); if (d && !app.vault.getAbstractFileByPath(d)) await app.vault.createFolder(d);
       const to = normalizePath(d ? `${d}/${f.name}` : f.name); if (to === f.path) return false; if (app.vault.getAbstractFileByPath(to)) { new Notice(`There's already a ${f.name} in ${d || "the vault root"}.`); return false; }
       await app.fileManager.renameFile(f, to); return true; },
+    // Obsidian's own Close tab and Toggle pin commands, answered by the map while its editor has a note (0.8.196, Nick: ⌘W closes the note and its orb, not the map)
+    onTabCmd: cb => { const W = /** @type {any} */ (app).commands; if (!W || !W.commands) return; plugin.tabCmds ||= new Set(); plugin.tabCmds.add(cb); events.register(() => plugin.tabCmds.delete(cb));
+      if (plugin.tabCmdPatched) return; plugin.tabCmdPatched = true;
+      for (const [id, what] of [["workspace:close", "close"], ["workspace:toggle-pin", "pin"]]) { const c = W.commands[id]; if (!c) continue; const oc = c.checkCallback, ob = c.callback;
+        c.checkCallback = checking => { for (const f of plugin.tabCmds || []) if (f(what, true)) { if (!checking) f(what, false); return true; } return oc ? oc.call(c, checking) : ob ? (checking || ob.call(c), true) : false; };
+        if (ob) c.callback = undefined;
+        plugin.register(() => { c.checkCallback = oc; c.callback = ob; plugin.tabCmdPatched = false; }); } },
     onMove: cb => { events.registerEvent(app.vault.on("rename", (f, old) => { if (f instanceof TFile && f.extension === "md" && old) cb(old, f.path); })); },   // a note moved or renamed: the map moves it live
     onLinks: cb => { const st = plugin.settings, nm = (v, d) => (Array.isArray(v) ? v : String(v || d).split(",")).map(x => String(x).trim().toLowerCase()).filter(Boolean);
       events.registerEvent(app.metadataCache.on("changed", (f, _data, c) => { if (!(f instanceof TFile) || !c) return;

@@ -5383,7 +5383,7 @@ function makeEd(kind){
     const up = () => { if (!drag_) return; drag_ = null; el.classList.remove("resizing"); EDW[kind] = Math.round(edRect(kind).w); save("iv-edw", EDW); if (o.ed) o.ed.resize(); };
     gr.addEventListener("pointerup", up); gr.addEventListener("pointercancel", up);
     gr.addEventListener("dblclick", e => { e.stopPropagation(); delete EDW[kind]; save("iv-edw", EDW); edFree(); draw(); }); }   // double-click: back to the default width
-  xb.onclick = () => { o.close(); panBack(); }; if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
+  xb.onclick = () => { if (kind === "left") edCloseTab(); else { o.close(); panBack(); } };   /* the main editor's ×: closes its orb too (0.8.196, Nick) */ if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
   return o; }
 let LIVEQ = false;   // the map reacting as you write refreshes the note panel quietly: no camera move, no editor reload
 let EDS = null; EDS = { left: makeEd("left"), right: makeEd("right") };   /* the editor in the middle is gone (0.8.195, Nick): the main editor is always on the left */
@@ -5489,6 +5489,8 @@ let BGLAST = null;   /* several in a row line up in the order you opened them, a
 function tabAddBg(i){ const p = N[i].path; if (TABS.some(t => t.path === p)) { orbFlash(p); return; } let at = TCUR >= 0 ? TCUR + 1 : TABS.length; if (BGLAST && BGLAST.cur === TCUR && TABS[BGLAST.at] && TABS[BGLAST.at].path === BGLAST.p) at = BGLAST.at + 1;
   TABS.splice(at, 0, { path: p }); BGLAST = { cur: TCUR, at, p }; tabsSave(); syncOrbs(); orbFlash(p); }
 function orbFlash(p){ win.setTimeout(() => { const j = TABS.findIndex(t => t.path === p), b = orbBar.querySelector(`.ivm-orb[data-i="${j}"]`); if (!b) return; b.classList.remove("flash"); void b.offsetWidth; b.classList.add("flash"); }, 0); }
+/* closing the main editor's note is closing its tab (0.8.196, Nick: "mimic how Obsidian works with Command-W"): the orb goes too, and the next orb's note takes its place, as in Obsidian */
+function edCloseTab(){ const o = EDS.left; if (TABS[TCUR] && TABS[TCUR].path === o.path) { tabClose(TCUR); if (!TABS.length || EDS.left.el.hidden) { select(-1); panBack(); } } else { o.close(); panBack(); } }
 function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
   TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); arenaSync(); syncNav(); }
 function tabGo(j){ const t = TABS[j]; if (!t) return; const i = PIDX.get(t.path); if (i == null) return;
@@ -6126,6 +6128,9 @@ cv.addEventListener("pointermove", e => { if (view !== "arena") { if (SLOTX) { S
 cv.addEventListener("pointerdown", e => { if (!SLOTX || view !== "arena" || e.button !== 0 || Math.hypot(SLOTX.x - e.offsetX, SLOTX.y - e.offsetY) > 11) return; e.stopImmediatePropagation(); e.preventDefault(); const t = SLOTX; SLOTX = null; if (t.plan) planClear(t.q); else arenaClear(t.q); }, { capture: true });
 function drawSlotX(){ if (!SLOTX || view !== "arena") return; const { x, y } = SLOTX; ctx.save(); ctx.fillStyle = css.bg; ctx.strokeStyle = css.muted; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, 9, 0, 6.2832); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = css.ink; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 3.5, y - 3.5); ctx.lineTo(x + 3.5, y + 3.5); ctx.moveTo(x + 3.5, y - 3.5); ctx.lineTo(x - 3.5, y + 3.5); ctx.stroke(); ctx.restore(); }
+/* ⌘W (Obsidian's Close tab, whatever its hotkey) closes the main editor's note and its orb; your Toggle pin hotkey pins and unpins it (0.8.196, Nick). Only while the map, or its editor, has the focus and the editor shows a note */
+if (host.onTabCmd) host.onTabCmd((what, check) => { if (dead || !EDS || EDS.left.el.hidden || !EDS.left.path) return false; const a = doc.activeElement; if (!(host.isActive() || (a && Object.values(EDS).some(o => o.el.contains(a))))) return false;
+  if (check) return true; if (what === "close") edCloseTab(); else tabPin(); return true; });
 const wl = i => { const b = N[i].path.split("/").pop().replace(/\.md$/i, ""); return b === N[i].title ? `[[${b}]]` : `[[${b}|${N[i].title}]]`; };
 function callGroups(){ const out_ = []; let sec = null, hub = null;
   for (const r of SHELF.index || []) { if (!sec || sec.name !== r.sec) { sec = {name: r.sec, hubs: []}; out_.push(sec); hub = null; }
