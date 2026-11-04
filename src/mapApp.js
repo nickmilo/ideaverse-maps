@@ -5502,7 +5502,7 @@ function tabAddBg(i){ const p = N[i].path; if (TABS.some(t => t.path === p)) { o
   TABS.splice(at, 0, { path: p }); BGLAST = { cur: TCUR, at, p }; tabsSave(); syncOrbs(); orbFlash(p); }
 function orbFlash(p){ win.setTimeout(() => { const j = TABS.findIndex(t => t.path === p), b = orbBar.querySelector(`.ivm-orb[data-i="${j}"]`); if (!b) return; b.classList.remove("flash"); void b.offsetWidth; b.classList.add("flash"); }, 0); }
 /* closing the main editor's note is closing its tab (0.8.196, Nick: "mimic how Obsidian works with Command-W"): the orb goes too, and the next orb's note takes its place, as in Obsidian */
-function edCloseTab(){ const o = EDS.left; if (TABS[TCUR] && TABS[TCUR].path === o.path) { tabClose(TCUR); if (!TABS.length || EDS.left.el.hidden) { select(-1); panBack(); } } else { o.close(); panBack(); } }
+function edCloseTab(){ const o = EDS.left; if (o.path) { CLOSED.push(o.path); if (CLOSED.length > 30) CLOSED.shift(); } if (TABS[TCUR] && TABS[TCUR].path === o.path) { tabClose(TCUR); if (!TABS.length || EDS.left.el.hidden) { select(-1); panBack(); } } else { o.close(); panBack(); } }
 function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
   TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); arenaSync(); syncNav(); }
 function tabGo(j){ const t = TABS[j]; if (!t) return; const i = PIDX.get(t.path); if (i == null) return;
@@ -5826,7 +5826,10 @@ const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.
   cb.onchange = async () => { setEmoOn("sense", cb.checked); st.setText(""); if (cb.checked && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
 root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if (!r.checked) return; if (r.value === "spacetime") { goMap("spacetime", false); syncEmd(); return; } if (view === "spacetime") { closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); setView("emergence"); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); morph(true, () => fitTarget()); syncEmd(); });
 syncEmd();
-function goChord(m){ const keep = $("#tclook") && !$("#tclook").hidden && (m === "in" || m === "out"); if (!keep) closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (m === "in" || m === "out") { TCLOOK = m; save("iv-tclook", m); if (typeof syncTL === "function") syncTL(); } if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
+function goChord(m){ const keep = $("#tclook") && !$("#tclook").hidden && (m === "in" || m === "out");
+  if (keep && view === "chord" && (CSPH === "in" || CSPH === "out") && m !== CSPH) {   /* Tesla ⇄ Corona: the same globe, so just redraw it in the other look, at once (0.8.199, Nick: the old look's lines stayed until a drag) */
+    CSPH = m; save("iv-csph", m); TCLOOK = m; save("iv-tclook", m); syncTL(); ++morphId; morphing = false; camBusy = 0; csAngles(); csProject(); X.set(DX); Y.set(DY); buildGrid(); legend(); draw(); return; }
+  if (!keep) closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (m === "in" || m === "out") { TCLOOK = m; save("iv-tclook", m); if (typeof syncTL === "function") syncTL(); } if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
 $("#gochord").onclick = () => goChord("");
 function syncCB(){ root.querySelectorAll("#chordby button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cb === chordBy))); }
 root.querySelectorAll("#chordby button").forEach(b => b.onclick = () => { if (b.dataset.cb === chordBy) return; chordBy = b.dataset.cb; save("iv-chordby", chordBy); syncCB(); chSetCats(); chPin = -1; chArc = -1; if (typeof tmTagUI === "function") tmTagUI(); if (view === "chord") { if (TMOFF.size) relayout(true, false, () => fitTarget()); else morph(true, () => fitTarget()); legend(); } });
@@ -6020,7 +6023,6 @@ for (const g of ["square", "hex", "mandala", "octa", "shells"]) { const b = root
 for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
 /* Tesla and Corona are one map now, Tesla / Corona, with its look picked in the gear menu (0.8.197, Nick) */
 let TCLOOK = pref("iv-tclook", "in") === "out" ? "out" : "in";
-$("#gocso").onclick = () => goChord("out");
 $("#gocsi").onclick = () => goChord(TCLOOK);
 { const cb_ = $("#chordby"), tl = doc.createElement("div"); tl.className = "seg"; tl.id = "tclook"; tl.setAttribute("role", "group"); tl.setAttribute("aria-label", "Look"); tl.hidden = true; cb_.before(tl);
   for (const [v, t] of [["in", "Tesla"], ["out", "Corona"]]) { const b = tl.createEl("button", { text: t, attr: { type: "button" } }); b.dataset.tl = v; b.onclick = e => { e.stopPropagation(); if (CSPH !== v) goChord(v); syncTL(); }; } }
@@ -6146,7 +6148,13 @@ cv.addEventListener("pointerdown", e => { if (!SLOTX || view !== "arena" || e.bu
 function drawSlotX(){ if (!SLOTX || view !== "arena") return; const { x, y } = SLOTX; ctx.save(); ctx.fillStyle = css.bg; ctx.strokeStyle = css.muted; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, 9, 0, 6.2832); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = css.ink; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 3.5, y - 3.5); ctx.lineTo(x + 3.5, y + 3.5); ctx.moveTo(x + 3.5, y - 3.5); ctx.lineTo(x - 3.5, y + 3.5); ctx.stroke(); ctx.restore(); }
 /* ⌘W (Obsidian's Close tab, whatever its hotkey) closes the main editor's note and its orb; your Toggle pin hotkey pins and unpins it (0.8.196, Nick). Only while the map, or its editor, has the focus and the editor shows a note */
-if (host.onTabCmd) host.onTabCmd((what, check) => { if (dead || !EDS || EDS.left.el.hidden || !EDS.left.path) return false; const a = doc.activeElement; if (!(host.isActive() || (a && Object.values(EDS).some(o => o.el.contains(a))))) return false;
+/* "the map has the focus": the last click was in the map, its editors or its previews (0.8.199, Nick: the pin hotkey didn't answer right after picking a note, since Obsidian's own idea of the active tab can be the editor's leaf) */
+let MAPFOCUS = false;
+on(doc, "pointerdown", e => { const t = e.target instanceof Node ? e.target : null; MAPFOCUS = !!t && (root.contains(t) || pvLayer.contains(t) || (EDS && Object.values(EDS).some(o => o.el.contains(t)))); }, true);
+const CLOSED = [];   /* the notes you closed, newest last: ⌘⇧T (Obsidian's Undo close tab) opens them again (0.8.199, Nick) */
+if (host.onTabCmd) host.onTabCmd((what, check) => { if (dead || !EDS) return false; const a = doc.activeElement; if (!(MAPFOCUS || host.isActive() || (a && Object.values(EDS).some(o => o.el.contains(a))))) return false;
+  if (what === "reopen") { if (!CLOSED.length) return false; if (check) return true; while (CLOSED.length) { const i = PIDX.get(CLOSED.pop()); if (i != null && vis[i]) { TABNEW = true; select(i); break; } } return true; }
+  if (EDS.left.el.hidden || !EDS.left.path) return false;
   if (check) return true; if (what === "close") edCloseTab(); else tabPin(); return true; });
 const wl = i => { const b = N[i].path.split("/").pop().replace(/\.md$/i, ""); return b === N[i].title ? `[[${b}]]` : `[[${b}|${N[i].title}]]`; };
 function callGroups(){ const out_ = []; let sec = null, hub = null;
@@ -6287,7 +6295,7 @@ const HOPS = [
   ["emergence", () => { if (view !== "emergence" && view !== "spacetime") hopTab("emergence"); hopRadio("emd", "flat"); }], ["spacetime", () => hopRadio("emd", "spacetime")],
   ["planetarium", () => { if (view !== "emergence" && view !== "spacetime") hopTab("emergence"); hopRadio("emd", "dome"); }],
   ["gravity", () => hopTab("gravity")], ["stars2d", () => { hopTab("stars"); hopRadio("s3d", "2d"); }], ["stars3d", () => { hopTab("stars"); hopRadio("s3d", "3d"); }], ["sense", () => hopTab("sense")],
-  ["chord", () => hopBtn("#gochord")], ["corona", () => hopBtn("#gocso")], ["tesla", () => hopBtn("#gocsi")], ["treemap", () => hopBtn("#gotreemap")], ["shelf", () => hopBtn("#goshelf")],
+  ["chord", () => hopBtn("#gochord")], ["corona", () => goChord("out")], ["tesla", () => hopBtn("#gocsi")], ["treemap", () => hopBtn("#gotreemap")], ["shelf", () => hopBtn("#goshelf")],
   ["geo-square", () => hopBtn("#gogeosquare")], ["geo-hex", () => hopBtn("#gogeohex")], ["geo-mandala", () => hopBtn("#gogeomandala")], ["geo-octa", () => hopBtn("#gogeoocta")], ["geo-shells", () => hopBtn("#gogeoshells")],
   ["planet-flat", () => hopBtn("#goplflat")], ["planet-table", () => hopBtn("#gopltable")], ["planet-globe", () => hopBtn("#goplglobe")], ["tree", () => hopBtn("#gotree")], ["lincal", () => hopBtn("#golincal")], ["spiral", () => hopBtn("#gospiral")], ["lifeline", () => hopBtn("#golifeline")], ["skyline", () => hopBtn("#goskyline")]];
 function hopNow(){ return view === "emergence" ? (DOME.emergence ? "planetarium" : "emergence") : view === "stars" ? (S3D ? "stars3d" : "stars2d") : view === "chord" ? (CSPH === "out" ? "corona" : CSPH === "in" ? "tesla" : "chord")
@@ -7106,7 +7114,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const gg = doc.createElement("button"); gg.className = "chip"; gg.id = "gograph"; gg.textContent = "Obsidian"; gg.setAttribute("aria-label", "Like Obsidian's graph view: notes pulled together by their links, drawn with the emergence symbols");
     for (const [id, v, label, tip] of [["gogravity", "gravity", "Gravity", "The five levels as rings: hubs at the center, unlinked notes on the rim"]]) {
       const b = doc.createElement("button"); b.className = "chip"; b.id = id; b.textContent = label; b.setAttribute("aria-label", tip); $("#gochord").before(b); b.onclick = () => { closePops(); driftStop(); setView(v); }; }
-    { const co = $("#gocso"); if (co) { co.textContent = "Corona"; co.hidden = true; } const te = $("#gocsi"); if (te) { te.textContent = "Tesla / Corona"; te.hidden = false; te.classList.remove("gone"); } }
+    { const co = $("#gocso"); if (co) co.remove(); const te = $("#gocsi"); if (te) { te.textContent = "Tesla / Corona"; te.hidden = false; te.classList.remove("gone"); } }
     $("#gochord").before(gg); gg.onclick = () => { closePops(); driftStop(); setView("graph"); };
     // Compass (0.8.32): one note at the centre, after Chord
     { const gc = doc.createElement("button"); gc.className = "chip"; gc.id = "gocompass"; gc.textContent = "Compass"; gc.setAttribute("aria-label", "One note at the centre: above it what it links up to, below what links up to it, time left to right");

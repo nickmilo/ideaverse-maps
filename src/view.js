@@ -237,7 +237,7 @@ export async function mountInto(owner, el, opts) {
     // Obsidian's own Close tab and Toggle pin commands, answered by the map while its editor has a note (0.8.196, Nick: ⌘W closes the note and its orb, not the map)
     onTabCmd: cb => { const W = /** @type {any} */ (app).commands; if (!W || !W.commands) return; plugin.tabCmds ||= new Set(); plugin.tabCmds.add(cb); events.register(() => plugin.tabCmds.delete(cb));
       if (plugin.tabCmdPatched) return; plugin.tabCmdPatched = true;
-      for (const [id, what] of [["workspace:close", "close"], ["workspace:toggle-pin", "pin"]]) { const c = W.commands[id]; if (!c) continue; const oc = c.checkCallback, ob = c.callback;
+      for (const [id, what] of [["workspace:close", "close"], ["workspace:toggle-pin", "pin"], ["workspace:undo-close-pane", "reopen"]]) { const c = W.commands[id]; if (!c) continue; const oc = c.checkCallback, ob = c.callback;
         c.checkCallback = checking => { for (const f of plugin.tabCmds || []) if (f(what, true)) { if (!checking) f(what, false); return true; } return oc ? oc.call(c, checking) : ob ? (checking || ob.call(c), true) : false; };
         if (ob) c.callback = undefined;
         plugin.register(() => { c.checkCallback = oc; c.callback = ob; plugin.tabCmdPatched = false; }); } },
