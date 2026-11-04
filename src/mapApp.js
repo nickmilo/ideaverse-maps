@@ -71,12 +71,14 @@ const TV = new Float64Array(n);
 // a note's date: its Date property (Created by default), or, with Filter → Years → Organize by most recently modified, the day its file was last changed
 let BYMT = host.store.get("iv-mtime") === true;
 // with Organize by most recently modified on, a window back from right now: the last day, week, month or year (or all); Emergence and Space-Time stretch it across the timeline
-const MTW = { day: DAY, week: 7*DAY, month: 30.44*DAY, year: YEAR }; let MTWIN = host.store.get("iv-mtwin") || "all"; if (!MTW[MTWIN]) MTWIN = "all";
+/* the window's stops (0.8.194, Nick: a slider for "what's been going on with me for the past quarter"): 1 day … 1 year, year to date, all */
+const WSTOPS = [["day", "1 day"], ["week", "1 week"], ["w2", "2 weeks"], ["w3", "3 weeks"], ["month", "1 month"], ["w5", "5 weeks"], ["w6", "6 weeks"], ["w7", "7 weeks"], ["w8", "8 weeks"], ["m3", "3 months"], ["m4", "4 months"], ["m7", "7 months"], ["year", "1 year"], ["ytd", "Year to date"], ["all", "All"]];
+const MTW = { day: DAY, week: 7*DAY, w2: 14*DAY, w3: 21*DAY, month: 30.44*DAY, w5: 35*DAY, w6: 42*DAY, w7: 49*DAY, w8: 56*DAY, m3: 3*30.44*DAY, m4: 4*30.44*DAY, m7: 7*30.44*DAY, year: YEAR, ytd: 1 };   /* ytd: worked out from Jan 1 */ let MTWIN = host.store.get("iv-mtwin") || "all"; if (!MTW[MTWIN]) MTWIN = "all";
 /* the same window by the Date property too (0.8.191, Nick: "I wish I had that same ability for By Date Created"): its own choice, so each switch keeps its own */
 let CTWIN = host.store.get("iv-ctwin") || "all"; if (!MTW[CTWIN]) CTWIN = "all";
-const WINV = () => BYMT ? MTWIN : CTWIN;
+const WINV = () => BYMT ? MTWIN : CTWIN, wLabel = w => w === "ytd" ? "Year to date" : "Last " + (WSTOPS.find(q => q[0] === w) || [0, w])[1];
 let NOWMS = Date.now(); const todayU = () => { const d = new Date(NOWMS); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); };
-const winSpan = () => MTW[WINV()] ? MTW[WINV()] : 0, winEnd = () => BYMT ? NOWMS : todayU() + DAY, winStart = () => winEnd() - (BYMT ? winSpan() : Math.round(winSpan() / DAY) * DAY);   /* by the Date property a window is whole days, ending tonight */
+const winEnd = () => BYMT ? NOWMS : todayU() + DAY, winSpan = () => { const w = WINV(); if (!MTW[w]) return 0; if (w === "ytd") { const y = new Date(NOWMS).getFullYear(); return winEnd() - (BYMT ? new Date(y, 0, 1).getTime() : Date.UTC(y, 0, 1)); } return MTW[w]; }, winStart = () => winEnd() - (BYMT ? winSpan() : Math.round(winSpan() / DAY) * DAY);   /* by the Date property a window is whole days, ending tonight */
 const fillTV = () => N.forEach((d,i) => TV[i] = BYMT ? (d.mt || NaN) : /^\d{4}-\d{2}-\d{2}$/.test(d.date||"") ? Date.parse(d.date) : NaN); fillTV();
 const ARCH = Uint8Array.from(N, d => d.archive ? 1 : 0), hasArch = ARCH.some(v => v);
 // the years always come from the Date property, even when the map opened with Organize by most recently modified on (0.7.58: opened that way,
@@ -4822,11 +4824,11 @@ function propLabels(yTop){
 }
 // the window's marks, in your own time zone: every 3 hours (a day), each day (a week), each Monday (a month), each month (a year)
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-function winTicks(){ const t0 = winStart(), out_ = [], d = new Date(t0);
-  if (WINV() === "day") { d.setMinutes(0, 0, 0); d.setHours(Math.ceil((d.getHours() + (t0 > d.getTime() ? 1 : 0))/3)*3);
+function winTicks(){ const t0 = winStart(), out_ = [], d = new Date(t0), sp = winSpan(), g = sp <= 1.5 * DAY ? "day" : sp <= 22 * DAY ? "week" : sp <= 63 * DAY ? "month" : "year";   /* the marks follow the window's length */
+  if (g === "day") { d.setMinutes(0, 0, 0); d.setHours(Math.ceil((d.getHours() + (t0 > d.getTime() ? 1 : 0))/3)*3);
     for (; d.getTime() <= winEnd(); d.setHours(d.getHours() + 3)) { const h = d.getHours(); out_.push({ t: d.getTime(), major: h === 0, label: h === 0 ? `${DOW[d.getDay()]} ${d.getDate()}` : `${h % 12 || 12}${h < 12 ? "am" : "pm"}` }); } }
-  else if (WINV() === "week") { d.setHours(24, 0, 0, 0); for (; d.getTime() <= winEnd(); d.setDate(d.getDate() + 1)) out_.push({ t: d.getTime(), major: true, label: `${DOW[d.getDay()]} ${d.getDate()}` }); }
-  else if (WINV() === "month") { d.setHours(24, 0, 0, 0); while (d.getDay() !== 1) d.setDate(d.getDate() + 1); for (; d.getTime() <= winEnd(); d.setDate(d.getDate() + 7)) out_.push({ t: d.getTime(), major: true, label: `${MON[d.getMonth()]} ${d.getDate()}` }); }
+  else if (g === "week") { d.setHours(24, 0, 0, 0); for (; d.getTime() <= winEnd(); d.setDate(d.getDate() + 1)) out_.push({ t: d.getTime(), major: true, label: `${DOW[d.getDay()]} ${d.getDate()}` }); }
+  else if (g === "month") { d.setHours(24, 0, 0, 0); while (d.getDay() !== 1) d.setDate(d.getDate() + 1); for (; d.getTime() <= winEnd(); d.setDate(d.getDate() + 7)) out_.push({ t: d.getTime(), major: true, label: `${MON[d.getMonth()]} ${d.getDate()}` }); }
   else { d.setHours(0, 0, 0, 0); d.setDate(1); d.setMonth(d.getMonth() + 1); for (; d.getTime() <= winEnd(); d.setMonth(d.getMonth() + 1)) out_.push({ t: d.getTime(), major: d.getMonth() === 0, label: d.getMonth() === 0 ? String(d.getFullYear()) : MON[d.getMonth()] }); }
   return out_; }
 function timeGuides(){
@@ -5660,7 +5662,7 @@ function syncYr(){ const yc = $("#ycol") || $("#yrctl"); if (!yc) return; const 
     if (!h0.hidden && !h1.hidden && f(YR1) - f(YR0) < near) { h0.classList.add("lft"); h1.classList.add("rgt"); } else { h0.classList.remove("lft"); h1.classList.remove("rgt"); }
     e0.style.visibility = (!h0.hidden && f(YR0) < near) || (!h1.hidden && f(YR1) < near) ? "hidden" : "";
     e1.style.visibility = (!h1.hidden && f(YR1) > 1 - near) || (!h0.hidden && f(YR0) > 1 - near) ? "hidden" : ""; }
-  ($("#yrv0") || yc.querySelector(".yrv")).setText(BYMT ? (winSpan() ? "Last " + MTWIN : "All, by modified") : winSpan() ? "Last " + CTWIN : !yrNarrow() ? `${SLMIN}–${NOW_Y} (All)` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
+  ($("#yrv0") || yc.querySelector(".yrv")).setText(BYMT ? (winSpan() ? wLabel(MTWIN) + ", by modified" : "All, by modified") : winSpan() ? wLabel(CTWIN) : !yrNarrow() ? `${SLMIN}–${NOW_Y} (All)` : YR0 === YR1 ? `${YR0} only` : `${YR0}–${YR1}`); }
 function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
@@ -7112,10 +7114,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const tm = yc.createEl("label", { cls: "pmaps yrall", attr: { "aria-label": "Date each note by when its file was last modified, instead of the Date property" } });
     const cm = tm.createEl("input", { type: "checkbox", attr: { id: "bymt" } }); cm.checked = BYMT; tm.createEl("i", { cls: "sw" }); tm.createSpan({ text: "Organize by most recently modified" });
     // the window back from right now, in place of the years slider while the switch is on
-    const wr = yc.createDiv({ cls: "mtwin" }); wr.createSpan({ cls: "mtl", text: "Last" }); const wsg = wr.createDiv({ cls: "seg", attr: { role: "group", "aria-label": "Show the notes modified in the last…" } });
-    const wbs = [["day", "Day"], ["week", "Week"], ["month", "Month"], ["year", "Year"], ["all", "All"]].map(([v, t]) => { const b_ = wsg.createEl("button", { text: t, attr: { type: "button" } });
-      b_.onclick = e => { e.stopPropagation(); if (BYMT) { MTWIN = v; save("iv-mtwin", v); } else { CTWIN = v; save("iv-ctwin", v); } NOWMS = Date.now(); syncMT(); relayout(true, false, () => fitTarget()); if (typeof syncTB === "function") syncTB(); }; return [b_, v]; });
-    const syncMT = () => { for (const [b_, v] of wbs) b_.setAttribute("aria-pressed", String(v === WINV())); wr.hidden = false; const ycol = $("#ycol") || yc; const rg = ycol.querySelector(".prng"); if (rg) rg.hidden = BYMT || winSpan() > 0; syncYr(); };   /* Last … is there either way now; the years slider steps aside while a window is picked */
+    const wr = yc.createDiv({ cls: "mtwin mtslide" }); wr.createSpan({ cls: "mtl", text: "Window" }); const wsl = wr.createEl("input", { type: "range", attr: { min: "0", max: String(WSTOPS.length - 1), step: "1", "aria-label": "How far back to show" } }), wv = wr.createSpan({ cls: "mtv" });
+    wsl.onclick = e => e.stopPropagation(); let wt = 0;
+    const wset = commit => { const v = WSTOPS[+wsl.value][0]; if (BYMT) MTWIN = v; else CTWIN = v; wv.setText(v === "all" ? "All" : wLabel(v)); win.clearTimeout(wt);
+      const go = () => { if (BYMT) save("iv-mtwin", v); else save("iv-ctwin", v); NOWMS = Date.now(); syncMT(); relayout(true, false, () => fitTarget()); if (typeof syncTB === "function") syncTB(); }; if (commit) go(); else wt = win.setTimeout(go, 160); };
+    wsl.oninput = () => wset(false); wsl.onchange = () => wset(true);
+
+    const syncMT = () => { const k_ = WSTOPS.findIndex(q => q[0] === WINV()); wsl.value = String(k_ < 0 ? WSTOPS.length - 1 : k_); wv.setText(WINV() === "all" ? "All" : wLabel(WINV())); wr.hidden = false; const ycol = $("#ycol") || yc; const rg = ycol.querySelector(".prng"); if (rg) rg.hidden = BYMT || winSpan() > 0; syncYr(); };   /* Last … is there either way now; the years slider steps aside while a window is picked */
     win.setTimeout(syncMT, 0); FUI.years = () => { cb.checked = YRALL; cm.checked = BYMT; syncMT(); };
     cm.onchange = () => { BYMT = cm.checked; save("iv-mtime", BYMT); NOWMS = Date.now(); fillTV(); syncMT(); if (LCUIOK) syncLC(); if (typeof syncTB === "function") syncTB(); relayout(true, false, () => fitTarget()); legend(); };
     let t_ = 0; const upd = commit => { let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; SY0 = YR0; SY1 = YR1; syncYr();

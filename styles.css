@@ -1593,3 +1593,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 /* an orb opened in the background (⌘-click) pulses once (0.8.193) */
 .ivm-orbs .ivm-orb.flash{animation:ivm-orbflash .9s ease-out 1}
 @keyframes ivm-orbflash{0%{transform:scale(1.5);box-shadow:0 0 0 6px color-mix(in srgb,var(--interactive-accent) 45%,transparent)}100%{transform:scale(1);box-shadow:0 0 0 0 transparent}}
+/* Filter → Years: the window as a slider (0.8.194) */
+.ivm .mtwin.mtslide{display:flex;align-items:center;gap:10px}
+.ivm .mtwin.mtslide input[type=range]{flex:1;min-width:120px}
+.ivm .mtwin.mtslide .mtv{min-width:96px;text-align:right;font:600 12px var(--mono);color:var(--ink)}
