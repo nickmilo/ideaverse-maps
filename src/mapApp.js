@@ -5207,7 +5207,9 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
   RECTAB.hidden = !on || RECOPEN; RECEL.hidden = !on || !RECOPEN; RECTAB.setCssProps({ "--hr": R_ + "px" }); RECEL.setCssProps({ "--hr": R_ + "px" }); if (!on) return;
   const L = recList(); if (!RECOPEN) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); return; }
   const key = L.join(",") + "|" + RECEMO + "|" + (EMOI ? 1 : 0) + "|" + Math.floor(Date.now() / 60000); if (key === RECKEY) return; RECKEY = key; RECEL.empty();
-  const hd = RECEL.createDiv({ cls: "rch" }); hd.createSpan({ cls: "rct", text: `◷  RECENTS · ${L.length}` });
+  const hd = RECEL.createDiv({ cls: "rch cardhd-tuck" }); hd.createSpan({ cls: "rct", text: `◷  RECENTS · ${L.length}` });
+  /* tucks away as the editors do (0.8.242, Nick: "we already have specs"): a click on its header (not on the switch) or on ›, and it waits as a tab on the edge */
+  hd.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest("label, input, button")) return; e.stopPropagation(); RECOPEN = false; save("iv-recopen", false); RECKEY = ""; recSync(); });
   const sw = hd.createEl("label", { cls: "mini lcemo rcemo" }); const cb = sw.createEl("input", { type: "checkbox" }); cb.checked = RECEMO; sw.createEl("i", { cls: "sw" }); sw.createSpan({ text: "Emojis" });
   cb.onchange = () => { RECEMO = cb.checked; save("iv-recemo", RECEMO); if (RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; recSync(); }); RECKEY = ""; recSync(); };
   const x = hd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Recents away" } }); x.onclick = e => { e.stopPropagation(); RECOPEN = false; save("iv-recopen", false); RECKEY = ""; recSync(); };
