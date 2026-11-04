@@ -2867,7 +2867,7 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
   on(doc, "keydown", e => { if (!CK.on || dead || !host.isActive()) return; const a = doc.activeElement; if (a && a !== doc.body && (a.closest && (a.closest(".ivm-card") || a.closest("input,textarea,[contenteditable]")) || /INPUT|TEXTAREA/.test(a.tagName))) return; if (a && a !== doc.body && !root.contains(a)) return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; let used = true;
     /* keys (0.8.154, Nick): E forward, D back, S F turn, W R look up and down, A G orbit round the note; I O only links in or out */
-    if (["e", "d", "s", "f", "r", "w", "x", "v", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(k)) { CK.keys.add(k); if (CK.wd) ckWanderStop(); CK.auto = false; }   /* keys (0.8.157, Nick): R forward, W back, X V pan, S F orbit left and right, E D orbit over and under */
+    if (["e", "d", "s", "f", "r", "t", "w", "x", "v", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(k)) { CK.keys.add(k); if (CK.wd) ckWanderStop(); CK.auto = false; }   /* keys (0.8.157, Nick): R forward, W back, X V pan, S F orbit left and right, E D orbit over and under */
     else if (k === "i") CK.only = CK.only === "in" ? "" : "in";
     else if (k === "o") CK.only = CK.only === "out" ? "" : "out";
     else if (k === " " || k === "Enter") { if (CK.lock >= 0) CK.auto = true; }
@@ -3038,6 +3038,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
     if (T && !K.has("e") && !K.has("d")) {
       const [ty_, tp_] = ckLook(CK.P, T); if (!K.has("e") && !K.has("d")) ckUpright(); CK.yaw += Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)) * Math.min(1, dt * 8); CK.pitch += (tp_ - CK.pitch) * Math.min(1, dt * 8); } }   /* 360° (0.8.97, Nick): no limit on looking up or down; loop right over */
   const VMAX = CKW === "sf" ? 3200 : 1100; if (K.has("r") || K.has("ArrowUp")) CK.v = Math.min(VMAX, CK.v + (CKW === "sf" ? 1600 : 800) * dt);   /* back to the speed before 0.8.149 (0.8.152, Nick) */   /* full speed back for the open space between galaxies (0.8.151, Nick); gentle near them */   /* gentler by hand (0.8.150, Nick: "speeds by too fast") */
+  else if (K.has("t")) { const IMP = CKW === "sf" ? 360 : 140; CK.v += (IMP - CK.v) * (1 - Math.pow(.15, dt)); }   /* T: impulse (0.8.217, Nick: a Star Trek nod): a slow, steady cruise to take the Ideaverse in; from warp it eases down to it */
   else if (K.has("w") || K.has("ArrowDown")) CK.v = Math.max(-400, CK.v - 800 * dt);
   else if (!CK.auto) CK.v *= Math.pow(.06, dt);   /* off the gas, the ship slows sooner (0.8.150) */
   CK.roll *= Math.pow(.08, dt);
@@ -7373,7 +7374,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKFRAME; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Cockpit frame" });
       c_.onchange = () => { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); }; }
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
-      for (const [k_, v_] of [["R W  ↑ ↓", "forward, back"], ["X V  ← →", "pan left, right"], ["S F", "orbit left, right round the note"], ["E D", "orbit over, under the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
+      for (const [k_, v_] of [["R W  ↑ ↓", "forward, back"], ["T", "impulse: a slow, steady cruise"], ["X V  ← →", "pan left, right"], ["S F", "orbit left, right round the note"], ["E D", "orbit over, under the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
         const r_ = box.createDiv({ cls: "ckkey" }); r_.createEl("kbd", { text: k_ }); r_.createSpan({ text: v_ }); } }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "cockpit"; }; }
   // Compass: Relevance
