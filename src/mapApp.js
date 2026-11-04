@@ -2627,7 +2627,7 @@ let CKW = pref("iv-ckw", "links") === "sf" ? "sf" : "links";
 /* Starfield, one place with two vantage points (0.8.218, an experiment, Nick: "see what it would look like to move between Starfield > Chart and Starfield > Starship"):
    from Starfield's Chart you board the Starship among the same galaxies, and Chart brings you back to the star you were at. Starship on its own (the maps menu)
    is left exactly as it is: its world is borrowed for the trip (not saved) and handed back. 3D Starfield steps aside for the trial (SFMERGE = false brings it back) */
-const SFMERGE = false; let SFSHIP = null;
+const SFMERGE = true; let SFSHIP = null;
 const CKSF = { ver: -1, P: null, sc: 1, B: [] };
 function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), turn = CKX.turn;
   if (CKSF.ver === starVer && CKSF.P && (!turn || now - (CKSF.tc || 0) < 30)) return CKSF; CKSF.tc = now;
