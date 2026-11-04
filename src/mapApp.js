@@ -5387,7 +5387,7 @@ function edLook(el){ const SFE = CARDTH === "starfield", th = SFE ? "starfield" 
 function edTint(o){ if (!o || !o.el || o.el.hidden) return;
   if (!o.path || !host.linkTargets) return; const sf = o.el.classList.contains("sf-th"), i = PIDX.get(o.path);
   const els = o.el.querySelectorAll("a.internal-link, .cm-hmd-internal-link, .multi-select-pill-content, .internal-link");
-  if (!sf || i == null) { for (const e of els) if (e.dataset.ivk) delete e.dataset.ivk; return; }
+  if (!(sf || pref("iv-linkcolor", false) === true) || i == null) { for (const e of els) if (e.dataset.ivk) delete e.dataset.ivk; return; }
   const M = new Map(); for (const [t, p] of host.linkTargets(o.path)) if (!M.has(t)) M.set(t, p);
   const kindOf = p => { const j = PIDX.get(p); if (j == null || j === i) return ""; const kk = EKIND.get(i*n + j); if (kk === undefined && !out[i].includes(j)) return ""; return kk === 1 ? "upp" : kk === 4 ? "rel" : kk === 5 ? "prop" : upOf(i, j) ? "up" : "down"; };
   for (const e of els) { const key = String(e.getAttribute("data-href") || e.textContent || "").trim().toLowerCase(); if (!key) continue;
@@ -5484,7 +5484,7 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
     if (L.above.length || L.below.length) { const em = o.drop.createDiv({ cls: "sdem" }); em.createSpan({ cls: "sdh", text: "EMERGENCE" });
       for (const [key, lab] of [["above", "above"], ["below", "below"]]) { if (!L[key].length) continue; const b = em.createEl("button", { cls: "schip " + (key === "above" ? "sab" : "sbe") + (o.sub_ === key ? " on" : ""), text: `${L[key].length} ${lab}`, attr: { type: "button", "aria-expanded": String(o.sub_ === key) } });
         b.onclick = e => { e.stopPropagation(); o.sub_ = o.sub_ === key ? "" : key; fillStrip(o, i); }; }
-      if (o.sub_ && L[o.sub_] && L[o.sub_].length) { const rows = o.drop.createDiv({ cls: "sdl sdsub" });
+      if (o.sub_ && L[o.sub_] && L[o.sub_].length) { const rows = o.drop.createDiv({ cls: "sdl sdsub " + (o.sub_ === "above" ? "sd-up" : "sd-down") });   /* tinted blue above, green below, as in the note panel (0.8.234, Nick) */
         for (const j of L[o.sub_]) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
           r.onclick = e => { e.stopPropagation(); if (!openAs(j, openKind(e))) select(j); }; }
       } }
@@ -7632,6 +7632,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const l3 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c3 = l3.createEl("input", { type: "checkbox" }); c3.checked = HUDPV; l3.createEl("i", { cls: "sw" }); l3.createSpan({ text: "Automatically see mini-preview on hover" }); l3.hidden = !HUDL;
     c3.onchange = () => { HUDPV = c3.checked; save("iv-hudpv", HUDPV); if (!HUDPV) hudPv(-1); };
     cb.onchange = () => { HUDL = cb.checked; save("iv-hudl", HUDL); l2.hidden = l3.hidden = !HUDL; if (!HUDL) hudPv(-1); draw(); }; }
+  /* Color all links by Idea Emergence (0.8.234, Nick: "color ALL links in all Obsidian windows by Idea Emergence") */
+  { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = pref("iv-linkcolor", false) === true; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Color all links by Idea Emergence" });
+    cb.onchange = () => { save("iv-linkcolor", cb.checked); if (host.linkColors) host.linkColors(); for (const o of Object.values(EDS)) edTint(o); }; }
   // Contrails (0.8.56, Nick): your path from note to note as a vapor trail behind a small airplane
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = CTRON; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Contrails" });
     const l2 = DI.p.createDiv({ cls: "eorow ctrrk tchoice" }); l2.createSpan({ cls: "eol", text: "Ship" }); l2.hidden = !CTRON; const sg2 = l2.createDiv({ cls: "seg" });
@@ -8027,6 +8030,8 @@ return {
   // the commands "Open note in Emergence / Starfield" (0.8.27, Nick: so they can be hotkeyed): that map, Edit mode on, the note in the primary note
   /** a note opened elsewhere while the map is in front: show it as the primary note (0.8.218). False when the map can't (not in the map, or filtered out) */
   hasNote(path){ return PIDX.has(path); },
+  /** how the note at toPath relates to the one at fromPath, for link colors everywhere (0.8.234): upp, rel, up, down, prop, or "" */
+  linkKind(fromPath, toPath){ const i = PIDX.get(fromPath), j = PIDX.get(toPath); if (i == null || j == null || i === j || dead) return ""; const kk = EKIND.get(i*n + j); if (kk === undefined && !out[i].includes(j)) return ""; return kk === 1 ? "upp" : kk === 4 ? "rel" : kk === 5 ? "prop" : upOf(i, j) ? "up" : "down"; },
   openPrimary(path){ const i = PIDX.get(path); if (i == null || dead || !edOn() || !vis[i]) return false; if (EDS.left.col) EDS.left.collapse(false); select(i); navTo(i); draw(); return true; },
   editIn(path, which){ const i = PIDX.get(path); if (i == null || dead) return false;
     if (!EDITM) { EDITM = true; save("iv-editm", true);

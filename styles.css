@@ -1677,3 +1677,24 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card.sf-th [data-ivk="up"],.ivm-card.sf-th [data-ivk="up"] *{color:var(--up)}
 .ivm-card.sf-th [data-ivk="down"],.ivm-card.sf-th [data-ivk="down"] *{color:var(--down)}
 .ivm-card.sf-th [data-ivk="prop"],.ivm-card.sf-th [data-ivk="prop"] *{color:var(--prop)}
+/* above and below in the editor strip's score list: blue and green, as the note panel shows them (0.8.234, Nick) */
+.ivm-card .carddrop .schip.sab{border-color:color-mix(in srgb,var(--up, var(--color-blue)) 55%,var(--background-modifier-border))}
+.ivm-card .carddrop .schip.sbe{border-color:color-mix(in srgb,var(--down, var(--color-green)) 55%,var(--background-modifier-border))}
+.ivm-card .carddrop .schip.sab.on,.ivm-card .carddrop .schip.sab:hover{border-color:var(--up, var(--color-blue));background:color-mix(in srgb,var(--up, var(--color-blue)) 12%,transparent)}
+.ivm-card .carddrop .schip.sbe.on,.ivm-card .carddrop .schip.sbe:hover{border-color:var(--down, var(--color-green));background:color-mix(in srgb,var(--down, var(--color-green)) 12%,transparent)}
+.ivm-card .carddrop .sdsub.sd-up{box-shadow:inset 2px 0 0 var(--up, var(--color-blue))}
+.ivm-card .carddrop .sdsub.sd-down{box-shadow:inset 2px 0 0 var(--down, var(--color-green))}
+/* every link in every note colored by Idea Emergence (0.8.234): up property gold, related violet, above blue, below green, other properties slate */
+body.ivm-linkcolors.theme-dark{--ivk-upp:#ffcf5a;--ivk-rel:#c9a2ff;--ivk-up:#6fd3ff;--ivk-down:#5fe0a8;--ivk-prop:#a9b4c8}
+body.ivm-linkcolors.theme-light{--ivk-upp:#a8770a;--ivk-rel:#7c3aed;--ivk-up:#1f78b4;--ivk-down:#178a5c;--ivk-prop:#5b6b82}
+body.ivm-linkcolors [data-ivk]{text-decoration-color:currentColor}
+body.ivm-linkcolors [data-ivk="upp"],body.ivm-linkcolors [data-ivk="upp"] *{color:var(--ivk-upp)}
+body.ivm-linkcolors [data-ivk="rel"],body.ivm-linkcolors [data-ivk="rel"] *{color:var(--ivk-rel)}
+body.ivm-linkcolors [data-ivk="up"],body.ivm-linkcolors [data-ivk="up"] *{color:var(--ivk-up)}
+body.ivm-linkcolors [data-ivk="down"],body.ivm-linkcolors [data-ivk="down"] *{color:var(--ivk-down)}
+body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{color:var(--ivk-prop)}
+.ivm-card:not(.sf-th) [data-ivk="upp"],.ivm-card:not(.sf-th) [data-ivk="upp"] *{color:var(--upp)}
+.ivm-card:not(.sf-th) [data-ivk="rel"],.ivm-card:not(.sf-th) [data-ivk="rel"] *{color:var(--rel)}
+.ivm-card:not(.sf-th) [data-ivk="up"],.ivm-card:not(.sf-th) [data-ivk="up"] *{color:var(--up)}
+.ivm-card:not(.sf-th) [data-ivk="down"],.ivm-card:not(.sf-th) [data-ivk="down"] *{color:var(--down)}
+.ivm-card:not(.sf-th) [data-ivk="prop"],.ivm-card:not(.sf-th) [data-ivk="prop"] *{color:var(--prop)}

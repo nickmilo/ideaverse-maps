@@ -3,6 +3,7 @@ import { MapView, VIEW_TYPE } from "./view.js";
 import { registerBases } from "./bases.js";
 import { registerEmbeds } from "./embed.js";
 import { registerDevLayout } from "./devlayout.js";
+import { registerLinkColors } from "./linkcolor.js";
 import { MapsSettingTab, detectDefaults } from "./settings.js";
 import { DEFAULTS, EXTRACT_VERSION, scanVault } from "./scan.js";
 
@@ -29,6 +30,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
     this.addCommand({ id: "rescan", name: "Rescan the vault", callback: () => { void this.rescan(); } });
     this.addSettingTab(new MapsSettingTab(this.app, this));
     registerBases(this);   // the map as a view inside any base (Obsidian 1.10+)
+    registerLinkColors(this);   // every link in every note colored by Idea Emergence, when Display asks (0.8.234)
     registerDevLayout(this);   // ⌘⌥⌃K: move any map anywhere in the maps menu (0.8.205)
     registerEmbeds(this);   // a map inside a note: a ```moti code block, or ![[name.moti]] (0.8.171)
 
