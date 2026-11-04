@@ -4338,7 +4338,7 @@ let k = 1, tx = 0, ty = 0, W = 0, H = 0, dpr = 1;
 let hover = -1, sel = -1, showAll = false;
 // hold ⌘ (Ctrl on Windows and Linux) over a note for a mini preview, as Obsidian does for links (0.8.159, Nick)
 let CMDK = false, CMDPT = null;
-const cmdPvSync = () => { if (view === "cockpit") return; if (!CMDK || hover < 0 || !vis[hover] || isPhone()) { if (!(HUDHOV >= 0 && HUDPV)) hudPv(-1); return; }
+const cmdPvSync = () => { if (view === "cockpit") return; if (HUDHOV >= 0) { if (!CMDK && !HUDPV) hudPv(-1); draw(); return; } if (!CMDK || hover < 0 || !vis[hover] || isPhone()) { if (!(HUDHOV >= 0 && HUDPV)) hudPv(-1); return; }
   const x = sx(X[hover]), y = sy(Y[hover]), pw = 230; hudPv(hover, x + 18 + pw + 14 <= W - 8 ? x + 18 + pw + 14 : x - 18, y, true); try { tip.hidden = true; } catch (_) { /* no tip yet */ } };   /* the preview takes the hover label's place */
 on(doc, "keydown", e => { if ((e.key === "Meta" || e.key === "Control") && !CMDK && host.isActive()) { CMDK = true; cmdPvSync(); } });
 on(doc, "keyup", e => { if (e.key === "Meta" || e.key === "Control") { CMDK = false; cmdPvSync(); } });
@@ -5178,7 +5178,7 @@ function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hud
     ctx.lineWidth = 3; ctx.strokeStyle = css.bg || "#111"; ctx.globalAlpha = hv ? 1 : .85; ctx.strokeText(tt, -12, 0); ctx.fillStyle = hv ? (css.accent || ink) : ink; ctx.fillText(tt, -12, 0);
     if (HUDR) { const sc = String(D_.sc.get(j)); ctx.font = `600 9.5px ${css.mono || css.body}`; ctx.globalAlpha = .75; ctx.fillStyle = css.accent || "#7fe7ff"; ctx.fillText(sc, -tw - 18, 0); ctx.font = `500 11px ${css.body}`; }
     ctx.restore(); HUDH.push([x - tw - 50, y - lh / 2, tw + 56, lh, j]);
-    if (hv) hudPv(j, x - tw - 40, y);
+    if (hv) hudPv(j, x - tw - 40, y, CMDK);   /* ⌘ shows it on a HUD row too, as on the map (0.8.214, Nick expected it); the switch makes it automatic */
     if (hv && vis[j]) { ctx.save(); ctx.globalAlpha = .6; ctx.strokeStyle = css.accent || ink; ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - tw - 30, y); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); ctx.restore(); } }
   if (!(HUDHOV >= 0 && D_.list.includes(HUDHOV))) hudPv(-1); { const [bx0] = at(0); HUDBOX = [bx0 - 260, top - 30, R_ - bx0 + 260, bot - top + 40]; }
   ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
@@ -5327,7 +5327,7 @@ function renderTrail(){
 // ---------- Edit mode (experimental, the road to 1.0): edit notes right on the map ----------
 // Two editors, each a real Obsidian editor (host.editCard): the main one on the left side (the centre card is gone since 0.8.195);
 // and a support note on the right for any note you ⌘-click. One theme and one opacity for all three. Starfield first, Emergence as the stress test.
-let EDITM = pref("iv-editm", false) === true, HUBPV = pref("iv-hubpv", false) === true;
+let EDITM = !host.embed,   /* Edit mode is how the map works now (0.8.214, Nick): always on, the switch is gone; an embed keeps its editors closed */ HUBPV = pref("iv-hubpv", false) === true;
 // how many mini previews: Starfield's biggest hubs and Compass's closest notes. 0.8.48 (Nick): Fewer, Natural or Max, never a free number,
 // and one governor for both maps: a preview only shows where it covers no other preview, the note you're on, the orbs, the editors or the edges
 const PVL = { off: 0, fewer: 3, natural: 6, max: 12 }, PVL_C = { off: 0, fewer: 5, natural: 10, max: 18 };   // Compass shows more: previews are its point (Nick, 0.8.57)
@@ -5511,7 +5511,7 @@ if (host.onCardLink) host.onCardLink((path, mode) => { const i = PIDX.get(path);
 // opens a new tab. The orbs sit along the top of the map; hover one for its name; Display → Edit mode → Show orbs (tabs), Show orb names.
 let TABS = (() => { const t = pref("iv-tabs", null); return Array.isArray(t) ? t.filter(x => x && typeof x.path === "string").map(x => ({ path: x.path, pin: !!x.pin })) : []; })();
 let TCUR = (pref("iv-tabcur", 0) | 0) === -1 ? -1 : Math.min(Math.max(0, pref("iv-tabcur", 0) | 0), Math.max(0, TABS.length - 1)), TABNEW = false;   /* -1: no orb is current (you clicked away), so the next note gets an orb of its own (0.8.192) */
-let ORBS = pref("iv-orbs", true) !== false, ORBN = pref("iv-orbn", false) === true;
+let ORBS = true,   /* orb tabs are always on (0.8.214, Nick); their names are the switch */ ORBN = pref("iv-orbn", false) === true;
 const tabsSave = () => { save("iv-tabs", TABS); save("iv-tabcur", TCUR); };
 function tabTake(i){ const p = N[i].path, nw = TABNEW; TABNEW = false; const cur = TABS[TCUR];
   if (cur && !cur.path) { const ex = TABS.findIndex(t => t.path === p); if (ex >= 0) { TABS.splice(TCUR, 1); TCUR = ex > TCUR ? ex - 1 : ex; } else TABS[TCUR] = { path: p }; tabsSave(); syncOrbs(); return; }   /* a new tab (⌘T) takes the first note you pick */
@@ -7535,28 +7535,25 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // Show more map names: the grid beside the tabs (wide windows), with the themes moved in here
   const alSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Draw every link on the map, faintly" } }); const alCb = alSw.createEl("input", { type: "checkbox" }); alSw.createEl("i", { cls: "sw" }); alSw.createSpan({ text: "Show all links" });
   alCb.onchange = () => { if (alCb.checked !== showAll) $("#alllinks").click(); };
-  { const l = DI.p.createEl("label", { cls: "pmaps drow editm" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = EDITM; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Edit mode (experimental)" });
-    const g = DI.p.createDiv({ cls: "editopts" }); g.hidden = !EDITM;
-    const tr = g.createDiv({ cls: "eorow" }); tr.createSpan({ cls: "eol", text: "Editor theme" }); const seg = tr.createDiv({ cls: "seg" });
+  /* Edit mode became the map's way of working (0.8.214, Nick): its switch and the indented group are gone, and what it held sits at the top level:
+     the editor's theme and opacity together, note mini-previews, and orb tab names (orb tabs themselves are always on) */
+  { const g = DI.p;
+    const tr = g.createDiv({ cls: "drow eorow tchoice" }); tr.createSpan({ cls: "eol", text: "Editor theme" }); const seg = tr.createDiv({ cls: "seg" });
     for (const [v, t] of [["obsidian", "Obsidian"], ["map", "MOTI"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDTH === v) } });
       b.onclick = e => { e.stopPropagation(); CARDTH = v; save("iv-cardth", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; }
-    const or_ = g.createEl("label", { cls: "eorow" }); or_.createSpan({ cls: "eol", text: "Opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
+    const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
     sl.oninput = () => { CARDOP = +sl.value; ov.setText(CARDOP + "%"); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
-    const sw = (txt, get, set) => { const l_ = g.createEl("label", { cls: "mini lcemo eosw" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = get(); l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: txt }); c_.onchange = () => set(c_.checked); };
-    { const r_ = g.createDiv({ cls: "eorow" }); r_.createSpan({ cls: "eol", text: "Previews" }); const seg = r_.createDiv({ cls: "seg" });
+    { const r_ = g.createDiv({ cls: "drow eorow tchoice", attr: { "aria-description": "Small read-only glimpses of notes: in Starfield its biggest hubs, in Compass the closest notes" } }); r_.createSpan({ cls: "eol", text: "Note mini-previews" }); const seg = r_.createDiv({ cls: "seg" });
       for (const [v, t_] of [["off", "Off"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(PVLV === v) } });
         b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
-    sw("Show orbs (tabs)", () => ORBS, v => { ORBS = v; save("iv-orbs", v); const n_ = g.querySelector(".orbnsw"); if (n_) n_.hidden = !v; syncOrbs(); });
-    sw("Show orb names", () => ORBN, v => { ORBN = v; save("iv-orbn", v); syncOrbs(); }); { const ls = g.querySelectorAll(".eosw"); const l_ = ls[ls.length - 1]; l_.classList.add("orbnsw", "sub"); l_.hidden = !ORBS; }
-    g.createDiv({ cls: "eonote", text: "Previews: small read-only glimpses of notes, in Starfield (its biggest hubs) and Compass (the closest notes). ⌘-click a note to open it in a new tab (an orb); ⌘⌥-click opens it as the support note on the right. Pin the editor to keep its note: what you pick then opens as the support note." });
-    cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); g.hidden = !EDITM; if (EDITM && sel >= 0) void openMain(sel); else closeEds(); syncOrbs(); draw(); }; }
+    { const l_ = g.createEl("label", { cls: "mini lcemo ctrrk top" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = ORBN; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Show orb tab names" }); c_.onchange = () => { ORBN = c_.checked; save("iv-orbn", ORBN); syncOrbs(); }; } }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
   // HUD links (0.8.143): the picked note's links down the right, as in the Cockpit
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = HUDL; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "HUD links" });
     const l2 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = HUDR; l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Relevance scores" }); l2.hidden = !HUDL;
     c2.onchange = () => { HUDR = c2.checked; save("iv-hudr", HUDR); draw(); };
-    const l3 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c3 = l3.createEl("input", { type: "checkbox" }); c3.checked = HUDPV; l3.createEl("i", { cls: "sw" }); l3.createSpan({ text: "Preview on hover" }); l3.hidden = !HUDL;
+    const l3 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c3 = l3.createEl("input", { type: "checkbox" }); c3.checked = HUDPV; l3.createEl("i", { cls: "sw" }); l3.createSpan({ text: "Automatically see mini-preview on hover" }); l3.hidden = !HUDL;
     c3.onchange = () => { HUDPV = c3.checked; save("iv-hudpv", HUDPV); if (!HUDPV) hudPv(-1); };
     cb.onchange = () => { HUDL = cb.checked; save("iv-hudl", HUDL); l2.hidden = l3.hidden = !HUDL; if (!HUDL) hudPv(-1); draw(); }; }
   // Contrails (0.8.56, Nick): your path from note to note as a vapor trail behind a small airplane
@@ -7659,7 +7656,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   left.insertBefore($("#viewms"), DI.w); { const vb = $("#viewbtn"); vb.empty(); setIcon(vb, "telescope"); { const sv = vb.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } } vb.classList.add("tbb", "tbi"); vb.setAttribute("aria-label", "Saved views"); vb.title = "Saved views"; }
   // Obsidian shows an element's aria-label as a hover tooltip, even on a whole menu ("Saved views and tours" hung under Saved, Nick 0.7.58); menus describe themselves instead
   { const MENU = '[role="dialog"][aria-label], .mspop[aria-label], .tbpop[aria-label]', quiet = el => { el.setAttribute("aria-description", el.getAttribute("aria-label")); el.removeAttribute("aria-label"); };
-    root.querySelectorAll(MENU).forEach(quiet); on(root, "pointerover", e => { const el = e.target instanceof Element && e.target.closest(MENU); if (el && root.contains(el)) quiet(el); }, true); }
+    /* and everything inside a menu too (0.8.214, Nick hovered "Show the way home" and got Obsidian's pop-up): any aria-label or title under the pointer turns quiet before Obsidian or the system can show it */
+    const POP = '.mspop, .tbpop, [role="dialog"]', hush = el => { const t_ = el.getAttribute("title"); if (t_ != null) { if (!el.getAttribute("aria-description")) el.setAttribute("aria-description", t_); el.removeAttribute("title"); } if (el.hasAttribute("aria-label")) quiet(el); };
+    root.querySelectorAll(MENU).forEach(quiet); on(root, "pointerover", e => { if (!(e.target instanceof Element)) return; const el = e.target.closest(MENU); if (el && root.contains(el)) quiet(el);
+      if (e.target.closest(POP)) for (let x = e.target; x && x !== root && !x.matches(POP); x = x.parentElement) if (x.hasAttribute("aria-label") || x.hasAttribute("title")) hush(x); }, true); }
   // Capture: a picture (PNG) or a short clip (MP4, or WebM where MP4 can't be recorded) of the map, saved to the vault's attachments,
   // then a small card to copy it, open it, or post it with a ready caption
   { const CP = popBtn("cap", "Capture", "star"); CP.b.empty(); setIcon(CP.b, "camera"); { const sv = CP.b.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } CP.b.classList.add("tbi"); CP.b.setAttribute("aria-label", "Capture a picture or a clip to share"); CP.b.title = "Capture a picture or a clip to share";

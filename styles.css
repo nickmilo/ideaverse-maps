@@ -1629,3 +1629,8 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-newtab .ntq:hover{color:var(--text-normal);border-color:var(--interactive-accent)}
 .ivm-newtab .ntx{position:absolute;top:8px;right:8px}
 .ivm .ivm-orb.blank .orbd{background:none;border:1.5px dashed var(--muted)}
+/* Display, 0.8.214: the editor's rows sit at the top level now that Edit mode is the map's way of working */
+.ivm #disppop .ctrrk.top{padding-left:0}
+.ivm #disppop .tchoice .seg{flex-wrap:nowrap}
+.ivm.ivm header #disppop{min-width:330px}
+.ivm #disppop .tchoice input[type=range]{width:110px;position:static;opacity:1;height:auto}
