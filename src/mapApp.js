@@ -5412,7 +5412,7 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
     b.onclick = e => { e.stopPropagation(); o.open_ = o.open_ === key ? "" : key; fillStrip(o, i); }; };
   // Nick's order (0.8.42; in before out since 0.8.46; above and below inside the rank since 0.8.47): level, up, related | in, out | the rank; the rank's pill opens the score, how it adds up, and why
   const bar = () => o.strip.createSpan({ cls: "sbar" });
-  if (L.up.length) chip("up", `${L.up.length} up`, "spill sup"); if (L.related.length) chip("related", `${L.related.length} related`, "spill srel");   /* tinted like the note panel's Uplinks and Related (0.8.205, Nick) */
+  chip("up", L.up.length ? `${L.up.length} up` : "up", "spill sup" + (L.up.length ? "" : " sz")); chip("related", L.related.length ? `${L.related.length} related` : "related", "spill srel" + (L.related.length ? "" : " sz"));   /* always there, dimmed when empty (0.8.207, Nick) */   /* tinted like the note panel's Uplinks and Related (0.8.205, Nick) */
   bar(); chip("in", `${d.body_in} in`, "spill"); chip("out", `${d.body_out} out`, "spill");
   bar();
   const rk = scoreRank(i); chip("score", rk ? `#${rk.toLocaleString()}` : d.score.toFixed(1), "spill sscore");
@@ -5443,10 +5443,17 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
           r.onclick = e => { e.stopPropagation(); if (!openAs(j, openKind(e))) select(j); }; }
       } }
     return; }
-  const list = o.open_ ? L[o.open_] || [] : []; o.drop.hidden = !list.length; if (!list.length) { o.open_ = ""; return; }
-  o.drop.createDiv({ cls: "sdh" + (o.open_ === "up" ? " sdh-up" : o.open_ === "related" ? " sdh-rel" : ""), text: `${o.open_.toUpperCase()} · ${list.length}` }); const rows = o.drop.createDiv({ cls: "sdl" });
+  const list = o.open_ ? L[o.open_] || [] : [], prop_ = (o.open_ === "up" || o.open_ === "related") && !!host.addLink && !!host.pickNote; o.drop.hidden = !list.length && !prop_; if (o.drop.hidden) { o.open_ = ""; return; }
+  o.drop.createDiv({ cls: "sdh" + (o.open_ === "up" ? " sdh-up" : o.open_ === "related" ? " sdh-rel" : ""), text: list.length ? `${o.open_.toUpperCase()} · ${list.length}` : o.open_.toUpperCase() }); const rows = o.drop.createDiv({ cls: "sdl" });
   for (const j of list) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
-    r.onclick = e => { e.stopPropagation(); if (!openAs(j, openKind(e))) select(j); }; } }
+    r.onclick = e => { e.stopPropagation(); if (!openAs(j, openKind(e))) select(j); }; }
+  /* + : link another note here, straight into the up or related property (0.8.207, Nick: "a bespoke properties menu for up and related") */
+  if (prop_) { const key = o.open_, ad = o.drop.createEl("button", { cls: "sdadd", attr: { type: "button", "aria-label": key === "up" ? "Link up to another note" : "Add a related note" } }); setIcon(ad, "plus");
+    ad.onclick = async e => { e.stopPropagation(); const have = new Set(list), items = [];
+      for (let j = 0; j < n; j++) if (j !== i && !have.has(j) && !ARCH[j]) items.push({ path: N[j].path, title: N[j].title, s: N[j].score }); items.sort((a, b) => b.s - a.s);
+      const p_ = await host.pickNote(items, key === "up" ? `${d.title}: link up to…` : `${d.title}: related to…`); if (!p_ || dead) return;
+      const r = await host.addLink(d.path, p_, key), t_ = (N[PIDX.get(p_)] || {}).title || p_;
+      new Notice(r === "dup" ? `${d.title} already has ${t_} in ${key}.` : r ? `${d.title} → ${key}: ${t_}` : "Couldn't add the link."); }; } }
 // the main editor's history: back and forward move through it without adding to it; a pinned editor keeps its note, so they wait
 let HIST = [], HPOS = -1, HNAV = null;
 // 0.8.51 (Nick: all the way back, and forward was gone): the step back or forward is remembered by the note it goes to, not as a flag the next
