@@ -5251,7 +5251,7 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
     const rrs = rowsAll.filter(rr => rr.getBoundingClientRect().height), ang = rr => parseFloat(win.getComputedStyle(rr).getPropertyValue("--rr")) || 0;
     const aT = rrs.length ? ang(rrs[0]) : 0, aB = rrs.length ? ang(rrs[rrs.length - 1]) : 0, hr = hd.getBoundingClientRect(), last = rrs.length ? rrs[rrs.length - 1].getBoundingClientRect() : null;
     void hr; hd.setCssProps({ "--rh": aT.toFixed(4) + "rad" });   /* tilt the banner first: it turns about its right end, so that end's top stays at offsetTop */
-    const hx = hd.offsetLeft + hd.offsetWidth, hy = hd.offsetTop - 6, lx = last ? last.right - pr.left : w, ly = last ? (aB > 0 ? last.bottom - LH / 2 : last.top + LH / 2) - pr.top + 13 : h - m;   /* the row turns about its right end: that end's middle sits half a row from the box's lower (or upper) side */
+    const hx = hd.offsetLeft + hd.offsetWidth, hy = hd.offsetTop - 6, lx = last ? last.right - pr.left : w, ly = last ? (aB > 0 ? last.bottom - LH / 2 : last.top + LH / 2) - pr.top + 19 : h - m;   /* the row turns about its right end: that end's middle sits half a row from the box's lower (or upper) side */
     const lineY = (ax, ay, a, x) => ay - Math.tan(a) * (ax - x);   /* a line through (ax, ay) at angle a */
     const solve = (ax, ay, a, xf) => { let y = ay; for (let k_ = 0; k_ < 4; k_++) y = lineY(ax, ay, a, xf(y)); return y; };
     const yTR = solve(hx, hy, aT, xrr), yTL = solve(hx, hy, aT, xl), yBR = solve(lx, ly, aB, xrr), yBL = solve(lx, ly, aB, xl);
