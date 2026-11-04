@@ -5344,9 +5344,27 @@ const bodyVars = () => { if (BODYV) return BODYV; BODYV = {}; for (const sh of [
     for (const r of [...rs]) { if (!r.style || !/^(body|\.theme-light, ?\.theme-dark|\.theme-dark, ?\.theme-light)$/.test(r.selectorText || "")) continue;
       for (const nm of [...r.style]) if (nm.startsWith("--")) { const v = r.style.getPropertyValue(nm).trim(); if (v.includes("var(")) BODYV[nm] = v; } } }
   return BODYV; };
-function edLook(el){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || (th === "obsidian" && doc.body.classList.contains("theme-dark")), m = CARDTH === "map";
+/* the editors' look (0.8.210, Nick: "some weird combination of the Obsidian themes… 24 different options"): two looks, each whole.
+   Obsidian: the editor is your Obsidian, as it is. MOTI: the editor wears the map's own theme: its background, ink, lines and accent stand in
+   for Obsidian's colors inside the card (headings, links, properties, pills), so every map theme gives one look, whatever Obsidian is set to.
+   The cards sit beside the map, not inside it, so the map's colors are read off it and handed over */
+const EDV = (bg, panel, ink, muted, line, acc, accS) => { const faint = `color-mix(in srgb,${muted} 70%,${bg})`, hov = `color-mix(in srgb,${ink} 7%,transparent)`;
+  return { "--background-primary": bg, "--background-primary-alt": panel, "--background-secondary": panel, "--background-secondary-alt": panel,
+    "--background-modifier-border": line, "--background-modifier-border-hover": `color-mix(in srgb,${line} 60%,${muted})`, "--background-modifier-border-focus": acc,
+    "--background-modifier-hover": hov, "--background-modifier-active-hover": accS, "--background-modifier-form-field": panel, "--background-modifier-cover": "rgba(0,0,0,.4)",
+    "--text-normal": ink, "--text-muted": muted, "--text-faint": faint, "--text-accent": acc, "--text-accent-hover": acc, "--text-on-accent": bg, "--text-selection": accS, "--text-highlight-bg": accS,
+    "--link-color": acc, "--link-color-hover": acc, "--link-external-color": acc, "--link-external-color-hover": acc, "--link-unresolved-color": acc, "--link-unresolved-opacity": ".6",
+    "--interactive-normal": panel, "--interactive-hover": hov, "--interactive-accent": acc, "--interactive-accent-hover": acc, "--caret-color": ink, "--icon-color": muted, "--icon-color-hover": ink, "--icon-color-focused": acc,
+    "--h1-color": ink, "--h2-color": ink, "--h3-color": ink, "--h4-color": ink, "--h5-color": ink, "--h6-color": ink, "--inline-title-color": ink, "--bold-color": ink, "--italic-color": ink,
+    "--code-background": panel, "--code-normal": ink, "--blockquote-border-color": acc, "--hr-color": line, "--checkbox-color": acc, "--checkbox-border-color": muted, "--list-marker-color": muted,
+    "--tag-color": acc, "--tag-background": accS, "--tag-color-hover": acc, "--tag-background-hover": accS, "--pill-color": muted, "--pill-border-color": line, "--metadata-label-text-color": muted, "--metadata-input-text-color": ink,
+    "--table-border-color": line, "--table-header-background": panel, "--callout-border-opacity": ".25", "--scrollbar-thumb-bg": `color-mix(in srgb,${muted} 35%,transparent)` }; };
+function edLook(el){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || (th === "obsidian" && doc.body.classList.contains("theme-dark")), m = CARDTH === "map" && th !== "obsidian";
   el.classList.toggle("theme-dark", m && dark); el.classList.toggle("theme-light", m && !dark);
-  const bv = bodyVars(); el.setCssProps(Object.fromEntries(Object.keys(bv).map(nm => [nm, m ? bv[nm] : ""]))); el.setCssProps({ "--cardop": CARDOP + "%" }); }
+  const bv = bodyVars(); el.setCssProps(Object.fromEntries(Object.keys(bv).map(nm => [nm, m ? bv[nm] : ""])));
+  const cs = win.getComputedStyle(root), g = nm => cs.getPropertyValue(nm).trim(), V = EDV(g("--bg"), g("--panel"), g("--ink"), g("--muted"), g("--line"), g("--accent"), g("--accent-soft"));
+  el.setCssProps(Object.fromEntries(Object.keys(V).map(nm => [nm, m ? V[nm] : ""])));
+  el.setCssProps({ "--cardop": CARDOP + "%", "--upp": g("--upp"), "--rel": g("--rel"), "--up": g("--up"), "--down": g("--down") }); }   /* the link colors always come along (the up/related pills) */
 const clampN = (v, a, b) => Math.round(Math.max(a, Math.min(b, v)));
 // the side editors' widths can be dragged at their inner edge (0.8.31); otherwise a share of the map
 const EDW = (() => { const o = pref("iv-edw", null); return o && typeof o === "object" ? o : {}; })();
@@ -6459,7 +6477,7 @@ $("#legend").addEventListener("click", () => setLegend(false));   // a click any
 { const db_ = root.querySelector('#themeseg button[data-th="dark"]'); if (db_) db_.remove(); }
 const autoTheme = () => doc.body.classList.contains("theme-dark") ? "lyt" : "paper";   // until a theme is picked, follow Obsidian's
 function setTheme(t, keep){ if (t === "dark") t = "lyt"; root.setAttribute("data-theme", t); if (keep) save("iv-theme", t); tip.setAttribute("data-theme", t);
-  root.querySelectorAll("#themeseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.th === t))); readCss(); legend(); draw(); }
+  root.querySelectorAll("#themeseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.th === t))); readCss(); legend(); try { for (const o of Object.values(EDS)) if (o && o.el) edLook(o.el); } catch (_) { /* editors not made yet */ } draw(); }
 root.querySelectorAll("#themeseg button").forEach(b => b.onclick = () => setTheme(b.dataset.th, true));
 setLegend(legendOpen);
 updateCounts();
