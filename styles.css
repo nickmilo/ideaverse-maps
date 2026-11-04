@@ -1580,3 +1580,15 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .mtwin.mtslide input[type=range]{flex:1;min-width:120px}
 .ivm .mtwin.mtslide .mtv{min-width:96px;text-align:right;font:600 12px var(--mono);color:var(--ink)}
 .ivm .editopts .eorow .seg{flex-wrap:wrap}
+/* Display menu choices as small type, not pills (0.8.198, Nick: "the tag pill toggling between options is a little large"): the tiny-type look from the old header grid */
+.ivm.ivm.ivm #disppop .seg{display:flex;flex-wrap:wrap;align-items:center;gap:2px 11px;background:none;border:0;box-shadow:none;padding:0;border-radius:0;height:auto}
+.ivm.ivm.ivm #disppop .seg button{appearance:none;background:none;border:0;box-shadow:none;margin:0;padding:1px 0;height:auto;min-height:0;border-radius:0;font:500 10.5px var(--mono);letter-spacing:.02em;color:var(--muted);cursor:pointer;line-height:15px}
+.ivm.ivm.ivm #disppop .seg button:hover{color:var(--ink);background:none}
+.ivm.ivm.ivm #disppop .seg button[aria-pressed="true"]{background:none;color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+.ivm #disppop .tchoice{display:flex;align-items:center;gap:10px}
+.ivm #disppop .ctrrk.tchoice{padding-left:30px}
+.ivm #disppop .ctrrk.tchoice[hidden]{display:none}
+.ivm #disppop .tchoice .eol{font:500 12px var(--body);color:var(--ink);min-width:0}
+.ivm #disppop .ctrrk.tchoice .eol{font-size:11.5px;color:var(--muted)}
+.ivm #disppop .lfxrow .lfxtry{appearance:none;background:none;border:1px solid var(--line);box-shadow:none;border-radius:999px;padding:1px 8px;height:auto;font:600 10px var(--body);color:var(--muted);cursor:pointer;margin-left:auto}
+.ivm #disppop .lfxrow .lfxtry:hover{color:var(--ink);border-color:var(--accent)}

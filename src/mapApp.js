@@ -5192,8 +5192,19 @@ cv.addEventListener("pointerleave", () => { if (HUDHOV >= 0) { HUDHOV = -1; hudP
 // ---------- Contrails (0.8.56, Nick): a breadcrumb trail you can see, subtle ----------
 // Each jump from one note to the next draws itself along a gentle arc (a small rocket can fly it: Display → Contrails → Rocket), leaving a vapor trail: a bright thin core inside a soft
 // cloud that widens, breaks into puffs and fades a step with each jump after it. The last 10 jumps stay. Display → Contrails.
-let CTRON = pref("iv-ctr", false) === true, CTRRK = pref("iv-ctrrk", false) === true; const CTR = [], CTR_FLY = 1300;   // CTRRK: a small rocket flies each new leg (Nick: a mini-mini switch, off)
+let CTRON = pref("iv-ctr", false) === true, CTRSHIP = ["rocket", "star", "none"].includes(pref("iv-ctrship", "")) ? pref("iv-ctrship", "") : pref("iv-ctrrk", false) === true ? "rocket" : "none";   /* what flies each leg: nothing, the rocket, or the starship (0.8.198) */ const CTR = [], CTR_FLY = 1300;   // CTRRK: a small rocket flies each new leg (Nick: a mini-mini switch, off)
 function ctrHop(a, b){ if (!CTRON || a === b) return; CTR.push({ a, b, t: performance.now(), s: hash(N[a].path + N[b].path, 7) }); if (CTR.length > 10) CTR.shift(); draw(); }
+/* an original starship (0.8.198, Nick asked for "a Starship"; our own design, not any screen ship): a long dart of a hull with swept wings, twin engines set into the wing roots, a bridge light and blinking wingtip lights */
+function drawStarship(px, py, ang, alpha, dark){ const t = performance.now() / 1000; ctx.save(); ctx.translate(px, py); ctx.rotate(ang); ctx.scale(1.25, 1.25); ctx.globalAlpha = alpha;
+  for (const sy_ of [-1.6, 1.6]) { const g = ctx.createRadialGradient(-6.6, sy_, 0, -6.6, sy_, 5.5 + Math.sin(t * 20 + sy_) * .6); g.addColorStop(0, "rgba(150,225,255,.95)"); g.addColorStop(1, "rgba(80,160,255,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(-6.6, sy_, 6, 0, 6.2832); ctx.fill(); }   /* engine glow */
+  const hull = dark ? "#e9edf8" : "#3b4160", trim = dark ? "#9aa6c4" : "#6b7396";
+  ctx.fillStyle = trim; ctx.beginPath(); ctx.moveTo(1.5, -1.2); ctx.lineTo(-4.5, -5.2); ctx.lineTo(-6, -5.2); ctx.lineTo(-4.4, -1.2); ctx.closePath(); ctx.moveTo(1.5, 1.2); ctx.lineTo(-4.5, 5.2); ctx.lineTo(-6, 5.2); ctx.lineTo(-4.4, 1.2); ctx.closePath(); ctx.fill();   /* swept wings */
+  ctx.fillStyle = hull; ctx.beginPath(); ctx.moveTo(9.5, 0); ctx.lineTo(1.5, -1.9); ctx.lineTo(-6.2, -2.3); ctx.lineTo(-6.2, 2.3); ctx.lineTo(1.5, 1.9); ctx.closePath(); ctx.fill();   /* the dart, broad at the stern for the engines */
+  ctx.fillStyle = "rgba(160,230,255,.95)"; for (const sy_ of [-1.25, 1.25]) { ctx.beginPath(); ctx.ellipse(-6.2, sy_, .5, .8, 0, 0, 6.2832); ctx.fill(); }   /* engine mouths */
+  ctx.strokeStyle = trim; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(-5.5, 0); ctx.stroke();   /* spine */
+  ctx.fillStyle = dark ? "#7fd3e6" : "#4f8fd6"; ctx.beginPath(); ctx.ellipse(3.4, 0, 1.3, .7, 0, 0, 6.2832); ctx.fill();   /* canopy */
+  if (Math.sin(t * 6) > 0) { ctx.fillStyle = "#ff5a5a"; ctx.beginPath(); ctx.arc(-5.6, -5.2, .55, 0, 6.2832); ctx.fill(); ctx.fillStyle = "#4dff9a"; ctx.beginPath(); ctx.arc(-5.6, 5.2, .55, 0, 6.2832); ctx.fill(); }   /* wingtip lights */
+  ctx.restore(); }
 function drawContrails(){ if (!CTRON || !CTR.length) return; const now = performance.now(); let busy = false;
   const dark = (() => { const h = String(css.bg || "#fff").replace("#", ""); if (h.length < 6) return view === "stars"; const v = parseInt(h.slice(0, 2), 16) * .3 + parseInt(h.slice(2, 4), 16) * .59 + parseInt(h.slice(4, 6), 16) * .11; return v < 110; })();
   const rgb = dark ? "235,240,255" : "120,128,160";
@@ -5214,7 +5225,8 @@ function drawContrails(){ if (!CTRON || !CTR.length) return; const now = perform
     const np = Math.round(len / 26); for (let k_ = 1; k_ < np; k_++) { const u = k_ / np; if (u > e) break; const [px, py] = pt(u), h_ = hash(N[a].path, 100 + k_), drift = spread * 9 * (h_ - .5);
       ctx.fillStyle = `rgba(${rgb},${.06 * fade})`; ctx.beginPath(); ctx.arc(px - dy / len * drift, py + dx / len * drift, 2 + 5 * spread * h_, 0, 6.2832); ctx.fill(); }
     // the rocket, nose along the arc, while it flies (only with its switch on)
-    if (fly < 1 && CTRRK) { const [px, py] = pt(e), [qx, qy] = pt(Math.max(0, e - .02)), ang = Math.atan2(py - qy, px - qx);
+    if (fly < 1 && CTRSHIP === "star") { const [px, py] = pt(e), [qx, qy] = pt(Math.max(0, e - .02)); drawStarship(px, py, Math.atan2(py - qy, px - qx), Math.min(1, (1 - fly) * 4), dark); }
+    if (fly < 1 && CTRSHIP === "rocket") { const [px, py] = pt(e), [qx, qy] = pt(Math.max(0, e - .02)), ang = Math.atan2(py - qy, px - qx);
       ctx.save(); ctx.translate(px, py); ctx.rotate(ang); ctx.globalAlpha = Math.min(1, (1 - fly) * 4);
       ctx.fillStyle = `rgba(255,${150 + Math.round(60 * Math.random())},80,.85)`; ctx.beginPath(); ctx.moveTo(-5, -1.6); ctx.lineTo(-9 - 3 * Math.random(), 0); ctx.lineTo(-5, 1.6); ctx.closePath(); ctx.fill();   // flame
       ctx.fillStyle = dark ? "#f4f6ff" : "#3b4160"; ctx.beginPath(); ctx.ellipse(0, 0, 5.5, 2.2, 0, 0, 6.2832); ctx.fill();   // body
@@ -6476,12 +6488,36 @@ function liveLinks(path, list){ const i = PIDX.get(path); if (i == null || ARCH[
   if (sel >= 0) win.setTimeout(() => { if (dead || sel < 0) return; const st0 = drawer.scrollTop; LIVEQ = true; try { select(sel, true); } finally { LIVEQ = false; } drawer.scrollTop = st0;
     for (const o of Object.values(EDS)) if (o.path && PIDX.has(o.path)) fillStrip(o, PIDX.get(o.path)); }, 820);   // the panel's numbers, once the map has settled (no camera move, no editor reload)
   draw(); }
+/* how a new link shows itself (0.8.198, Nick: "even cooler dynamic options… fun and tasteful"): Draw (the line draws itself, as before),
+   Spark (a comet runs the link and bursts on arrival), Thread (a line that starts loose and pulls taut), Bloom (ripples from both notes meet and light the link) */
+let LINKFX = ["draw", "spark", "thread", "bloom"].includes(pref("iv-linkfx", "")) ? pref("iv-linkfx", "") : "draw";
+function linkFx(o, e, x1, y1, x2, y2){ const col = view === "stars" ? "hsl(58,86%,66%)" : css.accent, dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len, P = u => [x1 + dx * u, y1 + dy * u];
+  ctx.strokeStyle = col; ctx.fillStyle = col; ctx.shadowColor = col; ctx.lineCap = "round";
+  if (LINKFX === "spark") { const run = Math.min(1, e / .42), g = 1 - Math.pow(1 - run, 2.2);   /* the comet: a bright head and a tail that thins behind it */
+    if (run < 1) { const t0 = Math.max(0, g - .28); for (let q = 0; q < 10; q++) { const u0 = t0 + (g - t0) * q / 10, u1 = t0 + (g - t0) * (q + 1) / 10, [ax, ay] = P(u0), [bx, by] = P(u1); ctx.globalAlpha = .1 + .8 * (q / 10); ctx.lineWidth = .8 + 3 * q / 10; ctx.shadowBlur = 10; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); }
+      const [hx, hy] = P(g); ctx.globalAlpha = 1; ctx.shadowBlur = 22; ctx.beginPath(); ctx.arc(hx, hy, 3.6, 0, 6.2832); ctx.fill(); }
+    else { const b = (e - .42) / .58; ctx.shadowBlur = 0; ctx.globalAlpha = .55 * (1 - b); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();   /* the burst at the far note */
+      for (let q = 0; q < 12; q++) { const a_ = q / 12 * 6.2832 + hash(N[o.b].path, q) * .5, r1 = 6 + 34 * Math.pow(b, .6), r0 = Math.max(0, r1 - 10); ctx.globalAlpha = .9 * (1 - b); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x2 + Math.cos(a_) * r0, y2 + Math.sin(a_) * r0); ctx.lineTo(x2 + Math.cos(a_) * r1, y2 + Math.sin(a_) * r1); ctx.stroke(); }
+      ctx.globalAlpha = .5 * (1 - b); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x2, y2, 4 + 26 * b, 0, 6.2832); ctx.stroke(); } }
+  else if (LINKFX === "thread") { const amp = Math.min(26, len * .12) * Math.pow(1 - Math.min(1, e / .7), 2), ph = e * 9, show = Math.min(1, e / .18);   /* loose at first, then it pulls taut and glows */
+    ctx.globalAlpha = (e < .7 ? .9 : .9 * (1 - (e - .7) / .3)) * show; ctx.lineWidth = 2.2; ctx.shadowBlur = 12 + 10 * (1 - amp / 26); ctx.beginPath();
+    for (let q = 0; q <= 48; q++) { const u = q / 48, w = Math.sin(u * Math.PI) * Math.sin(u * 3 * 6.2832 - ph) * amp, [px, py] = P(u); q ? ctx.lineTo(px + nx * w, py + ny * w) : ctx.moveTo(px + nx * w, py + ny * w); } ctx.stroke();
+    if (e > .62 && e < .82) { const f = 1 - Math.abs(e - .72) / .1; ctx.globalAlpha = .7 * f; ctx.lineWidth = 5; ctx.shadowBlur = 26; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); } }   /* the twang */
+  else if (LINKFX === "bloom") { const half = len / 2, rr = half * Math.min(1, e / .45);   /* ripples from both notes; where they meet, the link lights from the middle out */
+    ctx.shadowBlur = 0; for (const [cx_, cy_] of [[x1, y1], [x2, y2]]) for (const lag of [0, .35]) { const r_ = rr * (1 - lag); if (r_ <= 2 || e > .7) continue; ctx.globalAlpha = .45 * (1 - e / .7) * (1 - lag); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(cx_, cy_, r_, 0, 6.2832); ctx.stroke(); }
+    if (e >= .42) { const g = Math.min(1, (e - .42) / .25), [mx, my] = P(.5); ctx.globalAlpha = .95 * (e < .8 ? 1 : 1 - (e - .8) / .2); ctx.lineWidth = 3; ctx.shadowBlur = 18; ctx.beginPath(); ctx.moveTo(mx - dx / 2 * g, my - dy / 2 * g); ctx.lineTo(mx + dx / 2 * g, my + dy / 2 * g); ctx.stroke();
+      if (g < 1) { ctx.globalAlpha = 1 - g; ctx.shadowBlur = 30; ctx.beginPath(); ctx.arc(mx, my, 3 + 10 * g, 0, 6.2832); ctx.fill(); } } }
+  ctx.shadowBlur = 0; ctx.globalAlpha = 1; }
+function linkFxTry(){ let a = sel >= 0 && VV(sel) ? sel : -1; if (a < 0) { for (const i of order) if (VV(i) && N[i].level >= 3) { const x = sx(X[i]), y = sy(Y[i]); if (x > 80 && x < W - 80 && y > 80 && y < H - 80) { a = i; break; } } } if (a < 0) return;
+  let b = -1, bd = 0; for (const j of [...new Set([...out[a], ...inn[a]])]) { if (!VV(j) || j === a) continue; const d = Math.hypot(sx(X[j]) - sx(X[a]), sy(Y[j]) - sy(Y[a])); if (d > bd && d < Math.min(W, H) * .6) { bd = d; b = j; } }
+  if (b < 0) return; LIVE.links.push({ a, b, t0: performance.now(), add: true }); draw(); }
 function drawLive(){ if (!LIVE.links.length && !LIVE.rings.length) return; const now = performance.now();
   LIVE.links = LIVE.links.filter(o => now - o.t0 < LIVE_MS); LIVE.rings = LIVE.rings.filter(o => now - o.t0 < LIVE_MS);
   for (const o of LIVE.links) { if (!VV(o.a) || !VV(o.b)) continue; const e = (now - o.t0)/LIVE_MS, x1 = sx(X[o.a]), y1 = sy(Y[o.a]), x2 = sx(X[o.b]), y2 = sy(Y[o.b]);
     const g = Math.min(1, e*3), xm = x1 + (x2 - x1)*g, ym = y1 + (y2 - y1)*g;   // a new link draws itself from the note you're writing to its target
     ctx.save(); ctx.lineCap = "round";
-    if (o.add) { ctx.globalAlpha = .9*(1 - e); ctx.strokeStyle = view === "stars" ? "hsl(58,86%,66%)" : css.accent; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 14; ctx.lineWidth = 3.2;
+    if (o.add && LINKFX !== "draw") linkFx(o, e, x1, y1, x2, y2);
+    else if (o.add) { ctx.globalAlpha = .9*(1 - e); ctx.strokeStyle = view === "stars" ? "hsl(58,86%,66%)" : css.accent; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 14; ctx.lineWidth = 3.2;
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(xm, ym); ctx.stroke();
       ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(x2, y2, Math.max(4, rad(o.b)) * (1 + 2.5*e), 0, 6.2832); ctx.lineWidth = 1.6; ctx.stroke(); }
     else { ctx.globalAlpha = .7*(1 - e); ctx.strokeStyle = css.muted; ctx.setLineDash([4, 5]); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
@@ -7463,9 +7499,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     cb.onchange = () => { HUDL = cb.checked; save("iv-hudl", HUDL); l2.hidden = l3.hidden = !HUDL; if (!HUDL) hudPv(-1); draw(); }; }
   // Contrails (0.8.56, Nick): your path from note to note as a vapor trail behind a small airplane
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = CTRON; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Contrails" });
-    const l2 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = CTRRK; l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Rocket" }); l2.hidden = !CTRON;
-    c2.onchange = () => { CTRRK = c2.checked; save("iv-ctrrk", CTRRK); };
+    const l2 = DI.p.createDiv({ cls: "eorow ctrrk tchoice" }); l2.createSpan({ cls: "eol", text: "Ship" }); l2.hidden = !CTRON; const sg2 = l2.createDiv({ cls: "seg" });
+    for (const [v, t] of [["none", "None"], ["rocket", "Rocket"], ["star", "Starship"]]) { const b = sg2.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CTRSHIP === v) } }); b.onclick = e => { e.stopPropagation(); CTRSHIP = v; save("iv-ctrship", v); sg2.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); }; }
     cb.onchange = () => { CTRON = cb.checked; save("iv-ctr", CTRON); l2.hidden = !CTRON; if (!CTRON) CTR.length = 0; draw(); }; }
+  // how a new link appears (0.8.198): four looks, and Try to see one on the map
+  { const r_ = DI.p.createDiv({ cls: "drow eorow tchoice lfxrow" }); r_.createSpan({ cls: "eol", text: "New links" }); const sg = r_.createDiv({ cls: "seg" });
+    for (const [v, t] of [["draw", "Draw"], ["spark", "Spark"], ["thread", "Thread"], ["bloom", "Bloom"]]) { const b = sg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(LINKFX === v) } }); b.onclick = e => { e.stopPropagation(); LINKFX = v; save("iv-linkfx", v); sg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); linkFxTry(); }; }
+    const tr = r_.createEl("button", { cls: "lfxtry", text: "Try", attr: { type: "button" } }); tr.onclick = e => { e.stopPropagation(); linkFxTry(); }; }
   // Show the way home (Kevin Bacon): from the note you're on, the fewest links back to Home, or to a note you choose
   const bcSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Kevin Bacon: from the note you're on, light up the fewest links back to Home (or a note you choose)" } }); const bcCb = bcSw.createEl("input", { type: "checkbox" }); bcSw.createEl("i", { cls: "sw" }); bcSw.createSpan({ text: "Show the way home" });
   const bcTo = DI.p.createDiv({ cls: "bacto" }); bcTo.createSpan({ cls: "btl", text: "To" }); const bcName = bcTo.createEl("button", { cls: "bcname", attr: { type: "button", "aria-label": "Choose the note to find the way to" } });
