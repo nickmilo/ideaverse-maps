@@ -128,6 +128,7 @@ export async function mountInto(owner, el, opts) {
     return normalizePath(d ? `${d}/${SAVED_NAME}` : SAVED_NAME); };
   const map = mountMap(root, D, {
     store: opts.store || plugin.store,
+    embed: !!opts.embed,
     isActive: opts.isActive,
     registerDomEvent: (target, type, fn, o) => events.registerDomEvent(target, type, fn, o),
     openNote: opts.openNote,
@@ -166,7 +167,7 @@ export async function mountInto(owner, el, opts) {
       if (!dir) return null;
       plugin.settings.viewsFolder = dir; await plugin.saveSettings(); return dir; },
     readSaved: async () => { const f = app.vault.getAbstractFileByPath(savedPath()); return f instanceof TFile ? await app.vault.read(f) : null; },
-    writeSaved: async text => {
+    writeSaved: async text => { if (opts.embed) return null;   // a map embedded in a note reads the views file, never writes it
       const path = savedPath(); if (!path) return null;
       const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
       if (dir && !app.vault.getAbstractFileByPath(dir)) await app.vault.createFolder(dir);

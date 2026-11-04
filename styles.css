@@ -1515,3 +1515,14 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 /* the preview editor uses the mini preview's font too (Obsidian's interface font) */
 .ivm .ivm-cockpit .ivm-card.ckedit{--font-text:var(--font-interface);font-family:var(--font-interface)}
 .ivm .ivm-cockpit .ivm-card.ckedit :is(.cm-content,.markdown-source-view,.inline-title,.metadata-container){font-family:var(--font-interface)}
+
+/* a map inside a note (0.8.171): ```moti blocks and ![[name.moti]] embeds */
+.ivm-embed { position: relative; height: var(--ivm-embed-h, 480px); border: 1px solid var(--background-modifier-border); border-radius: 10px; overflow: hidden; margin: 6px 0; background: var(--background-primary); }
+.ivm-embed-host { position: absolute; inset: 0; }
+.ivm-embed-host.ivm-host { height: 100%; }
+.ivm-embed-veil { position: absolute; inset: 0; z-index: 40; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 14px; }
+.ivm-embed-hint { font: 600 11px var(--font-interface); letter-spacing: .04em; color: var(--text-muted); background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 999px; padding: 4px 11px; opacity: .85; transition: opacity .15s, color .15s; }
+.ivm-embed-veil:hover .ivm-embed-hint { opacity: 1; color: var(--text-accent); }
+.ivm-embed-miss { position: absolute; left: 12px; bottom: 12px; z-index: 41; font: 500 11px var(--font-interface); color: var(--text-muted); background: var(--background-primary); border-radius: 6px; padding: 3px 8px; }
+.ivm-embed-wrap { display: block; width: 100%; }
+.ivm-embed.is-quiet #drawer { display: none; }

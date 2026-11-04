@@ -6704,7 +6704,7 @@ const loadSavedText = (txt, fromSync) => { if (dead) return;
     else if (Object.keys(EMOF).length && !fromSync) nv++;   // assigned before the file had them: write them back
     if (Array.isArray(o.groups)) { const have = new Set(o.groups.map(g => g.name)); vgroups = fromSync ? o.groups : o.groups.concat(vgroups.filter(g => !have.has(g.name))); save("iv-vgroups", vgroups); }
     save("iv-views", views); save("iv-tours", tours); renderViewList(); renderTourList(); syncFolderBtn(); if (nv || nt) writeSaved(); } catch { /* not valid JSON (or half-synced): leave both as they are */ } };
-if (host.readSaved && host.savedFolder()) void host.readSaved().then(txt => loadSavedText(txt, false));
+const savedReady = host.readSaved && host.savedFolder() ? host.readSaved().then(txt => loadSavedText(txt, false)).catch(() => {}) : Promise.resolve();
 if (host.onSavedChange) host.onSavedChange(txt => loadSavedText(txt, true));
 // every popover stays inside the map: when one opens, nudge it sideways if it would spill past either edge
 function placePop(el){ el.setCssProps({ "--popx": "0px" }); const R = root.getBoundingClientRect(), r = el.getBoundingClientRect();
@@ -7621,6 +7621,9 @@ return {
   destroy(){ dead = true; closeEds(); for (const o of Object.values(EDS)) o.el.remove(); pvLayer.remove(); ro.disconnect(); popObs.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
     win.clearTimeout(senseTimer); win.clearTimeout(pTimer); driftStop(); tip.remove(); },
   openNote(path){ const i = PIDX.get(path); if (i != null) navTo(i); },
+  // a map embedded in a note (0.8.171): show a saved view, by name or as the view itself (from a .moti file)
+  async showSaved(spec){ await savedReady; if (dead) return false; const v = spec && typeof spec === "object" ? spec : views.find(x => x.name.toLowerCase() === String(spec || "").trim().toLowerCase());
+    if (!v) return false; win.setTimeout(() => { if (!dead) applySaved(host.embed ? { ...v, cam: null } : v); }, 60); return true; },   /* an embed is smaller than the map the view was saved on: fit it instead of the saved zoom */
   // the commands "Open note in Emergence / Starfield" (0.8.27, Nick: so they can be hotkeyed): that map, Edit mode on, the note in the left editor
   editIn(path, which){ const i = PIDX.get(path); if (i == null || dead) return false;
     if (!EDITM || !EDLEFT) { EDITM = true; EDLEFT = true; save("iv-editm", true); save("iv-edleft", true);
