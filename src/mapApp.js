@@ -5530,9 +5530,7 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   bar(); chip("in", `${d.body_in} in`, "spill"); chip("out", `${d.body_out} out`, "spill");
   bar();
   const rk = scoreRank(i); chip("score", rk ? `#${rk.toLocaleString()}` : d.score.toFixed(1), "spill sscore");
-  /* Focus on its links, from the note panel (0.8.238): a pill beside the rank; on, it reads "Focused" and a click lets go */
-  { const fb = o.strip.createEl("button", { cls: "schip spill sfoc" + (focus === i ? " on" : ""), text: focus === i ? "Focused" : "Focus", attr: { type: "button", "aria-description": focus === i ? "Exit focus" : "Focus on its links" } });
-    fb.onclick = e => { e.stopPropagation(); focusArmed = false; setFocus(focus === i ? -1 : i); fillStrip(o, i); }; }
+  /* (the Focus pill of 0.8.238 is gone, 0.8.251: Focus lives in the toolbar) */
   { const dir = d.path.includes("/") ? d.path.slice(0, d.path.lastIndexOf("/")) : "", f_ = o.strip.createSpan({ cls: "sfold", text: dir ? dir.split("/").pop() : "Vault root" });   /* its folder (0.8.175, Nick); the full path on hover */
     f_.setAttribute("aria-description", dir || "the top of the vault"); /* the full path on hover, in the plugin's own small label (0.8.176: aria-description alone showed nothing; the cards sit outside the map, so they get their own) */
     let tp = null; f_.addEventListener("pointerenter", () => { if (tp) tp.remove(); const r = f_.getBoundingClientRect(), cr = o.el.getBoundingClientRect(); tp = o.el.createDiv({ cls: "sfold-tip", text: dir || "The top of the vault" });
