@@ -1590,3 +1590,6 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm #vmorepop .vresetc{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font:500 11px var(--body);color:var(--ink);padding:4px 2px}
 .ivm #vmorepop .vresetc span{flex:1 1 100%}
 .ivm #vmorepop .vresetc button{height:auto;padding:3px 10px;font:600 11px var(--body);border-radius:999px}
+/* an orb opened in the background (⌘-click) pulses once (0.8.193) */
+.ivm-orbs .ivm-orb.flash{animation:ivm-orbflash .9s ease-out 1}
+@keyframes ivm-orbflash{0%{transform:scale(1.5);box-shadow:0 0 0 6px color-mix(in srgb,var(--interactive-accent) 45%,transparent)}100%{transform:scale(1);box-shadow:0 0 0 0 transparent}}

@@ -5485,6 +5485,11 @@ function tabTake(i){ const p = N[i].path, nw = TABNEW; TABNEW = false; const cur
     else if (nw) { TABS.splice(TCUR + 1, 0, { path: p }); TCUR++; }
     else TABS[TCUR] = { path: p }; }
   tabsSave(); syncOrbs(); }
+/* ⌘-click: a new orb in the background, the way Obsidian opens a tab with "Always focus new tabs" off (0.8.193, Nick): the orb appears, the editor stays put */
+let BGLAST = null;   /* several in a row line up in the order you opened them, as browser tabs do */
+function tabAddBg(i){ const p = N[i].path; if (TABS.some(t => t.path === p)) { orbFlash(p); return; } let at = TCUR >= 0 ? TCUR + 1 : TABS.length; if (BGLAST && BGLAST.cur === TCUR && TABS[BGLAST.at] && TABS[BGLAST.at].path === BGLAST.p) at = BGLAST.at + 1;
+  TABS.splice(at, 0, { path: p }); BGLAST = { cur: TCUR, at, p }; tabsSave(); syncOrbs(); orbFlash(p); }
+function orbFlash(p){ win.setTimeout(() => { const j = TABS.findIndex(t => t.path === p), b = orbBar.querySelector(`.ivm-orb[data-i="${j}"]`); if (!b) return; b.classList.remove("flash"); void b.offsetWidth; b.classList.add("flash"); }, 0); }
 function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
   TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); arenaSync(); syncNav(); }
 function tabGo(j){ const t = TABS[j]; if (!t) return; const i = PIDX.get(t.path); if (i == null) return;
@@ -6110,7 +6115,7 @@ const MODK = e => !!e && (Platform.isMacOS ? e.metaKey : e.ctrlKey);
 const openKind = e => MODK(e) && e.altKey ? "side" : MODK(e) ? "tab" : "";
 function openAs(i, kind){ if (i == null || i < 0 || !N[i]) return false;
   if (kind === "side") { if (edOn() && EDS) void EDS.right.open(i); else { if (vis[i]) select(i); if (host.openNote) host.openNote(N[i].path, "split"); } return true; }
-  if (kind === "tab") { if (edOn() && ORBS) { TABNEW = true; if (vis[i]) select(i); } else { if (vis[i]) select(i); if (host.openNote) host.openNote(N[i].path, true); } return true; }
+  if (kind === "tab") { if (edOn() && ORBS) { tabAddBg(i); } else { if (vis[i]) select(i); if (host.openNote) host.openNote(N[i].path, true); } return true; }
   return false; }
 /* Arena and Stonehenge: hover a filled slot and a small × appears; click it to empty the slot (0.8.189: was ⌥-click, now ⌥ means link) */
 let SLOTX = null;
@@ -7700,8 +7705,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         { let at = MP.querySelector("#goskyline"); for (const id of ["gocompass", "goarena", "gokandinsky", "gocockpit"]) { const el = MP.querySelector("#" + id); if (el && at) { at.after(el); at = el; } } }
         { const uf = MP.querySelector("#goskyline"), ud = uf && uf.closest("details"), es = ex.querySelector(":scope > summary"); if (ud && ud !== ex && es) es.after(ud); }   /* Unfinished first under Experimental (Nick, 0.8.80) */
         for (const v of ["gravity", "graph", "treemap", "mosaic", "shelf", "tesla", "corona", "chord"]) { const g_ = vgrid.querySelector(`[data-vg="${v}"]`); if (g_) vgrid.appendChild(g_); } const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
-    // the quick keys in list order; two are pinned wherever their maps sit (Nick): Linear Calendar is always 0, Base Builder always \
-    const QK = [..."123456789-=[]"], QPIN = { golincal: "0", gobuilder: "\\" };
+    // the quick keys in list order: 1–9, 0, then - = [ ] \
+    const QK = [..."1234567890-=[]\\"], QPIN = {};   /* the quick keys simply follow the list now, nothing pinned (0.8.193, Nick) */
     const KEYED = () => { const m_ = new Map(), cs = KEYMAPS().filter(c_ => !QPIN[c_.id]); cs.slice(0, QK.length).forEach((c_, j) => m_.set(QK[j], c_));
       for (const [id, k_] of Object.entries(QPIN)) { const el = MP.querySelector("#" + id); if (el) m_.set(k_, el); } return m_; };
     const KEYMAPS = () => [...MP.querySelectorAll(":scope > .chip")].filter(c_ => !c_.hidden);
