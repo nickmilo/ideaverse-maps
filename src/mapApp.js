@@ -6127,7 +6127,7 @@ function ldLink(t, j, up){ LDDONE = true; LDCTRL = false; const where = up ? "up
 cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.dataTransfer.getData("application/x-ivm-note"); if (!p) return; e.preventDefault(); const t = pick(e.offsetX, e.offsetY), j = PIDX.get(p);
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
-dbg.__lfx = () => linkFxTry();
+dbg.__lfx = (add = true) => linkFxTry(add);
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
 function drawLdrop(){ if (LDROP < 0 || !VV(LDROP)) return; const x = sx(X[LDROP]), y = sy(Y[LDROP]), r = rad(LDROP) + 10; ctx.save(); ctx.strokeStyle = css.accent; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
   const t = LDCTRL ? `→ up of ${N[LDROP].title}` : `→ ${N[LDROP].title}: ${LDPOS_T[LDPOS]}`; ctx.font = `600 12px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const w_ = ctx.measureText(t).width + 16; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - w_ / 2, y - r - 30, w_, 22, 11); ctx.fill(); ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = css.accent; ctx.fillText(t, x, y - r - 13); ctx.restore(); }   /* above the dot, clear of its name */
@@ -6512,9 +6512,9 @@ function linkFx(o, e, x1, y1, x2, y2){ const col = view === "stars" ? "hsl(58,86
   for (let q = 0; q <= 48; q++) { const u = q / 48, w = Math.sin(u * Math.PI) * Math.sin(u * 3 * 6.2832 - ph) * amp, [px, py] = P(u), [nx, ny] = T(u); q ? ctx.lineTo(px + nx * w, py + ny * w) : ctx.moveTo(px + nx * w, py + ny * w); } ctx.stroke();
   if (e > .62 && e < .82) { const f = 1 - Math.abs(e - .72) / .1; ctx.globalAlpha = .7 * f; ctx.lineWidth = 5; ctx.shadowBlur = 26; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx, cy, x2, y2); ctx.stroke(); }   /* the twang */
   ctx.shadowBlur = 0; ctx.globalAlpha = 1; }
-function linkFxTry(){ let a = sel >= 0 && VV(sel) ? sel : -1; if (a < 0) { for (const i of order) if (VV(i) && N[i].level >= 3) { const x = sx(X[i]), y = sy(Y[i]); if (x > 80 && x < W - 80 && y > 80 && y < H - 80) { a = i; break; } } } if (a < 0) return;
+function linkFxTry(add = true){ let a = sel >= 0 && VV(sel) ? sel : -1; if (a < 0) { for (const i of order) if (VV(i) && N[i].level >= 3) { const x = sx(X[i]), y = sy(Y[i]); if (x > 80 && x < W - 80 && y > 80 && y < H - 80) { a = i; break; } } } if (a < 0) return;
   let b = -1, bd = 0; for (const j of [...new Set([...out[a], ...inn[a]])]) { if (!VV(j) || j === a) continue; const d = Math.hypot(sx(X[j]) - sx(X[a]), sy(Y[j]) - sy(Y[a])); if (d > bd && d < Math.min(W, H) * .6) { bd = d; b = j; } }
-  if (b < 0) return; LIVE.links.push({ a, b, t0: performance.now(), add: true }); draw(); }
+  if (b < 0) return; LIVE.links.push({ a, b, t0: performance.now(), add }); draw(); }
 function drawLive(){ if (!LIVE.links.length && !LIVE.rings.length) return; const now = performance.now();
   LIVE.links = LIVE.links.filter(o => now - o.t0 < LIVE_MS); LIVE.rings = LIVE.rings.filter(o => now - o.t0 < LIVE_MS);
   for (const o of LIVE.links) { if (!VV(o.a) || !VV(o.b)) continue; const e = (now - o.t0)/LIVE_MS, x1 = sx(X[o.a]), y1 = sy(Y[o.a]), x2 = sx(X[o.b]), y2 = sy(Y[o.b]);
@@ -6524,7 +6524,8 @@ function drawLive(){ if (!LIVE.links.length && !LIVE.rings.length) return; const
     else if (o.add) { ctx.globalAlpha = .9*(1 - e); ctx.strokeStyle = view === "stars" ? "hsl(58,86%,66%)" : css.accent; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 14; ctx.lineWidth = 3.2;
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(xm, ym); ctx.stroke();
       ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(x2, y2, Math.max(4, rad(o.b)) * (1 + 2.5*e), 0, 6.2832); ctx.lineWidth = 1.6; ctx.stroke(); }
-    else { ctx.globalAlpha = .7*(1 - e); ctx.strokeStyle = css.muted; ctx.setLineDash([4, 5]); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+    else { ctx.globalAlpha = .7*(1 - e); ctx.strokeStyle = css.muted; ctx.setLineDash([4, 5]); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x1, y1);   /* a removed link fades along the arc it had (0.8.206, Nick) */
+      if (sphOn()) ctx.lineTo(x2, y2); else { const [cx, cy] = linkArc(o.a, o.b, x1, y1, x2, y2); ctx.quadraticCurveTo(cx, cy, x2, y2); } ctx.stroke(); }
     ctx.restore(); }
   ctx.textAlign = "center"; ctx.textBaseline = "bottom";
   for (const o of LIVE.rings) { const i = o.i; if (now < o.t0 || !VV(i)) continue; const e = (now - o.t0)/LIVE_MS, x = sx(X[i]), y = sy(Y[i]), r = Math.max(4, rad(i)), lv = N[i].level;
