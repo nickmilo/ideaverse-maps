@@ -5382,10 +5382,7 @@ function edLook(el){ const th = root.dataset.theme, dark = th === "lyt" || th ==
   win.setTimeout(() => { try { for (const o of Object.values(EDS)) if (o && o.el === el) edTint(o); } catch (_) { /* editors not made yet */ } }, 0); }
 /* a link's color in the editor says how the note it points to relates to this one (0.8.224, Nick: "what if every single link is colored based on whether it's an up, related, above, or below link?"):
    up property gold, related violet, above blue, below green, any other property slate. Starfield theme for now (the rule lives on .sf-th) */
-const EMO_RE = /\p{Extended_Pictographic}/u;
 function edTint(o){ if (!o || !o.el || o.el.hidden) return;
-  /* headings with an emoji glow behind their letters instead (0.8.230): the cut-out color would blank the emoji */
-  for (const h of o.el.querySelectorAll(".inline-title, h1, h2, h3, h4, h5, .cm-header-1, .cm-header-2, .cm-header-3, .cm-header-4, .cm-header-5")) { const e_ = EMO_RE.test(h.textContent || ""); if (h.classList.contains("has-emo") !== e_) h.classList.toggle("has-emo", e_); }
   if (!o.path || !host.linkTargets) return; const sf = o.el.classList.contains("sf-th"), i = PIDX.get(o.path);
   const els = o.el.querySelectorAll("a.internal-link, .cm-hmd-internal-link, .multi-select-pill-content, .internal-link");
   if (!sf || i == null) { for (const e of els) if (e.dataset.ivk) delete e.dataset.ivk; return; }
