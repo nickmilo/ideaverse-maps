@@ -1569,3 +1569,5 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card .sfold-tip{position:absolute;left:var(--tx);top:var(--ty);z-index:60;pointer-events:none;white-space:nowrap;font:600 11px var(--font-interface);color:var(--text-normal);background:var(--background-primary);border:1px solid var(--background-modifier-border);border-radius:6px;padding:3px 7px;box-shadow:0 4px 12px rgba(0,0,0,.18)}
 /* Linear Calendar: how many names (0.8.180) */
 .ivm .lcnames{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-muted);margin:4px 0}
+.ivm .lchalf{flex-wrap:wrap}
+.ivm .lcnames[hidden]{display:none}

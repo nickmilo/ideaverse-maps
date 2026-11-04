@@ -1885,14 +1885,17 @@ const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oc
 // Linear Calendar: the years shown (a range; both ends on one year shows one year) and the shape: Whole months (a row each, weeks lined up) or Half months (two rows each: the 1st to the 15th, then the 16th on, for a narrow pane)
 let LCUIOK = false, LCR0 = +pref("iv-lcr0", 0) || 0, LCR1 = +pref("iv-lcr1", 0) || 0, LCHALF = pref("iv-lchalf", true) !== false, LC = {years: [], C: 44};
 /* two more shapes (0.8.172, Nick): Life in weeks (a row per year, 52 week boxes; with a birth year, the 90 years from it) and Years stacked (a row per year, Jan to Dec on one line) */
-let LCSHAPE = ["weeks", "stack"].includes(pref("iv-lcshape", "")) ? pref("iv-lcshape", "") : "months", LCBORN = +pref("iv-lcborn", 0) || 0;
-const lcGrid = () => LCSHAPE === "weeks" || LCSHAPE === "stack";
+let LCSHAPE = ["weeks", "stack", "days"].includes(pref("iv-lcshape", "")) ? pref("iv-lcshape", "") : "months", LCBORN = +pref("iv-lcborn", 0) || 0;
+/* Last 30 days (0.8.181, Nick: "a rolling 30-day view… so we can really zoom in"): as one line, two rows of 15, or weeks (Monday to Sunday, the old standard) */
+let LC30 = ["line", "half", "weeks"].includes(pref("iv-lc30", "")) ? pref("iv-lc30", "") : "weeks";
+const lcGrid = () => LCSHAPE === "weeks" || LCSHAPE === "stack" || LCSHAPE === "days";
 /* how many names Linear Calendar shows (0.8.180, Nick): Natural, More, Many. Names still never overlap; More and Many let lower levels in sooner and take more of them */
 let LCNAMES = ["more", "many"].includes(pref("iv-lcnames", "")) ? pref("iv-lcnames", "") : "natural";
 { const y_ = +pref("iv-lcyear", 0) || 0; if (!LCR0 && y_) { LCR0 = LCR1 = y_; } if (pref("iv-lcall", false) === true && !+pref("iv-lcr0", 0)) { LCR0 = 1; LCR1 = 9999; } }
 const LC_GAP = 150;
 function layoutLincal(){
   for (let i=0;i<n;i++) RW[i] = RH[i] = 0;
+  if (LCSHAPE === "days") { layoutLc30(); return; }
   if (lcGrid()) { layoutLcGrid(); return; }
   lcClamp(); const years = Array.from({length: LCR1 - LCR0 + 1}, (_, j) => LCR0 + j), C = LC.C, half = LCHALF, MH = half ? 2*C + Math.round(C*.4) : C, H1 = 12*MH + LC_GAP, cells = new Map();
   for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) { EHID[i] = 1; continue; } const d = new Date(TV[i]), y = d.getUTCFullYear(), yi = years.indexOf(y); if (yi < 0) { EHID[i] = 1; continue; }
@@ -2000,6 +2003,27 @@ function lcGridYears(){ const [ya, y1] = lcClamp(); let y0 = ya;
     const min = Math.max(3, tot * .004); while (y0 < y1 && (cnt.get(y0) || 0) < min) y0++; }
   if (LCSHAPE === "weeks" && LCR0 >= LCR1) { if (LCBORN > 1000) return Array.from({length: 90}, (_, j) => LCBORN + j); return Array.from({length: y1 - y0 + 1}, (_, j) => y0 + j); }   /* the Years range filters the rows (0.8.173, Nick: "I cannot filter the weeks"); set to one year, it's the whole life (or every year) */
   const a = LCR0 < LCR1 ? LCR0 : y0, b = LCR0 < LCR1 ? LCR1 : y1; return Array.from({length: b - a + 1}, (_, j) => a + j); }   /* Years stacked: the Years range, or every year when it's set to one */
+const DAY_MS = 864e5;
+function lc30Pos(idx){ if (LC30 === "line") return [idx, 0]; if (LC30 === "half") return [idx % 15, Math.floor(idx / 15)]; const j = idx + LC.mo; return [j % 7, Math.floor(j / 7)]; }
+function layoutLc30(){ const now = new Date(), today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()), start = today - 29 * DAY_MS, C = 96, mo = (new Date(start).getUTCDay() + 6) % 7;   /* Monday first */
+  LC = { years: [], C: C * .55, shape: "days", start, cw: C, ch: C, mo };
+  const cells = new Map();
+  for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) { EHID[i] = 1; continue; } const d = new Date(TV[i]), idx = Math.round((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - start) / DAY_MS); if (idx < 0 || idx > 29) { EHID[i] = 1; continue; }
+    if (!cells.has(idx)) cells.set(idx, []); cells.get(idx).push(i); }
+  for (const [idx, ids] of cells) { const [c, r] = lc30Pos(idx), cx = c * C + C / 2, cy = r * C + C / 2 + C * .08; ids.sort(byRank);
+    const nI = ids.length, hw = C * .38, hh = C * .32, band = 2 * hh / nI, dk = String(start / DAY_MS + idx), slots = ids.map((_, j) => j).sort((a_, b_) => hash(dk + a_, 5) - hash(dk + b_, 5));
+    ids.forEach((i, j) => { const u = hash(N[i].path, 11), v = hash(N[i].path, 17); EX[i] = cx + (u - .5) * 2 * hw * .9; EY[i] = cy - hh + (slots[j] + .25 + .5 * v) * band; }); }
+  const [c1, r1] = LC30 === "line" ? [30, 1] : LC30 === "half" ? [15, 2] : [7, Math.ceil((mo + 30) / 7)];
+  expBox = { x0: -20, y0: -50, x1: c1 * C + 20, y1: r1 * C + 20 }; if (LCUIOK) syncLC(); }
+function lc30Guides(){ const { cw: C, start } = LC, now = new Date(), today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()), WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const fs = Math.max(9, Math.min(13, C * k * .13));
+  if (LC30 === "weeks") { ctx.fillStyle = css.muted; ctx.font = `600 ${fs}px ${css.mono}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; for (let c = 0; c < 7; c++) ctx.fillText(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][c], sx(c * C + C / 2), sy(-8)); }
+  for (let idx = 0; idx < 30; idx++) { const t = start + idx * DAY_MS, d = new Date(t), [c, r] = lc30Pos(idx), x = sx(c * C) + 2, y = sy(r * C) + 2, w = C * k - 4, wd = d.getUTCDay();
+    if (wd === 0 || wd === 6) { ctx.globalAlpha = .55; ctx.fillStyle = css.panel; ctx.fillRect(x, y, w, w); }
+    ctx.globalAlpha = .8; ctx.strokeStyle = t === today ? css.accent : css.line; ctx.lineWidth = t === today ? 2 : 1; ctx.strokeRect(x, y, w, w);
+    ctx.globalAlpha = .85; ctx.fillStyle = t === today ? css.accent : css.muted; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.font = `600 ${fs}px ${css.mono}`;
+    const lbl = (LC30 === "weeks" ? "" : WD[wd] + " ") + d.getUTCDate() + (d.getUTCDate() === 1 || idx === 0 ? " " + MON3[d.getUTCMonth()] : ""); ctx.fillText(lbl, x + 5, y + 4); }
+  ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 function layoutLcGrid(){ const st = LCSHAPE === "stack", years = lcGridYears(), C = 44, cw = st ? 16 : C, ch = st ? 58 : C, ncol = st ? 366 : 52, every = !st && LCBORN > 1000 ? 10 : 0, gap = C * .6;
   const dec = yi => Math.floor((years[yi] - LCBORN) / 10) - Math.floor((years[0] - LCBORN) / 10), rowTop = yi => yi * ch + (every ? dec(yi) * gap : 0), colOf = (y, m, d) => { const q = lcDoy(y, m, d); return st ? q + (!lcLeap(y) && m >= 2 ? 1 : 0) : Math.min(51, Math.floor(q / 7)); }, cells = new Map(), y0 = years[0];
   for (let i=0;i<n;i++) { if (!vis[i] || isNaN(TV[i])) { EHID[i] = 1; continue; } const d = new Date(TV[i]), yi = d.getUTCFullYear() - y0; if (yi < 0 || yi >= years.length) { EHID[i] = 1; continue; }
@@ -2028,7 +2052,7 @@ function lcGridGuides(){ const { years, cw, ch, rowTop, colOf, ncol } = LC, st =
   ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 EXP.lincal = {
   layout: layoutLincal, pick: (x, y) => dotPick(x, y), spinePick: true,   // like Bookshelf: the nearest dot wins and names never block, so you can glide along a row either way
-  guides(){ if (lcGrid()) { lcGridGuides(); return; } const {years, C, H1, col, rowY, MH, half} = LC, now = new Date();
+  guides(){ if (LCSHAPE === "days") { lc30Guides(); return; } if (lcGrid()) { lcGridGuides(); return; } const {years, C, H1, col, rowY, MH, half} = LC, now = new Date();
     for (let yi = 0; yi < years.length; yi++) { const y = years[yi], top = yi*H1; if (sy(top + 12*MH) < -40 || sy(top - 70) > H + 40) continue;
       ctx.fillStyle = css.panel; ctx.globalAlpha = .55;
       if (!half) for (const wc of [5, 6, 12, 13, 19, 20, 26, 27, 33, 34]) ctx.fillRect(sx(wc*C), sy(top - 6), C*k, (12*C + 6)*k);   // weekend columns
@@ -5877,7 +5901,7 @@ let lcSegSync = () => {};
 const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) el.hidden = true; c.classList.add("lcctl2");
   const sh = c.createDiv({ cls: "seg lchalf", attr: { role: "group", "aria-label": "Months as" } });
   let bornR = null;
-  for (const [v, t, tip] of [[false, "Whole months", "A row a month, the weeks lined up"], [true, "Half months", "Two rows a month (the 1st to the 15th, the 16th on): half as wide, for a narrow pane"], ["weeks", "Life in weeks", "A row a year, a box a week; give a birth year and it shows the 90 years from it, the weeks lived shaded"], ["stack", "Years stacked", "A row a year, January to December on one line, so the same season lines up across years"]]) {
+  for (const [v, t, tip] of [[false, "Whole months", "A row a month, the weeks lined up"], [true, "Half months", "Two rows a month (the 1st to the 15th, the 16th on): half as wide, for a narrow pane"], ["weeks", "Life in weeks", "A row a year, a box a week; give a birth year and it shows the 90 years from it, the weeks lived shaded"], ["stack", "Years stacked", "A row a year, January to December on one line, so the same season lines up across years"], ["days", "Last 30 days", "The last 30 days, up close: in one line, two rows of 15, or weeks"]]) {
     const pressed = () => typeof v === "string" ? LCSHAPE === v : LCSHAPE === "months" && LCHALF === v;
     const b = sh.createEl("button", { text: t, attr: { type: "button", title: tip, "aria-pressed": String(pressed()) } }); b.dataset.sh = String(v);
     b.onclick = e => { e.stopPropagation(); if (typeof v === "string") LCSHAPE = v; else { LCSHAPE = "months"; LCHALF = v; save("iv-lchalf", v); } save("iv-lcshape", LCSHAPE); lcSegSync(); if (view === "lincal") morph(true, () => fitTarget()); }; }
@@ -5886,7 +5910,10 @@ const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) e
       b.onclick = e => { e.stopPropagation(); LCNAMES = v; save("iv-lcnames", v); sg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
   { bornR = c.createDiv({ cls: "lcborn" }); bornR.createSpan({ text: "Born" }); const inp = bornR.createEl("input", { type: "number", attr: { placeholder: "year", min: "1900", max: String(NOW_Y), "aria-label": "Birth year, for Life in weeks" } }); if (LCBORN) inp.value = String(LCBORN);
     inp.onchange = () => { const v = +inp.value; LCBORN = v > 1000 && v <= NOW_Y ? v : 0; save("iv-lcborn", LCBORN); if (view === "lincal" && LCSHAPE === "weeks") morph(true, () => fitTarget()); }; }
-  lcSegSync = () => { sh.querySelectorAll("button").forEach(x => { const v = x.dataset.sh; x.setAttribute("aria-pressed", String(v === "weeks" || v === "stack" ? LCSHAPE === v : LCSHAPE === "months" && String(LCHALF) === v)); }); if (bornR) bornR.hidden = LCSHAPE !== "weeks"; };
+  const d30 = c.createDiv({ cls: "lcnames lc30" }); d30.createSpan({ text: "Days as" }); { const sg = d30.createDiv({ cls: "seg" });
+    for (const [v, t] of [["line", "One line"], ["half", "Two rows"], ["weeks", "Weeks"]]) { const b = sg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(LC30 === v) } }); b.dataset.d30 = v;
+      b.onclick = e => { e.stopPropagation(); LC30 = v; save("iv-lc30", v); lcSegSync(); if (view === "lincal") morph(true, () => fitTarget()); }; } }
+  lcSegSync = () => { sh.querySelectorAll("button").forEach(x => { const v = x.dataset.sh; x.setAttribute("aria-pressed", String(v === "weeks" || v === "stack" || v === "days" ? LCSHAPE === v : LCSHAPE === "months" && String(LCHALF) === v)); }); if (bornR) bornR.hidden = LCSHAPE !== "weeks"; d30.hidden = LCSHAPE !== "days"; d30.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.d30 === LC30))); };
   lcSegSync();
   const { yc, hv } = dualEl(c, "Years", "lcyr"); const pv = $("#lcprev"), yv = $("#lcyear"), nx = $("#lcnext"); for (const el of [pv, yv, nx]) { el.hidden = false; hv.appendChild(el); }
   const [a, b] = yc.querySelectorAll(".dual input"); let t_ = 0;
@@ -6441,7 +6468,7 @@ function snapView(name){
     s3d: view === "stars" ? {on: S3D, chart: STCH, chx: { ...CHL }, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
     // every filter (0.7.54): the years' edge strips, dating by modified time and its window, MOCs, properties and bases; and Linear Calendar's years and halves
     yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
-    lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF, shape: LCSHAPE, born: LCBORN || undefined, names: LCNAMES} : null,
+    lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF, shape: LCSHAPE, born: LCBORN || undefined, names: LCNAMES, d30: LCSHAPE === "days" ? LC30 : undefined} : null,
     emo: { ...EMON },   // Show emojis, map by map (0.7.58, Nick)
     // Base Builder and Posters (0.7.58): the layout (Rows, Scatter, Mosaic, Constellation, Timeline) and what each axis, row and size reads (Nick's movies Mosaic came back as Rows)
     pst: view === "builder" || view === "posters" ? (P_ => ({ across: P_.across, lanes: P_.lanes, size: P_.size, height: P_.height, mosaic: !!P_.mosaic, con: !!P_.con, tl: !!P_.tl, conSel: P_.conSel, conMax: P_.conMax, rng: JSON.parse(JSON.stringify(P_.rng || {})), lhide: JSON.parse(JSON.stringify(P_.lhide || {})) }))(view === "builder" ? PSTB : PSTP) : null,
@@ -6476,7 +6503,7 @@ function applySaved(v){
   MOCSEL = Array.isArray(v.mocs) ? v.mocs.filter(p_ => PIDX.has(p_)) : []; MDEG = v.mocDeg === 2 ? 2 : 1; save("iv-mocs", MOCSEL); save("iv-mocdeg", MDEG); computeMS();
   PSEL = v.props && typeof v.props === "object" && !Array.isArray(v.props) ? JSON.parse(JSON.stringify(v.props)) : {}; save("iv-props", PSEL); computePS();
   { const nb = Array.isArray(v.bq) ? v.bq : []; if (JSON.stringify(nb) !== JSON.stringify(BQ)) { BQ = nb; save("iv-bq", BQ); void applyBQ(); } }
-  if (v.lc && view === "lincal") { LCR0 = +v.lc.r0 || LCR0; LCR1 = +v.lc.r1 || LCR1; LCHALF = v.lc.half !== false; LCSHAPE = ["weeks", "stack"].includes(v.lc.shape) ? v.lc.shape : "months"; if (+v.lc.born) LCBORN = +v.lc.born; if (["natural", "more", "many"].includes(v.lc.names)) { LCNAMES = v.lc.names; save("iv-lcnames", LCNAMES); root.querySelectorAll(".lcnames button").forEach((b_, j) => b_.setAttribute("aria-pressed", String(["natural", "more", "many"][j] === LCNAMES))); } save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); save("iv-lchalf", LCHALF); save("iv-lcshape", LCSHAPE); save("iv-lcborn", LCBORN); lcSegSync(); if (typeof syncLC === "function") syncLC(); }
+  if (v.lc && view === "lincal") { LCR0 = +v.lc.r0 || LCR0; LCR1 = +v.lc.r1 || LCR1; LCHALF = v.lc.half !== false; LCSHAPE = ["weeks", "stack", "days"].includes(v.lc.shape) ? v.lc.shape : "months"; if (["line", "half", "weeks"].includes(v.lc.d30)) { LC30 = v.lc.d30; save("iv-lc30", LC30); } if (+v.lc.born) LCBORN = +v.lc.born; if (["natural", "more", "many"].includes(v.lc.names)) { LCNAMES = v.lc.names; save("iv-lcnames", LCNAMES); root.querySelectorAll(".lcnames button").forEach((b_, j) => b_.setAttribute("aria-pressed", String(["natural", "more", "many"][j] === LCNAMES))); } save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); save("iv-lchalf", LCHALF); save("iv-lcshape", LCSHAPE); save("iv-lcborn", LCBORN); lcSegSync(); if (typeof syncLC === "function") syncLC(); }
   for (const f_ of Object.values(FUI)) try { f_(); } catch (e) { /* a list not built yet */ }
   if (v.lanes) { lanes = v.lanes; save("iv-lanes", lanes); } if (v.subOrder) { subOrder = v.subOrder; save("iv-suborder", subOrder); }
   showAll = !!v.links; $("#alllinks").setAttribute("aria-pressed", String(showAll));
