@@ -5514,6 +5514,7 @@ let TCUR = (pref("iv-tabcur", 0) | 0) === -1 ? -1 : Math.min(Math.max(0, pref("i
 let ORBS = pref("iv-orbs", true) !== false, ORBN = pref("iv-orbn", false) === true;
 const tabsSave = () => { save("iv-tabs", TABS); save("iv-tabcur", TCUR); };
 function tabTake(i){ const p = N[i].path, nw = TABNEW; TABNEW = false; const cur = TABS[TCUR];
+  if (cur && !cur.path) { const ex = TABS.findIndex(t => t.path === p); if (ex >= 0) { TABS.splice(TCUR, 1); TCUR = ex > TCUR ? ex - 1 : ex; } else TABS[TCUR] = { path: p }; tabsSave(); syncOrbs(); return; }   /* a new tab (⌘T) takes the first note you pick */
   if (!cur) { const ex = TABS.findIndex(t => t.path === p); if (ex >= 0) TCUR = ex; else { TABS.push({ path: p }); TCUR = TABS.length - 1; } }
   else if (cur.path === p) return syncOrbs();
   else if (cur.pin && !nw) return syncOrbs();   // pinned: the note stays and the pick opens as the support note, even one open in another tab (0.8.60, Nick)
@@ -5531,7 +5532,20 @@ function orbFlash(p){ win.setTimeout(() => { const j = TABS.findIndex(t => t.pat
 function edCloseTab(){ const o = EDS.left; if (o.path) { CLOSED.push(o.path); if (CLOSED.length > 30) CLOSED.shift(); } if (TABS[TCUR] && TABS[TCUR].path === o.path) { tabClose(TCUR); if (!TABS.length || EDS.left.el.hidden) { select(-1); panBack(); } } else { o.close(); panBack(); } }
 function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
   TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); arenaSync(); syncNav(); }
-function tabGo(j){ const t = TABS[j]; if (!t) return; const i = PIDX.get(t.path); if (i == null) return;
+/* ⌘T: a new, empty tab, as in Obsidian (0.8.211, Nick): an orb of its own, and the main editor waits as a quiet placeholder until you pick a note.
+   Nothing is lost: the other orbs keep their notes */
+function tabNew(){ const at = TCUR >= 0 && TABS[TCUR] ? TCUR + 1 : TABS.length; TABS.splice(at, 0, { path: "" }); TCUR = at; tabsSave(); select(-1); EDS.left.close(); if (EDS.left.el) EDS.left.el.hidden = true; syncOrbs(); draw();
+  win.setTimeout(() => { const q = $("#q"); if (q && !dead) { q.focus(); q.select(); } }, 30); }
+const newTabEl = (() => { const e = doc.createElement("div"); e.className = "ivm-card ivm-newtab"; e.hidden = true; root.after(e);
+  e.createDiv({ cls: "ntt", text: "New tab" }); e.createDiv({ cls: "ntd", text: "Pick a note on the map, or search for one." });
+  const b = e.createEl("button", { cls: "ntq", text: "Search  /", attr: { type: "button" } }); b.onclick = ev => { ev.stopPropagation(); const q = $("#q"); if (q) q.focus(); };
+  const x = e.createEl("button", { cls: "cardbtn ntx", text: "×", attr: { type: "button", "aria-description": "Close tab" } }); x.onclick = ev => { ev.stopPropagation(); tabClose(TCUR); };
+  for (const ty of ["pointerdown", "wheel", "click"]) e.addEventListener(ty, ev => ev.stopPropagation()); return e; })();
+function newTabSync(){ const on = !dead && edOn() && !!TABS[TCUR] && !TABS[TCUR].path; newTabEl.hidden = !on; if (!on) return; try { edLook(newTabEl); } catch (_) { /* not ready */ }
+  const r = edRect("left"), c = cv.getBoundingClientRect(), pr = (newTabEl.offsetParent || newTabEl.parentElement).getBoundingClientRect();   /* where the main editor would sit */
+  newTabEl.setCssProps({ "--ntx": Math.round(c.left - pr.left + r.x) + "px", "--nty": Math.round(c.top - pr.top + r.y) + "px", "--ntw": Math.round(r.w) + "px" }); }
+function tabGo(j){ const t = TABS[j]; if (!t) return; if (!t.path) { if (TABS[TCUR] && TABS[TCUR].pin && j !== TCUR) return; TCUR = j; tabsSave(); select(-1); EDS.left.close(); syncOrbs(); return; }
+  const i = PIDX.get(t.path); if (i == null) return;
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
   // pinned: the main editor keeps its note, and another orb's note opens as the support note (0.8.68, Nick). Unpin to switch tabs
   if (j !== TCUR && TABS[TCUR] && TABS[TCUR].pin) { void EDS.right.open(i); return; }
@@ -5541,11 +5555,11 @@ function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j ===
   if (was) { if (TABS[TCUR]) tabGo(TCUR); else EDS.left.close(); } syncOrbs(); }
 const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; win.setTimeout(() => { if (!dead) syncOrbs(); }, 0);   // saved tabs show from the start
 let orbKey = "", orbDragged = false;
-function syncOrbs(){ for (const o of [EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
+function syncOrbs(){ newTabSync(); for (const o of [EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
   const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); if (!on) { orbKey = ""; return; }
   const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
-    TABS.forEach((t, j) => { const i = PIDX.get(t.path), nm = i != null ? N[i].title : t.path.replace(/^.*\//, "").replace(/\.md$/, ""), lv = i != null ? N[i].level : 1;
-      const b = orbBar.createEl("button", { cls: "ivm-orb lv" + lv + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""),   /* shaped like the note's dot (0.8.202, Nick): Level 5 a square, Level 4 a diamond, the rest round */ attr: { type: "button", "data-name": nm, "data-i": String(j) } });   // no aria-label: Obsidian would add its own tooltip over ours (Nick, 0.8.33); the name is read from a hidden span
+    TABS.forEach((t, j) => { const i = PIDX.get(t.path), nm = !t.path ? "New tab" : i != null ? N[i].title : t.path.replace(/^.*\//, "").replace(/\.md$/, ""), lv = i != null ? N[i].level : 1;
+      const b = orbBar.createEl("button", { cls: "ivm-orb lv" + lv + (t.path ? "" : " blank") + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""),   /* shaped like the note's dot (0.8.202, Nick): Level 5 a square, Level 4 a diamond, the rest round */ attr: { type: "button", "data-name": nm, "data-i": String(j) } });   // no aria-label: Obsidian would add its own tooltip over ours (Nick, 0.8.33); the name is read from a hidden span
       b.createSpan({ cls: "orbsr", text: nm });
       b.setCssProps({ "--o0": lv >= 3 ? GRAD[lv][0] : lv === 2 ? css.l2 : css.l1, "--o1": lv >= 3 ? GRAD[lv][1] : lv === 2 ? css.l2 : css.l1 });
       b.createSpan({ cls: "orbd" }); if (t.pin) setIcon(b.createSpan({ cls: "orbp" }), "pin");
@@ -5614,7 +5628,7 @@ function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap 
 cv.addEventListener("pointerdown", () => { if (CK.edit && CK.edit.host === pvLayer) ckEditClose(); });   /* a click on the map finishes a Compass edit */
 function select(i, fromTrail){
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
-  else if (!LIVEQ && i < 0 && edOn() && TABS[TCUR] && !TABS[TCUR].pin) { TCUR = -1; tabsSave(); syncOrbs(); }   /* clicking away lets go of the orb: it stays, and the next note you pick opens in a new one (0.8.192, Nick) */
+  else if (!LIVEQ && i < 0 && edOn() && TABS[TCUR] && !TABS[TCUR].pin && TABS[TCUR].path) { TCUR = -1; tabsSave(); syncOrbs(); }   /* clicking away lets go of the orb: it stays, and the next note you pick opens in a new one (0.8.192, Nick) */
   if (view === "compass" && !LIVEQ) win.setTimeout(cmpSync, 0);
   if (view === "arena" && !LIVEQ) win.setTimeout(arenaSync, 0);
   if (view === "cockpit" && !LIVEQ) win.setTimeout(ckSync, 0);
@@ -6182,6 +6196,8 @@ on(doc, "pointerdown", e => { const t = e.target instanceof Node ? e.target : nu
 const CLOSED = [];   /* the notes you closed, newest last: ⌘⇧T (Obsidian's Undo close tab) opens them again (0.8.199, Nick) */
 if (host.onTabCmd) host.onTabCmd((what, check) => { if (dead || !EDS) return false; const a = doc.activeElement; if (!(MAPFOCUS || host.isActive() || (a && Object.values(EDS).some(o => o.el.contains(a))))) return false;
   if (what === "reopen") { if (!CLOSED.length) return false; if (check) return true; while (CLOSED.length) { const i = PIDX.get(CLOSED.pop()); if (i != null && vis[i]) { TABNEW = true; select(i); break; } } return true; }
+  if (what === "new") { if (!edOn()) return false; if (check) return true; tabNew(); return true; }
+  if (what === "close" && TABS[TCUR] && !TABS[TCUR].path) { if (check) return true; tabClose(TCUR); return true; }
   if (EDS.left.el.hidden || !EDS.left.path) return false;
   if (check) return true; if (what === "close") edCloseTab(); else tabPin(); return true; });
 const wl = i => { const b = N[i].path.split("/").pop().replace(/\.md$/i, ""); return b === N[i].title ? `[[${b}]]` : `[[${b}|${N[i].title}]]`; };

@@ -1620,3 +1620,12 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card .carddrop .sdadd{justify-content:flex-start;width:auto;appearance:none;background:none;box-shadow:none;border:0;height:auto;padding:3px 4px;margin:2px 0 0;display:flex;align-items:center;color:var(--text-faint);cursor:pointer;opacity:.7}
 .ivm-card .carddrop .sdadd svg{width:13px;height:13px}
 .ivm-card .carddrop .sdadd:hover{color:var(--text-normal);opacity:1}
+/* ⌘T: a new tab's quiet placeholder where the main editor sits, and its hollow orb (0.8.211) */
+.ivm-card.ivm-newtab{left:var(--ntx,8px);top:var(--nty,8px);width:var(--ntw,360px);padding:16px 18px 18px;display:block}
+.ivm-card.ivm-newtab[hidden]{display:none}
+.ivm-newtab .ntt{font-weight:600;font-size:15px;color:var(--text-normal);margin:0 0 6px}
+.ivm-newtab .ntd{font-size:12.5px;color:var(--text-muted);margin:0 0 12px}
+.ivm-newtab .ntq{appearance:none;background:none;box-shadow:none;height:auto;border:1px dashed var(--background-modifier-border);border-radius:8px;padding:6px 10px;font:500 11px var(--font-monospace);color:var(--text-muted);cursor:pointer}
+.ivm-newtab .ntq:hover{color:var(--text-normal);border-color:var(--interactive-accent)}
+.ivm-newtab .ntx{position:absolute;top:8px;right:8px}
+.ivm .ivm-orb.blank .orbd{background:none;border:1.5px dashed var(--muted)}
