@@ -1714,12 +1714,13 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm .ivm-recents .rcx{appearance:none;background:none;border:0;box-shadow:none;height:auto;padding:0 4px;color:var(--muted);font:600 13px var(--body);cursor:pointer}
 .ivm .ivm-recents .rcx:hover{color:var(--ink)}
 .ivm .ivm-recents .rcl{overflow-y:auto;padding:4px 0;overscroll-behavior:contain}
-.ivm .ivm-recents .rcr{appearance:none;background:none;border:0;box-shadow:none;height:auto;width:100%;display:flex;align-items:center;gap:8px;padding:4px 12px;text-align:left;cursor:pointer;color:var(--ink);font:500 12px var(--body)}
-.ivm .ivm-recents .rcr:hover,.ivm .ivm-recents .rcr.on{background:var(--accent-soft)}
-.ivm .ivm-recents .rce{width:16px;flex:none;text-align:center;font-size:12px}
-.ivm .ivm-recents .rcd{width:16px;flex:none;display:flex;justify-content:center}
-.ivm .ivm-recents .rcd::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--dc)}
-.ivm .ivm-recents .rcn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ivm .ivm-recents .rca{flex:none;font:600 9.5px var(--mono);color:var(--muted)}
+.ivm .ivm-recents .rcr{appearance:none;background:none;border:0;box-shadow:none;width:auto;max-width:100%;align-self:flex-end;height:14.5px;min-height:0;display:flex;align-items:center;justify-content:flex-end;gap:7px;padding:0 12px 0 8px;text-align:right;cursor:pointer;color:var(--ink);font:500 11px var(--body);line-height:14.5px;transform:translateX(var(--rx,0px)) rotate(var(--rr,0rad));transform-origin:right center;border-radius:9px}
+.ivm .ivm-recents .rcr:hover,.ivm .ivm-recents .rcr.on{background:var(--accent-soft);color:var(--accent)}
+.ivm .ivm-recents .rce{flex:none;font-size:11px;width:14px;text-align:center}
+.ivm .ivm-recents .rcd{flex:none;width:14px;display:flex;justify-content:center}
+.ivm .ivm-recents .rcd::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--dc)}
+.ivm .ivm-recents .rcn{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.ivm .ivm-recents .rca{flex:none;font:600 9.5px var(--mono);color:var(--accent);opacity:.75;min-width:22px;text-align:right}
+.ivm .ivm-recents .rcl{padding:6px 0 8px;display:flex;flex-direction:column;align-items:flex-end}
 /* the Focus pill in the editor strip (0.8.238) */
 .ivm-card .cardstrip .schip.sfoc.on{border-color:var(--interactive-accent);color:var(--interactive-accent)}

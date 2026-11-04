@@ -5212,10 +5212,14 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
   cb.onchange = () => { RECEMO = cb.checked; save("iv-recemo", RECEMO); if (RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; recSync(); }); RECKEY = ""; recSync(); };
   const x = hd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Recents away" } }); x.onclick = e => { e.stopPropagation(); RECOPEN = false; save("iv-recopen", false); RECKEY = ""; recSync(); };
   const box = RECEL.createDiv({ cls: "rcl" });
-  for (const j of L) { const r = box.createEl("button", { cls: "rcr" + (j === sel ? " on" : ""), attr: { type: "button" } }); const em = recEmoji(j);
+  /* laid out as Links is (0.8.239, Nick): 11px names on 14.5px rows, right-aligned, the age where Links shows its score, the emoji (or dot) at the end,
+     and the rows bowed along the same gentle arc, tilting a little toward the top and bottom */
+  const RY = 300, LH = 14.5, mid = (Math.min(L.length, 24) - 1) / 2;
+  L.forEach((j, r_) => { const r = box.createEl("button", { cls: "rcr" + (j === sel ? " on" : ""), attr: { type: "button" } }), em = recEmoji(j);
+    const u = Math.max(-1, Math.min(1, (r_ - mid) * LH / RY)); r.setCssProps({ "--rx": (-60 * (1 - Math.sqrt(1 - u * u))).toFixed(1) + "px", "--rr": (Math.asin(u) * .25).toFixed(4) + "rad" });
+    r.createSpan({ cls: "rca", text: ago(N[j].mt) }); r.createSpan({ cls: "rcn", text: N[j].title });
     if (em) r.createSpan({ cls: "rce", text: em }); else { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1 }); }
-    r.createSpan({ cls: "rcn", text: N[j].title }); r.createSpan({ cls: "rca", text: ago(N[j].mt) });
-    r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); RECKEY = ""; }; } }
+    r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); RECKEY = ""; }; }); }
 if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
 cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
