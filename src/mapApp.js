@@ -5348,7 +5348,10 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   bar();
   const rk = scoreRank(i); chip("score", rk ? `#${rk.toLocaleString()}` : d.score.toFixed(1), "spill sscore");
   { const dir = d.path.includes("/") ? d.path.slice(0, d.path.lastIndexOf("/")) : "", f_ = o.strip.createSpan({ cls: "sfold", text: dir ? dir.split("/").pop() : "Vault root" });   /* its folder (0.8.175, Nick); the full path on hover */
-    f_.setAttribute("aria-description", dir || "the top of the vault"); const ic = createSpan({ cls: "sfold-i" }); setIcon(ic, "folder"); f_.prepend(ic); }
+    f_.setAttribute("aria-description", dir || "the top of the vault"); /* the full path on hover, in the plugin's own small label (0.8.176: aria-description alone showed nothing; the cards sit outside the map, so they get their own) */
+    let tp = null; f_.addEventListener("pointerenter", () => { if (tp) tp.remove(); const r = f_.getBoundingClientRect(), cr = o.el.getBoundingClientRect(); tp = o.el.createDiv({ cls: "sfold-tip", text: dir || "The top of the vault" });
+      tp.setCssProps({ "--tx": Math.round(r.left - cr.left) + "px", "--ty": Math.round(r.bottom - cr.top + 5) + "px" }); });
+    f_.addEventListener("pointerleave", () => { if (tp) { tp.remove(); tp = null; } }); const ic = createSpan({ cls: "sfold-i" }); setIcon(ic, "folder"); f_.prepend(ic); }
   o.drop.empty();
   if (o.open_ === "score") { o.drop.hidden = false; o.drop.createDiv({ cls: "sdh", text: `#${rk.toLocaleString()} IN ${d.archive ? "THE ARCHIVE" : "THE IDEAVERSE"} · SCORE ${f2(d.score)}` });
     // the score's details stay put when "above" or "below" opens: the list grows below them and the whole list scrolls, from where you were (0.8.55, Nick)
