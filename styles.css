@@ -1739,3 +1739,10 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm .ivm-recents .rcl.rcleft{align-items:stretch}
 .ivm .ivm-recents .rcl.rcleft .rcr{align-self:stretch;justify-content:flex-start;text-align:left;padding-left:14px}
 .ivm .ivm-recents .rcl.rcleft .rcn{flex:1}
+/* Recents: a width you set by dragging its left edge (0.8.257) */
+.ivm .ivm-recents.sized{width:var(--rcw);max-width:none}
+.ivm .ivm-recents.sized .rcn{max-width:none;flex:0 1 auto}
+.ivm .ivm-recents.sized .rcr{max-width:100%}
+.ivm .ivm-recents .rcgrip{position:absolute;left:-4px;top:12%;bottom:12%;width:10px;cursor:ew-resize;z-index:2}
+.ivm .ivm-recents.resizing{user-select:none}
+.ivm .ivm-recents .rct{white-space:nowrap}

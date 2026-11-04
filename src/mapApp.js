@@ -5197,6 +5197,7 @@ function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hud
    newest first, behind a tab on the map's right edge, above the Links tab. It opens a small panel (a hairline border, its own scroll): each row its emoji
    (a mini switch, on by default), its name and its age. Click a row to open it as the primary note (⌘ a new orb, Shift links it in); the panel stays open. */
 let RECN = Math.max(5, Math.min(50, +pref("iv-recn", 30) || 30)), RECHV = -1, RECHVEL = null;   /* how many Recents show (Display, 5–50, 0.8.244); the row under the pointer, for ⌘ previews */
+let RECW = +pref("iv-recw", 0) || 0;   /* Recents width, dragged at its left edge (0.8.257, Nick); 0 = as wide as its names */
 let RECEFRONT = pref("iv-recefront", false) === true, RECLEFT = pref("iv-recleft", false) === true;   /* RECLEFT: titles left-aligned, so the emojis line up (still on the curve) (0.8.255, Nick) */   /* Recents: the emoji before the name and the age at the end (0.8.246, Nick, to try) */
 let RECON = pref("iv-recent", true) !== false, RECOPEN = pref("iv-recopen", false) === true, RECEMO = pref("iv-recemo", true) !== false, RECV = 0, RECC = { v: "", list: [] }, RECEL = null, RECTAB = null, RECKEY = "";
 const ago = ms => { const s_ = Math.max(0, (Date.now() - ms) / 1000); return s_ < 60 ? "now" : s_ < 3600 ? Math.floor(s_ / 60) + "m" : s_ < 86400 ? Math.floor(s_ / 3600) + "h" : s_ < 86400 * 30 ? Math.floor(s_ / 86400) + "d" : s_ < 86400 * 365 ? Math.floor(s_ / 86400 / 30) + "mo" : Math.floor(s_ / 86400 / 365) + "y"; };
@@ -5206,19 +5207,27 @@ const recEmoji = i => { if (!RECEMO || !EMOI || !EMOI[i]) return ""; return /^\p
 function recBuild(){ if (RECEL) return; const st = e => e.stopPropagation();
   RECTAB = $("#main").createEl("button", { cls: "dtab rectab", attr: { type: "button" } }); RECTAB.hidden = true; RECTAB.addEventListener("pointerdown", st); RECTAB.onclick = e => { e.stopPropagation(); RECOPEN = !RECOPEN; save("iv-recopen", RECOPEN); RECKEY = ""; recSync(); };
   RECEL = $("#main").createDiv({ cls: "ivm-recents" }); RECEL.hidden = true; for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) RECEL.addEventListener(ty, st); }
+/* the left-edge grip: drag to widen or narrow Recents (0.8.257, Nick); double-click for its own width again */
+function recGrip(){ const gr = RECEL.createDiv({ cls: "rcgrip" }); let d_ = null;
+  gr.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); gr.setPointerCapture(e.pointerId); d_ = { x: e.clientX, w: RECEL.getBoundingClientRect().width }; RECEL.classList.add("resizing"); });
+  gr.addEventListener("pointermove", e => { if (!d_) return; RECW = Math.round(Math.max(180, Math.min(640, d_.w + (d_.x - e.clientX)))); RECEL.setCssProps({ "--rcw": RECW + "px" }); RECEL.classList.add("sized"); });
+  const up = () => { if (!d_) return; d_ = null; RECEL.classList.remove("resizing"); save("iv-recw", RECW); RECKEY = ""; recSync(); };
+  gr.addEventListener("pointerup", up); gr.addEventListener("pointercancel", up);
+  gr.addEventListener("dblclick", e => { e.stopPropagation(); RECW = 0; save("iv-recw", 0); RECEL.classList.remove("sized"); RECKEY = ""; recSync(); }); }
 function recPv(){ if (RECHV < 0 || !RECHVEL || !(CMDK || HUDPV)) { if (!(HUDHOV >= 0) && !(CMDK && hover >= 0)) hudPv(-1); return; } const c = cv.getBoundingClientRect(), r = RECHVEL.getBoundingClientRect(), pe = RECEL.getBoundingClientRect();
   hudPv(RECHV, pe.left - c.left - 6, r.top + r.height / 2 - c.top, true); }
 function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPhone() && edOn(); let R_ = 0; try { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); R_ = Math.max(0, Math.round(mr.right - c.right + sideW())); } catch (_) { /* not laid out yet */ }
   RECTAB.hidden = !on || RECOPEN; RECEL.hidden = !on || !RECOPEN; RECTAB.setCssProps({ "--hr": R_ + "px" }); RECEL.setCssProps({ "--hr": R_ + "px" }); if (!on) return;
   const L = recList(); if (!RECOPEN) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); return; }
-  const key = L.join(",") + "|" + RECEMO + RECEFRONT + RECLEFT + "|" + (EMOI ? 1 : 0) + "|" + Math.floor(Date.now() / 60000); if (key === RECKEY) return; RECKEY = key; RECEL.empty();
+  RECEL.classList.toggle("sized", RECW > 0); RECEL.setCssProps({ "--rcw": (RECW || 300) + "px" });
+  const key = L.join(",") + "|" + RECW + "|" + RECEMO + RECEFRONT + RECLEFT + "|" + (EMOI ? 1 : 0) + "|" + Math.floor(Date.now() / 60000); if (key === RECKEY) return; RECKEY = key; RECEL.empty();
   const hd = RECEL.createDiv({ cls: "rch cardhd-tuck" }); hd.createSpan({ cls: "rct", text: `◷  RECENTS · ${L.length}` });
   /* tucks away as the editors do (0.8.242, Nick: "we already have specs"): a click on its header (not on the switch) or on ›, and it waits as a tab on the edge */
   hd.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest("label, input, button")) return; e.stopPropagation(); RECOPEN = false; save("iv-recopen", false); RECKEY = ""; recSync(); });
   const sw = hd.createEl("label", { cls: "mini lcemo rcemo" }); const cb = sw.createEl("input", { type: "checkbox" }); cb.checked = RECEMO; sw.createEl("i", { cls: "sw" }); sw.createSpan({ text: "Emojis" });
   cb.onchange = () => { RECEMO = cb.checked; save("iv-recemo", RECEMO); if (RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; recSync(); }); RECKEY = ""; recSync(); };
   const x = hd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Recents away" } }); x.onclick = e => { e.stopPropagation(); RECOPEN = false; save("iv-recopen", false); RECKEY = ""; recSync(); };
-  const box = RECEL.createDiv({ cls: "rcl" + (RECLEFT ? " rcleft" : "") });
+  const box = RECEL.createDiv({ cls: "rcl" + (RECLEFT ? " rcleft" : "") }); recGrip();
   /* laid out as Links is (0.8.239, Nick): 11px names on 14.5px rows, right-aligned, the age where Links shows its score, the emoji (or dot) at the end,
      and the rows bowed along the same gentle arc, tilting a little toward the top and bottom */
   const LH = 17.5, nR = L.length, RY = Math.max(420, nR * LH * .9),   /* the arc opens up as the list grows, so more notes never crowd it (0.8.247) */ mid = (Math.min(nR, 24) - 1) / 2;   /* gentler (0.8.241, Nick: "a little bit less curve, not as tight"): Links' own radius rule, a little wider still */
