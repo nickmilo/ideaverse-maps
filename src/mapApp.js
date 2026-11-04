@@ -6266,6 +6266,9 @@ const CLOSED = [];   /* the notes you closed, newest last: ⌘⇧T (Obsidian's U
 if (host.onTabCmd) host.onTabCmd((what, check) => { if (dead || !EDS) return false; const a = doc.activeElement; if (!(MAPFOCUS || host.isActive() || (a && Object.values(EDS).some(o => o.el.contains(a))))) return false;
   if (what === "reopen") { if (!CLOSED.length) return false; if (check) return true; while (CLOSED.length) { const i = PIDX.get(CLOSED.pop()); if (i != null && vis[i]) { TABNEW = true; select(i); break; } } return true; }
   if (what === "new") { if (!edOn()) return false; if (check) return true; tabNew(); return true; }
+  /* ⌘⇧W: close every other orb, as Obsidian closes every other tab (0.8.233, Nick); pinned orbs stay, as pinned tabs do */
+  if (what === "others") { if (!edOn() || TABS.length < 2) return false; if (check) return true; const keep = TABS[TCUR] || TABS.find(t => EDS.left.path && t.path === EDS.left.path) || null;   /* no current orb (you clicked away): the primary note's orb stays, or only the pinned ones */ for (const t of TABS) if (t !== keep && !t.pin && t.path) { CLOSED.push(t.path); if (CLOSED.length > 30) CLOSED.shift(); }
+    TABS = TABS.filter(t => t === keep || t.pin); TCUR = keep ? TABS.indexOf(keep) : -1; tabsSave(); syncOrbs(); return true; }
   if (what === "close" && TABS[TCUR] && !TABS[TCUR].path) { if (check) return true; tabClose(TCUR); return true; }
   if (EDS.left.el.hidden || !EDS.left.path) return false;
   if (check) return true; if (what === "close") edCloseTab(); else tabPin(); return true; });
