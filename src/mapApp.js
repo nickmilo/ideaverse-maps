@@ -5194,16 +5194,17 @@ cv.addEventListener("pointerleave", () => { if (HUDHOV >= 0) { HUDHOV = -1; hudP
 // cloud that widens, breaks into puffs and fades a step with each jump after it. The last 10 jumps stay. Display → Contrails.
 let CTRON = pref("iv-ctr", false) === true, CTRSHIP = ["rocket", "star", "none"].includes(pref("iv-ctrship", "")) ? pref("iv-ctrship", "") : pref("iv-ctrrk", false) === true ? "rocket" : "none";   /* what flies each leg: nothing, the rocket, or the starship (0.8.198) */ const CTR = [], CTR_FLY = 1300;   // CTRRK: a small rocket flies each new leg (Nick: a mini-mini switch, off)
 function ctrHop(a, b){ if (!CTRON || a === b) return; CTR.push({ a, b, t: performance.now(), s: hash(N[a].path + N[b].path, 7) }); if (CTR.length > 10) CTR.shift(); draw(); }
-/* an original starship (0.8.198, Nick asked for "a Starship"; our own design, not any screen ship): a long dart of a hull with swept wings, twin engines set into the wing roots, a bridge light and blinking wingtip lights */
+/* an original starship (0.8.198; this first draft restored in 0.8.201, Nick liked it better): a long dart of a hull, two engine pods on short struts with blue glows, a bridge light and blinking running lights */
 function drawStarship(px, py, ang, alpha, dark){ const t = performance.now() / 1000; ctx.save(); ctx.translate(px, py); ctx.rotate(ang); ctx.scale(1.25, 1.25); ctx.globalAlpha = alpha;
-  for (const sy_ of [-1.6, 1.6]) { const g = ctx.createRadialGradient(-6.6, sy_, 0, -6.6, sy_, 5.5 + Math.sin(t * 20 + sy_) * .6); g.addColorStop(0, "rgba(150,225,255,.95)"); g.addColorStop(1, "rgba(80,160,255,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(-6.6, sy_, 6, 0, 6.2832); ctx.fill(); }   /* engine glow */
+  for (const sy_ of [-3.6, 3.6]) { const g = ctx.createRadialGradient(-8, sy_, 0, -8, sy_, 6 + Math.sin(t * 20 + sy_) * .6); g.addColorStop(0, "rgba(140,220,255,.95)"); g.addColorStop(1, "rgba(80,160,255,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(-8, sy_, 7, 0, 6.2832); ctx.fill(); }   /* engine glow */
   const hull = dark ? "#e9edf8" : "#3b4160", trim = dark ? "#9aa6c4" : "#6b7396";
-  ctx.fillStyle = trim; ctx.beginPath(); ctx.moveTo(1.5, -1.2); ctx.lineTo(-4.5, -5.2); ctx.lineTo(-6, -5.2); ctx.lineTo(-4.4, -1.2); ctx.closePath(); ctx.moveTo(1.5, 1.2); ctx.lineTo(-4.5, 5.2); ctx.lineTo(-6, 5.2); ctx.lineTo(-4.4, 1.2); ctx.closePath(); ctx.fill();   /* swept wings */
-  ctx.fillStyle = hull; ctx.beginPath(); ctx.moveTo(9.5, 0); ctx.lineTo(1.5, -1.9); ctx.lineTo(-6.2, -2.3); ctx.lineTo(-6.2, 2.3); ctx.lineTo(1.5, 1.9); ctx.closePath(); ctx.fill();   /* the dart, broad at the stern for the engines */
-  ctx.fillStyle = "rgba(160,230,255,.95)"; for (const sy_ of [-1.25, 1.25]) { ctx.beginPath(); ctx.ellipse(-6.2, sy_, .5, .8, 0, 0, 6.2832); ctx.fill(); }   /* engine mouths */
-  ctx.strokeStyle = trim; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(-5.5, 0); ctx.stroke();   /* spine */
-  ctx.fillStyle = dark ? "#7fd3e6" : "#4f8fd6"; ctx.beginPath(); ctx.ellipse(3.4, 0, 1.3, .7, 0, 0, 6.2832); ctx.fill();   /* canopy */
-  if (Math.sin(t * 6) > 0) { ctx.fillStyle = "#ff5a5a"; ctx.beginPath(); ctx.arc(-5.6, -5.2, .55, 0, 6.2832); ctx.fill(); ctx.fillStyle = "#4dff9a"; ctx.beginPath(); ctx.arc(-5.6, 5.2, .55, 0, 6.2832); ctx.fill(); }   /* wingtip lights */
+  ctx.strokeStyle = trim; ctx.lineWidth = .9; ctx.beginPath(); ctx.moveTo(-1.5, -1.2); ctx.lineTo(-3, -3); ctx.moveTo(-1.5, 1.2); ctx.lineTo(-3, 3); ctx.stroke();   /* struts */
+  ctx.fillStyle = trim; for (const sy_ of [-3.6, 3.6]) { ctx.beginPath(); ctx.ellipse(-4.2, sy_, 3.8, .95, 0, 0, 6.2832); ctx.fill(); }   /* pods */
+  ctx.fillStyle = "rgba(160,230,255,.95)"; for (const sy_ of [-3.6, 3.6]) { ctx.beginPath(); ctx.arc(-7.6, sy_, .7, 0, 6.2832); ctx.fill(); }
+  ctx.fillStyle = hull; ctx.beginPath(); ctx.moveTo(9.5, 0); ctx.lineTo(2, -1.9); ctx.lineTo(-5.5, -1.4); ctx.lineTo(-6.8, 0); ctx.lineTo(-5.5, 1.4); ctx.lineTo(2, 1.9); ctx.closePath(); ctx.fill();   /* the dart */
+  ctx.strokeStyle = trim; ctx.lineWidth = .5; ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(-5, 0); ctx.stroke();   /* spine */
+  ctx.fillStyle = dark ? "#7fd3e6" : "#4f8fd6"; ctx.beginPath(); ctx.arc(3.2, 0, .85, 0, 6.2832); ctx.fill();   /* bridge */
+  if (Math.sin(t * 6) > 0) { ctx.fillStyle = "#ff5a5a"; ctx.beginPath(); ctx.arc(1, -2.1, .55, 0, 6.2832); ctx.fill(); ctx.fillStyle = "#4dff9a"; ctx.beginPath(); ctx.arc(1, 2.1, .55, 0, 6.2832); ctx.fill(); }   /* running lights */
   ctx.restore(); }
 function drawContrails(){ if (!CTRON || !CTR.length) return; const now = performance.now(); let busy = false;
   const dark = (() => { const h = String(css.bg || "#fff").replace("#", ""); if (h.length < 6) return view === "stars"; const v = parseInt(h.slice(0, 2), 16) * .3 + parseInt(h.slice(2, 4), 16) * .59 + parseInt(h.slice(4, 6), 16) * .11; return v < 110; })();
