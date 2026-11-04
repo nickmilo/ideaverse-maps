@@ -5171,9 +5171,10 @@ function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && RADJ) return HUDC; 
 function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hudPv(-1); return; } if (!HUDL || sel < 0 || !vis[sel] || isPhone()) { hudTab(0); hudPv(-1); return; } const D_ = hudData(sel), n_ = D_.list.length; hudTab(n_); if (!n_ || HUDCOL) { hudPv(-1); return; }
   if (HUDC.offFor !== sel) { HUDC.offFor = sel; HUDOFF = 0; }
   let R_ = W - sideW(); try { if (EDS && !EDS.right.el.hidden && !EDS.right.col) R_ = Math.min(R_, edRect("right").x - 8); } catch (_) { /* no editors */ }
-  const top = 74 + RECDY, bot = H - 120, lh = 14.5, cap = Math.max(4, Math.min(n_, Math.floor((bot - top) / lh) - 1)), off = HUDOFF = Math.max(0, Math.min(n_ - cap, Math.round(HUDOFF))), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* the wheel scrolls it (0.8.144) */ cy = (top + bot) / 2, Ry = Math.max(300, (bot - top) * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))));
+  const top = 74 + RECDY, bot = H - 120, lh = 14.5, arc = hudArc(R_), cap = Math.max(4, Math.min(n_, Math.floor((bot - top) / lh) - 1)), off = HUDOFF = Math.max(0, Math.min(n_ - cap, Math.round(HUDOFF))), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* the wheel scrolls it (0.8.144) */ cy = (top + bot) / 2, Ry = Math.max(300, (bot - top) * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))));
   ctx.save(); ctx.font = `500 11px ${css.body}`; ctx.textBaseline = "middle"; ctx.textAlign = "right"; const ink = css.ink || "#ddd", SL = (() => { try { return SPACELINK(); } catch (_) { return {}; } })();
-  const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [R_ - 30 - 60 * (1 - Math.sqrt(Math.max(0, 1 - u * u))), y, Math.asin(Math.max(-1, Math.min(1, u))) * .25]; };
+  const y0 = RECDY > 0 ? top + 18 : cy - (rows - 1) / 2 * lh;   /* under Recent: straight on from it; alone: centred as before */ void Ry;
+  const at = r => { const y = y0 + r * lh, [x, tl] = arc(y); return [x, y, tl]; };
   const [hx, hy] = at(-1.3); ctx.globalAlpha = .6; ctx.font = `600 9.5px ${css.body}`; ctx.fillStyle = css.accent || "#7dffb0"; const htx = (n_ > cap ? `LINKS · ${off + 1}–${off + cap} of ${n_}` : `LINKS · ${n_}`) + "  ›"; ctx.fillText(htx, hx, hy); HUDH.push([hx - ctx.measureText(htx).width - 4, hy - 9, ctx.measureText(htx).width + 8, 18, -5]);   /* the header tucks the list away */ ctx.font = `500 11px ${css.body}`;
   for (let r = 0; r < rows; r++) { const [x, y, tl] = at(r), more = r === cap, j = more ? -1 : D_.list[off + r], hv = j >= 0 && j === HUDHOV;
     ctx.save(); ctx.translate(x, y); ctx.rotate(tl * (hv ? 0 : 1)); if (hv) ctx.scale(1.13, 1.13);
@@ -5192,6 +5193,8 @@ function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hud
 /* ---------- Recent (0.8.235, Nick: "my absolute favorite base… the recent space"): the notes changed most lately, newest first, in the upper right,
    in the HUD's own style (the same gentle arc, a hairline border round it). About ten show; the wheel scrolls on to thirty. A note's emoji (Display → Assign emojis,
    or the base column) leads its row, its age trails it. Click to open it as the primary note; the header tucks it away. Above the Links HUD when both are on */
+/* one arc for the whole HUD column (0.8.236, Nick: "Recent needs to curve WITH Links, like a unified HUD"): Recent and Links sit on the same curve, top to bottom */
+const hudArc = R_ => { const t = 74, b = H - 120, cy = (t + b) / 2, Ry = Math.max(300, (b - t) * .75); return y => { const u = Math.max(-1, Math.min(1, (y - cy) / Ry)); return [R_ - 30 - 60 * (1 - Math.sqrt(Math.max(0, 1 - u * u))), Math.asin(u) * .25]; }; };
 let RECON = pref("iv-recent", true) !== false, RECCOL = pref("iv-reccol", false) === true, RECH = [], RECHOV = -1, RECOFF = 0, RECBOX = null, RECDY = 0, RECV = 0, RECC = { v: -1, list: [] };
 const ago = ms => { const s_ = Math.max(0, (Date.now() - ms) / 1000); return s_ < 60 ? "now" : s_ < 3600 ? Math.floor(s_ / 60) + "m" : s_ < 86400 ? Math.floor(s_ / 3600) + "h" : s_ < 86400 * 30 ? Math.floor(s_ / 86400) + "d" : s_ < 86400 * 365 ? Math.floor(s_ / 86400 / 30) + "mo" : Math.floor(s_ / 86400 / 365) + "y"; };
 function recList(){ const key = RECV + ":" + VISV; if (RECC.v === key) return RECC.list; const L = []; for (let i = 0; i < n; i++) if (vis[i] && N[i].mt > 0 && !ARCH[i]) L.push(i);
@@ -5200,8 +5203,8 @@ function drawRecent(){ RECH = []; RECBOX = null; RECDY = 0; if (!RECON || view =
   let R_ = W - sideW(); try { if (EDS && !EDS.right.el.hidden && !EDS.right.col) R_ = Math.min(R_, edRect("right").x - 8); } catch (_) { /* no editors */ }
   const top = 74, lh = 15, cap = RECCOL ? 0 : Math.min(10, L.length), off = RECOFF = Math.max(0, Math.min(L.length - cap, Math.round(RECOFF))), rows = cap, Ry = 300;
   ctx.save(); ctx.textBaseline = "middle"; ctx.textAlign = "right"; const ink = css.ink || "#ddd";
-  const at = r => { const y = top + 18 + r * lh, u = (y - (top + 18 + (rows - 1) * lh / 2)) / Ry; return [R_ - 30 - 40 * (1 - Math.sqrt(Math.max(0, 1 - u * u))), y, Math.asin(Math.max(-1, Math.min(1, u))) * .2]; };
-  ctx.font = `600 9.5px ${css.body}`; ctx.globalAlpha = .6; ctx.fillStyle = css.accent || "#7dffb0"; const htx = RECCOL ? "RECENT  ‹" : (L.length > cap ? `RECENT · ${off + 1}–${off + cap} of ${L.length}` : `RECENT · ${L.length}`) + "  ›"; const hx = R_ - 30, hy = top;
+  const arc = hudArc(R_), at = r => { const y = top + 18 + r * lh, [x, tl] = arc(y); return [x, y, tl]; };
+  ctx.font = `600 9.5px ${css.body}`; ctx.globalAlpha = .6; ctx.fillStyle = css.accent || "#7dffb0"; const htx = "◷  " + (RECCOL ? "RECENT  ‹" : (L.length > cap ? `RECENT · ${off + 1}–${off + cap} of ${L.length}` : `RECENT · ${L.length}`) + "  ›"); const hy = top, hx = arc(hy)[0];
   ctx.fillText(htx, hx, hy); const hw = ctx.measureText(htx).width; RECH.push([hx - hw - 4, hy - 9, hw + 8, 18, -15]);
   let minX = hx - hw - 12; ctx.font = `500 11px ${css.body}`;
   /* measure first, so the veil and the border go down before the names */
@@ -5218,7 +5221,7 @@ function drawRecent(){ RECH = []; RECBOX = null; RECDY = 0; if (!RECON || view =
     if (hv) { ctx.globalAlpha = .9; ctx.fillStyle = css.bg || "#111"; ctx.beginPath(); ctx.roundRect(-tw - ew - aw - 22, -9, tw + ew + aw + 26, 18, 9); ctx.fill(); }
     ctx.font = `600 9.5px ${css.mono || css.body}`; ctx.globalAlpha = .7; ctx.fillStyle = css.muted || ink; ctx.fillText(age, 0, 0);
     ctx.font = `500 11px ${css.body}`; ctx.lineWidth = 3; ctx.strokeStyle = css.bg || "#111"; ctx.globalAlpha = hv ? 1 : .88; ctx.strokeText(tt, -aw - 8, 0); ctx.fillStyle = hv ? (css.accent || ink) : ink; ctx.fillText(tt, -aw - 8, 0);
-    if (em) { ctx.globalAlpha = 1; ctx.fillText(em, -aw - 12 - tw, 0); } else { ctx.globalAlpha = .78; ctx.fillStyle = N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1; ctx.beginPath(); ctx.arc(-aw - 14 - tw, 0, 2.6, 0, 6.2832); ctx.fill(); }
+    if (em) { ctx.globalAlpha = 1; ctx.fillText(em, -aw - 12 - tw, 0); } else { ctx.globalAlpha = .85; ctx.strokeStyle = N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(-aw - 14 - tw, 0, 2.6, 0, 6.2832); ctx.stroke(); }   /* a hollow ring: Recent's rows, apart from Links' filled dots */
     ctx.restore(); const x0 = x - aw - tw - ew - 18; RECH.push([x0, y - lh / 2, x - x0 + 4, lh, j]);
     if (hv) hudPv(j, x0 + 6, y, CMDK);
     if (hv && vis[j]) { ctx.save(); ctx.globalAlpha = .55; ctx.strokeStyle = css.accent || ink; ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); ctx.restore(); } }
