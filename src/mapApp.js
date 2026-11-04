@@ -1887,6 +1887,8 @@ let LCUIOK = false, LCR0 = +pref("iv-lcr0", 0) || 0, LCR1 = +pref("iv-lcr1", 0) 
 /* two more shapes (0.8.172, Nick): Life in weeks (a row per year, 52 week boxes; with a birth year, the 90 years from it) and Years stacked (a row per year, Jan to Dec on one line) */
 let LCSHAPE = ["weeks", "stack"].includes(pref("iv-lcshape", "")) ? pref("iv-lcshape", "") : "months", LCBORN = +pref("iv-lcborn", 0) || 0;
 const lcGrid = () => LCSHAPE === "weeks" || LCSHAPE === "stack";
+/* how many names Linear Calendar shows (0.8.180, Nick): Natural, More, Many. Names still never overlap; More and Many let lower levels in sooner and take more of them */
+let LCNAMES = ["more", "many"].includes(pref("iv-lcnames", "")) ? pref("iv-lcnames", "") : "natural";
 { const y_ = +pref("iv-lcyear", 0) || 0; if (!LCR0 && y_) { LCR0 = LCR1 = y_; } if (pref("iv-lcall", false) === true && !+pref("iv-lcr0", 0)) { LCR0 = 1; LCR1 = 9999; } }
 const LC_GAP = 150;
 function layoutLincal(){
@@ -1911,6 +1913,7 @@ function lcClamp(){ const [y0, y1] = datedYears(); if (!LCR0 || !LCR1) { LCR0 = 
    and discover what themes of the year start to emerge"). Built on three notes: the year note (titled "2026"), its Preview note (in the same folder) and the reviews beside them.
    Recall (left): emoji-first counts; hover one and its days light up, click to keep them lit. Reflect (right): the theme, the reviews in order, and an Extra fold.
    Notes that point up to the year note glow: the ones you marked as meaningful. */
+let LCYCARDS = [];   /* the year panels' boxes, so names keep clear of them (0.8.180) */
 let LCTH = pref("iv-lcth", true) !== false, LCYP = pref("iv-lcyp", true) !== false, LCGLOW = pref("iv-lcglow", true) !== false, LCXO = false, LCPIN = null, LCYHOV = null, LCYH = [];
 const LCYD = new Map();
 function lcYear(y){ let D = LCYD.get(y); if (D && D.n === n) return D;
@@ -1945,12 +1948,12 @@ function lcYearUnder(yi, y, top){ if (!(LCYP || LCGLOW)) return; const D = lcYea
   ctx.save(); ctx.fillStyle = css.accent; ctx.strokeStyle = css.accent; ctx.lineWidth = 2;
   for (const i of lit) { const b = box(i); if (!b) continue; const kk = b[0] + "," + b[1]; if (seen.has(kk)) continue; seen.add(kk); ctx.globalAlpha = .2; ctx.fillRect(b[0], b[1], b[2], b[2]); ctx.globalAlpha = .9; ctx.strokeRect(b[0], b[1], b[2], b[2]); }
   ctx.restore(); }
-function drawLcYear(){ LCYH = []; if (view !== "lincal" || lcGrid() || !expOn() || !LCYP || isPhone() || morphing || !LC.years || !LC.years.length) return;
+function drawLcYear(){ LCYH = []; LCYCARDS = []; if (view !== "lincal" || lcGrid() || !expOn() || !LCYP || isPhone() || morphing || !LC.years || !LC.years.length) return;
   const { years, C, H1, MH, half } = LC, gw = (half ? 16 : 37) * C, hudR = HUDL && sel >= 0 && HUDBOX;
   const lx1 = sx(-58), lw = Math.min(250, lx1 - 14), rx0 = sx(gw + 26), rw = Math.min(270, W - 14 - rx0), canL = lw >= 170, canR = rw >= 170 && !hudR;
   if (!canL && !canR) return;
   const fit = (t, w) => { if (ctx.measureText(t).width <= w) return t; while (t.length > 1 && ctx.measureText(t + "…").width > w) t = t.slice(0, -1); return t + "…"; };
-  const card = (x, y, w, h) => { ctx.save(); ctx.globalAlpha = .82; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - 10, y - 10, w + 20, h + 16, 10); ctx.fill(); ctx.globalAlpha = .9; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); };
+  const card = (x, y, w, h) => { LCYCARDS.push([x - 10, y - 10, w + 20, h + 16]); ctx.save(); ctx.globalAlpha = .82; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - 10, y - 10, w + 20, h + 16, 10); ctx.fill(); ctx.globalAlpha = .9; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); };
   const head = (t, x, y) => { ctx.font = `600 9.5px ${css.mono}`; ctx.fillStyle = css.muted; ctx.globalAlpha = .9; ctx.textAlign = "left"; ctx.letterSpacing = "1.2px"; ctx.fillText(t, x, y); ctx.letterSpacing = "0px"; ctx.globalAlpha = 1; };
   const hot = (x, y, w, on) => { if (!on) return; ctx.save(); ctx.globalAlpha = .16; ctx.fillStyle = css.accent; ctx.beginPath(); ctx.roundRect(x - 6, y - 11, w + 12, 22, 6); ctx.fill(); ctx.restore(); };
   ctx.save(); ctx.textBaseline = "middle";
@@ -4813,7 +4816,8 @@ function labels(lit){ let PICKDRAW = null;   // the picked note's name is drawn 
   const nv = NVIS;
   // in focus, or with a filter that leaves few notes, name the low levels too
   let minLv = ((focus >= 0 || NARROW) && nv <= 400) ? 1 : k >= 9 ? 1 : k >= 5 ? 2 : k >= 2.2 ? 3 : k >= 1.25 ? 4 : 5; if (NARROW && nv <= 2000) minLv = Math.min(minLv, 2);
-  let curI = -1; const taken = []; const fits = (x,y,w,h) => { for (const t of taken) if (x < t[0]+t[2] && x+w > t[0] && y < t[1]+t[3] && y+h > t[1]) return false; return fitsFor(curI, x, y, w, h); };
+  const lcN = view === "lincal" ? LCNAMES : "natural", lowCap = lcN === "many" ? 160 : lcN === "more" ? 45 : 12, allCap = lcN === "many" ? 900 : lcN === "more" ? 450 : 260; if (lcN !== "natural") minLv = Math.max(1, minLv - (lcN === "many" ? 3 : 1));
+  let curI = -1; const taken = view === "lincal" && LCYP ? LCYCARDS.map(q => q.slice()) : []; const fits = (x,y,w,h) => { for (const t of taken) if (x < t[0]+t[2] && x+w > t[0] && y < t[1]+t[3] && y+h > t[1]) return false; return fitsFor(curI, x, y, w, h); };
   ctx.textBaseline = "middle";
   const must = [];
   if (sel >= 0) must.push(sel); if (hover >= 0) must.push(hover);
@@ -4847,7 +4851,7 @@ function labels(lit){ let PICKDRAW = null;   // the picked note's name is drawn 
     // only the names that must show (the note you're on, the one under the pointer, its links) go looking for room; the rest keep their spot or wait for more zoom, so a crowded map stays calm
     // maps and hubs (Level 3 and up) may flip or tilt to find room; Level 1 and 2 names only take their usual spot, and only a handful of them (a little serendipity), unless you're zoomed well in
     const lowLv = N[i].level < 3;
-    if (!isMust && lowLv && (!fits(first-2, y-h/2, w+4, h) || (k < 5 && lowN >= 12))) continue;
+    if (!isMust && lowLv && (!fits(first-2, y-h/2, w+4, h) || (k < 5 && lowN >= lowCap))) continue;
     const sides = [[first, first === R_], ...(otherOK ? [[other, other === R_]] : [])];
     let place = null;
     for (const [px0, right] of sides) if (!place && fits(px0-2, y-h/2, w+4, h)) place = { lx: px0, ly: y };
@@ -4866,7 +4870,7 @@ function labels(lit){ let PICKDRAW = null;   // the picked note's name is drawn 
       const dr = () => { ctx.save(); ctx.translate(piv, y); ctx.rotate(a); const ox = right ? 0 : -w; ctx.strokeText(t, ox, 0); ctx.fillText(t, ox, 0); ctx.restore(); }; dr(); if (pick_) PICKDRAW = [dr, ctx.font, ctx.fillStyle, ctx.lineWidth]; }
     else { const { lx, ly } = place; taken.push([lx-2, ly-h/2, w+4, h]); LH.push([lx-2, ly-h/2, w+4, h, i]); const dr = () => { ctx.strokeText(t, lx, ly); ctx.fillText(t, lx, ly); }; dr(); if (pick_) PICKDRAW = [dr, ctx.font, ctx.fillStyle, ctx.lineWidth]; }
     if (!isMust && lowLv) lowN++;
-    if (++count > 260) break;
+    if (++count > allCap) break;
   }
   if (PICKDRAW) { const [dr, f, fs, lw] = PICKDRAW; ctx.globalAlpha = 1; ctx.font = f; ctx.fillStyle = fs; ctx.lineWidth = lw; ctx.strokeStyle = css.bg; ctx.lineJoin = "round"; dr(); }
   ctx.globalAlpha = 1;
@@ -5877,6 +5881,9 @@ const LCUI = (() => { const c = $("#lcctl"); for (const el of [...c.children]) e
     const pressed = () => typeof v === "string" ? LCSHAPE === v : LCSHAPE === "months" && LCHALF === v;
     const b = sh.createEl("button", { text: t, attr: { type: "button", title: tip, "aria-pressed": String(pressed()) } }); b.dataset.sh = String(v);
     b.onclick = e => { e.stopPropagation(); if (typeof v === "string") LCSHAPE = v; else { LCSHAPE = "months"; LCHALF = v; save("iv-lchalf", v); } save("iv-lcshape", LCSHAPE); lcSegSync(); if (view === "lincal") morph(true, () => fitTarget()); }; }
+  { const r_ = c.createDiv({ cls: "lcnames" }); r_.createSpan({ text: "Names" }); const sg = r_.createDiv({ cls: "seg", attr: { role: "group", "aria-label": "How many names" } });
+    for (const [v, t] of [["natural", "Natural"], ["more", "More"], ["many", "Many"]]) { const b = sg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(LCNAMES === v) } });
+      b.onclick = e => { e.stopPropagation(); LCNAMES = v; save("iv-lcnames", v); sg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
   { bornR = c.createDiv({ cls: "lcborn" }); bornR.createSpan({ text: "Born" }); const inp = bornR.createEl("input", { type: "number", attr: { placeholder: "year", min: "1900", max: String(NOW_Y), "aria-label": "Birth year, for Life in weeks" } }); if (LCBORN) inp.value = String(LCBORN);
     inp.onchange = () => { const v = +inp.value; LCBORN = v > 1000 && v <= NOW_Y ? v : 0; save("iv-lcborn", LCBORN); if (view === "lincal" && LCSHAPE === "weeks") morph(true, () => fitTarget()); }; }
   lcSegSync = () => { sh.querySelectorAll("button").forEach(x => { const v = x.dataset.sh; x.setAttribute("aria-pressed", String(v === "weeks" || v === "stack" ? LCSHAPE === v : LCSHAPE === "months" && String(LCHALF) === v)); }); if (bornR) bornR.hidden = LCSHAPE !== "weeks"; };
@@ -6434,7 +6441,7 @@ function snapView(name){
     s3d: view === "stars" ? {on: S3D, chart: STCH, chx: { ...CHL }, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
     // every filter (0.7.54): the years' edge strips, dating by modified time and its window, MOCs, properties and bases; and Linear Calendar's years and halves
     yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
-    lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF, shape: LCSHAPE, born: LCBORN || undefined} : null,
+    lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF, shape: LCSHAPE, born: LCBORN || undefined, names: LCNAMES} : null,
     emo: { ...EMON },   // Show emojis, map by map (0.7.58, Nick)
     // Base Builder and Posters (0.7.58): the layout (Rows, Scatter, Mosaic, Constellation, Timeline) and what each axis, row and size reads (Nick's movies Mosaic came back as Rows)
     pst: view === "builder" || view === "posters" ? (P_ => ({ across: P_.across, lanes: P_.lanes, size: P_.size, height: P_.height, mosaic: !!P_.mosaic, con: !!P_.con, tl: !!P_.tl, conSel: P_.conSel, conMax: P_.conMax, rng: JSON.parse(JSON.stringify(P_.rng || {})), lhide: JSON.parse(JSON.stringify(P_.lhide || {})) }))(view === "builder" ? PSTB : PSTP) : null,
@@ -6469,7 +6476,7 @@ function applySaved(v){
   MOCSEL = Array.isArray(v.mocs) ? v.mocs.filter(p_ => PIDX.has(p_)) : []; MDEG = v.mocDeg === 2 ? 2 : 1; save("iv-mocs", MOCSEL); save("iv-mocdeg", MDEG); computeMS();
   PSEL = v.props && typeof v.props === "object" && !Array.isArray(v.props) ? JSON.parse(JSON.stringify(v.props)) : {}; save("iv-props", PSEL); computePS();
   { const nb = Array.isArray(v.bq) ? v.bq : []; if (JSON.stringify(nb) !== JSON.stringify(BQ)) { BQ = nb; save("iv-bq", BQ); void applyBQ(); } }
-  if (v.lc && view === "lincal") { LCR0 = +v.lc.r0 || LCR0; LCR1 = +v.lc.r1 || LCR1; LCHALF = v.lc.half !== false; LCSHAPE = ["weeks", "stack"].includes(v.lc.shape) ? v.lc.shape : "months"; if (+v.lc.born) LCBORN = +v.lc.born; save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); save("iv-lchalf", LCHALF); save("iv-lcshape", LCSHAPE); save("iv-lcborn", LCBORN); lcSegSync(); if (typeof syncLC === "function") syncLC(); }
+  if (v.lc && view === "lincal") { LCR0 = +v.lc.r0 || LCR0; LCR1 = +v.lc.r1 || LCR1; LCHALF = v.lc.half !== false; LCSHAPE = ["weeks", "stack"].includes(v.lc.shape) ? v.lc.shape : "months"; if (+v.lc.born) LCBORN = +v.lc.born; if (["natural", "more", "many"].includes(v.lc.names)) { LCNAMES = v.lc.names; save("iv-lcnames", LCNAMES); root.querySelectorAll(".lcnames button").forEach((b_, j) => b_.setAttribute("aria-pressed", String(["natural", "more", "many"][j] === LCNAMES))); } save("iv-lcr0", LCR0); save("iv-lcr1", LCR1); save("iv-lchalf", LCHALF); save("iv-lcshape", LCSHAPE); save("iv-lcborn", LCBORN); lcSegSync(); if (typeof syncLC === "function") syncLC(); }
   for (const f_ of Object.values(FUI)) try { f_(); } catch (e) { /* a list not built yet */ }
   if (v.lanes) { lanes = v.lanes; save("iv-lanes", lanes); } if (v.subOrder) { subOrder = v.subOrder; save("iv-suborder", subOrder); }
   showAll = !!v.links; $("#alllinks").setAttribute("aria-pressed", String(showAll));
