@@ -2833,10 +2833,10 @@ function ckLeftEd(){ try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) { co
 let CKPV = ["off", "one", "fewer", "natural", "max"].includes(pref("iv-ckpv", "")) ? pref("iv-ckpv", "") : (pref("iv-ckx", {}) || {}).pv === false ? "off" : "one";
 // a preview becomes a live editor where it is (0.8.136, Nick: "can these mini-previews be editable?"): click to edit, Esc or × to finish; Shift-click opens it as the support note
 function ckPvMake(p, title){ const e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ }
-  e.dataset.hint = "click to edit · shift-click: support note";   /* our own small hint on hover, not the system tooltip (0.8.145) */
+  e.dataset.hint = "click to edit · ⇧ new orb · ⌘ support note";   /* our own small hint on hover, not the system tooltip (0.8.145) */
   e.addEventListener("pointerenter", () => { CK.pvOver = p; }); e.addEventListener("pointerleave", () => { if (CK.pvOver === p) CK.pvOver = null; });
   e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return;
-    if (ev.shiftKey && EDS) { void EDS.right.open(i); return; } const r = e.getBoundingClientRect(), pr = CK.el.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top); });
+    if ((ev.metaKey || ev.ctrlKey) && EDS) { void EDS.right.open(i); return; } if (ev.shiftKey) { TABNEW = true; if (vis[i]) { navTo(i); toEditor(i); } return; }   /* the same keys as everywhere else (0.8.177, Nick): ⇧ a new orb, ⌘ the support note */ const r = e.getBoundingClientRect(), pr = CK.el.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top); });
   return e; }
 async function ckEdit(p, x, y, hostEl){ if (!host.editCard) return; ckEditClose(); const i = PIDX.get(p); if (i == null) return; const HE = hostEl || CK.el;   /* hostEl: Compass's previews too (0.8.175) */
   const W = HE.clientWidth, H = HE.clientHeight, w = 380, h = Math.min(360, H - 40), cx = Math.max(8, Math.min(W - w - 8, x - 40)), cy = Math.max(8, Math.min(H - h - 8, y - 20));
@@ -5504,8 +5504,8 @@ function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap 
     ctx.restore(); }
   for (const g of gals) { const p = N[g.i].path; want.add(p); let e = HPV.get(p);
     if (!e) { e = pvLayer.createDiv({ cls: "ivm-card ivm-pv" + (cmp ? " pved" : "") }); e.createDiv({ cls: "pvt", text: N[g.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); HPV.set(p, e);
-      if (cmp) { e.dataset.hint = "click to edit · shift-click: support note";   /* Compass's previews are editable too (0.8.175, Nick), as the Cockpit's */
-        e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return; if (ev.shiftKey && EDS) { void EDS.right.open(i); return; }
+      if (cmp) { e.dataset.hint = "click to edit · ⇧ new orb · ⌘ support note";   /* Compass's previews are editable too (0.8.175, Nick), as the Cockpit's */
+        e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return; if ((ev.metaKey || ev.ctrlKey) && EDS) { void EDS.right.open(i); return; } if (ev.shiftKey) { TABNEW = true; if (vis[i]) { navTo(i); toEditor(i); } return; }   /* the same keys as everywhere else (0.8.177, Nick): ⇧ a new orb, ⌘ the support note */
           const r = e.getBoundingClientRect(), pr = pvLayer.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top, pvLayer); }); } }
     edLook(e); e.setCssProps({ "--pvw": pw + "px", "--pvh": ph + "px" }); e.style.left = Math.round(ox + g.px) + "px"; e.style.top = Math.round(oy + g.py) + "px"; }
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
