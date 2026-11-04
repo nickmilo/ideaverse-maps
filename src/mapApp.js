@@ -5311,11 +5311,14 @@ $("#alllinks").onclick = e => { showAll = !showAll; e.currentTarget.setAttribute
 // ---------- drawer ----------
 const drawer = $("#drawer");
 // the note panel can tuck away to a tab on the right edge (like the legend); the note stays selected
-let drawerCollapsed = pref("iv-dcol", false) === true;
+/* the note panel is retired on a computer (0.8.238, Nick: "I'm eager to get rid of the note panel"): the primary note's strip and score list hold what it held,
+   and Focus moved to the strip. It stays on phones, where the primary note editor doesn't open */
+const NOPANEL = () => !isPhone();
+let drawerCollapsed = NOPANEL() || pref("iv-dcol", false) === true;
 const dtab = $("#main").createEl("button", { cls: "dtab", attr: { "aria-label": "Show the note panel", title: "Show the note panel" } }); dtab.hidden = true;
-function syncDtab(){ const on = sel >= 0 && drawerCollapsed; dtab.hidden = !on; if (on) dtab.setText("‹  " + (N[sel].title.length > 40 ? N[sel].title.slice(0, 39) + "…" : N[sel].title)); }
+function syncDtab(){ const on = sel >= 0 && drawerCollapsed && !NOPANEL(); dtab.hidden = !on; if (on) dtab.setText("‹  " + (N[sel].title.length > 40 ? N[sel].title.slice(0, 39) + "…" : N[sel].title)); }
 let PANAUTO = false;   // the note panel was tucked away by Edit mode (0.8.38), not by you: it comes back when the editors close
-function setCollapsed(c, auto){ ANCHOR_T = performance.now() + 700; drawerCollapsed = c; if (!auto) { save("iv-dcol", c); PANAUTO = false; } if (sel >= 0) { drawer.hidden = c; if (!c) drawer.scrollTop = 0; } syncDtab(); resize(); }
+function setCollapsed(c, auto){ if (NOPANEL()) c = true; ANCHOR_T = performance.now() + 700; drawerCollapsed = c; if (!auto) { save("iv-dcol", c); PANAUTO = false; } if (sel >= 0) { drawer.hidden = c; if (!c) drawer.scrollTop = 0; } syncDtab(); resize(); }
 dtab.onclick = () => setCollapsed(false);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function noteList(ids, tag){
@@ -5491,6 +5494,9 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   bar(); chip("in", `${d.body_in} in`, "spill"); chip("out", `${d.body_out} out`, "spill");
   bar();
   const rk = scoreRank(i); chip("score", rk ? `#${rk.toLocaleString()}` : d.score.toFixed(1), "spill sscore");
+  /* Focus on its links, from the note panel (0.8.238): a pill beside the rank; on, it reads "Focused" and a click lets go */
+  { const fb = o.strip.createEl("button", { cls: "schip spill sfoc" + (focus === i ? " on" : ""), text: focus === i ? "Focused" : "Focus", attr: { type: "button", "aria-description": focus === i ? "Exit focus" : "Focus on its links" } });
+    fb.onclick = e => { e.stopPropagation(); focusArmed = false; setFocus(focus === i ? -1 : i); fillStrip(o, i); }; }
   { const dir = d.path.includes("/") ? d.path.slice(0, d.path.lastIndexOf("/")) : "", f_ = o.strip.createSpan({ cls: "sfold", text: dir ? dir.split("/").pop() : "Vault root" });   /* its folder (0.8.175, Nick); the full path on hover */
     f_.setAttribute("aria-description", dir || "the top of the vault"); /* the full path on hover, in the plugin's own small label (0.8.176: aria-description alone showed nothing; the cards sit outside the map, so they get their own) */
     let tp = null; f_.addEventListener("pointerenter", () => { if (tp) tp.remove(); const r = f_.getBoundingClientRect(), cr = o.el.getBoundingClientRect(); tp = o.el.createDiv({ cls: "sfold-tip", text: dir || "The top of the vault" });

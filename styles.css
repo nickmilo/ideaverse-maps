@@ -1721,3 +1721,5 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm .ivm-recents .rcd::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--dc)}
 .ivm .ivm-recents .rcn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ivm .ivm-recents .rca{flex:none;font:600 9.5px var(--mono);color:var(--muted)}
+/* the Focus pill in the editor strip (0.8.238) */
+.ivm-card .cardstrip .schip.sfoc.on{border-color:var(--interactive-accent);color:var(--interactive-accent)}
