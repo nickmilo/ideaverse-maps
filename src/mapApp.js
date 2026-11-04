@@ -6127,6 +6127,7 @@ function ldLink(t, j, up){ LDDONE = true; LDCTRL = false; const where = up ? "up
 cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.dataTransfer.getData("application/x-ivm-note"); if (!p) return; e.preventDefault(); const t = pick(e.offsetX, e.offsetY), j = PIDX.get(p);
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
+dbg.__lfx = () => linkFxTry();
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
 function drawLdrop(){ if (LDROP < 0 || !VV(LDROP)) return; const x = sx(X[LDROP]), y = sy(Y[LDROP]), r = rad(LDROP) + 10; ctx.save(); ctx.strokeStyle = css.accent; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
   const t = LDCTRL ? `→ up of ${N[LDROP].title}` : `→ ${N[LDROP].title}: ${LDPOS_T[LDPOS]}`; ctx.font = `600 12px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const w_ = ctx.measureText(t).width + 16; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - w_ / 2, y - r - 30, w_, 22, 11); ctx.fill(); ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = css.accent; ctx.fillText(t, x, y - r - 13); ctx.restore(); }   /* above the dot, clear of its name */
@@ -6498,25 +6499,18 @@ function liveLinks(path, list){ const i = PIDX.get(path); if (i == null || ARCH[
   if (sel >= 0) win.setTimeout(() => { if (dead || sel < 0) return; const st0 = drawer.scrollTop; LIVEQ = true; try { select(sel, true); } finally { LIVEQ = false; } drawer.scrollTop = st0;
     for (const o of Object.values(EDS)) if (o.path && PIDX.has(o.path)) fillStrip(o, PIDX.get(o.path)); }, 820);   // the panel's numbers, once the map has settled (no camera move, no editor reload)
   draw(); }
-/* how a new link shows itself (0.8.198, Nick: "even cooler dynamic options… fun and tasteful"): Draw (the line draws itself, as before),
-   Spark (a comet runs the link and bursts on arrival), Thread (a line that starts loose and pulls taut), Bloom (ripples from both notes meet and light the link) */
-let LINKFX = ["draw", "spark", "thread", "bloom"].includes(pref("iv-linkfx", "")) ? pref("iv-linkfx", "") : "draw";
-function linkFx(o, e, x1, y1, x2, y2){ const col = view === "stars" ? "hsl(58,86%,66%)" : css.accent, dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len, P = u => [x1 + dx * u, y1 + dy * u];
+/* how a new link shows itself: Thread, a line that starts loose and pulls taut and glows (0.8.198). Since 0.8.204 it's the only one (Nick kept Thread, dropped Draw, Spark and Bloom),
+   and it rides the same arc as the link it leaves behind, so the eye can follow the thread into the link (Nick: "can the thread follow the same arc as the link?") */
+function linkArc(a, b, x1, y1, x2, y2){   /* the control point of the curve the map draws between two notes (as the selected note's links are drawn) */
+  if (view === "chord") { const cx = sx(CH_C.x), cy = sy(CH_C.y); return [cx + ((x1+x2)/2 - cx)*.25, cy + ((y1+y2)/2 - cy)*.25]; }
+  return [(x1+x2)/2, (y1+y2)/2 - (view === "planet" ? Math.hypot(x2-x1, y2-y1)*.55 : GRV() ? 0 : Math.abs(x2-x1)*.12)]; }
+function linkFx(o, e, x1, y1, x2, y2){ const col = view === "stars" ? "hsl(58,86%,66%)" : css.accent, len = Math.hypot(x2 - x1, y2 - y1) || 1, [cx, cy] = linkArc(o.a, o.b, x1, y1, x2, y2);
+  const P = u => { const v = 1 - u; return [v*v*x1 + 2*u*v*cx + u*u*x2, v*v*y1 + 2*u*v*cy + u*u*y2]; }, T = u => { const tx = 2*(1 - u)*(cx - x1) + 2*u*(x2 - cx), ty = 2*(1 - u)*(cy - y1) + 2*u*(y2 - cy), l = Math.hypot(tx, ty) || 1; return [-ty / l, tx / l]; };
   ctx.strokeStyle = col; ctx.fillStyle = col; ctx.shadowColor = col; ctx.lineCap = "round";
-  if (LINKFX === "spark") { const run = Math.min(1, e / .42), g = 1 - Math.pow(1 - run, 2.2);   /* the comet: a bright head and a tail that thins behind it */
-    if (run < 1) { const t0 = Math.max(0, g - .28); for (let q = 0; q < 10; q++) { const u0 = t0 + (g - t0) * q / 10, u1 = t0 + (g - t0) * (q + 1) / 10, [ax, ay] = P(u0), [bx, by] = P(u1); ctx.globalAlpha = .1 + .8 * (q / 10); ctx.lineWidth = .8 + 3 * q / 10; ctx.shadowBlur = 10; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); }
-      const [hx, hy] = P(g); ctx.globalAlpha = 1; ctx.shadowBlur = 22; ctx.beginPath(); ctx.arc(hx, hy, 3.6, 0, 6.2832); ctx.fill(); }
-    else { const b = (e - .42) / .58; ctx.shadowBlur = 0; ctx.globalAlpha = .55 * (1 - b); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();   /* the burst at the far note */
-      for (let q = 0; q < 12; q++) { const a_ = q / 12 * 6.2832 + hash(N[o.b].path, q) * .5, r1 = 6 + 34 * Math.pow(b, .6), r0 = Math.max(0, r1 - 10); ctx.globalAlpha = .9 * (1 - b); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x2 + Math.cos(a_) * r0, y2 + Math.sin(a_) * r0); ctx.lineTo(x2 + Math.cos(a_) * r1, y2 + Math.sin(a_) * r1); ctx.stroke(); }
-      ctx.globalAlpha = .5 * (1 - b); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x2, y2, 4 + 26 * b, 0, 6.2832); ctx.stroke(); } }
-  else if (LINKFX === "thread") { const amp = Math.min(26, len * .12) * Math.pow(1 - Math.min(1, e / .7), 2), ph = e * 9, show = Math.min(1, e / .18);   /* loose at first, then it pulls taut and glows */
-    ctx.globalAlpha = (e < .7 ? .9 : .9 * (1 - (e - .7) / .3)) * show; ctx.lineWidth = 2.2; ctx.shadowBlur = 12 + 10 * (1 - amp / 26); ctx.beginPath();
-    for (let q = 0; q <= 48; q++) { const u = q / 48, w = Math.sin(u * Math.PI) * Math.sin(u * 3 * 6.2832 - ph) * amp, [px, py] = P(u); q ? ctx.lineTo(px + nx * w, py + ny * w) : ctx.moveTo(px + nx * w, py + ny * w); } ctx.stroke();
-    if (e > .62 && e < .82) { const f = 1 - Math.abs(e - .72) / .1; ctx.globalAlpha = .7 * f; ctx.lineWidth = 5; ctx.shadowBlur = 26; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); } }   /* the twang */
-  else if (LINKFX === "bloom") { const half = len / 2, rr = half * Math.min(1, e / .45);   /* ripples from both notes; where they meet, the link lights from the middle out */
-    ctx.shadowBlur = 0; for (const [cx_, cy_] of [[x1, y1], [x2, y2]]) for (const lag of [0, .35]) { const r_ = rr * (1 - lag); if (r_ <= 2 || e > .7) continue; ctx.globalAlpha = .45 * (1 - e / .7) * (1 - lag); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(cx_, cy_, r_, 0, 6.2832); ctx.stroke(); }
-    if (e >= .42) { const g = Math.min(1, (e - .42) / .25), [mx, my] = P(.5); ctx.globalAlpha = .95 * (e < .8 ? 1 : 1 - (e - .8) / .2); ctx.lineWidth = 3; ctx.shadowBlur = 18; ctx.beginPath(); ctx.moveTo(mx - dx / 2 * g, my - dy / 2 * g); ctx.lineTo(mx + dx / 2 * g, my + dy / 2 * g); ctx.stroke();
-      if (g < 1) { ctx.globalAlpha = 1 - g; ctx.shadowBlur = 30; ctx.beginPath(); ctx.arc(mx, my, 3 + 10 * g, 0, 6.2832); ctx.fill(); } } }
+  const amp = Math.min(26, len * .12) * Math.pow(1 - Math.min(1, e / .7), 2), ph = e * 9, show = Math.min(1, e / .18);   /* loose at first, then it pulls taut along the arc and glows */
+  ctx.globalAlpha = (e < .7 ? .9 : .9 * (1 - (e - .7) / .3)) * show; ctx.lineWidth = 2.2; ctx.shadowBlur = 12 + 10 * (1 - amp / 26); ctx.beginPath();
+  for (let q = 0; q <= 48; q++) { const u = q / 48, w = Math.sin(u * Math.PI) * Math.sin(u * 3 * 6.2832 - ph) * amp, [px, py] = P(u), [nx, ny] = T(u); q ? ctx.lineTo(px + nx * w, py + ny * w) : ctx.moveTo(px + nx * w, py + ny * w); } ctx.stroke();
+  if (e > .62 && e < .82) { const f = 1 - Math.abs(e - .72) / .1; ctx.globalAlpha = .7 * f; ctx.lineWidth = 5; ctx.shadowBlur = 26; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx, cy, x2, y2); ctx.stroke(); }   /* the twang */
   ctx.shadowBlur = 0; ctx.globalAlpha = 1; }
 function linkFxTry(){ let a = sel >= 0 && VV(sel) ? sel : -1; if (a < 0) { for (const i of order) if (VV(i) && N[i].level >= 3) { const x = sx(X[i]), y = sy(Y[i]); if (x > 80 && x < W - 80 && y > 80 && y < H - 80) { a = i; break; } } } if (a < 0) return;
   let b = -1, bd = 0; for (const j of [...new Set([...out[a], ...inn[a]])]) { if (!VV(j) || j === a) continue; const d = Math.hypot(sx(X[j]) - sx(X[a]), sy(Y[j]) - sy(Y[a])); if (d > bd && d < Math.min(W, H) * .6) { bd = d; b = j; } }
@@ -6526,7 +6520,7 @@ function drawLive(){ if (!LIVE.links.length && !LIVE.rings.length) return; const
   for (const o of LIVE.links) { if (!VV(o.a) || !VV(o.b)) continue; const e = (now - o.t0)/LIVE_MS, x1 = sx(X[o.a]), y1 = sy(Y[o.a]), x2 = sx(X[o.b]), y2 = sy(Y[o.b]);
     const g = Math.min(1, e*3), xm = x1 + (x2 - x1)*g, ym = y1 + (y2 - y1)*g;   // a new link draws itself from the note you're writing to its target
     ctx.save(); ctx.lineCap = "round";
-    if (o.add && LINKFX !== "draw") linkFx(o, e, x1, y1, x2, y2);
+    if (o.add && !sphOn()) linkFx(o, e, x1, y1, x2, y2);
     else if (o.add) { ctx.globalAlpha = .9*(1 - e); ctx.strokeStyle = view === "stars" ? "hsl(58,86%,66%)" : css.accent; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 14; ctx.lineWidth = 3.2;
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(xm, ym); ctx.stroke();
       ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(x2, y2, Math.max(4, rad(o.b)) * (1 + 2.5*e), 0, 6.2832); ctx.lineWidth = 1.6; ctx.stroke(); }
@@ -7517,10 +7511,6 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const l2 = DI.p.createDiv({ cls: "eorow ctrrk tchoice" }); l2.createSpan({ cls: "eol", text: "Ship" }); l2.hidden = !CTRON; const sg2 = l2.createDiv({ cls: "seg" });
     for (const [v, t] of [["none", "None"], ["rocket", "Rocket"], ["star", "Starship"]]) { const b = sg2.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CTRSHIP === v) } }); b.onclick = e => { e.stopPropagation(); CTRSHIP = v; save("iv-ctrship", v); sg2.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); }; }
     cb.onchange = () => { CTRON = cb.checked; save("iv-ctr", CTRON); l2.hidden = !CTRON; if (!CTRON) CTR.length = 0; draw(); }; }
-  // how a new link appears (0.8.198): four looks, and Try to see one on the map
-  { const r_ = DI.p.createDiv({ cls: "drow eorow tchoice lfxrow" }); r_.createSpan({ cls: "eol", text: "New links" }); const sg = r_.createDiv({ cls: "seg" });
-    for (const [v, t] of [["draw", "Draw"], ["spark", "Spark"], ["thread", "Thread"], ["bloom", "Bloom"]]) { const b = sg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(LINKFX === v) } }); b.onclick = e => { e.stopPropagation(); LINKFX = v; save("iv-linkfx", v); sg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); linkFxTry(); }; }
-    const tr = r_.createEl("button", { cls: "lfxtry", text: "Try", attr: { type: "button" } }); tr.onclick = e => { e.stopPropagation(); linkFxTry(); }; }
   // Show the way home (Kevin Bacon): from the note you're on, the fewest links back to Home, or to a note you choose
   const bcSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Kevin Bacon: from the note you're on, light up the fewest links back to Home (or a note you choose)" } }); const bcCb = bcSw.createEl("input", { type: "checkbox" }); bcSw.createEl("i", { cls: "sw" }); bcSw.createSpan({ text: "Show the way home" });
   const bcTo = DI.p.createDiv({ cls: "bacto" }); bcTo.createSpan({ cls: "btl", text: "To" }); const bcName = bcTo.createEl("button", { cls: "bcname", attr: { type: "button", "aria-label": "Choose the note to find the way to" } });
