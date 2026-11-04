@@ -1702,14 +1702,14 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 /* Recents (0.8.237): a tab on the map's right edge, above the Links tab, and the small panel it opens */
 .ivm .dtab.rectab{top:30%;right:var(--hr,0px)}
 .ivm .dtab.rectab[hidden]{display:none}
-.ivm .ivm-recents{position:absolute;top:44px;padding:28px 6px 28px 0;right:calc(var(--hr,0px) + 14px);z-index:6;width:max-content;max-width:340px;max-height:calc(100% - 120px);display:flex;flex-direction:column;overflow:visible;filter:drop-shadow(0 8px 18px rgba(0,0,0,.25))}
+.ivm .ivm-recents{position:absolute;top:50px;padding:14px 6px 16px 0;right:calc(var(--hr,0px) + 14px);z-index:6;width:max-content;max-width:340px;max-height:calc(100% - 120px);display:flex;flex-direction:column;overflow:visible;filter:drop-shadow(0 8px 18px rgba(0,0,0,.25))}
 /* the curved background: an SVG shape behind the rows (0.8.240) */
 .ivm .ivm-recents > svg.rcbg{position:absolute;inset:0;pointer-events:none}
 .ivm .ivm-recents > svg.rcbg path{fill:color-mix(in srgb,var(--bg) 90%,transparent);stroke:var(--line);stroke-width:1}
 .ivm .ivm-recents > :not(svg){position:relative}
 .ivm .ivm-recents .rch{transform:translateX(var(--rx,0px)) rotate(var(--rh,0rad));transform-origin:right center;border-bottom:0;padding-left:var(--rpl,12px);padding-right:var(--rpr,12px)}
 .ivm .ivm-recents[hidden]{display:none}
-.ivm .ivm-recents .rch{display:flex;align-items:center;gap:10px;padding:8px 10px 6px 12px;border-bottom:1px solid var(--line)}
+.ivm .ivm-recents .rch{display:flex;align-items:center;gap:10px;padding-top:6px;padding-bottom:4px}
 .ivm .ivm-recents .rct{flex:1;font:600 9.5px var(--mono);letter-spacing:.1em;color:var(--accent)}
 .ivm .ivm-recents .rcemo{display:flex;align-items:center;gap:6px;font:500 10.5px var(--body);color:var(--muted);cursor:pointer;position:relative}
 .ivm .ivm-recents .rcemo input{position:absolute;opacity:0;width:1px;height:1px}
@@ -1727,7 +1727,7 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm .ivm-recents .rcd::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--dc)}
 .ivm .ivm-recents .rcn{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
 .ivm .ivm-recents .rca{flex:none;font:600 9.5px var(--mono);color:var(--accent);opacity:.75;min-width:22px;text-align:right}
-.ivm .ivm-recents .rcl{padding:6px 10px 10px 0;min-height:0;flex:1;display:flex;flex-direction:column;align-items:flex-end}
+.ivm .ivm-recents .rcl{padding:2px 10px 6px 0;min-height:0;flex:1;display:flex;flex-direction:column;align-items:flex-end}
 /* the Focus pill in the editor strip (0.8.238) */
 .ivm-card .cardstrip .schip.sfoc.on{border-color:var(--interactive-accent);color:var(--interactive-accent)}
 .ivm .ivm-recents .rch.cardhd-tuck{cursor:pointer}
