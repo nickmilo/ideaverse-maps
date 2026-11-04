@@ -1,5 +1,5 @@
 import { BaseQ, NeedThis, Unsupported } from "./baseq.js";
-import { Component, FuzzySuggestModal, ItemView, MarkdownRenderer, MarkdownView, TFile, TFolder, normalizePath } from "obsidian";
+import { Component, FuzzySuggestModal, ItemView, MarkdownRenderer, MarkdownView, Notice, TFile, TFolder, normalizePath } from "obsidian";
 
 /** Pick a folder in the vault, or type a new one (resolves null if closed without choosing). */
 const SAVED_NAME = "Maps of the Ideaverse - saved views.json";
@@ -14,12 +14,12 @@ class NotePicker extends FuzzySuggestModal {
   onClose() { super.onClose(); window.setTimeout(() => { if (!this.picked) this.done(null); }, 0); }
 }
 class FolderPicker extends FuzzySuggestModal {
-  constructor(app, done) {
-    super(app); this.done = done; this.picked = false;
-    this.setPlaceholder("Where should saved views and tours live? Pick a folder or type a new one");
+  constructor(app, done, ph, noNote) {
+    super(app); this.done = done; this.picked = false; this.noNote = !!noNote;
+    this.setPlaceholder(ph || "Where should saved views and tours live? Pick a folder or type a new one");
     this.setInstructions([{ command: "↵", purpose: "choose" }, { command: "esc", purpose: "cancel" }]);
   }
-  onOpen() { super.onOpen();
+  onOpen() { super.onOpen(); if (this.noNote) return;
     const note = createDiv({ cls: "ivm-pick-note", text: "You can change this later in Settings → Maps of the Ideaverse → Saved views and tours." });
     const box = this.inputEl.closest(".prompt-input-container") || this.inputEl.parentElement; box.after(note); }
   getItems() { return this.app.vault.getAllLoadedFiles().filter(f => f instanceof TFolder); }
@@ -227,6 +227,12 @@ export async function mountInto(owner, el, opts) {
       const link = `[[${app.metadataCache.fileToLinktext(l, t.path, true)}]]`, base = s_ => String(s_).replace(/^\[\[|\]\]$/g, "").split("|")[0].trim();
       let dup = false; await app.fileManager.processFrontMatter(t, fm => { const k = Object.keys(fm).find(x => x.toLowerCase() === key.toLowerCase()) || key; const cur = fm[k] == null || fm[k] === "" ? [] : Array.isArray(fm[k]) ? fm[k] : [fm[k]];
         if (cur.some(x => base(x) === base(link))) { dup = true; return; } fm[k] = [...cur, link]; }); return dup ? "dup" : true; },
+    // the folder in the editor strip, clicked (0.8.188, Nick): move the note to another folder, the way Obsidian's "Move file to…" does
+    moveNote: async path => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return false;
+      const dir = await new Promise(res => new FolderPicker(app, res, `Move "${f.basename}" to…`, true).open()); if (!dir) return false;
+      const d = dir === "/" ? "" : normalizePath(dir); if (d && !app.vault.getAbstractFileByPath(d)) await app.vault.createFolder(d);
+      const to = normalizePath(d ? `${d}/${f.name}` : f.name); if (to === f.path) return false; if (app.vault.getAbstractFileByPath(to)) { new Notice(`There's already a ${f.name} in ${d || "the vault root"}.`); return false; }
+      await app.fileManager.renameFile(f, to); return true; },
     onMove: cb => { events.registerEvent(app.vault.on("rename", (f, old) => { if (f instanceof TFile && f.extension === "md" && old) cb(old, f.path); })); },   // a note moved or renamed: the map moves it live
     onLinks: cb => { const st = plugin.settings, nm = (v, d) => (Array.isArray(v) ? v : String(v || d).split(",")).map(x => String(x).trim().toLowerCase()).filter(Boolean);
       events.registerEvent(app.metadataCache.on("changed", (f, _data, c) => { if (!(f instanceof TFile) || !c) return;
