@@ -1995,7 +1995,7 @@ cv.addEventListener("pointermove", e => { if (view !== "lincal") return; const h
 cv.addEventListener("pointerdown", e => { if (view !== "lincal" || e.button !== 0) return; const h = lcAt(e.offsetX, e.offsetY); if (!h) return; e.stopImmediatePropagation(); e.preventDefault();
   if (h.k === "m") { LCPIN = LCPIN && LCPIN.v === h.v && LCPIN.y === h.y ? null : { v: h.v, y: h.y }; draw(); return; }
   if (h.k === "x") { LCXO = !LCXO; draw(); return; }
-  const j = h.v; if (j >= 0) { if (e.shiftKey) TABNEW = true; if (vis[j]) navTo(j); if (following) toEditor(j); else if (host.openNote && !vis[j]) host.openNote(N[j].path, false, true); } }, { capture: true });
+  const j = h.v; if (j >= 0) { if (openAs(j, openKind(e))) return; if (vis[j]) navTo(j); if (following) toEditor(j); else if (host.openNote && !vis[j]) host.openNote(N[j].path, false, true); } }, { capture: true });
 cv.addEventListener("pointerleave", () => { if (LCYHOV) { LCYHOV = null; draw(); } });
 const lcLeap = y => new Date(Date.UTC(y, 1, 29)).getUTCMonth() === 1;
 const lcDoy = (y, m, d) => Math.round((Date.UTC(y, m, d) - Date.UTC(y, 0, 1)) / 864e5);   // 0 for Jan 1
@@ -2835,6 +2835,12 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
     const bt = row.createEl("button", { cls: "ckgt", text: "1 · True", attr: { type: "button" } }), bf = row.createEl("button", { cls: "ckgf", text: "2 · False", attr: { type: "button" } });
     bt.onclick = e => { e.stopPropagation(); ckGameAnswer(true); }; bf.onclick = e => { e.stopPropagation(); ckGameAnswer(false); }; CK.gEl = { gc, hd, tx, bt, bf }; }
   for (let q = 0; q < 420; q++) CK.stars.push([hash("s" + q, 3) * 4000 - 2000, hash("s" + q, 5) * 4000 - 2000, hash("s" + q, 7) * 4000 - 2000, .3 + hash("s" + q, 9) * .7]);
+  /* ⌥-drag a star, a name or a panel: its [[link]] into an editor (0.8.189, as on the other maps) */
+  { let dj = -1, gh = null; c_.addEventListener("pointerdown", e => { if (e.button !== 0 || !e.altKey || e.metaKey || e.ctrlKey) return; let j = CK.starHov >= 0 ? CK.starHov : ckSideHit(e.offsetX, e.offsetY);
+      if (!(j >= 0)) { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) j = CK.items[h_].i; } if (!(j >= 0) || !N[j]) return; dj = j; c_.draggable = true; e.stopImmediatePropagation(); }, { capture: true });
+    c_.addEventListener("pointerup", () => { if (dj >= 0) { c_.draggable = false; dj = -1; } }, { capture: true });
+    c_.addEventListener("dragstart", e => { if (dj < 0 || !e.dataTransfer) { e.preventDefault(); return; } e.dataTransfer.setData("text/plain", wl(dj)); e.dataTransfer.effectAllowed = "all"; gh = doc.body.createDiv({ cls: "ivm-ldghost", text: "🔗 " + N[dj].title }); e.dataTransfer.setDragImage(gh, -8, -8); });
+    c_.addEventListener("dragend", () => { c_.draggable = false; dj = -1; if (gh) { gh.remove(); gh = null; } }); }
   c_.addEventListener("pointerdown", e => { if (CK.edit) { ckEditClose(); return; } if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false, star: CK.starHov };   /* the star under the pointer as you press: it stops being "hovered" the moment a press starts (0.8.109 fix) */ c_.setPointerCapture(e.pointerId); });
   c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); CK.hovS = ckSideHit(e.offsetX, e.offsetY); { let b_ = -1, bd = 64; for (const [px, py, j] of CK.scDots || []) { const dd = (px - e.offsetX) ** 2 + (py - e.offsetY) ** 2; if (dd < bd) { bd = dd; b_ = j; } } CK.scHov = b_; } CK.mouseOnPanel = h_ >= 0; CK.mouse = [e.offsetX, e.offsetY]; CK.mouseT = win.performance.now(); c_.classList.toggle("hot", h_ >= 0 || CK.hovS >= 0 || CK.hovS <= -10 || CK.scHov >= 0 || (CK.starHov || -1) >= 0); return; }
     const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) > 4) d.moved = true; d.x = e.clientX; d.y = e.clientY;
@@ -2842,9 +2848,9 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
   c_.addEventListener("pointerleave", () => { CK.hovS = -1; CK.scHov = -1; CK.mouse = null; CK.starHov = -1; });
   c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return;
     /* Shift-click any note (a star, a name, a scope dot, a signpost, a panel) opens it in a new orb, as on the map (0.8.146, Nick) */
-    if (e.shiftKey) { let sj = CK.scHov >= 0 ? CK.scHov : ckSideHit(e.offsetX, e.offsetY); if (!(sj >= 0)) { const p_ = (CK.posts || []).find(q => Math.hypot(q[0] - e.offsetX, q[1] - e.offsetY) < 12); if (p_) sj = p_[2]; }
+    if (openKind(e)) { let sj = CK.scHov >= 0 ? CK.scHov : ckSideHit(e.offsetX, e.offsetY); if (!(sj >= 0)) { const p_ = (CK.posts || []).find(q => Math.hypot(q[0] - e.offsetX, q[1] - e.offsetY) < 12); if (p_) sj = p_[2]; }
       if (!(sj >= 0)) { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) sj = CK.items[h_].i; } if (!(sj >= 0) && (d.star ?? -1) >= 0) sj = d.star;
-      if (sj >= 0 && vis[sj]) { TABNEW = true; select(sj); return; } } { const mj = ckSideHit(e.offsetX, e.offsetY); if (mj === -20) { hudCol(true); return; } if (mj <= -10) { const sk = -10 - mj, L_ = (CK.sideLists || [])[sk] || (sk ? CK.outL : CK.inL), cap = (CK.sideCap || [])[sk] || 20; CK.sOff[sk] = (CK.sOff[sk] || 0) + cap >= L_.length - cap + cap && (CK.sOff[sk] || 0) >= L_.length - cap ? 0 : (CK.sOff[sk] || 0) + cap; return; } } if (CK.scHov >= 0) { const sj = CK.scHov, was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } { const sj = ckSideHit(e.offsetX, e.offsetY); if (sj >= 0) { const was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } } const h_ = ckHit(e.offsetX, e.offsetY);
+      if (sj >= 0 && vis[sj]) { openAs(sj, openKind(e)); return; } } { const mj = ckSideHit(e.offsetX, e.offsetY); if (mj === -20) { hudCol(true); return; } if (mj <= -10) { const sk = -10 - mj, L_ = (CK.sideLists || [])[sk] || (sk ? CK.outL : CK.inL), cap = (CK.sideCap || [])[sk] || 20; CK.sOff[sk] = (CK.sOff[sk] || 0) + cap >= L_.length - cap + cap && (CK.sOff[sk] || 0) >= L_.length - cap ? 0 : (CK.sOff[sk] || 0) + cap; return; } } if (CK.scHov >= 0) { const sj = CK.scHov, was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } { const sj = ckSideHit(e.offsetX, e.offsetY); if (sj >= 0) { const was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } } const h_ = ckHit(e.offsetX, e.offsetY);
     if (h_ < 0 && CKW === "sf") { const p_ = (CK.posts || []).find(q => Math.hypot(q[0] - e.offsetX, q[1] - e.offsetY) < 12); if (p_) { const was = (CK.items[CK.lock] || {}).i === p_[2]; ckLockNote(p_[2]); if (was) CK.auto = true; return; } }
     if (h_ < 0) { if (CKW === "sf" && (d.star ?? -1) >= 0) { const sj = d.star, was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; } return; } if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
   c_.addEventListener("dblclick", e => { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) { CK.lock = h_; CK.auto = true; } });
@@ -2877,10 +2883,10 @@ function ckLeftEd(){ try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) { co
 let CKPV = ["off", "one", "fewer", "natural", "max"].includes(pref("iv-ckpv", "")) ? pref("iv-ckpv", "") : (pref("iv-ckx", {}) || {}).pv === false ? "off" : "one";
 // a preview becomes a live editor where it is (0.8.136, Nick: "can these mini-previews be editable?"): click to edit, Esc or × to finish; Shift-click opens it as the support note
 function ckPvMake(p, title){ const e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ }
-  e.dataset.hint = "click to edit · ⇧ new orb · ⌘ support note";   /* our own small hint on hover, not the system tooltip (0.8.145) */
+  e.dataset.hint = (Platform.isMacOS ? "click to edit · ⌘ new orb · ⌘⌥ support note" : "click to edit · Ctrl new orb · Ctrl+Alt support note");   /* our own small hint on hover, not the system tooltip (0.8.145) */
   e.addEventListener("pointerenter", () => { CK.pvOver = p; }); e.addEventListener("pointerleave", () => { if (CK.pvOver === p) CK.pvOver = null; });
   e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return;
-    if ((ev.metaKey || ev.ctrlKey) && EDS) { void EDS.right.open(i); return; } if (ev.shiftKey) { TABNEW = true; if (vis[i]) { navTo(i); toEditor(i); } return; }   /* the same keys as everywhere else (0.8.177, Nick): ⇧ a new orb, ⌘ the support note */ const r = e.getBoundingClientRect(), pr = CK.el.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top); });
+    if (openAs(i, openKind(ev))) return;   /* the same keys as everywhere (0.8.189): ⌘ a new orb, ⌘⌥ the support note */ const r = e.getBoundingClientRect(), pr = CK.el.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top); });
   return e; }
 async function ckEdit(p, x, y, hostEl){ if (!host.editCard) return; ckEditClose(); const i = PIDX.get(p); if (i == null) return; const HE = hostEl || CK.el;   /* hostEl: Compass's previews too (0.8.175) */
   const W = HE.clientWidth, H = HE.clientHeight, w = 380, h = Math.min(360, H - 40), cx = Math.max(8, Math.min(W - w - 8, x - 40)), cy = Math.max(8, Math.min(H - h - 8, y - 20));
@@ -3482,10 +3488,10 @@ function postersLaneChips(){ const box = $("#rng-lanes"); if (!box) return; cons
   const hid = new Set(PSC().lhide[id] || []), sig = id + "|" + L.map(x => x[0] + ":" + x[1]).join(",") + "|" + [...hid].join(",");
   if (box.dataset.sig === sig) return; box.dataset.sig = sig; box.empty();
   const show = L.slice(0, 24);
-  for (const [v, c] of show) { const ch = box.createEl("button", { cls: "pchip" + (hid.has(v) ? " off" : "") }); ch.createSpan({ text: v === "—" ? "No value" : v }); ch.createEl("b", { text: c.toLocaleString() });
+  for (const [v, c] of show) { const ch = box.createEl("button", { cls: "pchip" + (hid.has(v) ? " off" : "") }); ch.createSpan({ text: v === "—" ? "No value" : v }); ch.createEl("b", { text: c.toLocaleString() }); ch.createEl("i", { cls: "ponly", text: "only" });
     ch.setAttribute("aria-pressed", String(!hid.has(v)));
     ch.onclick = ev => { ev.stopPropagation(); const h = new Set(PSC().lhide[id] || []);
-      if (ev.altKey || ev.metaKey) { const only = !(h.size === L.length - 1 && !h.has(v)); h.clear(); if (only) for (const [w] of L) if (w !== v) h.add(w); }   // ⌥/⌘-click: only this one (again: all)
+      if (ev.target instanceof Element && ev.target.closest(".ponly")) { const only = !(h.size === L.length - 1 && !h.has(v)); h.clear(); if (only) for (const [w] of L) if (w !== v) h.add(w); }   // "only" (shown on hover; 0.8.189, was ⌥/⌘-click): only this one (again: all)
       else if (h.has(v)) h.delete(v); else if (h.size < L.length - 1) h.add(v);
       if (h.size) PSC().lhide[id] = [...h]; else delete PSC().lhide[id]; save(PK("lhide"), { ...PSC().lhide }); prngRelayout(true); }; }
   if (L.length > 24) box.createSpan({ cls: "pn", text: `+${L.length - 24} more in Other` });
@@ -4661,6 +4667,7 @@ function render(){
   drawHudLinks();
   drawLcYear();
   drawLdrop();
+  drawSlotX();
   drawContrails();
   drawLive();
   for (const o of Object.values(EDS)) o.place(); placeOrbs();
@@ -5107,16 +5114,14 @@ cv.addEventListener("pointermove", e => {
 const end = e => { pts.delete(e.pointerId);
   if (GPH.drag) { const g = GPH.drag; GPH.drag = null; if (moved) { GPH.F.free(g.j); GPH.F.heat(0); GPH.wake(); cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "arena" && ARSTY === "plan") { const q = planStoneAt(e.offsetX, e.offsetY);   /* Stonehenge: an empty stone takes a note; Option-click clears one */
-    if (q >= 0 && (e.altKey || stNote(STONES[q]) < 0)) { cv.classList.remove("drag"); drag = null; if (e.altKey) planClear(q); else void planFill(q); return; } }
+    if (q >= 0 && stNote(STONES[q]) < 0) { cv.classList.remove("drag"); drag = null; void planFill(q); return; } }
   else if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "arena") { const q = arenaSlotAt(e.offsetX, e.offsetY), sl = arenaSlots();   // Arena: fill an empty slot, or empty one (Option-click)
-    if (q >= 0 && (e.altKey || !sl[q] || PIDX.get(sl[q]) == null || !vis[PIDX.get(sl[q])])) { cv.classList.remove("drag"); drag = null; if (e.altKey) arenaClear(q); else void arenaFill(q); return; } }
+    if (q >= 0 && (!sl[q] || PIDX.get(sl[q]) == null || !vis[PIDX.get(sl[q])])) { cv.classList.remove("drag"); drag = null; void arenaFill(q); return; } }
   if (pts.size === 0 && drag && !moved && drag.btn !== 2 && view === "chord" && !csphOn() && pick(e.offsetX, e.offsetY) < 0) {   // click an arc to hold its ribbons; click it again or empty space to let go
     const a = chordArcAt(e.offsetX, e.offsetY); chPin = a >= 0 && a !== chPin ? a : -1; draw(); if (chPin >= 0) showArcTip(chPin); else { tip.hidden = true; tip.classList.remove("arc"); } if (a >= 0) { cv.classList.remove("drag"); drag = null; return; } }
   if (pts.size === 0) { cv.classList.remove("drag"); if (drag && drag.orbit && moved) { buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (domeOn()) domeKeep(); else save("iv-cam3", [yaw3, pitch3]); } if (drag && !moved && drag.btn !== 2) { const i = pick(e.offsetX, e.offsetY); if (pplOn() && pplClick(i, e.offsetX, e.offsetY)) { drag = null; return; }
     { const h = chartPostAt(e.offsetX, e.offsetY); if (h >= 0) { if (focus >= 0 || focusArmed) navTo(h); else { select(h); if (!S3D) flyTo(h, true); } drag = null; return; } }   // in Focus, the signpost's note becomes the focus, with all its links   // Star Chart: a signpost takes you to its hub
-  if (i >= 0 && edOn() && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { void EDS.right.open(i); drag = null; return; }
-  if (i >= 0 && edOn() && e.shiftKey) { TABNEW = true; select(i); drag = null; return; }   // Shift-click: a new tab (an orb)   // Edit mode: ⌘-click opens the note as a support note, in the right-hand editor
-  if (i >= 0 && host.openNote && (Platform.isMacOS ? e.metaKey : e.ctrlKey)) { select(i); host.openNote(N[i].path, true); drag = null; return; }   // ⌘-click (Ctrl-click on Windows and Linux): the note opens in a new tab, as in Obsidian
+  if (i >= 0 && openKind(e)) { openAs(i, openKind(e)); drag = null; return; }   // ⌘-click a new tab (orb), ⌘⌥-click the support note (0.8.189)
   if (i >= 0 && (focus >= 0 || focusArmed)) navTo(i); else { select(i); if (i >= 0 && (Platform.isMobile || (view === "stars" && LH.some(q => q[5] != null && q[4] === i && e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3])))) flyTo(i, true); else if (i >= 0) nudgeTo(i); } toEditor(i); } drag = null; } };   // Starfield: a galaxy's name flies you into it
 cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
 cv.addEventListener("pointerleave", () => { if (hover >= 0 || shTape >= 0) { hover = -1; shTape = -1; draw(); } tip.hidden = true; });
@@ -5174,7 +5179,7 @@ function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hud
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
 cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
 cv.addEventListener("pointerdown", e => { if (!HUDL || e.button !== 0) return; const j = hudAt(e.offsetX, e.offsetY); if (j === -1) return; e.stopImmediatePropagation(); e.preventDefault(); HUDHOV = -1;
-  if (j === -5) { hudCol(true); return; } if (j >= 0 && e.shiftKey) TABNEW = true;   /* Shift-click: a new orb */
+  if (j === -5) { hudCol(true); return; } if (j >= 0 && openKind(e)) { openAs(j, openKind(e)); return; }
   if (j === -6) { const n_ = HUDC.list.length, cap = HUDH.filter(q => q[4] >= 0).length; HUDOFF = HUDOFF + cap >= n_ ? 0 : HUDOFF + cap; draw(); return; } navTo(j); toEditor(j); }, { capture: true });
 cv.addEventListener("wheel", e => { const b = HUDBOX; if (!HUDL || HUDCOL || !b || e.offsetX < b[0] || e.offsetX > b[0] + b[2] || e.offsetY < b[1] || e.offsetY > b[1] + b[3]) return; e.preventDefault(); e.stopImmediatePropagation(); HUDOFF += e.deltaY / 18; draw(); }, { capture: true, passive: false });
 cv.addEventListener("pointerleave", () => { if (HUDHOV >= 0) { HUDHOV = -1; hudPv(-1); draw(); } });
@@ -5418,13 +5423,13 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
         b.onclick = e => { e.stopPropagation(); o.sub_ = o.sub_ === key ? "" : key; fillStrip(o, i); }; }
       if (o.sub_ && L[o.sub_] && L[o.sub_].length) { const rows = o.drop.createDiv({ cls: "sdl sdsub" });
         for (const j of L[o.sub_]) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
-          r.onclick = e => { e.stopPropagation(); if (e.shiftKey) TABNEW = true; if (Platform.isMacOS ? e.metaKey : e.ctrlKey) void EDS.right.open(j); else select(j); }; }
+          r.onclick = e => { e.stopPropagation(); if (!openAs(j, openKind(e))) select(j); }; }
       } }
     return; }
   const list = o.open_ ? L[o.open_] || [] : []; o.drop.hidden = !list.length; if (!list.length) { o.open_ = ""; return; }
   o.drop.createDiv({ cls: "sdh", text: `${o.open_.toUpperCase()} · ${list.length}` }); const rows = o.drop.createDiv({ cls: "sdl" });
   for (const j of list) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
-    r.onclick = e => { e.stopPropagation(); if (e.shiftKey) TABNEW = true; if (Platform.isMacOS ? e.metaKey : e.ctrlKey) void EDS.right.open(j); else select(j); }; } }
+    r.onclick = e => { e.stopPropagation(); if (!openAs(j, openKind(e))) select(j); }; } }
 // the main editor's history: back and forward move through it without adding to it; a pinned editor keeps its note, so they wait
 let HIST = [], HPOS = -1, HNAV = null;
 // 0.8.51 (Nick: all the way back, and forward was gone): the step back or forward is remembered by the note it goes to, not as a flag the next
@@ -5457,7 +5462,7 @@ async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.center.close(
 // A note that isn't on the map right now (filtered out, or not mapped) opens in Obsidian as usual
 // Shift-click opens it as a new tab (an orb); while the main editor is pinned, a plain click opens it as the support note
 if (host.onCardLink) host.onCardLink((path, mode) => { const i = PIDX.get(path); if (i == null || !vis[i] || !edOn() || dead) return false;
-  if (mode === "side" || mode === true) void EDS.right.open(i); else { if (mode === "tab") TABNEW = true; select(i); } draw(); return true; });
+  if (mode === "side") void EDS.right.open(i); else if (mode === "tab") openAs(i, "tab"); else select(i); draw(); return true; });
 
 // ---------- tabs, shown as orbs (0.8.28, Nick) ----------
 // Obsidian's tab model, in the map: each tab is a note for the main editor; the orb you're on is the note in it. A plain click replaces
@@ -5552,8 +5557,8 @@ function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap 
     ctx.restore(); }
   for (const g of gals) { const p = N[g.i].path; want.add(p); let e = HPV.get(p);
     if (!e) { e = pvLayer.createDiv({ cls: "ivm-card ivm-pv" + (cmp ? " pved" : "") }); e.createDiv({ cls: "pvt", text: N[g.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); HPV.set(p, e);
-      if (cmp) { e.dataset.hint = "click to edit · ⇧ new orb · ⌘ support note";   /* Compass's previews are editable too (0.8.175, Nick), as the Cockpit's */
-        e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return; if ((ev.metaKey || ev.ctrlKey) && EDS) { void EDS.right.open(i); return; } if (ev.shiftKey) { TABNEW = true; if (vis[i]) { navTo(i); toEditor(i); } return; }   /* the same keys as everywhere else (0.8.177, Nick): ⇧ a new orb, ⌘ the support note */
+      if (cmp) { e.dataset.hint = (Platform.isMacOS ? "click to edit · ⌘ new orb · ⌘⌥ support note" : "click to edit · Ctrl new orb · Ctrl+Alt support note");   /* Compass's previews are editable too (0.8.175, Nick), as the Cockpit's */
+        e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return; if (openAs(i, openKind(ev))) return;   /* the same keys as everywhere (0.8.189): ⌘ a new orb, ⌘⌥ the support note */
           const r = e.getBoundingClientRect(), pr = pvLayer.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top, pvLayer); }); } }
     { const lk = `${root.dataset.theme}|${CARDTH}|${CARDOP}|${pw}`; if (e.dataset.lk !== lk) { e.dataset.lk = lk; edLook(e); e.setCssProps({ "--pvw": pw + "px", "--pvh": ph + "px" }); } }   /* the look only when it changes, not every frame (0.8.178, Nick: Compass slow on the desktop) */
     { const L = Math.round(ox + g.px) + "px", T = Math.round(oy + g.py) + "px"; if (e.style.left !== L) e.style.left = L; if (e.style.top !== T) e.style.top = T; } }
@@ -6068,9 +6073,12 @@ $("#efx").onclick = closeEff; $("#effbtn").hidden = !EFF.length;
 /* Link by dragging (0.8.185, Nick: "option drag… pulling the link of a note from the graph"): hold ⌥ (Alt) and drag a note.
    Drop it in any editor and its [[link]] lands where you let go. Drop it on another note's dot and it goes into that note's related property;
    hold Control (at the start or as you drop) and it goes into up instead. */
+/* where a link dropped on a note goes (0.8.189, Nick: to try them out, then keep one): its related property, the top of the note, the top as a bullet, or the bottom. Control still sends it to up */
+let LDPOS = ["related", "top", "bullet", "bottom"].includes(pref("iv-ldpos", "")) ? pref("iv-ldpos", "") : "related";
+const LDPOS_T = { related: "related", top: "top of the note", bullet: "top, as a bullet", bottom: "bottom of the note" };
 let LDRAG = -1, LDCTRL = false, LDROP = -1, LDGHOST = null, LDDONE = false, LDSRC = -1;
-const ldOK = () => !["cockpit", "arena", "kandinsky"].includes(view) && !!host.addLink;
-cv.addEventListener("pointerdown", e => { if (e.button !== 0 || !e.altKey || e.metaKey || !ldOK()) return;   /* only ⌥/Alt starts a drag (0.8.187): Ctrl-click is the support note on Windows; Control while dropping still means up */ const i = pick(e.offsetX, e.offsetY); if (i < 0) return;
+const ldOK = () => view !== "cockpit" && !!host.addLink;
+cv.addEventListener("pointerdown", e => { if (e.button !== 0 || !e.altKey || e.metaKey || e.ctrlKey || !ldOK()) return;   /* only ⌥/Alt starts a drag (0.8.187): Ctrl-click is the support note on Windows; Control while dropping still means up */ const i = pick(e.offsetX, e.offsetY); if (i < 0) return;
   LDRAG = i; LDCTRL = e.ctrlKey; cv.draggable = true; e.stopImmediatePropagation(); }, { capture: true });
 cv.addEventListener("pointerup", () => { if (LDRAG >= 0 && cv.draggable) { cv.draggable = false; LDRAG = -1; } }, { capture: true });
 cv.addEventListener("contextmenu", e => { if (LDRAG >= 0) e.preventDefault(); }, { capture: true });   /* Control-click on a Mac is a right-click */
@@ -6083,13 +6091,32 @@ cv.addEventListener("dragend", e => { /* if the system refused the drop over a n
 cv.addEventListener("dragover", e => { if (!e.dataTransfer || !e.dataTransfer.types.includes("application/x-ivm-note")) return; const t = pick(e.offsetX, e.offsetY), ok = t >= 0 && t !== LDRAG;
   if (ok) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }   /* copy, not link: on a Mac, holding ⌥ forces a copy, and a "link" drop was refused (0.8.186, Nick: the note glided back) */ const nt = ok ? t : -1; LDCTRL = LDCTRL || e.ctrlKey; if (nt !== LDROP || LDCTRL !== e.ctrlKey) { LDROP = nt; draw(); } });
 cv.addEventListener("dragleave", () => { if (LDROP >= 0) { LDROP = -1; draw(); } });
-function ldLink(t, j, up){ LDDONE = true; LDCTRL = false;
-  void host.addLink(N[t].path, N[j].path, up ? "up" : "related").then(r => { new Notice(r === "dup" ? `${N[j].title} is already in ${N[t].title}'s ${up ? "up" : "related"}.` : r ? `Linked: ${N[j].title} → ${N[t].title}'s ${up ? "up" : "related"}` : `Couldn't add the link.`); }); }
+function ldLink(t, j, up){ LDDONE = true; LDCTRL = false; const where = up ? "up" : LDPOS, w_ = up ? "up" : LDPOS_T[LDPOS];
+  void host.addLink(N[t].path, N[j].path, where).then(r => { new Notice(r === "dup" ? `${N[t].title} already links to ${N[j].title} there (${w_}).` : r ? `Linked: ${N[j].title} → ${N[t].title} (${w_})` : `Couldn't add the link.`); }); }
 cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.dataTransfer.getData("application/x-ivm-note"); if (!p) return; e.preventDefault(); const t = pick(e.offsetX, e.offsetY), j = PIDX.get(p);
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 function drawLdrop(){ if (LDROP < 0 || !VV(LDROP)) return; const x = sx(X[LDROP]), y = sy(Y[LDROP]), r = rad(LDROP) + 10; ctx.save(); ctx.strokeStyle = css.accent; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
-  const t = `→ ${LDCTRL ? "up" : "related"} of ${N[LDROP].title}`; ctx.font = `600 12px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const w_ = ctx.measureText(t).width + 16; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - w_ / 2, y - r - 30, w_, 22, 11); ctx.fill(); ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = css.accent; ctx.fillText(t, x, y - r - 13); ctx.restore(); }   /* above the dot, clear of its name */
+  const t = LDCTRL ? `→ up of ${N[LDROP].title}` : LDPOS === "related" ? `→ related of ${N[LDROP].title}` : `→ ${N[LDROP].title}: ${LDPOS_T[LDPOS]}`; ctx.font = `600 12px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const w_ = ctx.measureText(t).width + 16; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - w_ / 2, y - r - 30, w_, 22, 11); ctx.fill(); ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = css.accent; ctx.fillText(t, x, y - r - 13); ctx.restore(); }   /* above the dot, clear of its name */
+/* One scheme for opening notes (0.8.189, Nick: "if Command-click is what users use in the rest of Obsidian to open a new tab…"), as in Obsidian:
+   click picks (the left editor follows in Edit mode) · ⌘-click a new tab (an orb, when orbs are on) · ⌘⌥-click the support note (Obsidian's split to the right) · ⌥-drag a link.
+   Ctrl stands in for ⌘ on Windows and Linux. Shift-click is left free. */
+const MODK = e => !!e && (Platform.isMacOS ? e.metaKey : e.ctrlKey);
+const openKind = e => MODK(e) && e.altKey ? "side" : MODK(e) ? "tab" : "";
+function openAs(i, kind){ if (i == null || i < 0 || !N[i]) return false;
+  if (kind === "side") { if (edOn() && EDS) void EDS.right.open(i); else { if (vis[i]) select(i); if (host.openNote) host.openNote(N[i].path, "split"); } return true; }
+  if (kind === "tab") { if (edOn() && ORBS) { TABNEW = true; if (vis[i]) select(i); } else { if (vis[i]) select(i); if (host.openNote) host.openNote(N[i].path, true); } return true; }
+  return false; }
+/* Arena and Stonehenge: hover a filled slot and a small × appears; click it to empty the slot (0.8.189: was ⌥-click, now ⌥ means link) */
+let SLOTX = null;
+function slotXAt(px, py){ if (view !== "arena") return null;
+  if (ARSTY === "plan") { const q = planStoneAt(px, py); if (q < 0 || stNote(STONES[q]) < 0) return null; const h = STHIT.find(t => t[4] === q); if (!h) return null; return { x: h[0] + h[2] - 2, y: h[1] + 2, q, plan: true }; }
+  const sl = arenaSlots(), q = arenaSlotAt(px, py); if (q < 0 || !sl[q] || PIDX.get(sl[q]) == null) return null; const [x, y] = arenaAt(q), X_ = sx(x), Y_ = sy(y); if (Math.hypot(X_ - px, Y_ - py) > 40) return null; return { x: X_ + 16, y: Y_ - 16, q, plan: false }; }
+cv.addEventListener("pointermove", e => { if (view !== "arena") { if (SLOTX) { SLOTX = null; draw(); } return; } const h = slotXAt(e.offsetX, e.offsetY), on_ = SLOTX && Math.hypot(SLOTX.x - e.offsetX, SLOTX.y - e.offsetY) < 11;
+  if (on_) return; if ((h && (!SLOTX || h.q !== SLOTX.q)) || (!h && SLOTX)) { SLOTX = h; draw(); } });
+cv.addEventListener("pointerdown", e => { if (!SLOTX || view !== "arena" || e.button !== 0 || Math.hypot(SLOTX.x - e.offsetX, SLOTX.y - e.offsetY) > 11) return; e.stopImmediatePropagation(); e.preventDefault(); const t = SLOTX; SLOTX = null; if (t.plan) planClear(t.q); else arenaClear(t.q); }, { capture: true });
+function drawSlotX(){ if (!SLOTX || view !== "arena") return; const { x, y } = SLOTX; ctx.save(); ctx.fillStyle = css.bg; ctx.strokeStyle = css.muted; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, 9, 0, 6.2832); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = css.ink; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 3.5, y - 3.5); ctx.lineTo(x + 3.5, y + 3.5); ctx.moveTo(x + 3.5, y - 3.5); ctx.lineTo(x - 3.5, y + 3.5); ctx.stroke(); ctx.restore(); }
 const wl = i => { const b = N[i].path.split("/").pop().replace(/\.md$/i, ""); return b === N[i].title ? `[[${b}]]` : `[[${b}|${N[i].title}]]`; };
 function callGroups(){ const out_ = []; let sec = null, hub = null;
   for (const r of SHELF.index || []) { if (!sec || sec.name !== r.sec) { sec = {name: r.sec, hubs: []}; out_.push(sec); hub = null; }
@@ -7403,9 +7430,12 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const r_ = g.createDiv({ cls: "eorow" }); r_.createSpan({ cls: "eol", text: "Previews" }); const seg = r_.createDiv({ cls: "seg" });
       for (const [v, t_] of [["off", "Off"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(PVLV === v) } });
         b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
+    { const r_ = g.createDiv({ cls: "eorow" }); r_.createSpan({ cls: "eol", text: Platform.isMacOS ? "⌥-drop" : "Alt-drop" }); const seg = r_.createDiv({ cls: "seg" });
+      for (const [v, t_] of [["related", "Related"], ["top", "Top"], ["bullet", "• Top"], ["bottom", "End"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(LDPOS === v), "aria-label": "A link dropped on a note goes to its " + LDPOS_T[v] } });
+        b.onclick = e => { e.stopPropagation(); LDPOS = v; save("iv-ldpos", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); }; } }
     sw("Show orbs (tabs)", () => ORBS, v => { ORBS = v; save("iv-orbs", v); const n_ = g.querySelector(".orbnsw"); if (n_) n_.hidden = !v; syncOrbs(); });
     sw("Show orb names", () => ORBN, v => { ORBN = v; save("iv-orbn", v); syncOrbs(); }); { const ls = g.querySelectorAll(".eosw"); const l_ = ls[ls.length - 1]; l_.classList.add("orbnsw", "sub"); l_.hidden = !ORBS; }
-    g.createDiv({ cls: "eonote", text: "Previews: small read-only glimpses of notes, in Starfield (its biggest hubs) and Compass (the closest notes). ⌘-click a note to open it as a support note on the right. Shift-click opens it in a new tab (an orb). Pin the editor to keep its note: what you pick then opens as the support note." });
+    g.createDiv({ cls: "eonote", text: "Previews: small read-only glimpses of notes, in Starfield (its biggest hubs) and Compass (the closest notes). ⌘-click a note to open it in a new tab (an orb); ⌘⌥-click opens it as the support note on the right. Pin the editor to keep its note: what you pick then opens as the support note." });
     cb.onchange = () => { EDITM = cb.checked; save("iv-editm", EDITM); g.hidden = !EDITM; if (EDITM && sel >= 0) void openMain(sel); else closeEds(); syncOrbs(); draw(); }; }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
@@ -7729,7 +7759,9 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       const fillCard = () => { card.empty(); const hd = card.createDiv({ cls: "kch" }); hd.createSpan({ text: "Keyboard shortcuts" }); const x_ = hd.createEl("button", { cls: "kcx", text: "×", attr: { type: "button", "aria-label": "Close" } }); x_.onclick = () => { card.hidden = true; };
         const cols = card.createDiv({ cls: "kcc" }), sec = (t, rows) => { const c_ = cols.createDiv({ cls: "kcs" }); c_.createDiv({ cls: "pt", text: t }); for (const [k_, d_] of rows) { const r_ = c_.createDiv({ cls: "kcr" }); const kk = r_.createSpan({ cls: "kcks" }); for (const one of k_.split(" ")) kk.createEl("kbd", { text: one }); r_.createSpan({ text: d_ }); } };
         sec("Maps", [...KEYED()].map(([k_, ch]) => [k_, [...ch.childNodes].filter(x => !(x.classList && x.classList.contains("mkey"))).map(x => x.textContent).join("").trim()]).sort((a_, b_) => "1234567890-=[]\\".indexOf(a_[0]) - "1234567890-=[]\\".indexOf(b_[0])));
-        sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["Z", "Zoom: Normal or Close-Up on the note"], ["V", "Saved views"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]); };
+        sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["Z", "Zoom: Normal or Close-Up on the note"], ["V", "Saved views"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]);
+        const M_ = Platform.isMacOS ? "⌘" : "Ctrl", A_ = Platform.isMacOS ? "⌥" : "Alt", C_ = Platform.isMacOS ? "⌃" : "Ctrl";   /* the mouse, the same everywhere (0.8.189) */
+        sec("With the mouse", [["Click", "Pick a note (in Edit mode it opens in the left editor)"], [`${M_} click`, "Open in a new tab (an orb)"], [`${M_} ${A_} click`, "Open as the support note, on the right"], [`hold ${M_}`, "Mini preview of the note under the pointer"], [`${A_} drag`, `Drag a link: into an editor, or onto a note (${LDPOS_T[LDPOS]}; Display → Edit mode to change)`], [`${A_} drag ${C_}`, "Onto a note: adds it to up instead"]]); };
       const toggleCard = () => { if (card.hidden) { closePops(); fillCard(); } card.hidden = !card.hidden; return true; };
       LK["?"] = toggleCard; on(doc, "pointerdown", e => { if (!card.hidden && !card.contains(e.target)) card.hidden = true; });
       onKey(e => { if (e.key === "Escape" && !card.hidden) card.hidden = true; });

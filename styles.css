@@ -1575,3 +1575,6 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-ldghost{position:fixed;left:-1000px;top:-1000px;font:600 12px var(--font-interface);color:var(--text-normal);background:var(--background-primary);border:1px solid var(--interactive-accent);border-radius:999px;padding:4px 10px;white-space:nowrap}
 .ivm-card .cardstrip .sfold.is-click{cursor:pointer;border-radius:8px}
 .ivm-card .cardstrip .sfold.is-click:hover{color:var(--text-normal);background:var(--background-modifier-hover)}
+/* Posters lanes: "only" on hover (0.8.189, was ⌥/⌘-click) */
+.ivm .pchip .ponly{display:none;font-style:normal;font-size:10px;margin-left:6px;color:var(--accent);text-decoration:underline;cursor:pointer}
+.ivm .pchip:hover .ponly{display:inline}

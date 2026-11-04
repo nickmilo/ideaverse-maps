@@ -85,7 +85,8 @@ export function openBeside(app, ownLeaf, noteLeaf, path, newTab, background) {
   const shown = l => { const el = l.view && l.view.containerEl; return !!el && el.isConnected && el.offsetParent !== null; };
   const beside = l => l !== ownLeaf && (!ownLeaf || l.parent !== ownLeaf.parent) && shown(l);
   let leaf = notes.includes(noteLeaf) && beside(noteLeaf) ? noteLeaf : notes.find(beside);
-  if (newTab) leaf = ws.getLeftLeaf(false) || ws.getLeaf("tab");   // ⌘-click: a new tab in the left sidebar, so the map stays in view
+  if (newTab === "split") leaf = ws.getLeaf("split", "vertical");   // ⌘⌥-click: a split to the right, as in Obsidian (0.8.189)
+  else if (newTab) leaf = ws.getLeftLeaf(false) || ws.getLeaf("tab");   // ⌘-click: a new tab in the left sidebar, so the map stays in view
   else if (!leaf) leaf = ws.getLeaf("split", "vertical");
   if (background && leaf.view && leaf.view.file === file) return newTab ? noteLeaf : leaf;   // already showing it
   void leaf.openFile(file, background ? { active: false } : undefined);   // in the background the map keeps focus
@@ -193,19 +194,11 @@ export async function mountInto(owner, el, opts) {
         W0.openLinkText = function (linktext, sourcePath, newLeaf, ...rest) { const cd = plugin.cardDown;
           if (cd && performance.now() - cd.t < 1500 && cd.el.isConnected) { plugin.cardDown = null;
             const f = app.metadataCache.getFirstLinkpathDest(String(linktext).split("#")[0].split("|")[0], sourcePath || "");
-            if (f instanceof TFile && cd.cb(f.path, newLeaf ? "side" : cd.shift ? "tab" : "plain")) return Promise.resolve(); }
+            if (f instanceof TFile && cd.cb(f.path, newLeaf === "split" ? "side" : newLeaf ? "tab" : "plain")) return Promise.resolve(); }
           return orig.call(this, linktext, sourcePath, newLeaf, ...rest); };
         plugin.register(() => { W0.openLinkText = orig; }); }
       split.containerEl.addEventListener("pointerdown", e => { if (cardLinkCb) plugin.cardDown = { t: performance.now(), el: split.containerEl, cb: cardLinkCb, shift: e.shiftKey }; }, true);
-      // Shift-click on a link (0.8.28): a new tab in the map. The editor would only extend its selection, so the click is taken here
-      const linkAt = e => { const t = e.target instanceof Element ? e.target : null; if (!t || !leaf || !(leaf.view instanceof MarkdownView)) return null;
-        const a = t.closest("[data-href]"); if (a) return a.getAttribute("data-href");
-        const s = t.closest(".cm-hmd-internal-link"); if (!s) return null; const cm = leaf.view.editor && leaf.view.editor.cm, f = leaf.view.file; if (!cm || !f) return null;
-        let pos; try { pos = cm.posAtDOM(s); } catch (_) { return null; } const c = app.metadataCache.getFileCache(f);
-        const l = c && (c.links || []).find(x => x.position.start.offset <= pos && pos <= x.position.end.offset); return l ? l.link : null; };
-      for (const ty of ["mousedown", "click"]) split.containerEl.addEventListener(ty, e => { if (!e.shiftKey || !cardLinkCb || e.metaKey || e.ctrlKey) return; const l = linkAt(e); if (!l) return;
-        e.preventDefault(); e.stopPropagation(); if (ty !== "click") return; const sp = leaf.view.file ? leaf.view.file.path : "";
-        const f = app.metadataCache.getFirstLinkpathDest(String(l).split("#")[0].split("|")[0], sp); if (f instanceof TFile) cardLinkCb(f.path, "tab"); }, true);
+      // Shift-click on a link is the editor's own again (it extends the selection): ⌘-click opens a new orb, ⌘⌥-click the support note (0.8.189)
       return { el: split.containerEl,
         open: async path => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return false;
           if (!leaf) leaf = W.createLeafInParent(split, 0);
@@ -223,6 +216,12 @@ export async function mountInto(owner, el, opts) {
     // (0 in the text, 1 up, 4 related, 5 any other property; collections are left to a rescan)
     // a link dragged onto a note's dot (0.8.185): into its related (or up) property, as a quoted [[link]], once
     addLink: async (targetPath, linkPath, kind) => { const t = app.vault.getAbstractFileByPath(targetPath), l = app.vault.getAbstractFileByPath(linkPath); if (!(t instanceof TFile) || !(l instanceof TFile)) return false;
+      if (kind === "top" || kind === "bullet" || kind === "bottom") { const lt = app.metadataCache.fileToLinktext(l, t.path, true), link = `[[${lt}]]`; let dup = false;   // in the note's text (0.8.189): top (after the properties), top as a bullet, or bottom
+        await app.vault.process(t, txt => { const m = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(txt), head = m ? m[0] : "", body = txt.slice(head.length);
+          if (body.includes(`[[${lt}]]`) || body.includes(`[[${lt}|`)) { dup = true; return txt; }
+          if (kind === "bottom") return txt.replace(/\s*$/, "") + "\n\n" + link + "\n";
+          const line = kind === "bullet" ? `- ${link}` : link, b = body.replace(/^\n+/, ""), joinB = kind === "bullet" && /^- /.test(b) ? "\n" : "\n\n";
+          return head + line + (b ? joinB + b : "\n"); }); return dup ? "dup" : true; }
       const st = plugin.settings, names = v => (Array.isArray(v) ? v : String(v || "").split(",")).map(x => String(x).trim()).filter(Boolean), key = (kind === "up" ? names(st.upProps)[0] : names(st.relatedProps)[0]) || kind;
       const link = `[[${app.metadataCache.fileToLinktext(l, t.path, true)}]]`, base = s_ => String(s_).replace(/^\[\[|\]\]$/g, "").split("|")[0].trim();
       let dup = false; await app.fileManager.processFrontMatter(t, fm => { const k = Object.keys(fm).find(x => x.toLowerCase() === key.toLowerCase()) || key; const cur = fm[k] == null || fm[k] === "" ? [] : Array.isArray(fm[k]) ? fm[k] : [fm[k]];
