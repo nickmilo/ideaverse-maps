@@ -1684,6 +1684,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card .carddrop .schip.sbe.on,.ivm-card .carddrop .schip.sbe:hover{border-color:var(--down, var(--color-green));background:color-mix(in srgb,var(--down, var(--color-green)) 12%,transparent)}
 .ivm-card .carddrop .sdsub.sd-up{box-shadow:inset 2px 0 0 var(--up, var(--color-blue))}
 .ivm-card .carddrop .sdsub.sd-down{box-shadow:inset 2px 0 0 var(--down, var(--color-green))}
+.ivm-card .carddrop .sdsub.sd-up,.ivm-card .carddrop .sdsub.sd-down{padding-left:8px}   /* a little air between the colored line and the names (0.8.243, Nick) */
 /* every link in every note colored by Idea Emergence (0.8.234): up property gold, related purple, above blue, below green, other properties slate */
 body.ivm-linkcolors.theme-dark{--ivk-upp:#ffcf5a;--ivk-rel:#c9a2ff;--ivk-up:#6fd3ff;--ivk-down:#5fe0a8;--ivk-prop:#a9b4c8}
 body.ivm-linkcolors.theme-light{--ivk-upp:#a8770a;--ivk-rel:#7c3aed;--ivk-up:#1f78b4;--ivk-down:#178a5c;--ivk-prop:#5b6b82}
