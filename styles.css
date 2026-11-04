@@ -1746,3 +1746,4 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm .ivm-recents .rcgrip{position:absolute;left:-4px;top:12%;bottom:12%;width:10px;cursor:ew-resize;z-index:2}
 .ivm .ivm-recents.resizing{user-select:none}
 .ivm .ivm-recents .rct{white-space:nowrap}
+.ivm .ivm-recents{cursor:pointer}.ivm .ivm-recents .rcr,.ivm .ivm-recents label{cursor:pointer}.ivm .ivm-recents .rcl{cursor:pointer}
