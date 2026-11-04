@@ -6069,7 +6069,7 @@ $("#efx").onclick = closeEff; $("#effbtn").hidden = !EFF.length;
    hold Control (at the start or as you drop) and it goes into up instead. */
 let LDRAG = -1, LDCTRL = false, LDROP = -1, LDGHOST = null, LDDONE = false, LDSRC = -1;
 const ldOK = () => !["cockpit", "arena", "kandinsky"].includes(view) && !!host.addLink;
-cv.addEventListener("pointerdown", e => { if (e.button !== 0 || !(e.altKey || e.ctrlKey) || e.metaKey || !ldOK()) return; const i = pick(e.offsetX, e.offsetY); if (i < 0) return;
+cv.addEventListener("pointerdown", e => { if (e.button !== 0 || !e.altKey || e.metaKey || !ldOK()) return;   /* only ⌥/Alt starts a drag (0.8.187): Ctrl-click is the support note on Windows; Control while dropping still means up */ const i = pick(e.offsetX, e.offsetY); if (i < 0) return;
   LDRAG = i; LDCTRL = e.ctrlKey; cv.draggable = true; e.stopImmediatePropagation(); }, { capture: true });
 cv.addEventListener("pointerup", () => { if (LDRAG >= 0 && cv.draggable) { cv.draggable = false; LDRAG = -1; } }, { capture: true });
 cv.addEventListener("contextmenu", e => { if (LDRAG >= 0) e.preventDefault(); }, { capture: true });   /* Control-click on a Mac is a right-click */
