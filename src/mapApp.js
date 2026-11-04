@@ -2146,7 +2146,7 @@ EXP.lifeline = {
 };
 
 // ---------- Compass (0.8.32, Nick): a local map around one note ----------
-// The note in the main editor (the pinned one, or the one you picked) sits at the centre. What it links up to sits above it, the notes
+// The note in the primary note (the pinned one, or the one you picked) sits at the centre. What it links up to sits above it, the notes
 // that link up to it below; otherwise the higher level goes above and the lower below. Time runs left (earlier) to right (later), on a
 // log scale so last week and ten years ago both have room. Relevance (in the gear) pulls the notes most related to the centre toward it,
 // like radar, keeping each one's direction: relevance is a walk from the centre note along links that keeps coming home (personalized
@@ -3074,7 +3074,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
 function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect(), dpr = win.devicePixelRatio || 1, W = Math.max(1, r.width), H = Math.max(1, r.height);
   if (CK.w !== W || CK.h !== H) { CK.w = W; CK.h = H; c_.width = W * dpr; c_.height = H * dpr; }
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = "#04060d"; g.fillRect(0, 0, W, H);
-  const cons = CKFRAME ? Math.min(150, H * .26) : 0, VH = H - cons,   /* no frame: the view runs to the bottom and the instruments float over it */ LXd = ckLeftEd(), cx = W / 2 + (CK.cxo = (CK.cxo || 0) + ((LXd ? Math.min(90, LXd * .2) : 0) - (CK.cxo || 0)) * .08), cy = VH / 2;   /* the view eases a little to the right when the left editor opens (0.8.117, Nick) */
+  const cons = CKFRAME ? Math.min(150, H * .26) : 0, VH = H - cons,   /* no frame: the view runs to the bottom and the instruments float over it */ LXd = ckLeftEd(), cx = W / 2 + (CK.cxo = (CK.cxo || 0) + ((LXd ? Math.min(90, LXd * .2) : 0) - (CK.cxo || 0)) * .08), cy = VH / 2;   /* the view eases a little to the right when the primary note opens (0.8.117, Nick) */
   if (CK.bl !== LXd) { CK.bl = LXd; CK.el.setCssProps({ "--ckl": (LXd ? LXd + 6 : 34) + "px" }); }   /* Back sits top left, moving over beside the editor */
   const F = Math.min(W, VH) * .95, font = css.body || "sans-serif";
   /* stars: wrap round the ship; streaks when moving */
@@ -3126,7 +3126,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
       g.strokeStyle = "rgba(0,0,0,.35)"; g.lineWidth = 1; g.beginPath(); g.moveTo(x0 + s_ * sw_ / 2, VH); g.lineTo(x1 + s_ * sw_ / 2, y1); g.stroke(); } }
   /* links in down the left, links out down the right: a dim arc of names, centred (Nick, from the mockup) */
   CK.side = []; CK.sideCol = [null, null]; CK.sideCap = [20, 20]; CK.sOff ||= [0, 0]; const lockI = (CK.items[CK.lock] || {}).i;
-  /* with the left editor open it would cover the links in, so every link goes down the right as one list (0.8.118, Nick): each note once, marked ← links in, → links out, ↔ both, most relevant first */
+  /* with the primary note open it would cover the links in, so every link goes down the right as one list (0.8.118, Nick): each note once, marked ← links in, → links out, ↔ both, most relevant first */
   const LX = ckLeftEd(), inS = new Set(CK.inL), outS = new Set(CK.outL);
   /* one list down the right, always (0.8.139, Nick): each note once, ← in, → out, ↔ both; up links first, then by relevance */
   const merged = (() => { const all = [...new Set([...CK.inL, ...CK.outL])], upS2 = new Set(CK.upL || []), rs = CK.relS || new Map(); return all.sort((a, b) => (upS2.has(b) ? 1 : 0) - (upS2.has(a) ? 1 : 0) || (rs.get(b) || 0) - (rs.get(a) || 0) || N[b].score - N[a].score); })();
@@ -4372,7 +4372,7 @@ function fitTarget(){ const f = fitTarget0(); if (!CAPFIT) return f; const a = c
   return { k: f.k * s_, tx: cx - (cx - f.tx) * s_, ty: cy - (cy - f.ty) * s_ }; }
 // the room the open Legend and Animations dock take on the left (desktop); tucked away, just their tabs. Fit all used to keep 400 px free
 // whatever was open, leaving Ideaverse, Obsidian, Treemap, Mosaic and the rest small and pushed right
-let EDLW = 0;   // the left editor's width, when it's open
+let EDLW = 0;   // the primary note's width, when it's open
 function leftCol(){ if (isPhone()) return 0; if (EDLW) return EDLW; const c = cv.getBoundingClientRect(); let r = 40;
   for (const el of [$("#legend"), $("#animdock")]) { if (!el || el.hidden || el.classList.contains("collapsed")) continue; const b = el.getBoundingClientRect(); if (b.width > 0) r = Math.max(r, b.right - c.left + 12); }
   return Math.min(r, 400); }
@@ -4411,13 +4411,13 @@ function sphFace(i){   // a globe turns the note to face you instead of zooming 
     csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); if (t < 1) RAF(step); else { sphTurning = false; buildGrid(); csKeep(); draw(); } };
   sphTurning = true; RAF(step); }
 // a click on a flat map: the note drifts a little of the way toward the middle (no zoom), once the note panel has made its room
-// the free stretch of the map, left to right: clear of the left editor, the support note and the note panel (0.8.79; Nick: the note didn't centre beside the left editor)
+// the free stretch of the map, left to right: clear of the primary note, the support note and the note panel (0.8.79; Nick: the note didn't centre beside the primary note)
 let FLYT = 0;
 function freeLR(){ let L = 0, R = W - (isPhone() ? 0 : sideW()); if (isPhone()) return [L, R];
   try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) L = edRect("left").x + edRect("left").w + 8; if (EDS && !EDS.right.el.hidden && !EDS.right.col) R = Math.min(R, edRect("right").x - 8); } catch (_) { /* editors not made yet */ }
   if (R - L < 160) { L = 0; R = W - (isPhone() ? 0 : sideW()); } return [L, R]; }
 function nudgeTo(i){ if (domeOn() || sphOn() || globeOn() || geo3On() || csphOn() || view === "chord" || (view === "stars" && S3D)) return; const id_ = i;
-  if (edOn() && edCam()) return;   /* the main editor frames the note itself (openMain) */
+  if (edOn() && edCam()) return;   /* the primary note frames the note itself (openMain) */
   win.setTimeout(() => { if (sel !== id_ || morphing) return; const phone = isPhone(), [fl, fr] = freeLR(), px_ = sx(X[i]), py_ = sy(Y[i]); if (!isFinite(px_) || !isFinite(py_)) return;
     const f = .3, dx = ((fl + fr)/2 - px_)*f, dy = (H/2 - py_)*f; if (Math.hypot(dx, dy) < 8) return; animateTo({ k, tx: tx + dx, ty: ty + dy }); }, 80); }
 function flyTo(i, noOut){   // noOut: from a click on the map, which never zooms out (it would lose where you were); it centers the note instead
@@ -4433,7 +4433,7 @@ function flyTo(i, noOut){   // noOut: from a click on the map, which never zooms
   for (const j of [...out[i], ...inn[i]]) { x0 = Math.min(x0, X[j]); x1 = Math.max(x1, X[j]); y0 = Math.min(y0, Y[j]); y1 = Math.max(y1, Y[j]); }
   const kk = Math.min(4, Math.max(phone ? .1 : .3, Math.min((vw - pad*2) / Math.max(x1-x0, 1), (vh - pad*2) / Math.max(y1-y0, 1))));
   if (noOut && kk < k) { animateTo({k, tx: lc + vw/2 - X[i]*k, ty: vh/2 - Y[i]*k}); return; }
-  if (edOn() && edCam() && fl > 0) {   /* with the left editor open: the note itself in the middle of the free space, zoomed so its links fit round it */
+  if (edOn() && edCam() && fl > 0) {   /* with the primary note open: the note itself in the middle of the free space, zoomed so its links fit round it */
     const hx = Math.max(X[i] - x0, x1 - X[i], 1), hy = Math.max(Y[i] - y0, y1 - Y[i], 1), k2 = Math.min(4, Math.max(.3, Math.min((vw/2 - pad) / hx, (vh/2 - pad) / hy)));
     animateTo({k: k2, tx: lc + vw/2 - X[i]*k2, ty: vh/2 - Y[i]*k2}); return; }
   animateTo({k:kk, tx:lc + vw/2 - (x0+x1)/2*kk, ty:vh/2 - (y0+y1)/2*kk}); }
@@ -5390,7 +5390,7 @@ function makeEd(kind){
   // the side editors tuck away to a tab on their edge, like the legend and the note panel; the note stays open in them
   const side = kind !== "center", cb = side ? hd.createEl("button", { cls: "cardbtn cardcol", text: kind === "left" ? "‹" : "›", attr: { type: "button", "aria-label": "Tuck away", title: "Tuck away" } }) : null;
   if (cb) hd.insertBefore(cb, ob);
-  // the main editor can be pinned (0.8.28): then a note you pick opens as the support note, and the pinned note stays (Nick's Mapping Method)
+  // the primary note can be pinned (0.8.28): then a note you pick opens as the support note, and the pinned note stays (Nick's Mapping Method)
   // back and forward through the notes this editor has shown (0.8.45, Nick: the trail works too, but that's a leap)
   const nav = kind !== "right" ? [["arrow-left", "Back", -1], ["arrow-right", "Forward", 1]].map(([ic, lb, d_]) => { const b_ = doc.createElement("button"); b_.className = "cardbtn cardnav"; b_.type = "button"; b_.setAttribute("aria-label", lb); setIcon(b_, ic); hd.insertBefore(b_, t); b_.onclick = e => { e.stopPropagation(); histGo(d_); }; return b_; }) : null;
   const pb = kind !== "right" ? hd.createEl("button", { cls: "cardbtn cardpin", attr: { type: "button", "aria-label": "Pin this note", title: "Pin this note" } }) : null;
@@ -5414,10 +5414,10 @@ function makeEd(kind){
     const up = () => { if (!drag_) return; drag_ = null; el.classList.remove("resizing"); EDW[kind] = Math.round(edRect(kind).w); save("iv-edw", EDW); if (o.ed) o.ed.resize(); };
     gr.addEventListener("pointerup", up); gr.addEventListener("pointercancel", up);
     gr.addEventListener("dblclick", e => { e.stopPropagation(); delete EDW[kind]; save("iv-edw", EDW); edFree(); draw(); }); }   // double-click: back to the default width
-  xb.onclick = () => { if (kind === "left") edCloseTab(); else { o.close(); panBack(); } };   /* the main editor's ×: closes its orb too (0.8.196, Nick) */ if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
+  xb.onclick = () => { if (kind === "left") edCloseTab(); else { o.close(); panBack(); } };   /* the primary note's ×: closes its orb too (0.8.196, Nick) */ if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
   return o; }
 let LIVEQ = false;   // the map reacting as you write refreshes the note panel quietly: no camera move, no editor reload
-let EDS = null; EDS = { left: makeEd("left"), right: makeEd("right") };   /* the editor in the middle is gone (0.8.195, Nick): the main editor is always on the left */
+let EDS = null; EDS = { left: makeEd("left"), right: makeEd("right") };   /* the editor in the middle is gone (0.8.195, Nick): the primary note is always on the left */
 const edMain = () => EDS.left;
 function stripLists(i){ const d = N[i], L = { above: [], below: [], up: [], related: [], out: [...new Set(out[i])].filter(j => j !== i && vis[j]), in: [...new Set(inn[i])].filter(j => j !== i && vis[j]) };
   for (const j of new Set([...out[i], ...inn[i]])) { if (!vis[j] || j === i) continue; const kk = EKIND.get(i*n + j);
@@ -5472,7 +5472,7 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
       const p_ = await host.pickNote(items, key === "up" ? `${d.title}: link up to…` : `${d.title}: related to…`); if (!p_ || dead) return;
       const r = await host.addLink(d.path, p_, key), t_ = (N[PIDX.get(p_)] || {}).title || p_;
       new Notice(r === "dup" ? `${d.title} already has ${t_} in ${key}.` : r ? `${d.title} → ${key}: ${t_}` : "Couldn't add the link."); }; } }
-// the main editor's history: back and forward move through it without adding to it; a pinned editor keeps its note, so they wait
+// the primary note's history: back and forward move through it without adding to it; a pinned editor keeps its note, so they wait
 let HIST = [], HPOS = -1, HNAV = null;
 // 0.8.51 (Nick: all the way back, and forward was gone): the step back or forward is remembered by the note it goes to, not as a flag the next
 // editor change could use up; and going to the note just ahead or behind (from the trail, say) moves along the history instead of cutting it
@@ -5485,13 +5485,13 @@ function syncNav(){ let pin = false; try { pin = !!(TABS[TCUR] && TABS[TCUR].pin
 function histGo(d_){ const q = HPOS + d_; if (q < 0 || q >= HIST.length) return; const i = PIDX.get(HIST[q]); if (i == null) return;
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map.`); return; } HPOS = q; HNAV = HIST[q]; select(i); syncNav(); }
 function edFree(){ EDLW = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 0; for (const o of Object.values(EDS)) { o.key = ""; o.place(); } }
-function panBack(){ if (PANAUTO && EDS.left.el.hidden) { PANAUTO = false; setCollapsed(false, true); } }   // the note panel returns when the main editor closes
+function panBack(){ if (PANAUTO && EDS.left.el.hidden) { PANAUTO = false; setCollapsed(false, true); } }   // the note panel returns when the primary note closes
 function closeEds(){ for (const o of Object.values(EDS)) o.close(); panBack(); }
 async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.left.close(); if (!edOn()) EDS.right.close(); if (PANAUTO) { PANAUTO = false; setCollapsed(false, true); } return; }
   const m = edMain();
   if (m.el.hidden && !m.col && !drawerCollapsed) { PANAUTO = true; setCollapsed(true, true); }   // the editor shows the note: the note panel tucks away (its tab brings it back)
   const tp = TABS[TCUR], pj = tp && tp.pin && tp.path !== N[i].path ? PIDX.get(tp.path) : null;
-  if (pj != null) { const p0 = m.open(pj); void EDS.right.open(i); syncOrbs(); if (view === "compass" || view === "arena") refitSoon(); await p0; return; }   // pinned: the main editor keeps its note, the one you picked opens beside it
+  if (pj != null) { const p0 = m.open(pj); void EDS.right.open(i); syncOrbs(); if (view === "compass" || view === "arena") refitSoon(); await p0; return; }   // pinned: the primary note keeps its note, the one you picked opens beside it
   histNote(N[i].path);
   syncNav();
   const p = m.open(i);
@@ -5499,14 +5499,14 @@ async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.left.close();
   else if (!edCam()) { /* a globe or 3D map keeps its own camera */ }
   else if (performance.now() - FLYT > 700) { const L = EDS.left.col ? 0 : edRect("left").x + edRect("left").w, R = EDS.right.el.hidden ? W - sideW() : edRect("right").x; animateTo({ k, tx: (L + R)/2 - X[i]*k, ty: H/2 - Y[i]*k }); }   /* a fly-to that just ran already framed it in the free space */   // the note in the free middle
   await p; }
-// a link clicked inside a card: the map picks that note (the main editor follows); ⌘-click (or a modifier Obsidian reads as "new tab") opens it as the support note.
+// a link clicked inside a card: the map picks that note (the primary note follows); ⌘-click (or a modifier Obsidian reads as "new tab") opens it as the support note.
 // A note that isn't on the map right now (filtered out, or not mapped) opens in Obsidian as usual
-// Shift-click opens it as a new tab (an orb); while the main editor is pinned, a plain click opens it as the support note
+// Shift-click opens it as a new tab (an orb); while the primary note is pinned, a plain click opens it as the support note
 if (host.onCardLink) host.onCardLink((path, mode) => { const i = PIDX.get(path); if (i == null || !vis[i] || !edOn() || dead) return false;
   if (mode === "side") void EDS.right.open(i); else if (mode === "tab") openAs(i, "tab"); else select(i); draw(); return true; });
 
 // ---------- tabs, shown as orbs (0.8.28, Nick) ----------
-// Obsidian's tab model, in the map: each tab is a note for the main editor; the orb you're on is the note in it. A plain click replaces
+// Obsidian's tab model, in the map: each tab is a note for the primary note; the orb you're on is the note in it. A plain click replaces
 // the current tab's note (unless it's pinned: then the note opens as the support note); Shift-click, on the map or on a link in an editor,
 // opens a new tab. The orbs sit along the top of the map; hover one for its name; Display → Edit mode → Show orbs (tabs), Show orb names.
 let TABS = (() => { const t = pref("iv-tabs", null); return Array.isArray(t) ? t.filter(x => x && typeof x.path === "string").map(x => ({ path: x.path, pin: !!x.pin })) : []; })();
@@ -5528,11 +5528,11 @@ let BGLAST = null;   /* several in a row line up in the order you opened them, a
 function tabAddBg(i){ const p = N[i].path; if (TABS.some(t => t.path === p)) { orbFlash(p); return; } let at = TCUR >= 0 ? TCUR + 1 : TABS.length; if (BGLAST && BGLAST.cur === TCUR && TABS[BGLAST.at] && TABS[BGLAST.at].path === BGLAST.p) at = BGLAST.at + 1;
   TABS.splice(at, 0, { path: p }); BGLAST = { cur: TCUR, at, p }; tabsSave(); syncOrbs(); orbFlash(p); }
 function orbFlash(p){ win.setTimeout(() => { const j = TABS.findIndex(t => t.path === p), b = orbBar.querySelector(`.ivm-orb[data-i="${j}"]`); if (!b) return; b.classList.remove("flash"); void b.offsetWidth; b.classList.add("flash"); }, 0); }
-/* closing the main editor's note is closing its tab (0.8.196, Nick: "mimic how Obsidian works with Command-W"): the orb goes too, and the next orb's note takes its place, as in Obsidian */
+/* closing the primary note's note is closing its tab (0.8.196, Nick: "mimic how Obsidian works with Command-W"): the orb goes too, and the next orb's note takes its place, as in Obsidian */
 function edCloseTab(){ const o = EDS.left; if (o.path) { CLOSED.push(o.path); if (CLOSED.length > 30) CLOSED.shift(); } if (TABS[TCUR] && TABS[TCUR].path === o.path) { tabClose(TCUR); if (!TABS.length || EDS.left.el.hidden) { select(-1); panBack(); } } else { o.close(); panBack(); } }
 function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
   TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); arenaSync(); syncNav(); }
-/* ⌘T: a new, empty tab, as in Obsidian (0.8.211, Nick): an orb of its own, and the main editor waits as a quiet placeholder until you pick a note.
+/* ⌘T: a new, empty tab, as in Obsidian (0.8.211, Nick): an orb of its own, and the primary note waits as a quiet placeholder until you pick a note.
    Nothing is lost: the other orbs keep their notes */
 function tabNew(){ const at = TCUR >= 0 && TABS[TCUR] ? TCUR + 1 : TABS.length; TABS.splice(at, 0, { path: "" }); TCUR = at; tabsSave(); select(-1); EDS.left.close(); if (EDS.left.el) EDS.left.el.hidden = true; syncOrbs(); draw();
   win.setTimeout(() => { const q = $("#q"); if (q && !dead) { q.focus(); q.select(); } }, 30); }
@@ -5542,12 +5542,12 @@ const newTabEl = (() => { const e = doc.createElement("div"); e.className = "ivm
   const x = e.createEl("button", { cls: "cardbtn ntx", text: "×", attr: { type: "button", "aria-description": "Close tab" } }); x.onclick = ev => { ev.stopPropagation(); tabClose(TCUR); };
   for (const ty of ["pointerdown", "wheel", "click"]) e.addEventListener(ty, ev => ev.stopPropagation()); return e; })();
 function newTabSync(){ const on = !dead && edOn() && !!TABS[TCUR] && !TABS[TCUR].path; newTabEl.hidden = !on; if (!on) return; try { edLook(newTabEl); } catch (_) { /* not ready */ }
-  const r = edRect("left"), c = cv.getBoundingClientRect(), pr = (newTabEl.offsetParent || newTabEl.parentElement).getBoundingClientRect();   /* where the main editor would sit */
+  const r = edRect("left"), c = cv.getBoundingClientRect(), pr = (newTabEl.offsetParent || newTabEl.parentElement).getBoundingClientRect();   /* where the primary note would sit */
   newTabEl.setCssProps({ "--ntx": Math.round(c.left - pr.left + r.x) + "px", "--nty": Math.round(c.top - pr.top + r.y) + "px", "--ntw": Math.round(r.w) + "px" }); }
 function tabGo(j){ const t = TABS[j]; if (!t) return; if (!t.path) { if (TABS[TCUR] && TABS[TCUR].pin && j !== TCUR) return; TCUR = j; tabsSave(); select(-1); EDS.left.close(); syncOrbs(); return; }
   const i = PIDX.get(t.path); if (i == null) return;
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
-  // pinned: the main editor keeps its note, and another orb's note opens as the support note (0.8.68, Nick). Unpin to switch tabs
+  // pinned: the primary note keeps its note, and another orb's note opens as the support note (0.8.68, Nick). Unpin to switch tabs
   if (j !== TCUR && TABS[TCUR] && TABS[TCUR].pin) { void EDS.right.open(i); return; }
   TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }
 function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j === TCUR; if (j < TCUR) TCUR--;
@@ -5683,7 +5683,8 @@ function runSearch(){
   hits = hits.slice(0, 9); hi = 0;
   html(res).v = hits.length ? hits.map((i,j) => `<button data-i="${i}" class="${j===0?"on":""}"><span class="t">${esc(N[i].title)}</span><span class="m">L${N[i].level} · ${esc(N[i].sub)}</span></button>`).join("") : `<button disabled><span class="t">No match</span></button>`;
   res.hidden = false;
-  res.querySelectorAll("[data-i]").forEach(b => b.onmousedown = ev => { ev.preventDefault(); go(+b.dataset.i); });
+  res.querySelectorAll("[data-i]").forEach((b, j) => { b.onmousedown = ev => { ev.preventDefault(); go(+b.dataset.i); };
+    b.onmousemove = () => { if (hi === j) return; hi = j; res.querySelectorAll("button").forEach((x, k) => x.classList.toggle("on", k === hi)); }; });   /* the pointer moves the one highlight (0.8.213, Nick saw two: the first result and the one under the mouse) */
 }
 function go(i){ res.hidden = true; q.blur(); navTo(i); toEditor(i); }
 q.addEventListener("input", runSearch);
@@ -6171,7 +6172,7 @@ dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
 function drawLdrop(){ if (LDROP < 0 || !VV(LDROP)) return; const x = sx(X[LDROP]), y = sy(Y[LDROP]), r = rad(LDROP) + 10; ctx.save(); ctx.strokeStyle = css.accent; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
   const t = LDCTRL ? `→ up of ${N[LDROP].title}` : `→ ${N[LDROP].title}: ${LDPOS_T[LDPOS]}`; ctx.font = `600 12px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const w_ = ctx.measureText(t).width + 16; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - w_ / 2, y - r - 30, w_, 22, 11); ctx.fill(); ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = css.accent; ctx.fillText(t, x, y - r - 13); ctx.restore(); }   /* above the dot, clear of its name */
 /* One scheme for opening notes (0.8.189, Nick: "if Command-click is what users use in the rest of Obsidian to open a new tab…"), as in Obsidian:
-   click picks (the left editor follows in Edit mode) · ⌘-click a new tab (an orb, when orbs are on) · ⌘⌥-click the support note (Obsidian's split to the right) · ⌥-drag a link.
+   click picks (the primary note follows in Edit mode) · ⌘-click a new tab (an orb, when orbs are on) · ⌘⌥-click the support note (Obsidian's split to the right) · ⌥-drag a link.
    Ctrl stands in for ⌘ on Windows and Linux. Shift-click is left free. */
 const MODK = e => !!e && (Platform.isMacOS ? e.metaKey : e.ctrlKey);
 const openKind = e => MODK(e) && e.altKey ? "side" : MODK(e) ? "tab" : "";
@@ -6189,7 +6190,7 @@ cv.addEventListener("pointermove", e => { if (view !== "arena") { if (SLOTX) { S
 cv.addEventListener("pointerdown", e => { if (!SLOTX || view !== "arena" || e.button !== 0 || Math.hypot(SLOTX.x - e.offsetX, SLOTX.y - e.offsetY) > 11) return; e.stopImmediatePropagation(); e.preventDefault(); const t = SLOTX; SLOTX = null; if (t.plan) planClear(t.q); else arenaClear(t.q); }, { capture: true });
 function drawSlotX(){ if (!SLOTX || view !== "arena") return; const { x, y } = SLOTX; ctx.save(); ctx.fillStyle = css.bg; ctx.strokeStyle = css.muted; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, 9, 0, 6.2832); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = css.ink; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 3.5, y - 3.5); ctx.lineTo(x + 3.5, y + 3.5); ctx.moveTo(x + 3.5, y - 3.5); ctx.lineTo(x - 3.5, y + 3.5); ctx.stroke(); ctx.restore(); }
-/* ⌘W (Obsidian's Close tab, whatever its hotkey) closes the main editor's note and its orb; your Toggle pin hotkey pins and unpins it (0.8.196, Nick). Only while the map, or its editor, has the focus and the editor shows a note */
+/* ⌘W (Obsidian's Close tab, whatever its hotkey) closes the primary note's note and its orb; your Toggle pin hotkey pins and unpins it (0.8.196, Nick). Only while the map, or its editor, has the focus and the editor shows a note */
 /* "the map has the focus": the last click was in the map, its editors or its previews (0.8.199, Nick: the pin hotkey didn't answer right after picking a note, since Obsidian's own idea of the active tab can be the editor's leaf) */
 let MAPFOCUS = false;
 on(doc, "pointerdown", e => { const t = e.target instanceof Node ? e.target : null; MAPFOCUS = !!t && (root.contains(t) || pvLayer.contains(t) || (EDS && Object.values(EDS).some(o => o.el.contains(t)))); }, true);
@@ -7901,7 +7902,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         sec("Maps", [...KEYED()].map(([k_, ch]) => [k_, [...ch.childNodes].filter(x => !(x.classList && x.classList.contains("mkey"))).map(x => x.textContent).join("").trim()]).sort((a_, b_) => "1234567890-=[]\\".indexOf(a_[0]) - "1234567890-=[]\\".indexOf(b_[0])));
         sec("On the map", [["O", "Orbit on or off"], ["J K L", "Orbit slow, medium, fast"], ["A", "Show or tuck Animations"], ["W", "Wander Mode"], ["T", "Timelapse"], ["S", "Sync with the editor"], ["F", "Filter"], ["N", "Focus"], ["Z", "Zoom: Normal or Close-Up on the note"], ["V", "Saved views"], ["/", "Find a note"], ["Esc", "Close a menu, or let go of a note"], ["?", "This list"]]);
         const M_ = Platform.isMacOS ? "⌘" : "Ctrl", A_ = Platform.isMacOS ? "⌥" : "Alt", C_ = Platform.isMacOS ? "⌃" : "Ctrl";   /* the mouse, the same everywhere (0.8.189) */
-        sec("With the mouse", [["Click", "Pick a note (in Edit mode it opens in the left editor)"], [`${M_} click`, "Open in a new tab (an orb)"], [`${M_} ${A_} click`, "Open as the support note, on the right"], [`hold ${M_}`, "Mini preview of the note under the pointer"], [`${A_} drag`, `Drag a link: into an editor, or onto a note (${LDPOS_T[LDPOS]}; Display → Edit mode to change)`], [`${A_} drag ${C_}`, "Onto a note: adds it to up instead"]]); };
+        sec("With the mouse", [["Click", "Pick a note (in Edit mode it opens as the primary note, on the left)"], [`${M_} click`, "Open in a new tab (an orb)"], [`${M_} ${A_} click`, "Open as the support note, on the right"], [`hold ${M_}`, "Mini preview of the note under the pointer"], [`${A_} drag`, `Drag a link: into an editor, or onto a note (${LDPOS_T[LDPOS]}; Display → Edit mode to change)`], [`${A_} drag ${C_}`, "Onto a note: adds it to up instead"]]); };
       const toggleCard = () => { if (card.hidden) { closePops(); fillCard(); } card.hidden = !card.hidden; return true; };
       LK["?"] = toggleCard; on(doc, "pointerdown", e => { if (!card.hidden && !card.contains(e.target)) card.hidden = true; });
       onKey(e => { if (e.key === "Escape" && !card.hidden) card.hidden = true; });
@@ -7945,7 +7946,7 @@ return {
   // a map embedded in a note (0.8.171): show a saved view, by name or as the view itself (from a .moti file)
   async showSaved(spec){ await savedReady; if (dead) return false; const v = spec && typeof spec === "object" ? spec : views.find(x => x.name.toLowerCase() === String(spec || "").trim().toLowerCase());
     if (!v) return false; win.setTimeout(() => { if (!dead) applySaved(host.embed ? { ...v, cam: null } : v); }, 60); return true; },   /* an embed is smaller than the map the view was saved on: fit it instead of the saved zoom */
-  // the commands "Open note in Emergence / Starfield" (0.8.27, Nick: so they can be hotkeyed): that map, Edit mode on, the note in the left editor
+  // the commands "Open note in Emergence / Starfield" (0.8.27, Nick: so they can be hotkeyed): that map, Edit mode on, the note in the primary note
   editIn(path, which){ const i = PIDX.get(path); if (i == null || dead) return false;
     if (!EDITM) { EDITM = true; save("iv-editm", true);
       const cb = root.querySelector(".editm input"); if (cb) cb.checked = true; const g = root.querySelector(".editopts"); if (g) g.hidden = false;

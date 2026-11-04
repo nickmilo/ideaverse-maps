@@ -22,7 +22,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
       if (!maps.length) return false;
       if (!checking) for (const v of maps) v.map.toggleFollow();
       return true; } });
-    // open the note you're on in a map, in the left editor (0.8.27; hotkey them in Settings → Hotkeys)
+    // open the note you're on in a map, in the primary note (0.8.27; hotkey them in Settings → Hotkeys)
     for (const [id, name, which] of [["open-in-emergence", "Open note in Emergence", "emergence"], ["open-in-starfield", "Open note in Starfield", "stars"]])
       this.addCommand({ id, name, checkCallback: checking => { const f = this.app.workspace.getActiveFile(); if (!f || f.extension !== "md") return false;
         if (!checking) void this.openNoteIn(f.path, which); return true; } });
@@ -85,7 +85,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
     await this.app.workspace.revealLeaf(leaf);
   }
 
-  /** Open the map (or bring it forward), wait for it to be ready, then show this note in that map's left editor. */
+  /** Open the map (or bring it forward), wait for it to be ready, then show this note in that map's primary note. */
   async openNoteIn(path, which) {
     await this.openMap();
     const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE)[0]; if (!leaf) return;
