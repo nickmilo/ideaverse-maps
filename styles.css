@@ -1727,7 +1727,7 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm .ivm-recents .rcd::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--dc)}
 .ivm .ivm-recents .rcn{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
 .ivm .ivm-recents .rca{flex:none;font:600 9.5px var(--mono);color:var(--accent);opacity:.75;min-width:22px;text-align:right}
-.ivm .ivm-recents .rcl{padding:7px 10px 6px 0;min-height:0;flex:1;display:flex;flex-direction:column;align-items:flex-end}
+.ivm .ivm-recents .rcl{padding:11px 10px 6px 0;min-height:0;flex:1;display:flex;flex-direction:column;align-items:flex-end}
 /* the Focus pill in the editor strip (0.8.238) */
 .ivm-card .cardstrip .schip.sfoc.on{border-color:var(--interactive-accent);color:var(--interactive-accent)}
 .ivm .ivm-recents .rch.cardhd-tuck{cursor:pointer}
@@ -1735,3 +1735,7 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm .ivm-recents > svg.rcbg path.rcbrk{fill:none;stroke:var(--accent);stroke-width:1.5;opacity:.7}
 .ivm .ivm-recents > svg.rcbg{overflow:visible}
 .ivm .ivm-recents > svg.rcbg path.rcdiv{fill:none;stroke:var(--line);stroke-width:1}
+/* Recents, left-aligned titles (0.8.255): the rows stretch, so emojis line up along the curve */
+.ivm .ivm-recents .rcl.rcleft{align-items:stretch}
+.ivm .ivm-recents .rcl.rcleft .rcr{align-self:stretch;justify-content:flex-start;text-align:left;padding-left:14px}
+.ivm .ivm-recents .rcl.rcleft .rcn{flex:1}
