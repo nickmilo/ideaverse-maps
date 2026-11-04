@@ -1662,8 +1662,10 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card.sf-th :is(h4,.cm-header-4){--hg:#5fe0a8;--hb:#f2fbf6}
 .ivm-card.sf-th :is(h5,.cm-header-5){--hg:#ff8fc0;--hb:#fbf3f7}
 .ivm-card.sf-th :is(.inline-title,h1,h2,h3,h4,h5,.cm-header-1,.cm-header-2,.cm-header-3,.cm-header-4,.cm-header-5){color:var(--hb);-webkit-text-fill-color:transparent;background-image:radial-gradient(2.3em 1.25em at 0 0,var(--hg),transparent 80%),radial-gradient(2.3em 1.25em at 100% 78%,color-mix(in srgb,var(--hg) 67%,transparent),transparent 80%),linear-gradient(var(--hb),var(--hb));-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 9px color-mix(in srgb,var(--hg) 24%,transparent))}
-.ivm-card.sf-th :is(.inline-title,h1,h2,h3,h4,h5){width:fit-content;max-width:100%}
 .ivm-card.sf-th :is(h1,h2,h3,h4,h5) :is(a,span,em,strong,code){-webkit-text-fill-color:currentColor}
+/* a heading with an emoji in it (0.8.230, Nick: the cut-out color blanked the volcano): the letters stay white and the color glows just behind the first and last letters instead, so the emoji keeps its own colors */
+.ivm-card.sf-th :is(.inline-title,h1,h2,h3,h4,h5,.cm-header-1,.cm-header-2,.cm-header-3,.cm-header-4,.cm-header-5).has-emo{-webkit-text-fill-color:var(--hb);-webkit-background-clip:border-box;background-clip:border-box;background-image:radial-gradient(1.6em 1em at 0 10%,color-mix(in srgb,var(--hg) 30%,transparent),transparent 80%),radial-gradient(1.6em 1em at 100% 85%,color-mix(in srgb,var(--hg) 20%,transparent),transparent 80%);filter:none;text-shadow:0 0 10px color-mix(in srgb,var(--hg) 35%,transparent)}
+.ivm-card.sf-th :is(.inline-title,h1,h2,h3,h4,h5){width:fit-content;max-width:100%}
 .ivm-card.sf-th h6,.ivm-card.sf-th .HyperMD-header-6,.ivm-card.sf-th .cm-header-6{font-family:var(--font-monospace);font-size:.8em;letter-spacing:.12em;text-transform:uppercase}
 .ivm-card.sf-th .metadata-container{background:rgba(20,16,38,.72);border:1px solid rgba(185,166,255,.18);border-radius:10px;padding:8px 12px}
 .ivm-card.sf-th .metadata-property-key,.ivm-card.sf-th .metadata-property-key-input{font-family:var(--font-monospace);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#a59fc4}
