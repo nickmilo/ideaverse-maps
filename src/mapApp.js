@@ -1135,7 +1135,7 @@ function setView(v){ win.setTimeout(() => { ckView(); if (typeof sfSwSync === "f
   root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === tabOf())));
   root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : "";
   if (yrNarrow() || (HASTAGS && TMOFF.size)) { computeVis(); layoutACE(); layoutTime(); layoutProp(); updateCounts(); }
-  syncRange(); legend(); morph(true, () => fitTarget());
+  syncRange(); legend(); morph(!SFJUMP, () => fitTarget()); SFJUMP = false;   /* the trip back from the Starship lands at once, behind the dark, so the chart can pull back out (0.8.228) */
   { const bb = root.querySelector(`#vseg button[data-v="${view}"]`); if (bb && isPhone()) bb.scrollIntoView({inline:"nearest", block:"nearest"}); }
 }
 function setMode(m){
@@ -2627,7 +2627,7 @@ let CKW = pref("iv-ckw", "links") === "sf" ? "sf" : "links";
 /* Starfield, one place with two vantage points (0.8.218, an experiment, Nick: "see what it would look like to move between Starfield > Chart and Starfield > Starship"):
    from Starfield's Chart you board the Starship among the same galaxies, and Chart brings you back to the star you were at. Starship on its own (the maps menu)
    is left exactly as it is: its world is borrowed for the trip (not saved) and handed back. 3D Starfield steps aside for the trial (SFMERGE = false brings it back) */
-const SFMERGE = true; let SFSHIP = null;
+const SFMERGE = true; let SFSHIP = null, SFJUMP = false;
 const CKSF = { ver: -1, P: null, sc: 1, B: [] };
 function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), turn = CKX.turn;
   if (CKSF.ver === starVer && CKSF.P && (!turn || now - (CKSF.tc || 0) < 30)) return CKSF; CKSF.tc = now;
@@ -5575,12 +5575,12 @@ function sfShip(on){ const [fl, fr] = freeLR(), mx = (fl + fr) / 2, my = (isPhon
     sfCam({ k, cx: sx0, cy: sy0, wx: X[i], wy: Y[i] }, { k: Math.min(40, k * 8), cx: mx, cy: my, wx: X[i], wy: Y[i] }, 500, p => p * p * (3 - 2 * p), [side * Math.min(160, (fr - fl) * .12), -60], board);
     win.setTimeout(() => veilTo(1, 330), 160); }   /* the dark starts with the zoom and lands with it */
   else { if (!SFSHIP) return; const c = CK.c, back = SFSHIP.cam; veilTo(1, 160);
-    win.setTimeout(() => { CKW = SFSHIP ? SFSHIP.ckw : CKW; SFSHIP = null; setView("stars"); sfSwSync();
+    win.setTimeout(() => { CKW = SFSHIP ? SFSHIP.ckw : CKW; SFSHIP = null; SFJUMP = true; setView("stars"); sfSwSync();
       const land = (t_) => { if (dead) return; if (morphing && t_ < 30) { win.setTimeout(() => land(t_ + 1), 50); return; }
         if (!(c >= 0 && vis[c])) { veilTo(0, 400); return; } select(c); const k1 = back ? back.k : k, k0 = Math.min(40, k1 * 8);
         k = k0; tx = mx - X[c] * k0; ty = my - Y[c] * k0; render(); veilTo(0, 300);
         sfCam({ k: k0, cx: mx, cy: my, wx: X[c], wy: Y[c] }, { k: k1, cx: mx, cy: my, wx: X[c], wy: Y[c] }, 520, p => 1 - Math.pow(1 - p, 3), [0, 0], null); };
-      win.setTimeout(() => land(0), 20); }, 170); }
+      land(0); }, 170); }   /* at once, in the same beat as the switch, so no frame of the fitted chart shows */
   win.setTimeout(sfSwSync, 0); }
 const sfSw = (() => { const w = $("#main").createDiv({ cls: "ivm-sfsw seg" }); w.hidden = true;
   for (const [m, t] of [["chart", "Chart"], ["ship", "Starship"]]) { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); sfShip(m === "ship"); }; }
@@ -6225,6 +6225,7 @@ cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.data
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 dbg.__lfx = (add = true) => linkFxTry(add);
+dbg.__k = () => k;
 dbg.__ck = () => [CK.yaw, CK.pitch];
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
 function drawLdrop(){ if (LDROP < 0 || !VV(LDROP)) return; const x = sx(X[LDROP]), y = sy(Y[LDROP]), r = rad(LDROP) + 10; ctx.save(); ctx.strokeStyle = css.accent; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
