@@ -221,6 +221,12 @@ export async function mountInto(owner, el, opts) {
       await MarkdownRenderer.render(app, txt, el, path, events); },
     // the map reacting as you write (0.8.23): when Obsidian has re-read a note's links, hand the map that note's links, resolved, each with its kind
     // (0 in the text, 1 up, 4 related, 5 any other property; collections are left to a rescan)
+    // a link dragged onto a note's dot (0.8.185): into its related (or up) property, as a quoted [[link]], once
+    addLink: async (targetPath, linkPath, kind) => { const t = app.vault.getAbstractFileByPath(targetPath), l = app.vault.getAbstractFileByPath(linkPath); if (!(t instanceof TFile) || !(l instanceof TFile)) return false;
+      const st = plugin.settings, names = v => (Array.isArray(v) ? v : String(v || "").split(",")).map(x => String(x).trim()).filter(Boolean), key = (kind === "up" ? names(st.upProps)[0] : names(st.relatedProps)[0]) || kind;
+      const link = `[[${app.metadataCache.fileToLinktext(l, t.path, true)}]]`, base = s_ => String(s_).replace(/^\[\[|\]\]$/g, "").split("|")[0].trim();
+      let dup = false; await app.fileManager.processFrontMatter(t, fm => { const k = Object.keys(fm).find(x => x.toLowerCase() === key.toLowerCase()) || key; const cur = fm[k] == null || fm[k] === "" ? [] : Array.isArray(fm[k]) ? fm[k] : [fm[k]];
+        if (cur.some(x => base(x) === base(link))) { dup = true; return; } fm[k] = [...cur, link]; }); return dup ? "dup" : true; },
     onMove: cb => { events.registerEvent(app.vault.on("rename", (f, old) => { if (f instanceof TFile && f.extension === "md" && old) cb(old, f.path); })); },   // a note moved or renamed: the map moves it live
     onLinks: cb => { const st = plugin.settings, nm = (v, d) => (Array.isArray(v) ? v : String(v || d).split(",")).map(x => String(x).trim().toLowerCase()).filter(Boolean);
       events.registerEvent(app.metadataCache.on("changed", (f, _data, c) => { if (!(f instanceof TFile) || !c) return;

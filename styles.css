@@ -1571,3 +1571,5 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm .lcnames{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-muted);margin:4px 0}
 .ivm .lchalf{flex-wrap:wrap}
 .ivm .lcnames[hidden]{display:none}
+/* link by dragging (0.8.185): the pill under the pointer */
+.ivm-ldghost{position:fixed;left:-1000px;top:-1000px;font:600 12px var(--font-interface);color:var(--text-normal);background:var(--background-primary);border:1px solid var(--interactive-accent);border-radius:999px;padding:4px 10px;white-space:nowrap}
