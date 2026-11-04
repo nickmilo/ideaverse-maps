@@ -5664,7 +5664,7 @@ q.addEventListener("blur", () => win.setTimeout(() => res.hidden = true, 120));
 const fromIn = $("#from");
 fromIn.min = SLMIN; fromIn.max = NOW_Y;
 $("#fromlo").textContent = SLMIN; $("#fromhi").textContent = NOW_Y;
-function syncYr(){ const yc = $("#ycol") || $("#yrctl"); if (!yc) return; const [a, b] = yc.querySelectorAll("input"); if (document.activeElement !== a && document.activeElement !== b) { a.value = YR0; b.value = YR1; }
+function syncYr(){ { const r_ = $("#yrreset"); if (r_) r_.hidden = YR0 === SLMIN && YR1 === NOW_Y && !winSpan(); } const yc = $("#ycol") || $("#yrctl"); if (!yc) return; const [a, b] = yc.querySelectorAll("input"); if (document.activeElement !== a && document.activeElement !== b) { a.value = YR0; b.value = YR1; }
   const f = y => (y - SLMIN) / Math.max(1, NOW_Y - SLMIN), fill = yc.querySelector(".fill"); fill.style.left = `calc(9px + (100% - 18px)*${f(YR0)})`; fill.style.width = `calc((100% - 18px)*${f(YR1) - f(YR0)})`;
   { const [h0, h1] = yc.querySelectorAll(".yrh"), [e0, e1] = yc.querySelectorAll(".yre"), near = Math.max(.08, 40 / Math.max(1, (yc.querySelector(".dual") || {}).clientWidth || 500));   // a year label is about 36px wide: closer than that to an end, the end's own year steps aside
     const put = (h, y) => { h.setText(String(y)); h.style.left = `calc(5px + (100% - 10px)*${f(y)})`; };
@@ -7177,7 +7177,10 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     let t_ = 0; const upd = commit => { if (winSpan()) { if (BYMT) { MTWIN = "all"; save("iv-mtwin", "all"); } else { CTWIN = "all"; save("iv-ctwin", "all"); } syncMT(); } let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; SY0 = YR0; SY1 = YR1; syncYr();
       if (view === "sense" && typeof senseSteps === "function") { senseStop(); senseT = null; senseTrail = []; SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; $("#tldate").textContent = "All time"; }
       win.clearTimeout(t_); if (commit) { save("iv-yr0", YR0); save("iv-yr1", YR1); } t_ = win.setTimeout(() => { relayout(false); if (typeof syncTB === "function") syncTB(); }, commit ? 0 : 90); };
-    a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true); }
+    a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true);
+    /* Reset (0.8.203, Nick: "a little confusing to look at how to accomplish that"): every year again, and Recent back to All (upd lets go of the window). Shows only when something's narrowed */
+    const rs = yc.createEl("button", { cls: "chip yrreset", text: "Reset", attr: { type: "button", id: "yrreset", "aria-label": "Show every year again, and set Recent back to All" } }); rs.hidden = true;
+    rs.onclick = e => { e.stopPropagation(); a.value = String(SLMIN); b.value = String(NOW_Y); upd(true); }; }
   // Obsidian and Ideaverse: the forces, live (drag a slider and the graph moves as you go)
   { const gc = $("#laygrp").createDiv({ cls: "postctl gfctl", attr: { id: "gfctl" } }); gc.hidden = true;
     gc.createDiv({ cls: "phint", text: "Forces. Drag a slider and watch the notes move." });
@@ -7370,7 +7373,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   const fcols = FI.p.createDiv({ cls: "fcols" });
   // Years: folds away like the other lists; its header shows the years kept, folded or not
   { const yc_ = fcols.createDiv({ cls: "fcol ycol", attr: { id: "ycol" } }), hd = yc_.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Years" }); const ac = hd.createSpan({ cls: "facts yfacts" });
-    const ctl = $("#yrctl"); const v_ = $("#yrv0"); if (v_) ac.appendChild(v_); const pr = ctl.querySelector(":scope > .prow"); if (pr) pr.remove(); yc_.appendChild(ctl);
+    const ctl = $("#yrctl"); const v_ = $("#yrv0"); if (v_) ac.appendChild(v_); { const r_ = $("#yrreset"); if (r_) ac.appendChild(r_); } const pr = ctl.querySelector(":scope > .prow"); if (pr) pr.remove(); yc_.appendChild(ctl);
     // on a computer the slider sits in the header row, between "Years" and the years kept, so the section takes less room
     if (!Platform.isMobile) { const rg = ctl.querySelector(".prng"); if (rg) { hd.insertBefore(rg, ac); hd.classList.add("yhd"); } } }
   { const fc = fcols.createDiv({ cls: "fcol" }), hd = fc.createDiv({ cls: "fhd" }); hd.createSpan({ cls: "pt", text: "Folders" }); const ac = hd.createSpan({ cls: "facts" }); ac.appendChild($("#foldall")); ac.appendChild($("#foldnone"));
