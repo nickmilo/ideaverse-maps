@@ -5218,6 +5218,7 @@ function drawHudLinks(){ HUDBOX = null; if (view === "cockpit") { hudPv(-1); ret
 /* ---------- Recents (0.8.237, Nick: "my absolute favorite base… the recent space"; rethought so Links stays as it was): the notes changed most lately,
    newest first, behind a tab on the map's right edge, above the Links tab. It opens a small panel (a hairline border, its own scroll): each row its emoji
    (a mini switch, on by default), its name and its age. Click a row to open it as the primary note (⌘ a new orb, Shift links it in); the panel stays open. */
+let TABCLR = pref("iv-tabclr", true) !== false;   /* the tucked HUD tabs follow the HUD's opacity (0.8.304; a Display switch since 0.8.309) */
 let RECN = Math.max(5, Math.min(50, +pref("iv-recn", 30) || 30)), RECHV = -1, RECHVEL = null;   /* how many Recents show (Display, 5–50, 0.8.244); the row under the pointer, for ⌘ previews */
 let RECW = +pref("iv-recw", 0) || 0, RECLAY = null, RECLT = 0;   /* RECLAY: lays the rows on the curve and draws the shape; re-run live while the edge is dragged (0.8.260) */   /* Recents width, dragged at its left edge (0.8.257, Nick); 0 = as wide as its names */
 const RECEFRONT = true, RECLEFT = true; let RECAGE = pref("iv-recage", true) !== false, RECOP = (() => { const v = +pref("iv-recop", 90); return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 90; })();   /* down to 0% (0.8.283, Nick) */   /* RECOP: Recents' background opacity, % (Display, 0.8.269) */   /* RECAGE: show how long ago each was changed (Display, 0.8.266) */   /* emoji first, titles left-aligned: the way Recents reads now (0.8.263, Nick); the switches are gone */   /* RECLEFT: titles left-aligned, so the emojis line up (still on the curve) (0.8.255, Nick) */   /* Recents: the emoji before the name and the age at the end (0.8.246, Nick, to try) */
@@ -5258,7 +5259,7 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
   /* two panels on one arc (0.8.287, Nick): Recents, and Links below it in its own slot; either tucks to its own tab and the other stays where it is */
   const recShow = on && recIsOpen(), lkShow = lkOn() && !HUDCOL, both = recShow && lkShow;
   RECTAB.hidden = !on || recIsOpen(); RECEL.hidden = !recShow; LKEL.hidden = !lkShow;
-  for (const P of [RECTAB, RECEL, LKEL]) P.setCssProps({ "--hr": R_ + "px" }); root.setCssProps({ "--rcop": RECOP + "%" });   /* the HUD tabs share the panels' opacity (0.8.304) */
+  for (const P of [RECTAB, RECEL, LKEL]) P.setCssProps({ "--hr": R_ + "px" }); root.setCssProps({ "--rcop": RECOP + "%" }); root.classList.toggle("tabclr", TABCLR);   /* the HUD tabs share the panels' opacity (0.8.304), when See-through tabs is on */
   /* where they sit: Recents alone near the top (as Nick liked it); with Links, a little lower, out of the corner. Links always in the same slot, just under where Recents
      ends when it's showing 7 notes, so it never moves when Recents tucks away (0.8.286/0.8.287, Nick: "the links are always going to be a little bit lower on the right-hand side") */
   const Hm = $("#main").clientHeight || 800, rTop = both ? Math.max(44, Math.round(Hm * .075)) : 50, lTop = Math.max(44, Math.round(Hm * .075)) + (RECPH || 190) + 4;
@@ -7584,7 +7585,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       c_.onchange = () => { KNAMES = c_.checked; save("iv-knames", KNAMES); draw(); }; }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "kandinsky"; }; }
   /* a "?" after a menu switch: hover (or tap) it for a line or two on what the switch does (0.8.302, Nick). The card is the map's own, never a system tooltip */
-let QHC = null;
+let QHC = null, RELHELP = "";   /* RELHELP: the relevance score, explained (shared by the Starship and Display) */
 function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh", text: "?" }); const show = () => { if (!QHC) QHC = $("#main").createDiv({ cls: "ivm-qhcard" }); QHC.empty(); for (const p_ of String(text).split("\n\n")) QHC.createEl("p", { text: p_ });
     const r = q.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); QHC.hidden = false; const w = QHC.offsetWidth, h = QHC.offsetHeight; let x = r.right - m.left + 8, y = r.top - m.top - 6; if (x + w > m.width - 8) x = r.left - m.left - w - 8; if (y + h > m.height - 8) y = m.height - h - 8;
     QHC.setCssProps({ "--qx": Math.max(8, x) + "px", "--qy": Math.max(8, y) + "px" }); };
@@ -7620,11 +7621,11 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
         card: "A card along the bottom with the note you're at: its level, score and what to do next.", mirror: "A rear-view mirror in place of the note card: what's behind you.", frame: "The canopy's struts, as if you're sitting in the cockpit.",
         names: "Galaxy names, out in the sky.", gas: "Each folder's galaxy glows in its own color.", gasp: "A stronger, wider folder glow.", orb: "A slow dashed orbit turning round each big hub.", lines: "Faint lines between the big hubs (Level 4 and up).",
         twinkle: "Now and then a star twinkles.", turn: "The galaxies slowly turn.", haze: "A soft haze of starlight behind everything.", emo: "Each note's emoji in place of its dot." };
-      const grp = (title, keys) => { fa.createDiv({ cls: "ckmh", text: title }); const grid = fa.createDiv({ cls: "ckxgrid" });
+      RELHELP = QH.rel; const grp = (title, keys) => { fa.createDiv({ cls: "ckmh", text: title }); const grid = fa.createDiv({ cls: "ckxgrid" });
         for (const k_ of keys) { const lab = k_ === "frame" ? "Cockpit frame" : (CKX_LABELS.find(q => q[0] === k_) || [k_, k_])[1], l_ = grid.createEl("label", { cls: "mini lcemo" }), c_ = l_.createEl("input", { type: "checkbox" });
           c_.checked = k_ === "frame" ? CKFRAME : !!CKX[k_]; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: lab }); qHelp(l_, QH[k_]);
           c_.onchange = () => { if (k_ === "frame") { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); return; } CKX = { ...CKX, [k_]: c_.checked }; save("iv-ckx", CKX); if (k_ === "turn") CKSF.ver = -1; if (k_ === "emo" && c_.checked && !EMOI) void loadEmo(); }; } };
-      grp("HUD artifacts", ["rings", "read", "rel", "posts", "dial", "mini", "card", "mirror", "frame"]);
+      grp("HUD artifacts", ["rings", "read", "posts", "dial", "mini", "card", "mirror", "frame"]);   /* Relevance scores follows Display → HUD links now (0.8.309) */
       grp("Cosmotic elements", ["names", "gas", "gasp", "orb", "lines", "twinkle", "turn", "haze", "emo"]); }
     /* the game, near the bottom (0.8.302, Nick: "too prioritized right now") */
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKG; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "True or false (a game: right answers jump you there)" }); qHelp(l_, "A quiz about the notes around you. Answer right and the ship jumps to the note in question.");
@@ -7944,6 +7945,25 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
   // Sync uses Obsidian's own link icon
   const fb = $("#follownote"); fb.empty(); setIcon(fb, "link"); { const sv = fb.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } fb.classList.add("tbb", "tbi"); fb.setAttribute("aria-label", "Sync active note with Obsidian editor"); fb.title = "Sync active note with Obsidian editor"; left.insertBefore(fb, fo);   // Sync (the link) sits left of Focus
   // Display: just its sliders icon, right after Focus (Nick, 0.7.42)
+  /* Display, grouped (0.8.309, Nick: "consider how to reorder that menu, like we recently did for Starfield's"): mini headers over Link colors, HUD, Editors and Wayfinding,
+     the same mini switches, a "?" on each. Built where each switch lives, then moved into place once the menu is whole */
+  win.setTimeout(() => { try { const P = DI.p, kids = [...P.children], find = t => kids.find(c => (c.innerText || c.textContent || "").trim().startsWith(t)), H = t => { const d = doc.createElement("div"); d.className = "dmh"; d.textContent = t; return d; };
+      const tcl = doc.createElement("label"); tcl.className = "mini lcemo ctrrk"; { const c_ = tcl.createEl("input", { type: "checkbox" }); c_.checked = TABCLR; tcl.createEl("i", { cls: "sw" }); tcl.createSpan({ text: "See-through tabs" });
+        c_.onchange = () => { TABCLR = c_.checked; save("iv-tabclr", TABCLR); root.classList.toggle("tabclr", TABCLR); }; }
+      const op = find("Opacity"); if (op) { const l_ = op.querySelector(".eol"); if (l_) l_.setText("HUD opacity"); }
+      const help = { "Show all links": "Every link on the map, drawn faintly.", "Starfield link colors": "The map's link colors in Starfield's palette, with links below in red.", "Collection links (coral)": "The picked note's collections drawn as coral lines.",
+        "Color all links by Idea Emergence": "Every link in your notes colored by how its note relates: up gold, related purple, above blue, below green, other properties coral.",
+        "HUD links": "The picked note's links in a panel on the right.", "Show relevance scores": RELHELP || "How close each linked note is, 100 for the closest.", "Colored names": "Each link's name in its line's color.", "Group property links": "Links that come only from properties go under a header per property.",
+        "Automatically see mini-preview on hover": "Hovering a row shows its note's preview without holding ⌘.", "Recents": "The notes you changed most lately, in a panel on the right.", "Emojis": "Each note's emoji before its name.", "Show time since modified": "How long ago each note changed.",
+        "See-through tabs": "The tucked Recents and Links tabs follow the HUD's opacity, down to just an outline.", "Show orb tab names": "Each orb tab's note name under it.", "Contrails": "Your jumps from note to note, as fading vapor trails.",
+        "Show the way home": "From the note you're on, the fewest links back to Home (or a note you choose).", "Show area and projects selector": "A panel to pick areas and projects; each one picked lights up its notes." };
+      const order = [find("Show all links"), H("Link colors"), find("Starfield link colors"), find("Collection links"), find("Color all links by Idea Emergence"),
+        H("HUD"), find("Recents"), find("Show30") || kids.find(c => c.querySelector && c.querySelector('input[type="range"][min="5"]')), find("Emojis"), find("Show time since modified"), find("HUD links"), find("Show relevance scores"), find("Colored names"), find("Group property links"), find("Automatically see mini-preview"), op, tcl,
+        H("Editors"), find("Editor theme"), find("Editor mode"), find("Editor opacity"), find("Editor text size"), find("Note mini-previews"), find("Show orb tab names"),
+        H("Wayfinding"), find("Contrails"), kids.find(c => c.querySelector && c.querySelector(".seg") && /Ship/.test(c.innerText || "")), find("Show the way home"), kids.find(c => c.classList.contains("bacto")), kids.find(c => c.classList.contains("bcfind")), find("Show area and projects selector")].filter(Boolean);
+      const anchor = kids.find(c => c.classList.contains("thsec")) || null; for (const el of order) P.insertBefore(el, anchor);
+      for (const el of order) { if (el.tagName !== "LABEL" || el.querySelector(".qh")) continue; const t = (el.innerText || el.textContent || "").trim(), k_ = Object.keys(help).find(h => t.startsWith(h)); if (k_) qHelp(el, help[k_]); }
+      const sync_ = () => { tcl.hidden = !RECON && !HUDL; }; sync_(); } catch (_) { /* the menu stays as built */ } }, 0);
   { const t_ = DI.b.querySelector(".tbl2"); if (t_) t_.remove(); DI.b.classList.add("tbi"); DI.b.setAttribute("aria-label", "Display"); DI.b.title = "Display"; left.appendChild(DI.w); }
   // Arrange (how the notes are placed, with its current choice) sits just before Sync, by the map tabs
   { const aw = $("#arrms"); if (aw) left.insertBefore(aw, fb); }
