@@ -5517,6 +5517,9 @@ function makeEd(kind){
   const nav = kind !== "right" ? [["arrow-left", "Back", -1], ["arrow-right", "Forward", 1]].map(([ic, lb, d_]) => { const b_ = doc.createElement("button"); b_.className = "cardbtn cardnav"; b_.type = "button"; b_.setAttribute("aria-label", lb); setIcon(b_, ic); hd.insertBefore(b_, t); b_.onclick = e => { e.stopPropagation(); histGo(d_); }; return b_; }) : null;
   const pb = kind !== "right" ? hd.createEl("button", { cls: "cardbtn cardpin", attr: { type: "button", "aria-label": "Pin this note", title: "Pin this note" } }) : null;
   if (pb) { setIcon(pb, "pin"); hd.insertBefore(pb, cb || ob); pb.onclick = () => tabPin(); }
+  /* Focus, right after the pin (0.8.272, Nick): the same as the toolbar's Focus on active note; lit while this note is focused */
+  const fb_ = kind === "left" ? hd.createEl("button", { cls: "cardbtn cardfoc", attr: { type: "button", "aria-description": "Focus on this note" } }) : null;
+  if (fb_) { setIcon(fb_, "locate-fixed"); hd.insertBefore(fb_, cb || ob); fb_.onclick = e => { e.stopPropagation(); const i = o.path != null ? PIDX.get(o.path) : null; if (i == null) return; focusArmed = false; setFocus(focus === i ? -1 : i); }; }
   const tab = side ? $("#main").createEl("button", { cls: "dtab edtab edtab-" + kind, attr: { "aria-label": "Show the editor", title: "Show the editor" } }) : null; if (tab) tab.hidden = true;
   const o = { kind, el, nav, strip, drop, open_: "", sub_: "", ed: null, path: null, key: "", pb, col: side && pref("iv-edcol-" + kind, false) === true,
     tabSync(){ if (!tab) return; const on = o.col && !!o.path; tab.hidden = !on; if (!on) return; const nm = t.textContent || "";
@@ -5711,7 +5714,7 @@ function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j ===
   if (was) { if (TABS[TCUR]) tabGo(TCUR); else EDS.left.close(); } syncOrbs(); }
 const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; win.setTimeout(() => { if (!dead) syncOrbs(); }, 0);   // saved tabs show from the start
 let orbKey = "", orbDragged = false;
-function syncOrbs(){ newTabSync(); for (const o of [EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
+function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".cardfoc"); if (fb) fb.setAttribute("aria-pressed", String(focus >= 0 && EDS.left.path != null && PIDX.get(EDS.left.path) === focus)); } for (const o of [EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
   const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); if (!on) { orbKey = ""; return; }
   const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
     TABS.forEach((t, j) => { const i = PIDX.get(t.path), nm = !t.path ? "New tab" : i != null ? N[i].title : t.path.replace(/^.*\//, "").replace(/\.md$/, ""), lv = i != null ? N[i].level : 1;

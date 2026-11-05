@@ -1757,3 +1757,5 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm .edtab-right{top:39%}
 .ivm .dtab.hudtab{top:66%}
 .ivm .dtab.rectab,.ivm .edtab-right,.ivm .dtab.hudtab{max-height:22%}
+/* the primary note's Focus button (0.8.272): lit while its note is focused */
+.ivm-card .cardhd .cardfoc[aria-pressed="true"]{color:var(--interactive-accent);border-color:var(--interactive-accent)}
