@@ -31,7 +31,7 @@ export function registerLinkColors(plugin) {
   const FLIP = { upp: "down", up: "down", down: "up", rel: "rel", prop: "prop" };
   const markBL = (bl, path, m) => { const L = bl && bl.backlinkDom && bl.backlinkDom.resultDomLookup; if (!L || !path) return;
     for (const [f, rd] of L) { const el = rd && rd.selfEl && (rd.selfEl.querySelector(".tree-item-inner") || rd.selfEl); if (!el || !f || !f.path) continue;
-      const kd = m.linkKind(path, f.path) || FLIP[m.linkKind(f.path, path)] || "";
+      let kd = m.linkKind(path, f.path); if (!kd) { const rk = m.linkKind(f.path, path); kd = rk === "prop" && m.vertKind ? m.vertKind(path, f.path) : FLIP[rk] || ""; }   /* another note's property pointing here (a book's "by") isn't one of this note's properties: above or below, by level (0.8.295, Nick) */
       if ((el.dataset.ivk || "") !== kd) { if (kd) el.dataset.ivk = kd; else delete el.dataset.ivk; } } };
   const run = () => { const yes = on(); document.body.classList.toggle("ivm-linkcolors", yes); document.body.classList.toggle("ivm-sflinks", plugin.store.get("iv-sflinks") === true);   /* the map's Starfield link colors switch: below red everywhere (0.8.294, Nick) */ if (!yes) return; const m = mapApi(); if (!m) return;
     app.workspace.iterateAllLeaves(l => { const v = l.view; const ty = v && v.getViewType && v.getViewType();
