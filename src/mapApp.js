@@ -103,7 +103,7 @@ const emoAny = () => Object.keys(EMON).some(k_ => EMON[k_] === true);
 // and only a note with none falls back to the base column (Settings → Emoji labels)
 let EMOF = (() => { const o = pref("iv-emofold", null); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; })();
 let EMOI = null;   // note index → its emoji
-let VISV = 0;   // bumps whenever what shows changes (Recent caches by it)
+let VISV = 0, RECCK = false;   // bumps whenever what shows changes (Recent caches by it)
 const emoBuild = () => { const has = Object.keys(EMOF).length > 0; if (!has && !EMO) { EMOI = null; return; }
   EMOI = N.map(d => { if (has) { let q = d.path; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (EMOF[q]) return EMOF[q]; } } return EMO ? EMO.get(d.path) : undefined; }); };
 emoBuild();
@@ -1125,7 +1125,7 @@ function morph(animate, cam){
   RAF(step);
 }
 let camBusy = 0;
-function setView(v){ win.setTimeout(() => { ckView(); if (typeof sfSwSync === "function") sfSwSync(); if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
+function setView(v){ if (v === "cockpit" && view !== "cockpit") RECCK = false; win.setTimeout(() => { ckView(); if (typeof sfSwSync === "function") sfSwSync(); try { RECKEY = ""; recSync(); } catch (_) { /* not built yet */ } if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
@@ -5205,10 +5205,10 @@ function recList(){ const key = RECV + ":" + VISV + ":" + RECN; if (RECC.v === k
   L.sort((a, b) => N[b].mt - N[a].mt); RECC = { v: key, list: L.slice(0, RECN) }; return RECC.list; }
 const recEmoji = i => { if (!RECEMO || !EMOI || !EMOI[i]) return ""; return /^\p{Extended_Pictographic}/u.test(N[i].title) ? "" : EMOI[i]; };
 function recBuild(){ if (RECEL) return; const st = e => e.stopPropagation();
-  RECTAB = $("#main").createEl("button", { cls: "dtab rectab", attr: { type: "button" } }); RECTAB.hidden = true; RECTAB.addEventListener("pointerdown", st); RECTAB.onclick = e => { e.stopPropagation(); RECOPEN = !RECOPEN; save("iv-recopen", RECOPEN); RECKEY = ""; recSync(); };
+  RECTAB = $("#main").createEl("button", { cls: "dtab rectab", attr: { type: "button" } }); RECTAB.hidden = true; RECTAB.addEventListener("pointerdown", st); RECTAB.onclick = e => { e.stopPropagation(); recSetOpen(!recIsOpen()); RECKEY = ""; recSync(); };
   RECEL = $("#main").createDiv({ cls: "ivm-recents" }); RECEL.hidden = true; for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) RECEL.addEventListener(ty, st);
   /* a click anywhere on Recents that isn't a note, the switch or the edge grip tucks it away, as a click on an editor's header does (0.8.258, Nick) */
-  RECEL.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest(".rcr, label, input, button, .rcgrip")) return; RECOPEN = false; save("iv-recopen", false); RECKEY = ""; recSync(); }, true); }
+  RECEL.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest(".rcr, label, input, button, .rcgrip")) return; recSetOpen(false); RECKEY = ""; recSync(); }, true); }
 /* the left-edge grip: drag to widen or narrow Recents (0.8.257, Nick); double-click for its own width again */
 function recGrip(){ const gr = RECEL.createDiv({ cls: "rcgrip" }); let d_ = null;
   gr.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); gr.setPointerCapture(e.pointerId); d_ = { x: e.clientX, w: RECEL.getBoundingClientRect().width }; RECEL.classList.add("resizing"); });
@@ -5218,16 +5218,18 @@ function recGrip(){ const gr = RECEL.createDiv({ cls: "rcgrip" }); let d_ = null
   gr.addEventListener("dblclick", e => { e.stopPropagation(); RECW = 0; save("iv-recw", 0); RECEL.classList.remove("sized"); RECKEY = ""; recSync(); }); }
 function recPv(){ if (RECHV < 0 || !RECHVEL || !(CMDK || HUDPV)) { if (!(HUDHOV >= 0) && !(CMDK && hover >= 0)) hudPv(-1); return; } const c = cv.getBoundingClientRect(), r = RECHVEL.getBoundingClientRect(), pe = RECEL.getBoundingClientRect();
   hudPv(RECHV, pe.left - c.left - 6, r.top + r.height / 2 - c.top, true); }
-function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPhone() && edOn(); let R_ = 0; try { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); R_ = Math.max(0, Math.round(mr.right - c.right + sideW())); } catch (_) { /* not laid out yet */ }
-  RECTAB.hidden = !on || RECOPEN; RECEL.hidden = !on || !RECOPEN; RECTAB.setCssProps({ "--hr": R_ + "px" }); RECEL.setCssProps({ "--hr": R_ + "px" }); if (!on) return;
-  const L = recList(); if (!RECOPEN) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); return; }
+/* in the Starship it's its own: always starts tucked away, and opening it there doesn't change the map's (0.8.273, Nick) */
+const recIsOpen = () => view === "cockpit" ? RECCK : RECOPEN, recSetOpen = v => { if (view === "cockpit") RECCK = v; else { RECOPEN = v; save("iv-recopen", v); } };
+function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "cockpit" || edOn()); let R_ = 0; try { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); R_ = Math.max(0, Math.round(mr.right - c.right + sideW())); } catch (_) { /* not laid out yet */ }
+  RECTAB.hidden = !on || recIsOpen(); RECEL.hidden = !on || !recIsOpen(); RECTAB.setCssProps({ "--hr": R_ + "px" }); RECEL.setCssProps({ "--hr": R_ + "px" }); if (!on) return;
+  const L = recList(); if (!recIsOpen()) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); return; }
   RECEL.setCssProps({ "--rcop": RECOP + "%" }); RECEL.classList.toggle("sized", RECW > 0); RECEL.classList.toggle("narrow", RECW > 0 && RECW < 250);   /* narrow: the Emojis switch keeps only its switch */ RECEL.setCssProps({ "--rcw": (RECW || 300) + "px" });
   const key = L.join(",") + "|" + RECW + "|" + RECAGE + RECEMO + RECEFRONT + RECLEFT + "|" + (EMOI ? 1 : 0) + "|" + Math.floor(Date.now() / 60000); if (key === RECKEY) return; RECKEY = key; RECEL.empty();
   const hd = RECEL.createDiv({ cls: "rch cardhd-tuck" }); hd.createSpan({ cls: "rct", text: `◷  RECENTS · ${L.length}` });
   /* tucks away as the editors do (0.8.242, Nick: "we already have specs"): a click on its header (not on the switch) or on ›, and it waits as a tab on the edge */
-  hd.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest("label, input, button")) return; e.stopPropagation(); RECOPEN = false; save("iv-recopen", false); RECKEY = ""; recSync(); });
+  hd.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest("label, input, button")) return; e.stopPropagation(); recSetOpen(false); RECKEY = ""; recSync(); });
   /* the Emojis switch lives in Display now (0.8.270, Nick) */
-  const x = hd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Recents away" } }); x.onclick = e => { e.stopPropagation(); RECOPEN = false; save("iv-recopen", false); RECKEY = ""; recSync(); };
+  const x = hd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Recents away" } }); x.onclick = e => { e.stopPropagation(); recSetOpen(false); RECKEY = ""; recSync(); };
   const box = RECEL.createDiv({ cls: "rcl" + (RECLEFT ? " rcleft" : "") }); recGrip();
   /* laid out as Links is (0.8.239, Nick): 11px names on 14.5px rows, right-aligned, the age where Links shows its score, the emoji (or dot) at the end,
      and the rows bowed along the same gentle arc, tilting a little toward the top and bottom */
