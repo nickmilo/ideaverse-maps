@@ -5249,7 +5249,7 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
     const sMax = Math.max(sh(0), sh(h)), m = 4, inset = Math.min(14, h * .04), T = m + inset, B = h - m - inset, yy = []; for (let y = T; y <= B; y += 6) yy.push(y); if (yy[yy.length - 1] !== B) yy.push(B);
     /* 0.8.248 (Nick's second drawing): a curved band like ")". The left edge bends well along the rows' arc (its ends further out than its middle), the right edge bows out the same way,
        and the right side runs taller than the left */
-    const s3 = y => { const u = Math.max(-1, Math.min(1, (y - h / 2) / (h * .62))); return 90 * (1 - Math.sqrt(1 - u * u)); }, s3Max = Math.max(s3(0), s3(h));
+    const s3 = y => { const u = Math.max(-1, Math.min(1, (y - h / 2) / (Math.max(h, 520) * .62)));   /* the bend is set for a full panel, so a short list (5 notes) curves gently instead of sharply (0.8.268) */ return 90 * (1 - Math.sqrt(1 - u * u)); }, s3Max = Math.max(s3(0), s3(h));
     /* the rows ride the same bend as the panel's edges (0.8.252): each row shifts by the band's own curve and tilts with it, so nothing floats in empty corners */
     const rowsAll = [...box.querySelectorAll(".rcr")]; for (const rr of rowsAll) { rr.setCssProps({ "--rx": "0px", "--rr": "0rad" }); }
     for (const rr of rowsAll) { const q = rr.getBoundingClientRect(); if (!q.height) continue; const cy_ = q.top + q.height / 2 - pr.top, dy = 4, sl = (s3(cy_ + dy) - s3(cy_ - dy)) / (2 * dy) * .6;
