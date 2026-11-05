@@ -103,7 +103,7 @@ const emoAny = () => Object.keys(EMON).some(k_ => EMON[k_] === true);
 // and only a note with none falls back to the base column (Settings → Emoji labels)
 let EMOF = (() => { const o = pref("iv-emofold", null); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; })();
 let EMOI = null;   // note index → its emoji
-let VISV = 0, RECCK = false;   // bumps whenever what shows changes (Recent caches by it)
+let VISV = 0, RECCK = false, RECBOT = 0;   /* RECBOT: where the open Recents panel ends, in map pixels, when it shares the edge with Links (0 otherwise) */   // bumps whenever what shows changes (Recent caches by it)
 const emoBuild = () => { const has = Object.keys(EMOF).length > 0; if (!has && !EMO) { EMOI = null; return; }
   EMOI = N.map(d => { if (has) { let q = d.path; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (EMOF[q]) return EMOF[q]; } } return EMO ? EMO.get(d.path) : undefined; }); };
 emoBuild();
@@ -5172,9 +5172,9 @@ function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && RADJ) return HUDC; 
 function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hudPv(-1); return; } if (!HUDL || sel < 0 || !vis[sel] || isPhone()) { hudTab(0); hudPv(-1); return; } const D_ = hudData(sel), n_ = D_.list.length; hudTab(n_); if (!n_ || HUDCOL) { hudPv(-1); return; }
   if (HUDC.offFor !== sel) { HUDC.offFor = sel; HUDOFF = 0; }
   let R_ = W - sideW(); try { if (EDS && !EDS.right.el.hidden && !EDS.right.col) R_ = Math.min(R_, edRect("right").x - 8); } catch (_) { /* no editors */ }
-  const top = 74, bot = H - 120, lh = 14.5, cap = Math.max(4, Math.min(n_, Math.floor((bot - top) / lh) - 1)), off = HUDOFF = Math.max(0, Math.min(n_ - cap, Math.round(HUDOFF))), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* the wheel scrolls it (0.8.144) */ cy = (top + bot) / 2, Ry = Math.max(300, (bot - top) * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))));
+  const top = RECBOT > 0 ? Math.max(74, RECBOT + 34) : 74, bot = H - 120, lh = 14.5, cap = Math.max(4, Math.min(n_, Math.floor((bot - top) / lh) - 1)), off = HUDOFF = Math.max(0, Math.min(n_ - cap, Math.round(HUDOFF))), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* the wheel scrolls it (0.8.144) */ cy = (top + bot) / 2, Ry = Math.max(300, (bot - top) * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))));
   ctx.save(); ctx.font = `500 11px ${css.body}`; ctx.textBaseline = "middle"; ctx.textAlign = "right"; const ink = css.ink || "#ddd", SL = (() => { try { return SPACELINK(); } catch (_) { return {}; } })();
-  const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [R_ - 30 - 60 * (1 - Math.sqrt(Math.max(0, 1 - u * u))), y, Math.asin(Math.max(-1, Math.min(1, u))) * .25]; };
+  const at = r => { const y = RECBOT > 0 ? top + 14 + r * lh : cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry;   /* under Recents: Links hangs from just below it (0.8.275) */ return [R_ - 30 - 60 * (1 - Math.sqrt(Math.max(0, 1 - u * u))), y, Math.asin(Math.max(-1, Math.min(1, u))) * .25]; };
   const [hx, hy] = at(-1.3); ctx.globalAlpha = .6; ctx.font = `600 9.5px ${css.body}`; ctx.fillStyle = css.accent || "#7dffb0"; const htx = (n_ > cap ? `LINKS · ${off + 1}–${off + cap} of ${n_}` : `LINKS · ${n_}`) + "  ›"; ctx.fillText(htx, hx, hy); HUDH.push([hx - ctx.measureText(htx).width - 4, hy - 9, ctx.measureText(htx).width + 8, 18, -5]);   /* the header tucks the list away */ ctx.font = `500 11px ${css.body}`;
   for (let r = 0; r < rows; r++) { const [x, y, tl] = at(r), more = r === cap, j = more ? -1 : D_.list[off + r], hv = j >= 0 && j === HUDHOV;
     ctx.save(); ctx.translate(x, y); ctx.rotate(tl * (hv ? 0 : 1)); if (hv) ctx.scale(1.13, 1.13);
@@ -5221,7 +5221,12 @@ function recPv(){ if (RECHV < 0 || !RECHVEL || !(CMDK || HUDPV)) { if (!(HUDHOV 
 /* in the Starship it's its own: always starts tucked away, and opening it there doesn't change the map's (0.8.273, Nick) */
 const recIsOpen = () => view === "cockpit" ? RECCK : RECOPEN, recSetOpen = v => { if (view === "cockpit") RECCK = v; else { RECOPEN = v; save("iv-recopen", v); } };
 function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "cockpit" || edOn()); let R_ = 0; try { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); R_ = Math.max(0, Math.round(mr.right - c.right + sideW())); } catch (_) { /* not laid out yet */ }
-  RECTAB.hidden = !on || recIsOpen(); RECEL.hidden = !on || !recIsOpen(); RECTAB.setCssProps({ "--hr": R_ + "px" }); RECEL.setCssProps({ "--hr": R_ + "px" }); if (!on) return;
+  RECTAB.hidden = !on || recIsOpen(); RECEL.hidden = !on || !recIsOpen(); RECTAB.setCssProps({ "--hr": R_ + "px" }); RECEL.setCssProps({ "--hr": R_ + "px" });
+  /* sharing the right edge with Links (0.8.275, Nick): Recents rises to the top and shows 7 (the rest scroll), and Links hangs just below it, one column on the edge */
+  let paired = false; try { paired = on && recIsOpen() && view !== "cockpit" && HUDL && !HUDCOL && sel >= 0 && vis[sel] && hudData(sel).list.length > 0; } catch (_) { paired = false; }
+  if (RECEL.classList.contains("paired") !== paired) { RECEL.classList.toggle("paired", paired); if (RECLAY) win.requestAnimationFrame(() => { if (RECLAY) RECLAY(); }); }
+  if (!paired && RECBOT) { RECBOT = 0; draw(); }
+  if (!on) return;
   const L = recList(); if (!recIsOpen()) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); return; }
   RECEL.setCssProps({ "--rcop": RECOP + "%" }); RECEL.classList.toggle("sized", RECW > 0); RECEL.classList.toggle("narrow", RECW > 0 && RECW < 250);   /* narrow: the Emojis switch keeps only its switch */ RECEL.setCssProps({ "--rcw": (RECW || 300) + "px" });
   const key = L.join(",") + "|" + RECW + "|" + RECAGE + RECEMO + RECEFRONT + RECLEFT + "|" + (EMOI ? 1 : 0) + "|" + Math.floor(Date.now() / 60000); if (key === RECKEY) return; RECKEY = key; RECEL.empty();
@@ -5231,6 +5236,7 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
   /* the Emojis switch lives in Display now (0.8.270, Nick) */
   const x = hd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Recents away" } }); x.onclick = e => { e.stopPropagation(); recSetOpen(false); RECKEY = ""; recSync(); };
   const box = RECEL.createDiv({ cls: "rcl" + (RECLEFT ? " rcleft" : "") }); recGrip();
+  { let sr = 0; box.addEventListener("scroll", () => { if (!sr) sr = win.requestAnimationFrame(() => { sr = 0; if (RECLAY) RECLAY(); }); }, { passive: true }); }   /* scrolled rows re-take the curve */
   /* laid out as Links is (0.8.239, Nick): 11px names on 14.5px rows, right-aligned, the age where Links shows its score, the emoji (or dot) at the end,
      and the rows bowed along the same gentle arc, tilting a little toward the top and bottom */
   const LH = 17.5, nR = L.length, RY = Math.max(420, nR * LH * .9),   /* the arc opens up as the list grows, so more notes never crowd it (0.8.247) */ mid = (Math.min(nR, 24) - 1) / 2;   /* gentler (0.8.241, Nick: "a little bit less curve, not as tight"): Links' own radius rule, a little wider still */
@@ -5261,7 +5267,7 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
     const xl = y => base + (s3Max - s3(y)) * .6, xrr = y => w - m - s3(y) * .6 + 2,   /* the left edge bends exactly as the rows shift (0.8.261, Nick): the same gap to the emojis top, middle and bottom */ f = v => v.toFixed(1);
     /* top and bottom edges run parallel to the first and last rows (0.8.253, Nick: "the top and bottom curves don't match the top-most and bottom-most Recent note"):
        the top edge sits just above the title banner, at the first row's tilt; the bottom edge just under the last row, at its tilt. No corner brackets (Nick) */
-    const rrs = rowsAll.filter(rr => rr.getBoundingClientRect().height), ang = rr => parseFloat(win.getComputedStyle(rr).getPropertyValue("--rr")) || 0;
+    const rrs = rowsAll.filter(rr => { const q = rr.getBoundingClientRect(); return q.height && q.bottom > bxr.top + 2 && q.top < bxr.bottom - 2; })   /* only the rows in view (a scrolled list) set the edges */, ang = rr => parseFloat(win.getComputedStyle(rr).getPropertyValue("--rr")) || 0;
     const aT = rrs.length ? ang(rrs[0]) : 0, aB = rrs.length ? ang(rrs[rrs.length - 1]) : 0, hr = hd.getBoundingClientRect(), last = rrs.length ? rrs[rrs.length - 1].getBoundingClientRect() : null;
     void hr; hd.setCssProps({ "--rh": aT.toFixed(4) + "rad" });   /* tilt the banner first: it turns about its right end, so that end's top stays at offsetTop */
     const hx = hd.offsetLeft + hd.offsetWidth, hy = hd.offsetTop - 6, lx = last ? last.right - pr.left : w, ly = last ? (aB > 0 ? last.bottom - LH / 2 : last.top + LH / 2) - pr.top + 19 : h - m;   /* the row turns about its right end: that end's middle sits half a row from the box's lower (or upper) side */
@@ -5276,6 +5282,7 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
     let sv = RECEL.querySelector(":scope > svg.rcbg"); if (!sv) { sv = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); sv.setAttribute("class", "rcbg"); sv.setAttribute("aria-hidden", "true"); RECEL.prepend(sv); }
     sv.setAttribute("width", String(w)); sv.setAttribute("height", String(h)); sv.setAttribute("viewBox", `0 0 ${w} ${h}`); sv.empty(); const pa = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pa.setAttribute("d", d); sv.appendChild(pa);
     const pv = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pv.setAttribute("d", dv); pv.setAttribute("class", "rcdiv"); sv.appendChild(pv);
+    { const pb = RECEL.classList.contains("paired") ? Math.round(RECEL.getBoundingClientRect().bottom - cv.getBoundingClientRect().top) : 0; if (Math.abs(pb - RECBOT) > 1) { RECBOT = pb; draw(); } }
     hd.setCssProps({ "--rx": "0px", "--rpl": (xl(yTL) + 10).toFixed(1) + "px", "--rpr": Math.max(0, w - xrr(yTR) - 4).toFixed(1) + "px", "--rh": aT.toFixed(4) + "rad" });   /* the header spans the top edge, corner to corner (0.8.265, Nick): the title from just inside the left corner, › just inside the right */ }; win.requestAnimationFrame(RECLAY); }
 if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };

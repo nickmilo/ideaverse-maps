@@ -1782,3 +1782,8 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="prop"],body.ivm-linkcol
 .ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="up"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="up"] *{color:var(--up)}
 .ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="down"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="down"] *{color:var(--down)}
 .ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"] *{color:var(--prop)}
+/* Recents beside Links (0.8.275): it rises to the top, 7 rows show and the rest scroll; Links hangs below it */
+.ivm .ivm-recents.paired{top:12px}
+.ivm .ivm-recents.paired .rcl{max-height:calc(17.5px * 7 + 17px);overflow-y:auto;scrollbar-width:none}
+.ivm .ivm-recents.paired .rcl::-webkit-scrollbar{display:none}
+.ivm .ivm-recents .rcl .rcr{flex:none}
