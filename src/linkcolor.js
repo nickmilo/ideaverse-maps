@@ -33,7 +33,7 @@ export function registerLinkColors(plugin) {
     for (const [f, rd] of L) { const el = rd && rd.selfEl && (rd.selfEl.querySelector(".tree-item-inner") || rd.selfEl); if (!el || !f || !f.path) continue;
       const kd = m.linkKind(path, f.path) || FLIP[m.linkKind(f.path, path)] || "";
       if ((el.dataset.ivk || "") !== kd) { if (kd) el.dataset.ivk = kd; else delete el.dataset.ivk; } } };
-  const run = () => { const yes = on(); document.body.classList.toggle("ivm-linkcolors", yes); if (!yes) return; const m = mapApi(); if (!m) return;
+  const run = () => { const yes = on(); document.body.classList.toggle("ivm-linkcolors", yes); document.body.classList.toggle("ivm-sflinks", plugin.store.get("iv-sflinks") === true);   /* the map's Starfield link colors switch: below red everywhere (0.8.294, Nick) */ if (!yes) return; const m = mapApi(); if (!m) return;
     app.workspace.iterateAllLeaves(l => { const v = l.view; const ty = v && v.getViewType && v.getViewType();
       if (ty === "markdown" && v.file) { mark(v.containerEl, v.file.path, m); if (v.backlinks) markBL(v.backlinks, v.file.path, m); }   /* backlinks at the bottom of a note too */
       else if (ty === "backlink" && v.backlink) markBL(v.backlink, (v.file && v.file.path) || (v.backlink.file && v.backlink.file.path), m); }); };
@@ -43,6 +43,6 @@ export function registerLinkColors(plugin) {
     for (const ev of ["layout-change", "active-leaf-change", "file-open", "editor-change"]) plugin.registerEvent(app.workspace.on(ev, soon));
     plugin.registerEvent(app.metadataCache.on("changed", soon));
     const mo = new MutationObserver(() => { if (on()) soon(); }); mo.observe(app.workspace.containerEl, { childList: true, subtree: true }); plugin.register(() => mo.disconnect());
-    plugin.register(() => document.body.classList.remove("ivm-linkcolors"));
+    plugin.register(() => document.body.classList.remove("ivm-linkcolors", "ivm-sflinks"));
     soon(); });
 }

@@ -5504,10 +5504,11 @@ function edLook(el){ const SFE = CARDTH === "starfield", th = SFE ? "starfield" 
   const cs = win.getComputedStyle(root), g = nm => SFE ? SFPAL[nm] || "" : cs.getPropertyValue(nm).trim(), V = EDV(g("--bg"), g("--panel"), g("--ink"), g("--muted"), g("--line"), g("--accent"), g("--accent-soft"));
   el.setCssProps(Object.fromEntries(Object.keys(V).map(nm => [nm, m ? V[nm] : fm && bv[nm] ? bv[nm] : ""])));   /* a forced mode keeps Obsidian's own variables, re-read on the card */
   { const bs = parseFloat(win.getComputedStyle(doc.body).getPropertyValue("--font-text-size")) || 16; el.setCssProps({ "--font-text-size": CARDFS === 100 ? "" : (bs * CARDFS / 100).toFixed(1) + "px" }); }
-  el.setCssProps({ "--cardop": CARDOP + "%", "--upp": g("--upp"), "--rel": g("--rel"), "--up": g("--up"), "--down": g("--down"), "--prop": g("--prop") });
+  { const rs = SFLINKS ? win.getComputedStyle(root) : null, lc = nm => rs && rs.getPropertyValue(nm).trim() || g(nm);   /* Starfield link colors on: the editors use the map's link colors too, below red (0.8.294, Nick) */
+    el.setCssProps({ "--cardop": CARDOP + "%", "--upp": lc("--upp"), "--rel": lc("--rel"), "--up": lc("--up"), "--down": lc("--down"), "--prop": g("--prop") }); }
   /* the Starfield theme's editor (0.8.224, from Nick's Nebula mockup): pink for the chrome (no link line uses it), headings in nebula colors, H6 as small capitals,
      properties in a dark panel with mono labels, and every link in its relation's color (edTint) */
-  const sf = m && th === "starfield"; el.classList.toggle("sf-th", sf);
+  const sf = m && th === "starfield"; el.classList.toggle("sf-th", sf); if (sf && SFLINKS) { const rs = win.getComputedStyle(root); for (const nm of ["--upp", "--rel", "--up", "--down"]) { const v_ = rs.getPropertyValue(nm).trim(); if (v_) el.setCssProps({ [nm]: v_ }); } }
   const H = { "--h1-color": "#fff4ec", "--inline-title-color": "#fff4ec", "--h2-color": "#ff8fc0", "--h3-color": "#c9b8ff", "--h4-color": "#ffd9ea", "--h5-color": "#c9b8ff", "--h6-color": "#8fc3ff",
     "--blockquote-border-color": "#ff8fc0", "--blockquote-color": "#ffd9ea", "--tag-color": "#ffa8cf", "--tag-background": "rgba(255,122,182,.14)", "--tag-color-hover": "#ffc4de", "--tag-background-hover": "rgba(255,122,182,.22)",
     "--link-color": "#f0e6ff", "--link-color-hover": "#ffffff", "--link-unresolved-color": "#a59fc4", "--text-selection": "rgba(255,143,192,.28)", "--interactive-accent": "#ff8fc0", "--interactive-accent-hover": "#ffa8cf", "--checkbox-color": "#ff8fc0", "--caret-color": "#ff8fc0" };
@@ -7770,7 +7771,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
     { const l_ = g.createEl("label", { cls: "mini lcemo ctrrk top" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = ORBN; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Show orb tab names" }); c_.onchange = () => { ORBN = c_.checked; save("iv-orbn", ORBN); syncOrbs(); }; } }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
-    cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
+    cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); for (const o of Object.values(EDS)) if (o && o.el) { try { edLook(o.el); } catch (_) { /* not open */ } } if (host.linkColors) host.linkColors(); }; }   /* "Color all links" and the editors follow the switch (0.8.294) */
   // HUD links (0.8.143): the picked note's links down the right, as in the Cockpit
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = HUDL; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "HUD links" });
     const l2 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = HUDR; l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Show relevance scores" }); l2.hidden = !HUDL;

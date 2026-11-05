@@ -1831,3 +1831,6 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"] *,.ivm-card.ivm-
    text), which grew with the editor's text size and could outrank the 10.5px rule, so the variable itself is pinned */
 .ivm-card.sf-th{--metadata-label-font-size:10px}
 .ivm-card.ivm-card.sf-th .metadata-property-key,.ivm-card.ivm-card.sf-th .metadata-property-key-input,.ivm-card.ivm-card.sf-th input.metadata-property-key-input{font-size:10px;letter-spacing:.08em}
+/* with Display → Starfield link colors on, "Color all links" follows the map: below red (0.8.294, Nick); other properties stay coral */
+body.ivm-linkcolors.ivm-sflinks.theme-dark{--ivk-upp:#ffcf6e;--ivk-up:#6fd3ff;--ivk-down:#ff6f61;--ivk-rel:#c9a2ff}
+body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;--ivk-down:#d0453f;--ivk-rel:#8a3ff0}
