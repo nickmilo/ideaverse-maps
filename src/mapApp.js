@@ -3136,9 +3136,9 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   const LX = ckLeftEd(), inS = new Set(CK.inL), outS = new Set(CK.outL);
   /* one list down the right, always (0.8.139, Nick): each note once, ← in, → out, ↔ both; up links first, then by relevance */
   const merged = (() => { const all = [...new Set([...CK.inL, ...CK.outL])], upS2 = new Set(CK.upL || []), rs = CK.relS || new Map(); return all.sort((a, b) => (upS2.has(b) ? 1 : 0) - (upS2.has(a) ? 1 : 0) || (rs.get(b) || 0) - (rs.get(a) || 0) || N[b].score - N[a].score); })();
-  CK.sideLists = merged ? [null, merged] : [CK.inL, CK.outL];
+  CK.sideLists = merged ? [null, merged] : [CK.inL, CK.outL]; CK.merged = merged;
   hudTab(HUDCOL ? merged.length : 0);
-  if (!HUDCOL) for (const [s, list0, lab] of merged ? [[1, merged, "LINKS"]] : [[-1, CK.inL, "IN"], [1, CK.outL, "OUT"]]) { const n_ = list0.length; if (!n_) continue; const shortV = VH < 520, maxR = shortV ? Math.max(3, Math.floor((VH - 70) / 12)) : Math.max(12, Math.floor((VH - (W < 700 ? 250 : 300)) / (W < 700 ? 12 : 13)))   /* a short view (a phone on its side) keeps names 12 px apart and shows fewer (0.8.142) */   /* clear of the scopes and overview map below */, cap = n_ <= maxR ? n_ : maxR - 1, sk = s < 0 ? 0 : 1; CK.sideCap[sk] = cap; const off = Math.round(CK.sOff[sk] = Math.max(0, Math.min(n_ - cap, CK.sOff[sk] || 0))), list = list0.slice(off, off + cap), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* scrolls (0.8.115): wheel over the names, or click the last line */ Rx = W * .5, Ry = VH * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))), lh = shortV ? 12 : Math.min(W < 700 ? 13 : 15.5, (VH - 90) / (rows + 1));   /* a busy note's list curves less, so more names fit (0.8.139) */
+  if (!HUDCOL && isPhone()) for (const [s, list0, lab] of merged ? [[1, merged, "LINKS"]] : [[-1, CK.inL, "IN"], [1, CK.outL, "OUT"]]) { const n_ = list0.length; if (!n_) continue; const shortV = VH < 520, maxR = shortV ? Math.max(3, Math.floor((VH - 70) / 12)) : Math.max(12, Math.floor((VH - (W < 700 ? 250 : 300)) / (W < 700 ? 12 : 13)))   /* a short view (a phone on its side) keeps names 12 px apart and shows fewer (0.8.142) */   /* clear of the scopes and overview map below */, cap = n_ <= maxR ? n_ : maxR - 1, sk = s < 0 ? 0 : 1; CK.sideCap[sk] = cap; const off = Math.round(CK.sOff[sk] = Math.max(0, Math.min(n_ - cap, CK.sOff[sk] || 0))), list = list0.slice(off, off + cap), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* scrolls (0.8.115): wheel over the names, or click the last line */ Rx = W * .5, Ry = VH * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))), lh = shortV ? 12 : Math.min(W < 700 ? 13 : 15.5, (VH - 90) / (rows + 1));   /* a busy note's list curves less, so more names fit (0.8.139) */
     const dim = CK.only && CK.only !== (s < 0 ? "in" : "out"); g.save(); g.font = `500 ${W < 700 ? 9.5 : 11}px ${font}`; g.textBaseline = "middle";
     const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [W / 2 + s * Rx * Math.sqrt(Math.max(0, 1 - u * u)) - s * 34, y, Math.asin(Math.max(-1, Math.min(1, u))) * .3]; };
     /* hover (Nick: "a dynamic feel"): the name under the pointer eases in toward the middle and grows, its neighbours make way, and a tether runs to its panel */
@@ -3160,6 +3160,12 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
       if (tv > .05) { const it = CK.items.find(o => o.i === j); if (it && it.zc > 8 && it.sw > 0) { g.save(); g.globalAlpha = .55 * tv; g.strokeStyle = ckCol(N[j].level); g.lineWidth = 1; g.setLineDash([3, 4]); g.lineDashOffset = -win.performance.now() / 40;
           g.beginPath(); g.moveTo(x + (s < 0 ? tw * (1 + .204 * tv) : -tw * (1 + .204 * tv)), ym); g.lineTo(it.sx + (s < 0 ? -it.sw / 2 : it.sw / 2), it.sy); g.stroke(); g.restore(); } } }
     const [hx, hy] = at(-1.3); { const hw = 210; CK.side.push([s < 0 ? hx : hx - hw, hy - 9, hw, 18, -20]); } g.globalAlpha = dim ? .25 : .55; g.font = `600 9.5px ${font}`; g.fillStyle = "#7dffb0"; g.textAlign = s < 0 ? "left" : "right"; g.fillText((n_ > cap ? `${lab} · ${off + 1}–${off + cap} of ${n_}` : `${lab} · ${n_}`) + "  ›", hx + (s < 0 ? 4 : -4), hy); CK.sideCol[sk] = n_ > cap ? [Math.min(hx, at(rows - 1)[0]) - 200 * (s > 0 ? 1 : 0), hy - 10, 240, at(rows - 1)[1] - hy + 20] : null; g.restore(); }
+  /* on a computer the list lives in the Links panel (0.8.289): star names keep clear of it, and a hovered row gets the tether to its panel, as the canvas list did */
+  if (!isPhone()) { if (LKEL && !LKEL.hidden) { const q = LKEL.getBoundingClientRect(); CK.side.push([q.left - r.left, q.top - r.top, q.width, q.height, -2]); }
+    if (CK.hovS >= 0 && CK.hovEl && CK.hovEl.isConnected) { const q = CK.hovEl.getBoundingClientRect(), x0 = q.left - r.left, y0 = q.top - r.top + q.height / 2; CK.side.unshift([x0, y0 - q.height / 2, q.width, q.height, CK.hovS]);
+      const it = CK.items.find(o => o.i === CK.hovS); if (it && it.zc > 8 && it.sw > 0) { g.save(); g.globalAlpha = .55; g.strokeStyle = ckCol(N[CK.hovS].level); g.lineWidth = 1; g.setLineDash([3, 4]); g.lineDashOffset = -win.performance.now() / 40;
+        g.beginPath(); g.moveTo(x0, y0); g.lineTo(it.sx + it.sw / 2, it.sy); g.stroke(); g.restore(); } }
+    const sig = CK.c + ":" + merged.length + ":" + lockI + ":" + (CK.only || "") + ":" + HUDCOL; if (sig !== CK.lkSig) { CK.lkSig = sig; try { recSync(); } catch (_) { /* panels not built */ } } }
   g.textAlign = "left";
   /* up links at the top of the HUD (0.8.116, Nick: "an uplink should be at the top"), just under the orbs: a gentle arc of ▲ names in the up colour; click to lock, again to fly */
   if (CK.upL && CK.upL.length && CK.c >= 0) { const SLc = (CK.SL && CK.SL.upp) || "#ffcf6e", ups = CK.upL.slice(0, 5), y0 = 66; g.save(); g.font = `600 11.5px ${font}`; g.textBaseline = "middle";
@@ -5158,7 +5164,7 @@ let HUDCOL = pref("iv-hudcol", false) === true, HUDPV = pref("iv-hudpv", false) 
 function hudTab(nLinks){ if (!HUDTAB) { HUDTAB = $("#main").createEl("button", { cls: "dtab hudtab", attr: { type: "button", "aria-label": "Show the links", title: "Show the links" } }); HUDTAB.hidden = true;
     HUDTAB.addEventListener("pointerdown", e => e.stopPropagation()); HUDTAB.onclick = e => { e.stopPropagation(); hudCol(false); }; }
   const on_ = HUDCOL && nLinks > 0; HUDTAB.hidden = !on_; if (on_) { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); HUDTAB.setCssProps({ "--hr": Math.max(0, Math.round(mr.right - c.right + (view === "cockpit" ? 0 : sideW()))) + "px" }); }   /* at the map's right edge, beside the note panel */ if (on_) { const t_ = `‹  Links · ${nLinks}`; if (HUDTAB.textContent !== t_) HUDTAB.setText(t_); } }
-function hudCol(c){ HUDCOL = c; save("iv-hudcol", c); draw(); }
+function hudCol(c){ HUDCOL = c; save("iv-hudcol", c); draw(); try { RECKEY = ""; recSync(); } catch (_) { /* not built yet */ } }
 function hudPv(j, x, y, force){ if (j < 0 && typeof RECHV !== "undefined" && RECHV >= 0 && (CMDK || HUDPV)) return;   /* a Recents row is showing its preview: the map's redraws leave it be */
   if (!(HUDPV || force) || j < 0 || !host.preview) { if (HUDPVE) HUDPVE.hidden = true; return; } const p = N[j].path;
   if (!HUDPVE || HUDPVP !== p) { if (HUDPVE) HUDPVE.remove(); const e = $("#main").createDiv({ cls: "ivm-card ivm-pv hudpv" }); e.createDiv({ cls: "pvt", text: N[j].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } HUDPVE = e; HUDPVP = p; }
@@ -5172,7 +5178,11 @@ function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && RADJ) return HUDC; 
 /* Links lives in the Recents panel now (0.8.284, Nick: "do opt 2, but each needs to work independently"): one background, one curve, two sections; each tucks to its own
    edge tab. The map only draws the dashed line from a hovered row to its note, and keeps HUDBOX (the panel, in map pixels) for maps that leave it room */
 let LKHV = null, HUDTC = pref("iv-hudtc", true) !== false;   /* LKHV: the Links row under the pointer; HUDTC: names in their level's color instead of a dot (0.8.284, Nick) */
-const lkOn = () => { try { return HUDL && view !== "cockpit" && !isPhone() && sel >= 0 && !!vis[sel] && hudData(sel).list.length > 0; } catch (_) { return false; } };
+const lkOn = () => { try { if (isPhone()) return false; if (view === "cockpit") return CK.c >= 0 && (CK.merged || []).length > 0;   /* the Starship's own list, always (0.8.289) */
+  return HUDL && sel >= 0 && !!vis[sel] && hudData(sel).list.length > 0; } catch (_) { return false; } };
+/* what the Links panel lists: the picked note's links on a map, or in the Starship the note you're at (0.8.289, Nick: "Starship map can integrate the new Recents/Links HUD") */
+const lkData = () => { if (view !== "cockpit") return hudData(sel); const lockI = (CK.items[CK.lock] || {}).i;
+  return { ck: true, i: CK.c, v: (CK.merged || []).length + "/" + lockI + "/" + (CK.only || ""), list: CK.merged || [], inS: new Set(CK.inL), outS: new Set(CK.outL), upS: new Set(CK.upL || []), sc: CK.relS || new Map(), lock: lockI }; };
 function drawHudLinks(){ HUDBOX = null; if (view === "cockpit") { hudPv(-1); return; } if (!HUDL || sel < 0 || !vis[sel] || isPhone()) { hudTab(0); hudPv(-1); return; } const D_ = hudData(sel), n_ = D_.list.length; hudTab(n_); if (!n_ || HUDCOL) { hudPv(-1); return; }
   const c = cv.getBoundingClientRect(); if (LKEL && !LKEL.hidden) { const r = LKEL.getBoundingClientRect(); HUDBOX = [r.left - c.left, r.top - c.top, r.width, r.height]; }
   if (HUDHOV >= 0 && LKHV && LKHV.isConnected && vis[HUDHOV]) { const q = LKHV.getBoundingClientRect(); ctx.save(); ctx.globalAlpha = .6; ctx.strokeStyle = css.accent || css.ink || "#ddd"; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
@@ -5222,7 +5232,7 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
   RECEL.classList.toggle("paired", both); RECEL.setCssProps({ "--rct": rTop + "px" }); LKEL.setCssProps({ "--lkt": lTop + "px" });
   if (on && !recIsOpen()) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); }
   if (!(recShow || lkShow)) { if (RECHV >= 0 && RECHVEL && !RECHVEL.isConnected) { RECHV = -1; RECHVEL = null; } return; }
-  const L = recShow ? recList() : [], D_ = lkShow ? hudData(sel) : null;
+  const L = recShow ? recList() : [], D_ = lkShow ? lkData() : null; LKEL.classList.toggle("ck", view === "cockpit");
   for (const P of [RECEL, LKEL]) { P.setCssProps({ "--rcop": RECOP + "%", "--rcw": (RECW || 300) + "px" }); P.classList.toggle("narrow", RECW > 0 && RECW < 250); }
   RECEL.classList.toggle("sized", RECW > 0 || both); LKEL.classList.add("sized");   /* the same width when both show, so they share one left edge on the arc */
   const key = L.join(",") + "|" + RECW + "|" + RECAGE + RECEMO + RECEFRONT + RECLEFT + "|" + (EMOI ? 1 : 0) + "|" + Math.floor(Date.now() / 60000) + "|" + recShow + lkShow + (D_ ? D_.i + ":" + D_.v : "") + HUDR + HUDTC + "|" + (recShow ? sel : "") + "|" + rTop + ":" + lTop; if (key === RECKEY) return; RECKEY = key;
@@ -5256,15 +5266,17 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
     const x2 = lhd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Links away" } }); x2.onclick = e => { e.stopPropagation(); hudCol(true); RECKEY = ""; recSync(); };
     lbox = LKEL.createDiv({ cls: "rcl lkl rcleft" });
     { let sr = 0; lbox.addEventListener("scroll", () => { if (!sr) sr = win.requestAnimationFrame(() => { sr = 0; if (RECLAY) RECLAY(); }); }, { passive: true }); }
-    for (const j of D_.list) { if (!N[j]) continue; const r = lbox.createEl("button", { cls: "rcr lkr", attr: { type: "button" } });
+    for (const j of D_.list) { if (!N[j]) continue; const dimJ = D_.ck && CK.only ? !(CK.only === "in" ? D_.inS.has(j) : D_.outS.has(j)) : false;   /* the Starship's F / R scopes dim the other side */
+      const r = lbox.createEl("button", { cls: "rcr lkr" + (D_.ck && j === D_.lock ? " on" : "") + (dimJ ? " dim" : ""), attr: { type: "button" } });
       const col = D_.upS.has(j) ? (SL.upp || css.upp || ink) : (N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1) || ink;
       if (!HUDTC) { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": col }); }
       r.createSpan({ cls: "lka", text: D_.inS.has(j) && D_.outS.has(j) ? "↔" : D_.inS.has(j) ? "←" : "→" });
       const nm = r.createSpan({ cls: "rcn" + (HUDTC ? " lkc" : ""), text: N[j].title }); if (HUDTC) nm.setCssProps({ "--lc": col });
-      if (HUDR) r.createSpan({ cls: "rca lks", text: String(D_.sc.get(j)) });
-      r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); };
-      r.addEventListener("pointerenter", () => { HUDHOV = j; LKHV = r; RECHV = j; RECHVEL = r; recPv(); draw(); });
-      r.addEventListener("pointerleave", () => { if (HUDHOV === j) { HUDHOV = -1; LKHV = null; } if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } draw(); }); } }
+      if (HUDR && D_.sc.has(j)) r.createSpan({ cls: "rca lks", text: String(D_.sc.get(j)) });
+      /* in the Starship a click locks onto that note's panel, a second click flies there, as its own list did */
+      r.onclick = e => { e.stopPropagation(); if (openKind(e)) { openAs(j, openKind(e)); return; } if (D_.ck) { const was = (CK.items[CK.lock] || {}).i === j; ckLockNote(j); if (was) CK.auto = true; RECKEY = ""; return; } if (shiftLink(j, e)) return; navTo(j); toEditor(j); };
+      r.addEventListener("pointerenter", () => { if (D_.ck) { CK.hovS = j; CK.hovEl = r; return; } HUDHOV = j; LKHV = r; RECHV = j; RECHVEL = r; recPv(); draw(); });
+      r.addEventListener("pointerleave", () => { if (D_.ck) { if (CK.hovS === j) { CK.hovS = -1; CK.hovEl = null; } return; } if (HUDHOV === j) { HUDHOV = -1; LKHV = null; } if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } draw(); }); } }
   if (recShow) recGrip(RECEL); if (lkShow) recGrip(LKEL);
   RECLAY = () => { if (recShow && hd && box) layPanel(RECEL, hd, box, LH); if (lkShow && lhd && lbox) layPanel(LKEL, lhd, lbox, LH);
     if (both && !RECEL.hidden) { const ph = RECEL.offsetHeight; if (ph && Math.abs(ph - RECPH) > 2) { RECPH = ph; RECKEY = ""; win.requestAnimationFrame(() => { if (!dead) recSync(); }); } } };   /* Links' slot follows Recents' real height */

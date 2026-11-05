@@ -1821,3 +1821,6 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"] *,.ivm-card.ivm-
 .ivm .ivm-recents .rcl{margin-top:6px}
 /* a row scrolled to the top or bottom edge of a list fades out instead of being cut (0.8.287) */
 .ivm .ivm-recents .rcl{-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 10px,#000 calc(100% - 6px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 10px,#000 calc(100% - 6px),transparent 100%)}
+/* the Starship's Links (0.8.289): clear of the scopes along the bottom; the locked note lit, the other side dimmed while a scope is on */
+.ivm .ivm-recents.ivm-lkhud.ck{max-height:calc(100% - var(--lkt,260px) - 150px)}
+.ivm .ivm-recents .rcr.dim{opacity:.3}
