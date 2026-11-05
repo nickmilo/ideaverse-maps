@@ -5906,16 +5906,23 @@ function sfLaunch(){ if (view === "cockpit" && SFSHIP) return; if (view === "sta
   closePops(); veilTo(1, 150); win.setTimeout(() => { if (dead) return; SFSHIP = { ckw: CKW, cam: null }; CKW = "sf"; CK.sfIn = false; setView("cockpit"); win.setTimeout(() => { veilTo(0, 300); sfSwSync(); }, 80); }, 160); }
 function sfChart(){ if (view === "cockpit" && SFSHIP) { sfShip(false); return; } if (view !== "stars") setView("stars"); }
 /* beside the orb tabs, not under them (0.8.323, Nick: "dead center just below the orb tabs… is prime real estate"); centered at the top when there are no orbs */
-function sfSwPlace(){ if (sfSw.hidden) return; try { const m = $("#main").getBoundingClientRect(), c = cv.getBoundingClientRect();
+function sfSwPlace(){ for (const el of [sfSw, ivSw]) if (el && !el.hidden) swPlace(el); }
+function swPlace(sfSw){ try { const m = $("#main").getBoundingClientRect(), c = cv.getBoundingClientRect();
   /* top right of the map, on the orbs' row (0.8.344, Nick: "maybe the switch needs to be further right?"); beside the orbs only when the row is too narrow for both */
   let r = null; if (orbBar && !orbBar.hidden) for (const ch of orbBar.children) { const q = ch.getBoundingClientRect(); if (!q.width) continue; if (!r || q.right > r.right) r = { right: q.right, top: q.top, height: q.height }; }
   let rr = Math.max(0, Math.round(m.right - c.right + (view === "cockpit" ? 0 : sideW()))) + 16; { const wn = root.querySelector(".wm-name"); if (wn && wn.offsetParent) { const q = wn.getBoundingClientRect(); if (q.width) rr = Math.max(rr, Math.round(m.right - q.left) + 14); } }   /* clear of the plugin's name on the chart */ const sw = sfSw.offsetWidth || 200, top = r ? Math.round(r.top - m.top + r.height / 2) : 20;
   sfSw.classList.remove("sfbeside", "sfright");
   if (!r || m.width - rr - sw > r.right - m.left + 24) { sfSw.classList.add("sfright"); sfSw.setCssProps({ "--sfr": rr + "px", "--sft": top + "px" }); }
   else { sfSw.classList.add("sfbeside"); sfSw.setCssProps({ "--sfl": Math.round(r.right - m.left + 14) + "px", "--sft": top + "px" }); } } catch (_) { /* not laid out yet */ } }
-function sfSwSync(){ const on = SFMERGE && !dead && (view === "stars" || (view === "cockpit" && !!SFSHIP)); sfSw.hidden = !on; if (!on) return; win.setTimeout(sfSwPlace, 0); sfSw.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.m === "ship") === (view === "cockpit")))); }
+/* Ideaverse | Obsidian (0.8.356, Nick): the same switch and the same C, for the two graph maps */
+const ivSw = (() => { const w = $("#main").createDiv({ cls: "ivm-sfsw seg" }); w.hidden = true;
+  for (const [m, t] of [["ideaverse", "Ideaverse"], ["graph", "Obsidian"]]) { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); if (view !== m) { closePops(); setView(m); } }; }
+  w.createSpan({ cls: "sfk", text: "C", attr: { "aria-hidden": "true" } });
+  for (const ty of ["pointerdown", "wheel", "click"]) w.addEventListener(ty, ev => ev.stopPropagation()); return w; })();
+function ivSwSync(){ const on = !dead && (view === "ideaverse" || view === "graph"); ivSw.hidden = !on; if (!on) return; ivSw.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === view))); win.setTimeout(sfSwPlace, 0); }
+function sfSwSync(){ ivSwSync(); const on = SFMERGE && !dead && (view === "stars" || (view === "cockpit" && !!SFSHIP)); sfSw.hidden = !on; if (!on) return; win.setTimeout(sfSwPlace, 0); sfSw.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.m === "ship") === (view === "cockpit")))); }
 onKey(e => { if (!SFMERGE || e.metaKey || e.ctrlKey || e.altKey || e.key.toLowerCase() !== "c") return; const a = doc.activeElement; if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable)) return;
-  if (view === "cockpit" && SFSHIP) { e.preventDefault(); sfShip(false); } else if (view === "stars") { e.preventDefault(); sfShip(true); } });   /* C toggles Chart ⇄ Starship (0.8.222, Nick); no other map uses C */
+  if (view === "cockpit" && SFSHIP) { e.preventDefault(); sfShip(false); } else if (view === "stars") { e.preventDefault(); sfShip(true); } else if (view === "ideaverse" || view === "graph") { e.preventDefault(); setView(view === "ideaverse" ? "graph" : "ideaverse"); } });   /* C toggles Chart ⇄ Starship (0.8.222, Nick); no other map uses C */
 /* ⌘T: a new, empty tab, as in Obsidian (0.8.211, Nick): an orb of its own, and the primary note waits as a quiet placeholder until you pick a note.
    Nothing is lost: the other orbs keep their notes */
 function tabNew(){ const at = TCUR >= 0 && TABS[TCUR] ? TCUR + 1 : TABS.length; TABS.splice(at, 0, { path: "" }); TCUR = at; tabsSave(); select(-1); EDS.left.close(); if (EDS.left.el) EDS.left.el.hidden = true; syncOrbs(); draw();
