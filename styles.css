@@ -1840,3 +1840,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .ivm-recents .lkg:hover{filter:brightness(1.2)}
 .ivm .ivm-recents .rcr.lkin{padding-left:28px}
 .ivm .ivm-recents .lkg{transform:translateX(var(--rx,0px)) rotate(var(--rr,0rad));transform-origin:right center}
+/* the Focus bar steps down below the orb tabs (and Starfield's Chart | Starship switch) instead of sitting on them (0.8.300, Nick) */
+.ivm.ivm main:has(> .ivm-orbs:not([hidden])) > .focusbar.mapfb{top:50px}
+.ivm.ivm main:has(> .ivm-sfsw:not([hidden])) > .focusbar.mapfb{top:84px}
+.ivm.ivm main:has(> .ivm-orbs.named:not([hidden])) > .focusbar.mapfb{top:112px}

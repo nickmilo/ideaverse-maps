@@ -3886,7 +3886,12 @@ function layoutGraph(){
   if (!isFinite(x0)) { x0 = y0 = -100; x1 = y1 = 100; } expBox = { x0: x0 - 40, y0: y0 - 40, x1: x1 + 40, y1: y1 + 40 }; }
 // d3-force style: many-body (Barnes–Hut) + links + centering, velocity Verlet with alpha cooling
 // the forces, as in Obsidian's graph settings: Gravity (the pull to the middle), Repel (every note pushing the others away), Link length
-const GF = (() => { const g = pref("iv-gforce", null) || {}; return { grav: isFinite(g.grav) ? +g.grav : .1, rep: isFinite(g.rep) ? +g.rep : 30, ld: isFinite(g.ld) ? +g.ld : 30 }; })();
+const GFRD = (key, d) => { const g = pref(key, null) || {}; return { grav: isFinite(g.grav) ? +g.grav : d.grav, rep: isFinite(g.rep) ? +g.rep : d.rep, ld: isFinite(g.ld) ? +g.ld : d.ld }; };
+/* Focus has its own forces (0.8.300, Nick: "when Focus is turned on, shift the default Repel level to 200, and the default Link length to 60"): a focused handful of notes
+   reads better spread out. The sliders and Reset work on whichever set is in use; each is kept */
+const GFD = { grav: .1, rep: 30, ld: 30 }, GFDF = { grav: .1, rep: 200, ld: 60 }, GFN = GFRD("iv-gforce", GFD), GFF = GFRD("iv-gforcef", GFDF), gfAct = () => focus >= 0 ? GFF : GFN, gfKey = () => focus >= 0 ? "iv-gforcef" : "iv-gforce";
+const GF = { get grav(){ return gfAct().grav; }, set grav(v){ gfAct().grav = v; }, get rep(){ return gfAct().rep; }, set rep(v){ gfAct().rep = v; }, get ld(){ return gfAct().ld; }, set ld(v){ gfAct().ld = v; } };
+let GFUI = null;   /* refreshes the open sliders when Focus switches the set */
 function graphForce(m, EA, EB, x, y, act, z) {   // act: Int32Array of node indices that move; z: a third axis for 3D (optional)
   const D3 = !!z, K = D3 ? 8 : 4;
   const vx = new Float64Array(m), vy = new Float64Array(m), vz = new Float64Array(m), cnt = new Int32Array(m), ne = EA.length; if (!z) z = new Float64Array(m);
@@ -6517,7 +6522,8 @@ function starFocusTarget(xs, ys, i){ const vw = W - sideW(), cx = vw/2, cy = H/2
   if (d < 30) d = b ? b.r * .8 : 160;
   const kk = Math.max(.15, Math.min(6, R/d)); return { k: kk, tx: cx - xs[i]*kk, ty: cy - ys[i]*kk }; }
 function setFocus(i, fromTrail){
-  focus = i; computeFocus();
+  const wasF = focus >= 0; focus = i; computeFocus();
+  if (wasF !== (i >= 0)) { try { if (GFUI) GFUI(); if (GPH.F) { GPH.F.heat(.3); GPH.wake(); win.setTimeout(() => GPH.F && GPH.F.heat(0), 900); } } catch (_) { /* no graph yet */ } }   /* Focus swaps the forces (0.8.300) */
   const fb = $("#focusbar"); if (fb.hidden !== (i < 0)) { fb.hidden = i < 0; if (i >= 0 && !fb.hasChildNodes()) html(fb).v = "&nbsp;"; resize(); }
   const prev = sel; if (i >= 0) { sel = i; if (drawer.hidden && !isPhone() && !drawerCollapsed) { ANCHOR_T = performance.now() + 700; drawer.hidden = false; resize(); } }   // open the panel first so the camera plans for the narrower map
   relayout(true, false, i >= 0 ? (xs, ys) => (FZC && fzOn() ? closeTarget(xs, ys, i) : visTarget(xs, ys)) : () => fitTarget());
@@ -7479,12 +7485,13 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       const v = w.createEl("b", { text: String(GF[key]) }); rows.push([key, r, v]);
       // the view holds still while you drag (it stops following the graph), so a looser graph takes more room on screen instead of being zoomed back out to the same picture
       r.oninput = () => { GF[key] = +r.value; v.setText(r.value); GPH.touched = true; if (GPH.F) { GPH.F.heat(.3); GPH.wake(); } };
-      r.onchange = () => { save("iv-gforce", { ...GF }); if (GPH.F) GPH.F.heat(0); }; }
+      r.onchange = () => { save(gfKey(), { ...GF }); if (GPH.F) GPH.F.heat(0); }; }
+    GFUI = () => { for (const [key, r, v] of rows) { r.value = String(GF[key]); v.setText(String(GF[key])); } };
     // a small status line: what the physics is doing right now (useful when something seems stuck)
     const stat = gc.createDiv({ cls: "phint gfstat" }); const statT = () => { if (gc.hidden || !gc.offsetParent) return;
       stat.setText(`${GPH.F ? (GPH.live && GPH.live() ? "Moving" : "Settled") : "Not started"} · ${(GPH.m || 0).toLocaleString()} notes · step ${GPH.it || 0}${morphing ? " · gliding" : ""}${GPH.touched ? "" : " · view follows"}${GPH.err ? " · error: " + GPH.err : ""}`); };
     const statIv = win.setInterval(() => { if (dead) win.clearInterval(statIv); else statT(); }, 500);
-    const rs = gc.createEl("button", { cls: "pchip", text: "Reset", attr: { type: "button" } }); rs.onclick = e => { e.stopPropagation(); Object.assign(GF, DEF); for (const [key, r, v] of rows) { r.value = String(GF[key]); v.setText(String(GF[key])); } save("iv-gforce", { ...GF }); GPH.touched = true; if (GPH.F) { GPH.F.heat(.3); GPH.wake(); win.setTimeout(() => GPH.F && GPH.F.heat(0), 600); } }; }
+    const rs = gc.createEl("button", { cls: "pchip", text: "Reset", attr: { type: "button" } }); rs.onclick = e => { e.stopPropagation(); Object.assign(GF, focus >= 0 ? GFDF : DEF); for (const [key, r, v] of rows) { r.value = String(GF[key]); v.setText(String(GF[key])); } save(gfKey(), { ...GF }); GPH.touched = true; if (GPH.F) { GPH.F.heat(.3); GPH.wake(); win.setTimeout(() => GPH.F && GPH.F.heat(0), 600); } }; }
   // Posters' own options, in its map menu: Across, Lanes, Size
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "postctl" } }); pc.hidden = true;
     pc.createDiv({ cls: "phint bhint", attr: { id: "bhint" } }).hidden = true;
