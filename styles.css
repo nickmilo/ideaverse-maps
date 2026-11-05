@@ -1834,3 +1834,9 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"] *,.ivm-card.ivm-
 /* with Display → Starfield link colors on, "Color all links" follows the map: below red (0.8.294, Nick); other properties stay coral */
 body.ivm-linkcolors.ivm-sflinks.theme-dark{--ivk-upp:#ffcf6e;--ivk-up:#6fd3ff;--ivk-down:#ff6f61;--ivk-rel:#c9a2ff}
 body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;--ivk-down:#d0453f;--ivk-rel:#8a3ff0}
+/* Links HUD: a property's group header and its rows (0.8.297, Nick: option H2) */
+.ivm .ivm-recents .lkg{appearance:none;background:none;border:0;box-shadow:none;height:auto;padding:6px 12px 2px 14px;margin:0;align-self:stretch;text-align:left;font:600 9px var(--mono);letter-spacing:.1em;color:#ff9e7d;cursor:pointer;flex:none}
+.theme-light .ivm .ivm-recents .lkg,.ivm[data-theme="paper"] .ivm-recents .lkg,.ivm[data-theme="softpaper"] .ivm-recents .lkg{color:#d0582f}
+.ivm .ivm-recents .lkg:hover{filter:brightness(1.2)}
+.ivm .ivm-recents .rcr.lkin{padding-left:28px}
+.ivm .ivm-recents .lkg{transform:translateX(var(--rx,0px)) rotate(var(--rr,0rad));transform-origin:right center}

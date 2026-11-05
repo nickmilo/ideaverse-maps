@@ -285,6 +285,9 @@ export async function mountInto(owner, el, opts) {
         plugin.register(() => { c.checkCallback = oc; c.callback = ob; plugin.tabCmdPatched = false; }); } },
     linkColors: () => { if (plugin.linkColorsRun) plugin.linkColorsRun(); },
     collectionKeys: () => { const v = plugin.settings.collectionProps; return (Array.isArray(v) ? v : String(v || "collections").split(",")).map(x => String(x).trim().toLowerCase()).filter(Boolean); },
+    /* a note's property links with the property each sits in (0.8.297: the Links HUD groups them by property), as [key, target path] */
+    propLinks: path => { const f = app.vault.getAbstractFileByPath(path), c = f instanceof TFile ? app.metadataCache.getFileCache(f) : null, out = []; if (!c) return out;
+      for (const l of c.frontmatterLinks || []) { const t = app.metadataCache.getFirstLinkpathDest(String(l.link || "").split("#")[0], path); if (t instanceof TFile) out.push([String(l.key || "").split(".")[0].trim().toLowerCase(), t.path]); } return out; },
     linkTargets: path => { const f = app.vault.getAbstractFileByPath(path), c = f instanceof TFile ? app.metadataCache.getFileCache(f) : null, out = []; if (!c) return out;   /* what each link in a note shows, and the note it reaches (0.8.224: the editor colors links by relation) */
       for (const l of [...(c.links || []), ...(c.embeds || []), ...(c.frontmatterLinks || [])]) { const base = String(l.link || "").split("#")[0], t = app.metadataCache.getFirstLinkpathDest(base, path); if (!(t instanceof TFile)) continue;
         for (const key of [l.displayText, l.link, base, t.basename]) if (key) out.push([String(key).trim().toLowerCase(), t.path]); } return out; },
