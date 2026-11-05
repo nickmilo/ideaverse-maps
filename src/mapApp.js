@@ -5171,10 +5171,10 @@ function hudPv(j, x, y, force){ if (j < 0 && typeof RECHV !== "undefined" && REC
   const c = cv.getBoundingClientRect(), pr = $("#main").getBoundingClientRect(), pw = 230, ph = 140; HUDPVE.hidden = false;
   HUDPVE.setCssProps({ "--pvx": Math.round(c.left - pr.left + Math.max(8, x - pw - 14)) + "px", "--pvy": Math.round(c.top - pr.top + Math.max(8, Math.min(H - ph - 8, y - ph / 2))) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); }
 let HUDL = pref("iv-hudl", false) === true, HUDR = pref("iv-hudr", true) !== false, HUDHOV = -1, HUDC = { i: -2, list: [], rel: null };
-function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && RADJ) return HUDC; const L = stripLists(i), inS = new Set(L.in), outS = new Set(L.out), upS = new Set(L.up); let rel = null; try { rel = relFrom(i); } catch (_) { rel = null; }
+function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && HUDC.vv === VISV) return HUDC;   /* cached until the relevance graph or what shows changes; it used to recompute (and rebuild the HUD) on every redraw while RADJ was empty (0.8.290) */ const L = stripLists(i), inS = new Set(L.in), outS = new Set(L.out), upS = new Set(L.up); let rel = null; try { rel = relFrom(i); } catch (_) { rel = null; }
   const all = [...new Set([...L.in, ...L.out])].filter(j => j !== i && N[j] && vis[j]), rv = j => rel ? rel[j] : N[j].score / 1e3; let mx = 0; for (const j of all) mx = Math.max(mx, rv(j));
   all.sort((a, b) => (upS.has(b) ? 1 : 0) - (upS.has(a) ? 1 : 0) || rv(b) - rv(a) || N[b].score - N[a].score);
-  return (HUDC = { i, rj: RADJ, v: (HUDC.v || 0) + 1, list: all, inS, outS, upS, sc: new Map(all.map(j => [j, mx > 0 ? Math.round(100 * rv(j) / mx) : 0])) }); }
+  return (HUDC = { i, rj: RADJ, vv: VISV, v: (HUDC.v || 0) + 1, list: all, inS, outS, upS, sc: new Map(all.map(j => [j, mx > 0 ? Math.round(100 * rv(j) / mx) : 0])) }); }
 /* Links lives in the Recents panel now (0.8.284, Nick: "do opt 2, but each needs to work independently"): one background, one curve, two sections; each tucks to its own
    edge tab. The map only draws the dashed line from a hovered row to its note, and keeps HUDBOX (the panel, in map pixels) for maps that leave it room */
 let LKHV = null, HUDTC = pref("iv-hudtc", true) !== false;   /* LKHV: the Links row under the pointer; HUDTC: names in their level's color instead of a dot (0.8.284, Nick) */
@@ -5196,7 +5196,7 @@ function drawHudLinks(){ HUDBOX = null; if (view === "cockpit") { hudPv(-1); ret
 let RECN = Math.max(5, Math.min(50, +pref("iv-recn", 30) || 30)), RECHV = -1, RECHVEL = null;   /* how many Recents show (Display, 5–50, 0.8.244); the row under the pointer, for ⌘ previews */
 let RECW = +pref("iv-recw", 0) || 0, RECLAY = null, RECLT = 0;   /* RECLAY: lays the rows on the curve and draws the shape; re-run live while the edge is dragged (0.8.260) */   /* Recents width, dragged at its left edge (0.8.257, Nick); 0 = as wide as its names */
 const RECEFRONT = true, RECLEFT = true; let RECAGE = pref("iv-recage", true) !== false, RECOP = (() => { const v = +pref("iv-recop", 90); return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 90; })();   /* down to 0% (0.8.283, Nick) */   /* RECOP: Recents' background opacity, % (Display, 0.8.269) */   /* RECAGE: show how long ago each was changed (Display, 0.8.266) */   /* emoji first, titles left-aligned: the way Recents reads now (0.8.263, Nick); the switches are gone */   /* RECLEFT: titles left-aligned, so the emojis line up (still on the curve) (0.8.255, Nick) */   /* Recents: the emoji before the name and the age at the end (0.8.246, Nick, to try) */
-let RECON = pref("iv-recent", true) !== false, RECOPEN = pref("iv-recopen", false) === true, RECEMO = pref("iv-recemo", true) !== false, RECV = 0, RECC = { v: "", list: [] }, RECEL = null, LKEL = null, RECPH = 0, RECTAB = null, RECKEY = "";
+let RECON = pref("iv-recent", true) !== false, RECOPEN = pref("iv-recopen", false) === true, RECEMO = pref("iv-recemo", true) !== false, RECV = 0, RECC = { v: "", list: [] }, RECEL = null, LKEL = null, RECPH = 0, RECPOS = "", RECROWS = Math.max(7, Math.min(14, +pref("iv-recrows", 7) || 7)),   /* how many Recents show above Links, 7 to 14 (0.8.290, Nick) */ RECTAB = null, RECKEY = "";
 const ago = ms => { const s_ = Math.max(0, (Date.now() - ms) / 1000); return s_ < 60 ? "now" : s_ < 3600 ? Math.floor(s_ / 60) + "m" : s_ < 86400 ? Math.floor(s_ / 3600) + "h" : s_ < 86400 * 30 ? Math.floor(s_ / 86400) + "d" : s_ < 86400 * 365 ? Math.floor(s_ / 86400 / 30) + "mo" : Math.floor(s_ / 86400 / 365) + "y"; };
 function recList(){ const key = RECV + ":" + VISV + ":" + RECN; if (RECC.v === key) return RECC.list; const L = []; for (let i = 0; i < n; i++) if (vis[i] && N[i].mt > 0 && !ARCH[i]) L.push(i);
   L.sort((a, b) => N[b].mt - N[a].mt); RECC = { v: key, list: L.slice(0, RECN) }; return RECC.list; }
@@ -5209,7 +5209,15 @@ function recBuild(){ if (RECEL) return; const st = e => e.stopPropagation();
   LKEL = $("#main").createDiv({ cls: "ivm-recents ivm-lkhud" }); LKEL.hidden = true;
   for (const P of [RECEL, LKEL]) { for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) P.addEventListener(ty, st);
     /* a click anywhere on a panel that isn't a note, a switch or the edge grip tucks that panel away, as a click on an editor's header does (0.8.258, Nick) */
-    P.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest(".rcr, label, input, button, .rcgrip")) return; e.stopPropagation(); if (P === LKEL) hudCol(true); else recSetOpen(false); RECKEY = ""; recSync(); }, true); } }
+    P.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest(".rcr, label, input, button, .rcgrip, .rcvgrip")) return; e.stopPropagation(); if (P === LKEL) hudCol(true); else recSetOpen(false); RECKEY = ""; recSync(); }, true); } }
+/* a hidden grip along Recents' bottom edge while Links is below it (0.8.290, Nick: "a hidden grab point to expand the recents HUD downward… only double the vertical length at max"):
+   drag down for more notes (7 to 14), Links slides down to keep its place under it; double-click for 7 again */
+function recVGrip(){ const gr = RECEL.createDiv({ cls: "rcvgrip" }); let d_ = null;
+  gr.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); gr.setPointerCapture(e.pointerId); d_ = { y: e.clientY, n: RECROWS }; RECEL.classList.add("resizing"); });
+  gr.addEventListener("pointermove", e => { if (!d_) return; const n_ = Math.max(7, Math.min(14, d_.n + Math.round((e.clientY - d_.y) / 17.5))); if (n_ === RECROWS) return; RECROWS = n_; RECEL.setCssProps({ "--rcrows": String(n_) }); if (!RECLT) RECLT = win.requestAnimationFrame(() => { RECLT = 0; if (RECLAY) RECLAY(); }); });
+  const up = () => { if (!d_) return; d_ = null; RECEL.classList.remove("resizing"); save("iv-recrows", RECROWS); };
+  gr.addEventListener("pointerup", up); gr.addEventListener("pointercancel", up);
+  gr.addEventListener("dblclick", e => { e.stopPropagation(); RECROWS = 7; save("iv-recrows", 7); RECEL.setCssProps({ "--rcrows": "7" }); if (RECLAY) RECLAY(); }); }
 /* the left-edge grip: drag to widen or narrow Recents (0.8.257, Nick); double-click for its own width again */
 function recGrip(P){ const gr = P.createDiv({ cls: "rcgrip" }); let d_ = null;
   gr.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); gr.setPointerCapture(e.pointerId); d_ = { x: e.clientX, w: P.getBoundingClientRect().width }; P.classList.add("resizing"); });
@@ -5235,7 +5243,7 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
   const L = recShow ? recList() : [], D_ = lkShow ? lkData() : null; LKEL.classList.toggle("ck", view === "cockpit");
   for (const P of [RECEL, LKEL]) { P.setCssProps({ "--rcop": RECOP + "%", "--rcw": (RECW || 300) + "px" }); P.classList.toggle("narrow", RECW > 0 && RECW < 250); }
   RECEL.classList.toggle("sized", RECW > 0 || both); LKEL.classList.add("sized");   /* the same width when both show, so they share one left edge on the arc */
-  const key = L.join(",") + "|" + RECW + "|" + RECAGE + RECEMO + RECEFRONT + RECLEFT + "|" + (EMOI ? 1 : 0) + "|" + Math.floor(Date.now() / 60000) + "|" + recShow + lkShow + (D_ ? D_.i + ":" + D_.v : "") + HUDR + HUDTC + "|" + (recShow ? sel : "") + "|" + rTop + ":" + lTop; if (key === RECKEY) return; RECKEY = key;
+  const key = L.join(",") + "|" + RECW + "|" + RECAGE + RECEMO + RECEFRONT + RECLEFT + "|" + (EMOI ? 1 : 0) + "|" + Math.floor(Date.now() / 60000) + "|" + recShow + lkShow + (D_ ? D_.i + ":" + D_.v : "") + HUDR + HUDTC + "|" + (recShow ? sel : ""); { const pos = rTop + ":" + lTop; if (pos !== RECPOS) { RECPOS = pos; if (key === RECKEY && RECLAY) win.requestAnimationFrame(() => { if (RECLAY) RECLAY(); }); } }   /* a move re-lays the rows on the arc without rebuilding (so a drag keeps its grip) */ if (key === RECKEY) return; RECKEY = key;
   RECEL.empty(); LKEL.empty(); LKHV = null; if (HUDHOV >= 0) HUDHOV = -1;
   let hd = null, box = null; const LH = 17.5;
   if (recShow) {
@@ -5277,9 +5285,9 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
       r.onclick = e => { e.stopPropagation(); if (openKind(e)) { openAs(j, openKind(e)); return; } if (D_.ck) { const was = (CK.items[CK.lock] || {}).i === j; ckLockNote(j); if (was) CK.auto = true; RECKEY = ""; return; } if (shiftLink(j, e)) return; navTo(j); toEditor(j); };
       r.addEventListener("pointerenter", () => { if (D_.ck) { CK.hovS = j; CK.hovEl = r; return; } HUDHOV = j; LKHV = r; RECHV = j; RECHVEL = r; recPv(); draw(); });
       r.addEventListener("pointerleave", () => { if (D_.ck) { if (CK.hovS === j) { CK.hovS = -1; CK.hovEl = null; } return; } if (HUDHOV === j) { HUDHOV = -1; LKHV = null; } if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } draw(); }); } }
-  if (recShow) recGrip(RECEL); if (lkShow) recGrip(LKEL);
+  if (recShow) recGrip(RECEL); if (lkShow) recGrip(LKEL); RECEL.setCssProps({ "--rcrows": String(RECROWS) }); if (both) recVGrip();
   RECLAY = () => { if (recShow && hd && box) layPanel(RECEL, hd, box, LH); if (lkShow && lhd && lbox) layPanel(LKEL, lhd, lbox, LH);
-    if (both && !RECEL.hidden) { const ph = RECEL.offsetHeight; if (ph && Math.abs(ph - RECPH) > 2) { RECPH = ph; RECKEY = ""; win.requestAnimationFrame(() => { if (!dead) recSync(); }); } } };   /* Links' slot follows Recents' real height */
+    if (both && !RECEL.hidden) { const ph = RECEL.offsetHeight; if (ph && Math.abs(ph - RECPH) > 2) { RECPH = ph; win.requestAnimationFrame(() => { if (!dead) recSync(); }); } } };   /* Links' slot follows Recents' real height */
   win.requestAnimationFrame(RECLAY); }
 /* lay one HUD panel on the shared arc (0.8.287): the arc belongs to the map, centered on its height, so Recents and Links ride one curve. Each row shifts and tilts with it;
    the panel's edges follow the rows (top parallel to the header, bottom under the last row in view), with a hairline divider under the header */
