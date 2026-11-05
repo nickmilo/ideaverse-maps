@@ -1842,7 +1842,6 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .ivm-recents .lkg{transform:translateX(var(--rx,0px)) rotate(var(--rr,0rad));transform-origin:right center}
 /* the Focus bar steps down below the orb tabs (and Starfield's Chart | Starship switch) instead of sitting on them (0.8.300, Nick) */
 .ivm.ivm main:has(> .ivm-orbs:not([hidden])) > .focusbar.mapfb{top:50px}
-.ivm.ivm main:has(> .ivm-sfsw:not([hidden])) > .focusbar.mapfb{top:84px}
 .ivm.ivm main:has(> .ivm-orbs.named:not([hidden])) > .focusbar.mapfb{top:112px}
 /* menus: a mini header over a group of switches, and a "?" with a small card saying what a switch does (0.8.302, Nick) */
 .ivm .ckany .ckmh{font:600 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:12px 0 5px;padding-top:8px;border-top:1px solid var(--line, rgba(127,127,127,.25))}
@@ -1876,3 +1875,6 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm #driftseg .dship{display:none}
 .ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftseg .dship{display:inline-block}
 .ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftseg .dflat,.ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftseg .dearth,.ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftbar .dwob{display:none}
+.ivm .ivm-sfsw{opacity:.8;transition:opacity .15s}
+.ivm .ivm-sfsw:hover{opacity:1}
+.ivm .ivm-sfsw.sfbeside{left:var(--sfl);top:var(--sft);transform:translateY(-50%)}   /* beside the orb tabs, at 80% (0.8.323, Nick) */

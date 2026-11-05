@@ -5796,7 +5796,7 @@ function sfShip(on){ const [fl, fr] = freeLR(), mx = (fl + fr) / 2, my = (isPhon
       land(0); }, 170); }   /* at once, in the same beat as the switch, so no frame of the fitted chart shows */
   win.setTimeout(sfSwSync, 0); }
 const sfSw = (() => { const w = $("#main").createDiv({ cls: "ivm-sfsw seg" }); w.hidden = true;
-  for (const [m, t] of [["chart", "Chart"], ["ship", "Starship"]]) { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); sfShip(m === "ship"); }; }
+  for (const [m, t] of [["ship", "Starship"], ["chart", "Chart"]])   /* Starship first (0.8.323, Nick) */ { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); sfShip(m === "ship"); }; }
   w.createSpan({ cls: "sfk", text: "C", attr: { "aria-hidden": "true" } });   /* the key that toggles them */
   for (const ty of ["pointerdown", "wheel", "click"]) w.addEventListener(ty, ev => ev.stopPropagation()); win.setTimeout(() => sfSwSync(), 0); return w; })();
 /* Starfield leads with the Starship (0.8.320, Nick: "Starfield on its own is so powerful that it should be the lead"); Star Chart is the 2D chart as its own map, and C still swaps */
@@ -5804,7 +5804,9 @@ function sfLaunch(){ if (view === "cockpit" && SFSHIP) return; if (view === "sta
   if (view === "cockpit") { setView("stars"); win.setTimeout(() => { if (!dead) sfShip(true); }, 400); return; }
   closePops(); veilTo(1, 150); win.setTimeout(() => { if (dead) return; SFSHIP = { ckw: CKW, cam: null }; CKW = "sf"; CK.sfIn = false; setView("cockpit"); win.setTimeout(() => { veilTo(0, 300); sfSwSync(); }, 80); }, 160); }
 function sfChart(){ if (view === "cockpit" && SFSHIP) { sfShip(false); return; } if (view !== "stars") setView("stars"); }
-function sfSwSync(){ const on = SFMERGE && !dead && (view === "stars" || (view === "cockpit" && !!SFSHIP)); sfSw.hidden = !on; if (!on) return; sfSw.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.m === "ship") === (view === "cockpit")))); }
+/* beside the orb tabs, not under them (0.8.323, Nick: "dead center just below the orb tabs… is prime real estate"); centered at the top when there are no orbs */
+function sfSwPlace(){ if (sfSw.hidden) return; try { const m = $("#main").getBoundingClientRect(); if (orbBar && !orbBar.hidden && orbBar.childElementCount) { let r = null; for (const c of orbBar.children) { const q = c.getBoundingClientRect(); if (!q.width) continue; if (!r) r = { right: q.right, top: q.top, height: q.height }; else if (q.right > r.right) r = { right: q.right, top: q.top, height: q.height }; } if (!r) { sfSw.classList.remove("sfbeside"); return; } sfSw.classList.add("sfbeside"); sfSw.setCssProps({ "--sfl": Math.round(r.right - m.left + 14) + "px", "--sft": Math.round(r.top - m.top + r.height / 2) + "px" }); } else sfSw.classList.remove("sfbeside"); } catch (_) { /* not laid out yet */ } }
+function sfSwSync(){ const on = SFMERGE && !dead && (view === "stars" || (view === "cockpit" && !!SFSHIP)); sfSw.hidden = !on; if (!on) return; win.setTimeout(sfSwPlace, 0); sfSw.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.m === "ship") === (view === "cockpit")))); }
 onKey(e => { if (!SFMERGE || e.metaKey || e.ctrlKey || e.altKey || e.key.toLowerCase() !== "c") return; const a = doc.activeElement; if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable)) return;
   if (view === "cockpit" && SFSHIP) { e.preventDefault(); sfShip(false); } else if (view === "stars") { e.preventDefault(); sfShip(true); } });   /* C toggles Chart ⇄ Starship (0.8.222, Nick); no other map uses C */
 /* ⌘T: a new, empty tab, as in Obsidian (0.8.211, Nick): an orb of its own, and the primary note waits as a quiet placeholder until you pick a note.
@@ -5859,7 +5861,7 @@ function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".card
           TABS = order.map(q => TABS[q]).filter(Boolean); TCUR = cur ? Math.max(0, TABS.indexOf(cur)) : -1; tabsSave(); orbKey = ""; syncOrbs(); };
         win.addEventListener("pointermove", mv, true); win.addEventListener("pointerup", upf, true); win.addEventListener("pointercancel", upf, true); }); }); }
   placeOrbs(); }
-function placeOrbs(){ if (orbBar.hidden) return; const L = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 12, R = (!EDS.right.el.hidden ? edRect("right").x : W - sideW()) - 12;
+function placeOrbs(){ win.setTimeout(() => { if (!dead && typeof sfSwPlace === "function") sfSwPlace(); }, 0); if (orbBar.hidden) return; const L = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 12, R = (!EDS.right.el.hidden ? edRect("right").x : W - sideW()) - 12;
   orbBar.style.left = Math.round(L) + "px"; orbBar.style.width = Math.max(40, Math.round(R - L)) + "px"; }
 // Starfield: a small read-only preview of each galaxy's hub note, above it
 const pvLayer = doc.createElement("div"); pvLayer.className = "ivm-pvl"; root.after(pvLayer); const HPV = new Map();
