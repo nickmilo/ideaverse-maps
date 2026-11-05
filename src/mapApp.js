@@ -3003,7 +3003,7 @@ function ckView(){ ckEl(); if (view !== "cockpit" && SFSHIP) { CKW = "sf"; SFSHI
 //   Drift: cruise slowly, the lock passing from link to link as you look at each, then fly to the last one
 // Started with ▶ under Animations → Wander Mode (or P, or the Cockpit's ⚙); any key, drag or scroll takes the stick back.
 let CKWM = ["links", "jumps", "drift"].includes(pref("iv-ckwm", "links")) ? pref("iv-ckwm", "links") : "links";
-function ckWander(on){ if (on) { CK.wd = { phase: "linger", t0: win.performance.now() - 1e5, seen: new Set([CK.c]), stack: [], cyc: 0 }; CK.wmsg = `Wander · ${({ links: "Links", jumps: "Jumps", drift: "Drift" })[CKWM]}`; }
+function ckWander(on){ if (on) { CK.wd = { phase: "linger", t0: win.performance.now() - 1e5, seen: new Set([CK.c]), stack: [], cyc: 0 }; CK.wmsg = `Wander · ${({ links: "Links", jumps: "Random", drift: "Link & Wonder" })[CKWM]}`; }
   else { CK.wd = null; CK.wmsg = ""; CK.auto = false; CK.hyper = 0; } }
 function ckWanderPick(){ const W_ = CK.wd, c = CK.c; if (c < 0) return -1;
   if (CKWM === "jumps") { for (let k_ = 0; k_ < 60; k_++) { const j = Math.floor(Math.random() * n); if (vis[j] && j !== c && N[j].level >= 2 && !W_.seen.has(j)) return j; } return -1; }
