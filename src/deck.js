@@ -111,48 +111,60 @@ export class DeckView extends ItemView {
     const f = this.file(path), fm = (f && this.app.metadataCache.getFileCache(f) || {}).frontmatter || {}, low = a => a.map(x => x.toLowerCase());
     const fmL = keys => { const out = [], K = low(keys); for (const [k, v] of Object.entries(fm)) if (K.includes(k.toLowerCase())) for (const x of Array.isArray(v) ? v : [v]) { const m = /\[\[([^\]|#]+)/.exec(String(x || "")); const t = m && this.app.metadataCache.getFirstLinkpathDest(m[1], path); if (t) out.push(t.path); } return [...new Set(out)]; };
     const lvOf = p => { const n_ = G && G.idx.get(p); return n_ ? n_.level : 0; }, scOf = p => { const n_ = G && G.idx.get(p); return n_ ? n_.score || 0 : 0; };
+    const byLv = a => a.sort((x, y) => lvOf(y) - lvOf(x) || scOf(y) - scOf(x));   /* highest level first, as in the map */
     const outL = Object.keys(rl[path] || {}).filter(t => t !== path && t.endsWith(".md")), inL = Object.entries(rl).filter(([k, m]) => k !== path && m && m[path]).map(([k]) => k);
     const L = { up: fmL(UP), related: fmL(RE), out: outL, in: inL }, nb = [...new Set([...outL, ...inL])], me = nd ? nd.level : 0, ms = nd ? nd.score || 0 : 0;
     L.above = nb.filter(p => lvOf(p) > me || (lvOf(p) === me && scOf(p) > ms)); L.below = nb.filter(p => !L.above.includes(p));
     const key = "strip:" + (slot || path), S_ = (this.stripOpen ||= {}), so = S_[key] || {}, open = so.o || "", sub = so.s || "";
     const set_ = (o, s_) => { S_[key] = { o, s: s_ }; this.render(); };
-    const b = host.createDiv({ cls: "ivd-strip" }), dr = host.createDiv({ cls: "ivd-sdrop" });
-    if (nd) { const lv = b.createSpan({ cls: "ivd-lv", text: "L" + nd.level }); lv.dataset.l = String(nd.level); }
-    const chip = (k, label, cls) => { const c = b.createEl("button", { cls: "ivd-chip " + cls + (open === k ? " on" : ""), text: label, attr: { type: "button", "aria-expanded": String(open === k) } });
+    /* the map's own classes and CSS (cardstrip, carddrop…), so the two strips look and read the same */
+    const b = host.createDiv({ cls: "cardstrip" }), dr = host.createDiv({ cls: "carddrop" });
+    const LC = { 5: "var(--ivd-upp)", 4: "var(--ivd-rel)", 3: "var(--ivd-up)", 2: "var(--ivd-down)", 1: "var(--text-muted)" };
+    if (nd) { const lv = b.createSpan({ cls: "slv", text: "L" + nd.level }); lv.style.setProperty("--slc", LC[nd.level] || "var(--text-muted)"); }
+    const chip = (k, label, cls) => { const c = b.createEl("button", { cls: "schip " + cls + (open === k ? " on" : ""), text: label, attr: { type: "button", "aria-expanded": String(open === k) } });
       c.onclick = e => { e.stopPropagation(); set_(open === k ? "" : k, ""); }; };
-    const bar = () => b.createSpan({ cls: "ivd-sbar" });
-    chip("up", L.up.length ? `${L.up.length} up` : "up", "ivd-sup" + (L.up.length ? "" : " ivd-sz")); chip("related", L.related.length ? `${L.related.length} related` : "related", "ivd-srel" + (L.related.length ? "" : " ivd-sz"));
-    bar(); chip("in", `${L.in.length} in`, ""); chip("out", `${L.out.length} out`, ""); bar();
-    const rk = G && G.rk.get(path); if (nd) chip("score", rk ? `#${rk.toLocaleString()}` : (nd.score || 0).toFixed(1), "ivd-sscore");
-    { const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "", fo = b.createSpan({ cls: "ivd-fold is-click" }); setIcon(fo.createSpan({ cls: "ivd-fold-i" }), "folder"); fo.createSpan({ text: dir ? dir.split("/").pop() : "Vault root" });
-      let tp = null; fo.addEventListener("pointerenter", () => { if (tp) tp.remove(); const r = fo.getBoundingClientRect(), cr = host.getBoundingClientRect(); tp = host.createDiv({ cls: "ivd-tip", text: dir || "The top of the vault" }); tp.style.left = Math.round(r.left - cr.left) + "px"; tp.style.top = Math.round(r.bottom - cr.top + 5) + "px"; });
+    const bar = () => b.createSpan({ cls: "sbar" });
+    chip("up", L.up.length ? `${L.up.length} up` : "up", "spill sup" + (L.up.length ? "" : " sz")); chip("related", L.related.length ? `${L.related.length} related` : "related", "spill srel" + (L.related.length ? "" : " sz"));
+    bar(); chip("in", `${L.in.length} in`, "spill"); chip("out", `${L.out.length} out`, "spill"); bar();
+    const rk = G && G.rk.get(path); if (nd) chip("score", rk ? `#${rk.toLocaleString()}` : (nd.score || 0).toFixed(1), "spill sscore");
+    { const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "", fo = b.createSpan({ cls: "sfold is-click", text: dir ? dir.split("/").pop() : "Vault root" }); const ic = createSpan({ cls: "sfold-i" }); setIcon(ic, "folder"); fo.prepend(ic);
+      let tp = null; fo.addEventListener("pointerenter", () => { if (tp) tp.remove(); const r = fo.getBoundingClientRect(), cr = host.getBoundingClientRect(); tp = host.createDiv({ cls: "sfold-tip", text: dir || "The top of the vault" }); tp.style.setProperty("--tx", Math.round(r.left - cr.left) + "px"); tp.style.setProperty("--ty", Math.round(r.bottom - cr.top + 5) + "px"); });
       fo.addEventListener("pointerleave", () => { if (tp) { tp.remove(); tp = null; } });
       fo.onclick = e => { e.stopPropagation(); if (tp) { tp.remove(); tp = null; } void this.moveNote(path); }; }
-    const rowL = (box, p) => { const r = this.row(box, p, "", "var(--ivd-link)", lvOf(p) ? "L" + lvOf(p) : ""); r.addClass("ivd-srow"); return r; };
+    const rowL = (box, p) => { const r = box.createEl("button", { cls: "sdr", attr: { type: "button", draggable: "true" } }); r.createSpan({ text: this.title(p) }); r.createSpan({ cls: "sdm", text: lvOf(p) ? "L" + lvOf(p) : "" });
+      r.onclick = e => { e.stopPropagation(); if (e.metaKey || e.ctrlKey) this.openSupport(p); else this.openPrimary(p); };
+      r.addEventListener("dragstart", e => { e.dataTransfer.setData("text/ivd-path", p); this.contentEl.addClass("ivd-dragging"); }); r.addEventListener("dragend", () => this.contentEl.removeClass("ivd-dragging"));
+      r.addEventListener("mouseenter", e => { this.hovPath = p; this.hovEl = r; if (e.metaKey || e.ctrlKey) this.showPv(p, r); }); r.addEventListener("mouseleave", () => { if (this.hovEl === r) { this.hovPath = null; this.hovEl = null; } }); return r; };
     if (open === "score" && nd) { const f2 = x => (Math.round(x * 100) / 100).toFixed(2), LN = x => Math.log1p(x), w = (G.w || {});
-      dr.createDiv({ cls: "ivd-h", text: `#${(rk || 0).toLocaleString()} IN ${nd.archive ? "THE ARCHIVE" : "THE IDEAVERSE"} · SCORE ${f2(nd.score || 0)}` });
-      const g = dr.createDiv({ cls: "ivd-nums" }); for (const [v, t_] of [[nd.body_in || 0, "linked from"], [nd.body_out || 0, "links to"], [nd.up_in || 0, "link up to it"], [(nd.score || 0).toFixed(1), "link score"]]) { const c_ = g.createDiv(); c_.createEl("b", { text: String(v) }); c_.createSpan({ text: t_ }); }
-      dr.createDiv({ cls: "ivd-why", text: `Level ${nd.level}: ${this.levelWhy(path, nd)}` });
+      dr.createDiv({ cls: "sdh", text: `#${(rk || 0).toLocaleString()} IN ${nd.archive ? "THE ARCHIVE" : "THE IDEAVERSE"} · SCORE ${f2(nd.score || 0)}` });
+      const det = dr.createDiv({ cls: "sddet" }), g = det.createDiv({ cls: "sdnums" }); for (const [v, t_] of [[nd.body_in || 0, "linked from"], [nd.body_out || 0, "links to"], [nd.up_in || 0, "link up to it"], [(nd.score || 0).toFixed(1), "link score"]]) { const c_ = g.createDiv(); c_.createEl("b", { text: String(v) }); c_.createSpan({ text: t_ }); }
+      det.createDiv({ cls: "sdwhy", text: `Level ${nd.level}: ${this.levelWhy(path, nd)}` });
       if (nd.s) { const [a, b_, u, c] = nd.s, rows = [["Links in", a, w.in, (w.in || 0) * LN(a)], ["Links out", b_, w.out, (w.out || 0) * LN(b_)], ["Links both in and out", a && b_ ? `${a} in · ${b_} out` : "—", w.both, (w.both || 0) * Math.sqrt(LN(a) * LN(b_))]];
         if (!nd.archive) rows.push(["Notes that link up to this note", u, w.up, (w.up || 0) * LN(u)], ["Notes in its collection", c, w.coll, (w.coll || 0) * LN(c)]);
-        const t = dr.createDiv({ cls: "ivd-tab" }); for (const h of ["", "count", "weight", "adds"]) t.createSpan({ cls: "ivd-th", text: h });
-        for (const [l, ct, wt, ad] of rows) { const z = !ad ? " z" : ""; t.createSpan({ cls: "ivd-tl" + z, text: l }); t.createSpan({ cls: "ivd-tn" + z, text: String(ct) }); t.createSpan({ cls: "ivd-tn" + z, text: "×" + (+(wt || 0)).toFixed(2) }); t.createSpan({ cls: "ivd-tn" + z, text: f2(ad) }); }
-        t.createSpan({ cls: "ivd-tl ivd-tt", text: "Score" }); t.createSpan(); t.createSpan(); t.createSpan({ cls: "ivd-tn ivd-tt", text: f2(nd.score || 0) }); }
-      if (L.above.length || L.below.length) { const em = dr.createDiv({ cls: "ivd-em" }); em.createSpan({ cls: "ivd-h", text: "EMERGENCE" });
-        for (const [k, lab] of [["above", "above"], ["below", "below"]]) { if (!L[k].length) continue; const c = em.createEl("button", { cls: "ivd-chip ivd-" + k + (sub === k ? " on" : ""), text: `${L[k].length} ${lab}`, attr: { type: "button" } }); c.onclick = e => { e.stopPropagation(); set_("score", sub === k ? "" : k); }; }
-        if (sub && L[sub].length) { const ls = dr.createDiv({ cls: "ivd-sdl ivd-sd-" + sub }); for (const p of L[sub].sort((x, y) => lvOf(y) - lvOf(x) || scOf(y) - scOf(x))) rowL(ls, p); } }
+        const t = det.createDiv({ cls: "sdtab" }); for (const h of ["", "count", "weight", "adds"]) t.createSpan({ cls: "sdth", text: h });
+        for (const [l, ct, wt, ad] of rows) { const z = !ad ? " z" : ""; t.createSpan({ cls: "sdtl" + z, text: l }); t.createSpan({ cls: "sdtn" + z, text: String(ct) }); t.createSpan({ cls: "sdtn" + z, text: "×" + (+(wt || 0)).toFixed(2) }); t.createSpan({ cls: "sdtn" + z, text: f2(ad) }); }
+        t.createSpan({ cls: "sdtl sdtt", text: "Score" }); t.createSpan(); t.createSpan(); t.createSpan({ cls: "sdtn sdtt", text: f2(nd.score || 0) }); }
+      if (L.above.length || L.below.length) { const em = dr.createDiv({ cls: "sdem" }); em.createSpan({ cls: "sdh", text: "EMERGENCE" });
+        for (const [k, lab] of [["above", "above"], ["below", "below"]]) { if (!L[k].length) continue; const c = em.createEl("button", { cls: "schip " + (k === "above" ? "sab" : "sbe") + (sub === k ? " on" : ""), text: `${L[k].length} ${lab}`, attr: { type: "button" } }); c.onclick = e => { e.stopPropagation(); set_("score", sub === k ? "" : k); }; }
+        if (sub && L[sub].length) { const ls = dr.createDiv({ cls: "sdl sdsub " + (sub === "above" ? "sd-up" : "sd-down") }); for (const p of byLv(L[sub])) rowL(ls, p); } }
       return; }
     const list = open && L[open] ? L[open] : null, prop_ = open === "up" || open === "related";
     if (!list || (!list.length && !prop_)) { dr.hidden = true; return; }
-    dr.createDiv({ cls: "ivd-h" + (open === "up" ? " ivd-h-up" : open === "related" ? " ivd-h-rel" : ""), text: list.length ? `${open.toUpperCase()} · ${list.length}` : open.toUpperCase() });
-    const ls = dr.createDiv({ cls: "ivd-sdl" }); for (const p of list.sort((a, c) => this.title(a).localeCompare(this.title(c)))) rowL(ls, p);
-    if (prop_) { const ad = dr.createEl("button", { cls: "ivd-sadd", attr: { type: "button", "aria-label": open === "up" ? "Link up to another note" : "Add a related note" } }); setIcon(ad, "plus");
+    dr.createDiv({ cls: "sdh" + (open === "up" ? " sdh-up" : open === "related" ? " sdh-rel" : ""), text: list.length ? `${open.toUpperCase()} · ${list.length}` : open.toUpperCase() });
+    const ls = dr.createDiv({ cls: "sdl" }); for (const p of byLv(list)) rowL(ls, p);
+    if (prop_) { const ad = dr.createEl("button", { cls: "sdadd", attr: { type: "button", "aria-label": open === "up" ? "Link up to another note" : "Add a related note" } }); setIcon(ad, "plus");
       ad.onclick = async e => { e.stopPropagation(); const have = new Set(list), items = []; for (const [p, n_] of (G ? G.idx : new Map())) if (p !== path && !have.has(p) && !n_.archive) items.push({ path: p, title: n_.title || this.title(p), s: n_.score || 0 });
         items.sort((a, c) => c.s - a.s); const t = this.title(path), p_ = await new Promise(res => new NotePicker(this.app, items, res, open === "up" ? `${t}: link up to…` : `${t}: related to…`).open()); if (!p_) return;
         const r = await this.addProp(path, p_, open === "up" ? UP[0] || "up" : RE[0] || "related"), t_ = this.title(p_);
         new Notice(r === "dup" ? `${t} already has ${t_} in ${open}.` : r ? `${t} → ${open}: ${t_}` : "Couldn't add the link."); window.setTimeout(() => this.render(), 300); }; } }
   levelWhy(path, nd) { for (const l of this.app.workspace.getLeavesOfType("ideaverse-maps")) { const m = l.view && l.view.map; if (m && m.levelRule) { const r = m.levelRule(path); if (r) return r; } }
-    const w = nd.why || ""; return w ? w.charAt(0).toUpperCase() + w.slice(1) + "." : ""; }
+    /* no map open: the same sentences, from the scan's settings (cut-offs without the map's balancing) */
+    const g = this.plugin.graph || {}, ss = g.settings || {}, sc = nd.score || 0, f2 = x => (Math.round(x * 100) / 100).toFixed(2), l4 = +ss.promote_l4 || 6.5, l3 = +ss.promote_l3 || 5.5, top = +ss.l5_top || 25, ml = +ss.l4_map_links || 3;
+    let r = nd.level === 5 ? (nd.home ? "It's one of your home notes." : `It's among the top ${top} by score.`)
+      : nd.level === 4 ? (nd.is_map && nd.maps_linked >= ml ? `It's a map that links to ${nd.maps_linked} other maps (${ml}+ makes Level 4).` : `Its score ${f2(sc)} is at least the Level 4 cut-off (${l4.toFixed(1)}).`)
+      : nd.level === 3 ? (nd.is_map ? "It's a map. Every map is at least Level 3, whatever its score." : `Its score ${f2(sc)} is at least the Level 3 cut-off (${l3.toFixed(1)}).`)
+      : nd.level === 2 ? `It has links, but it isn't a map and its score ${f2(sc)} is under the Level 3 cut-off (${l3.toFixed(1)}).` : "No links in or out yet.";
+    const rk = this.G && this.G.rk.get(path); if (rk) r += ` (#${rk.toLocaleString()} in ${nd.archive ? "the archive" : "the ideaverse"})`; return r; }
   async addProp(path, linkPath, key) { const t = this.file(path), l = this.file(linkPath); if (!t || !l) return false; const link = `[[${this.app.metadataCache.fileToLinktext(l, t.path, true)}]]`, base = s_ => String(s_).replace(/^\[\[|\]\]$/g, "").split("|")[0].trim(); let dup = false;
     await this.app.fileManager.processFrontMatter(t, fm => { const k = Object.keys(fm).find(x => x.toLowerCase() === key.toLowerCase()) || key, cur = fm[k] == null || fm[k] === "" ? [] : Array.isArray(fm[k]) ? fm[k] : [fm[k]];
       if (cur.some(x => base(x) === base(link))) { dup = true; return; } fm[k] = [...cur, link]; }); return dup ? "dup" : true; }
@@ -208,7 +220,7 @@ export class DeckView extends ItemView {
     if (path && opts.strip) this.strip(c, path, slot);
     const body = c.createDiv({ cls: "ivd-body" });
     if (!path) { const e_ = body.createDiv({ cls: "ivd-empty" }); e_.createDiv({ text: opts.empty || "Drop a note here" }); e_.createDiv({ cls: "ivd-sub", text: "drag a Recents or Links row · or ⌘-click one" }); }
-    else if (opts.readOnly) { const pv = body.createDiv({ cls: "ivd-pv markdown-rendered" }); void this.app.vault.cachedRead(this.file(path)).then(t => { void MarkdownRenderer.render(this.app, t.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").slice(0, 900), pv, path, this); }); }
+    else if (opts.readOnly) { const pv = body.createDiv({ cls: "ivd-pv markdown-rendered" }); void this.app.vault.cachedRead(this.file(path)).then(t => { void MarkdownRenderer.render(this.app, t.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").slice(0, 40000), pv, path, this); }); }
     else { const ed = this.editor(slot, body); void ed.open(path); }
     if (opts.drop) { c.addEventListener("dragover", e => { if (e.dataTransfer.types.includes("text/ivd-path")) { e.preventDefault(); c.addClass("ivd-over"); } });
       c.addEventListener("dragleave", () => c.removeClass("ivd-over")); c.addEventListener("drop", e => { const p = e.dataTransfer.getData("text/ivd-path"); c.removeClass("ivd-over"); if (p) { e.preventDefault(); opts.drop(p); } }); }

@@ -1933,7 +1933,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivd-primary{border-color:color-mix(in srgb,var(--ivd-acc) 50%,var(--ivd-line))}
 .ivd-prev{flex:0 0 210px;opacity:.82;cursor:pointer}
 .ivd-prev:hover{opacity:1}
-.ivd-pv{padding:4px 14px;font-size:12px;overflow:hidden;pointer-events:none}
+.ivd-pv{padding:4px 14px;font-size:12px;overflow-y:auto;flex:1;min-height:0;overscroll-behavior:contain}   /* read-only, but it scrolls (0.9.11, Nick) */
 .ivd-side{border-color:color-mix(in srgb,var(--ivd-rel) 45%,var(--ivd-line))}
 .ivd-sup{transition:flex-grow .25s ease}
 .ivd-sup.ivd-focus{flex-grow:1.7;border-color:color-mix(in srgb,var(--text-accent) 60%,var(--ivd-line))}
@@ -2060,3 +2060,66 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivd .ivd-chip.ivd-above.on{border-color:var(--ivd-up)}.ivd .ivd-chip.ivd-below.on{border-color:var(--ivd-down)}
 .ivd-sd-above{border-left:2px solid color-mix(in srgb,var(--ivd-up) 60%,transparent);margin-left:6px}.ivd-sd-below{border-left:2px solid color-mix(in srgb,var(--ivd-down) 60%,transparent);margin-left:6px}
 .ivd-sdrop{overflow-y:auto}
+
+/* the note strip in the Deck uses the map's own rules (0.9.11): copied from .ivm-card .cardstrip / .carddrop */
+.ivd .ivd-card .cardstrip{display:flex;align-items:center;gap:7px;padding:4px 12px 5px 14px;border-bottom:1px solid var(--background-modifier-border);font-size:11.5px;color:var(--text-muted);white-space:nowrap;overflow-x:auto;scrollbar-width:none;flex:none}
+.ivd .ivd-card .cardstrip:empty{display:none}
+.ivd .ivd-card .cardstrip .slv{font-family:var(--font-monospace);font-weight:700;color:var(--slc)}
+.ivd .ivd-card .cardstrip .ssep{opacity:.4}
+.ivd .ivd-card .cardstrip .schip{appearance:none;background:none;box-shadow:none;margin:0;height:auto;font-family:inherit;cursor:pointer;font-size:11px;line-height:1;padding:3px 8px;border:1px solid var(--background-modifier-border);border-radius:10px;color:var(--text-muted);white-space:nowrap}
+.ivd .ivd-card .cardstrip .schip:hover,.ivd .ivd-card .cardstrip .schip.on{border-color:var(--interactive-accent);color:var(--text-normal)}
+.ivd .ivd-card .cardstrip .sab::first-letter{color:#e8538a}
+.ivd .ivd-card .cardstrip .sbe::first-letter{color:#3fb98f}
+.ivd .ivd-card .carddrop{margin:6px 10px 4px;border:1px solid var(--background-modifier-border);border-radius:8px;background:color-mix(in srgb,var(--background-secondary) 90%,transparent);padding:6px 4px 6px 10px;flex:none;max-height:55%;display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain}
+.ivd .ivd-card .carddrop .sdl{flex:none}
+.ivd .ivd-card .carddrop[hidden]{display:none}
+.ivd .ivd-card .carddrop .sdh{font:600 10px var(--font-monospace);letter-spacing:.1em;color:var(--text-muted);margin:0 0 4px}
+.ivd .ivd-card .carddrop .sdl{overflow-y:auto;padding-right:6px}
+.ivd .ivd-card .carddrop .sdr{appearance:none;background:none;border:0;box-shadow:none;margin:0;height:auto;font-family:inherit;text-align:left;display:flex;justify-content:space-between;gap:10px;width:100%;box-sizing:border-box;padding:2px 4px;border-radius:4px;font-size:12.5px;color:var(--text-normal);cursor:pointer}
+.ivd .ivd-card .carddrop .sdr:hover{background:var(--background-modifier-hover)}
+.ivd .ivd-card .carddrop .sdm{font:500 10.5px var(--font-monospace);color:var(--text-faint)}
+.ivd .ivd-card .cardstrip .sscore{font-family:var(--font-monospace);color:var(--text-normal)}
+.ivd .ivd-card .carddrop .sdnums{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:2px 6px 6px 0}
+.ivd .ivd-card .carddrop .sdnums > div{border:1px solid var(--background-modifier-border);border-radius:6px;padding:5px 7px;display:flex;flex-direction:column}
+.ivd .ivd-card .carddrop .sdnums b{font:600 15px var(--font-monospace);color:var(--text-normal)}
+.ivd .ivd-card .carddrop .sdnums span{font-size:10.5px;color:var(--text-muted)}
+.ivd .ivd-card .carddrop .sdwhy{font-size:12px;line-height:1.45;color:var(--text-muted);margin:0 6px 2px 0}
+.ivd .ivd-card .cardstrip .sbar{width:1px;height:13px;background:var(--background-modifier-border);flex:none;margin:0 1px}
+.ivd .ivd-card .carddrop .sdtab{display:grid;grid-template-columns:1fr auto auto auto;gap:3px 12px;margin:8px 8px 2px 0;font-size:11.5px;align-items:baseline}
+.ivd .ivd-card .carddrop .sdth{font:500 10px var(--font-monospace);color:var(--text-faint);text-align:right}
+.ivd .ivd-card .carddrop .sdtl{color:var(--text-normal)}
+.ivd .ivd-card .carddrop .sdtn{font-family:var(--font-monospace);text-align:right;color:var(--text-muted)}
+.ivd .ivd-card .carddrop .z{opacity:.5}
+.ivd .ivd-card .carddrop .sdtt{font-weight:700;color:var(--text-normal);border-top:1px solid var(--background-modifier-border);padding-top:3px}
+.ivd .ivd-card .carddrop .sdem{display:flex;align-items:center;gap:6px;margin:10px 8px 4px 0;padding-top:8px;border-top:1px solid var(--background-modifier-border)}
+.ivd .ivd-card .carddrop .sdem .sdh{margin:0 4px 0 0}
+.ivd .ivd-card .carddrop .sdem .schip{appearance:none;background:none;box-shadow:none;margin:0;height:auto;font-family:inherit;cursor:pointer;font-size:11px;line-height:1;padding:3px 8px;border:1px solid var(--background-modifier-border);border-radius:10px;color:var(--text-muted)}
+.ivd .ivd-card .carddrop .sdem .schip:hover,.ivd .ivd-card .carddrop .sdem .schip.on{border-color:var(--interactive-accent);color:var(--text-normal)}
+.ivd .ivd-card .carddrop .sdsub{margin-top:4px}
+.ivd .ivd-card .cardstrip .sfold{display:inline-flex;align-items:center;gap:4px;font-size:11px;line-height:1;color:var(--text-muted);padding:3px 2px 3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;cursor:default}
+.ivd .ivd-card .cardstrip .sfold-i{display:inline-flex;flex:none}
+.ivd .ivd-card .cardstrip .sfold-i svg{width:12px;height:12px}
+.ivd .ivd-card .cardstrip .sfold.is-click{cursor:pointer;border-radius:8px}
+.ivd .ivd-card .cardstrip .sfold.is-click:hover{color:var(--text-normal);background:var(--background-modifier-hover)}
+.ivd .ivd-card .cardstrip .schip.sup{border-color:color-mix(in srgb,var(--upp, var(--color-yellow)) 55%,var(--background-modifier-border))}
+.ivd .ivd-card .cardstrip .schip.srel{border-color:color-mix(in srgb,var(--rel, var(--color-purple)) 55%,var(--background-modifier-border))}
+.ivd .ivd-card .cardstrip .schip.sup.on,.ivd .ivd-card .cardstrip .schip.sup:hover{border-color:var(--upp, var(--color-yellow));background:color-mix(in srgb,var(--upp, var(--color-yellow)) 12%,transparent)}
+.ivd .ivd-card .cardstrip .schip.srel.on,.ivd .ivd-card .cardstrip .schip.srel:hover{border-color:var(--rel, var(--color-purple));background:color-mix(in srgb,var(--rel, var(--color-purple)) 12%,transparent)}
+.ivd .ivd-card .carddrop .sdh.sdh-up::before,.ivd .ivd-card .carddrop .sdh.sdh-rel::before{content:"";display:inline-block;width:14px;height:0;border-top:2px solid var(--upp, var(--color-yellow));vertical-align:middle;margin:0 8px 2px 0}
+.ivd .ivd-card .carddrop .sdh.sdh-rel::before{border-top-color:var(--rel, var(--color-purple))}
+.ivd .ivd-card .cardstrip .schip.sz{opacity:.45;border-style:dashed}
+.ivd .ivd-card .cardstrip .schip.sz:hover,.ivd .ivd-card .cardstrip .schip.sz.on{opacity:1}
+.ivd .ivd-card .carddrop .sdadd{justify-content:flex-start;width:auto;appearance:none;background:none;box-shadow:none;border:0;height:auto;padding:3px 4px;margin:2px 0 0;display:flex;align-items:center;color:var(--text-faint);cursor:pointer;opacity:.7}
+.ivd .ivd-card .carddrop .sdadd svg{width:13px;height:13px}
+.ivd .ivd-card .carddrop .sdadd:hover{color:var(--text-normal);opacity:1}
+.ivd .ivd-card.sf-th .cardstrip .slv{color:#ff8fc0}
+.ivd .ivd-card .carddrop .schip.sab{border-color:color-mix(in srgb,var(--up, var(--color-blue)) 55%,var(--background-modifier-border))}
+.ivd .ivd-card .carddrop .schip.sbe{border-color:color-mix(in srgb,var(--down, var(--color-green)) 55%,var(--background-modifier-border))}
+.ivd .ivd-card .carddrop .schip.sab.on,.ivd .ivd-card .carddrop .schip.sab:hover{border-color:var(--up, var(--color-blue));background:color-mix(in srgb,var(--up, var(--color-blue)) 12%,transparent)}
+.ivd .ivd-card .carddrop .schip.sbe.on,.ivd .ivd-card .carddrop .schip.sbe:hover{border-color:var(--down, var(--color-green));background:color-mix(in srgb,var(--down, var(--color-green)) 12%,transparent)}
+.ivd .ivd-card .carddrop .sdsub.sd-up{box-shadow:inset 2px 0 0 var(--up, var(--color-blue))}
+.ivd .ivd-card .carddrop .sdsub.sd-down{box-shadow:inset 2px 0 0 var(--down, var(--color-green))}
+.ivd .ivd-card .carddrop .sdsub.sd-up,.ivd .ivd-card .carddrop .sdsub.sd-down{padding-left:8px}
+.ivd .ivd-card .cardstrip .schip.sfoc.on{border-color:var(--interactive-accent);color:var(--interactive-accent)}
+.ivd .ivd-card .sfold-tip{position:absolute;left:var(--tx);top:var(--ty);z-index:60;pointer-events:none;white-space:nowrap;font:600 11px var(--font-interface);color:var(--text-normal);background:var(--background-primary);border:1px solid var(--ivd-line);border-radius:5px;padding:3px 7px}
+.ivd .ivd-card{--upp:var(--ivd-upp);--rel:var(--ivd-rel)}
