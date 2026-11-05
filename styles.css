@@ -1825,5 +1825,5 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"] *,.ivm-card.ivm-
 .ivm .ivm-recents.ivm-lkhud.ck{max-height:calc(100% - var(--lkt,260px) - 150px)}
 .ivm .ivm-recents .rcr.dim{opacity:.3}
 /* Recents above Links shows --rcrows notes (7 to 14), set by the hidden grip along its bottom edge (0.8.290, Nick) */
-.ivm .ivm-recents.paired .rcl.rcrec{max-height:calc(17.5px * var(--rcrows,7) + 17px)}
+.ivm .ivm-recents.paired .rcl.rcrec{max-height:calc(17.5px * var(--rcrows,10) + 17px)}
 .ivm .ivm-recents .rcvgrip{position:absolute;left:18%;right:18%;bottom:6px;height:12px;cursor:ns-resize;z-index:2}
