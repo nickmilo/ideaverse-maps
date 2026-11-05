@@ -948,7 +948,10 @@ function senseLabels(){
 // The centre each note flies from is the middle of the 2×2, or in Starfield its own galaxy's core.
 // the date behind the map while the timeline runs: the year huge, the month under it, and the week when stepping by week
 let senseStepStart = null;
-function drawWatermark(cx, cy, size, col, alpha){
+/* the date watermark shows only while the Timelapse plays; once it stops, it stays 7 s and then fades out over 1.5 s (0.8.358, Nick) */
+let TLSTOP = 0;
+function tlWmA(){ if (sensePlaying) return 1; if (!TLSTOP) return 0; const t = performance.now() - TLSTOP; return t < 7000 ? 1 : Math.max(0, 1 - (t - 7000) / 1500); }
+function drawWatermark(cx, cy, size, col, alpha){ alpha *= tlWmA(); if (alpha <= 0) return;
   const d = new Date(senseStepStart != null ? senseStepStart : senseT), y = d.getUTCFullYear();
   ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = col; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.font = `${css.dw} ${Math.round(size)}px ${css.display}`; ctx.fillText(String(y), cx, cy);
@@ -1080,7 +1083,7 @@ function senseSet(idx, rebuildTrail){
 }
 let tlGlide = false;   // a timeline step is moving notes: don't re-frame a selected note each step
 function senseClear(){ senseStop(); unfreeze(false); senseT = null; senseTrail = []; if (GROWN) { ungrow(); morph(true); } $("#tlrange").value = SSTEPS.length - 1; $("#tldate").textContent = "All time"; buildGrid(); draw(); legend(); }
-function senseStop(){ sensePlaying = false; win.clearTimeout(senseTimer); $("#tlplay").textContent = "▶"; $("#tlplay").setAttribute("aria-label", "Play the years"); }
+function senseStop(){ if (sensePlaying) { TLSTOP = performance.now(); for (const ms of [7100, 7500, 7900, 8300, 8700]) win.setTimeout(() => { if (!dead) draw(); }, ms); } sensePlaying = false; win.clearTimeout(senseTimer); $("#tlplay").textContent = "▶"; $("#tlplay").setAttribute("aria-label", "Play the years"); }
 function senseTick(){ if (!sensePlaying) return; const i = +$("#tlrange").value;
   if (i >= SSTEPS.length - 1) { senseStop(); return; }
   senseSet(i + 1, false); senseTimer = win.setTimeout(senseTick, stepMs()); }
@@ -2760,19 +2763,21 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     es.sort((x, y) => x[2] - y[2]); g.save(); g.globalCompositeOperation = "lighter"; g.strokeStyle = "rgba(170,185,220,1)"; g.lineWidth = .8; g.globalAlpha = .07; g.beginPath();
     for (const [a, b] of es.slice(0, 6000)) { g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } g.stroke(); g.restore(); }
   g.globalCompositeOperation = "source-over";
-  if (TLp) { /* each new star arrives the way Timelapse's effect says (0.8.353, Nick): Comets streak in, Rain falls, Swirl out spirals from the note you're at, Swirl in spirals in from afar; then a flare */
-    const ctr = CK.cPos || [cx, cy], ease = t => 1 - Math.pow(1 - t, 3);
-    const posAt = (i, px, py, t) => { const h = hash(N[i].path, 31), e = ease(Math.min(1, t)), k_ = 1 - e;
-      if (senseFx === "rain") return [px + (h - .5) * 30 * k_, py - 260 * k_];
-      if (senseFx === "swirl") { const a0 = Math.atan2(py - ctr[1], px - ctr[0]), d0 = Math.hypot(px - ctr[0], py - ctr[1]), a = a0 - 2.4 * k_, d = d0 * e; return [ctr[0] + Math.cos(a) * d, ctr[1] + Math.sin(a) * d]; }
-      if (senseFx === "swirlin") { const a = h * 6.2832 + 3 * k_, d = 320 * k_; return [px + Math.cos(a) * d, py + Math.sin(a) * d]; }
-      const a = h * 6.2832, d = 340 * k_; return [px + Math.cos(a) * d, py + Math.sin(a) * d]; };   /* comets */
-    for (const [i, px, py, p_, zc] of flash) { const col = ckCol(N[i].level), tr = Math.min(1, p_ / .62), R0 = Math.max(3, Math.min(14, 2600 / zc));
-      if (tr < 1) { const hd = posAt(i, px, py, tr), tl = posAt(i, px, py, Math.max(0, tr - .18)); g.globalAlpha = .85; g.strokeStyle = col; g.lineWidth = 2; g.lineCap = "round"; g.beginPath(); g.moveTo(tl[0], tl[1]); g.lineTo(hd[0], hd[1]); g.stroke();
-        g.fillStyle = "#ffffff"; g.beginPath(); g.arc(hd[0], hd[1], 2.4, 0, 6.2832); g.fill(); continue; }
-      const q = (p_ - .62) / .38, e = 1 - q; g.globalAlpha = .9 * e; g.strokeStyle = col; g.lineWidth = 1.5; g.beginPath(); g.arc(px, py, R0 + 22 * q, 0, 6.2832); g.stroke();
-      g.globalAlpha = e; g.fillStyle = "#ffffff"; g.beginPath(); g.arc(px, py, Math.max(1.5, R0 * .5 * e), 0, 6.2832); g.fill(); }
-    /* the date, quiet, high in the sky */ const dl = senseDateLabel(senseStepStart != null ? senseStepStart : senseT); g.globalAlpha = .55; g.font = `600 30px ${font}`; g.textAlign = "center"; g.fillStyle = "#eef1ff"; g.fillText(dl, cx, Math.max(84, VH * .14)); g.textAlign = "left"; g.globalAlpha = 1; }
+  if (TLp) { /* each new star arrives the way Timelapse's effect says (0.8.353; quieter 0.8.358, Nick: "they all suck"): a short, thin, tapered streak that glows,
+       sized by distance, only for the nearest 70 births; farther ones simply fade in; then a soft bloom, no rings. Rain is a Comet here (no "down" in space) */
+    const ctr = CK.cPos || [cx, cy], ease = t => 1 - Math.pow(1 - t, 3), fx = senseFx === "rain" ? "comet" : senseFx;
+    flash.sort((a, b) => a[4] - b[4]); g.save(); g.globalCompositeOperation = "lighter"; g.lineCap = "round";
+    flash.forEach(([i, px, py, p_, zc], q) => { const col = SPAL[SC[i]] || ckCol(N[i].level), sc_ = Math.max(.35, Math.min(1.4, 2600 / zc)), h = hash(N[i].path, 31), tr = Math.min(1, p_ / .62);
+      if (tr < 1) { if (q >= 70) return; const e = ease(tr), k_ = 1 - e; let hx, hy, tx_, ty_;
+        if (fx === "swirl" || fx === "swirlin") { const at = t => { const kk = 1 - ease(t); if (fx === "swirl") { const a0 = Math.atan2(py - ctr[1], px - ctr[0]), d0 = Math.hypot(px - ctr[0], py - ctr[1]); return [ctr[0] + Math.cos(a0 - 1.6 * kk) * d0 * (1 - kk), ctr[1] + Math.sin(a0 - 1.6 * kk) * d0 * (1 - kk)]; }
+            const a = h * 6.2832 + 2.2 * kk, d = 110 * sc_ * kk; return [px + Math.cos(a) * d, py + Math.sin(a) * d]; };
+          [hx, hy] = at(tr); [tx_, ty_] = at(Math.max(0, tr - .14)); }
+        else { const a = h * 6.2832, d = 150 * sc_ * k_, L = 46 * sc_; hx = px + Math.cos(a) * d; hy = py + Math.sin(a) * d; tx_ = hx + Math.cos(a) * L; ty_ = hy + Math.sin(a) * L; }
+        const gr = g.createLinearGradient(tx_, ty_, hx, hy); gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(1, col); g.globalAlpha = .55 * Math.min(1, tr * 4); g.strokeStyle = gr; g.lineWidth = 1.1 * sc_; g.beginPath(); g.moveTo(tx_, ty_); g.lineTo(hx, hy); g.stroke();
+        const s0 = 9 * sc_; g.globalAlpha = .7; g.drawImage(sprite(col), hx - s0 / 2, hy - s0 / 2, s0, s0); return; }
+      const q_ = (p_ - .62) / .38, s1 = (10 + 26 * Math.sin(Math.min(1, q_ * 1.6) * Math.PI / 2)) * sc_; g.globalAlpha = .55 * (1 - q_); g.drawImage(sprite(col), px - s1 / 2, py - s1 / 2, s1, s1); });   /* the bloom */
+    g.restore();
+    /* the date, quiet, high in the sky */ const dl = senseDateLabel(senseStepStart != null ? senseStepStart : senseT); g.globalAlpha = .55 * tlWmA(); g.font = `600 30px ${font}`; g.textAlign = "center"; g.fillStyle = "#eef1ff"; g.fillText(dl, cx, Math.max(84, VH * .14)); g.textAlign = "left"; g.globalAlpha = 1; }
   if (emoL) { emoL.sort((a, b) => a[4] - b[4]); const far = emoL.splice(40); g.fillStyle = "#cfd8ee"; g.globalAlpha = .7; g.beginPath(); for (const q of far) g.rect(q[1] - 1, q[2] - 1, 2, 2); g.fill();   /* only the 40 nearest show their emoji */
     g.textAlign = "center"; g.textBaseline = "middle"; for (const [i, px, py, r] of emoL) { g.globalAlpha = 1; g.font = `${r}px ${font}`; g.fillText(EMOI[i], px, py); } g.textAlign = "left"; g.textBaseline = "alphabetic"; }
   CK.starHov = hi >= 0 && hi !== ck ? hi : -1;

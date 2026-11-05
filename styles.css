@@ -1908,3 +1908,4 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm #driftbar .ckosc{display:none}
 .ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftbar .ckosc{display:inline-flex;margin-left:6px}
 .ivm.ivm.ivm .ivm-recents .lkg{color:var(--lgc,#a9b4c8)}   /* group headers take their rows' color (0.8.354) */
+.ivm[data-view="cockpit"] #tlfx button[data-f="rain"]{display:none}   /* no "down" in space (0.8.358, Nick) */
