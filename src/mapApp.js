@@ -8166,7 +8166,6 @@ return {
   /** a note opened elsewhere while the map is in front: show it as the primary note (0.8.218). False when the map can't (not in the map, or filtered out) */
   hasNote(path){ return PIDX.has(path); },
   /** how the note at toPath relates to the one at fromPath, for link colors everywhere (0.8.234): upp, rel, up, down, prop, or "" */
-  hasNote(path){ return !dead && PIDX.has(path); },
   linkKind(fromPath, toPath){ const i = PIDX.get(fromPath), j = PIDX.get(toPath); if (i == null || j == null || i === j || dead) return ""; const kk = EKIND.get(i*n + j); if (kk === undefined && !out[i].includes(j)) return ""; return kk === 1 ? "upp" : kk === 4 ? "rel" : kk === 5 || kk === 3 ? "prop" : upOf(i, j) ? "up" : "down"; },
   openPrimary(path){ const i = PIDX.get(path); if (i == null || dead || !edOn() || !vis[i]) return false; if (EDS.left.col) EDS.left.collapse(false); select(i); navTo(i); draw(); return true; },
   editIn(path, which){ const i = PIDX.get(path); if (i == null || dead) return false;
