@@ -12,7 +12,7 @@ const KIND_COL = { upp: "var(--ivd-upp)", rel: "var(--ivd-rel)", up: "var(--ivd-
 
 export class DeckView extends ItemView {
   constructor(leaf, plugin) { super(leaf); this.plugin = plugin;
-    this.st = { mini: false, primary: null, prev: null, sup: [null, null], focus: 0, side: null, drawers: {}, drawerMain: true, hist: {}, leftW: 340, hudW: 230, rightW: 380 };
+    this.st = { mini: false, primary: null, prev: null, sup: [null, null], focus: 0, side: null, drawers: {}, drawerMain: true, drawerDock: true, hist: {}, leftW: 340, hudW: 230, rightW: 380 };
     this.eds = {}; }
   getViewType() { return DECK_TYPE; }
   getDisplayText() { return this.st.mini ? "Deck Mini" : "Deck"; }
@@ -152,7 +152,7 @@ export class DeckView extends ItemView {
     if (!list || (!list.length && !prop_)) { dr.hidden = true; return; }
     dr.createDiv({ cls: "sdh" + (open === "up" ? " sdh-up" : open === "related" ? " sdh-rel" : ""), text: list.length ? `${open.toUpperCase()} · ${list.length}` : open.toUpperCase() });
     const ls = dr.createDiv({ cls: "sdl" }); for (const p of byLv(list)) rowL(ls, p);
-    if (prop_) { const ad = dr.createEl("button", { cls: "sdadd", attr: { type: "button", "aria-label": open === "up" ? "Link up to another note" : "Add a related note" } }); setIcon(ad, "plus");
+    if (prop_) { const ad = dr.createEl("button", { cls: "sdadd", attr: { type: "button", "aria-description": open === "up" ? "Link up to another note" : "Add a related note" } }); setIcon(ad, "plus");
       ad.onclick = async e => { e.stopPropagation(); const have = new Set(list), items = []; for (const [p, n_] of (G ? G.idx : new Map())) if (p !== path && !have.has(p) && !n_.archive) items.push({ path: p, title: n_.title || this.title(p), s: n_.score || 0 });
         items.sort((a, c) => c.s - a.s); const t = this.title(path), p_ = await new Promise(res => new NotePicker(this.app, items, res, open === "up" ? `${t}: link up to…` : `${t}: related to…`).open()); if (!p_) return;
         const r = await this.addProp(path, p_, open === "up" ? UP[0] || "up" : RE[0] || "related"), t_ = this.title(p_);
@@ -203,7 +203,7 @@ export class DeckView extends ItemView {
     if (!linksOnly) for (const f of this.recents(this.optN())) this.row(rb, f.path, "", f.path === path ? "var(--ivd-acc)" : "var(--ivd-recent)", this.opt("age") ? this.age(f.stat.mtime) : "");
     const ls = path ? this.linksOf(path) : []; box.createDiv({ cls: "ivd-h" + (linksOnly ? "" : " ivd-h2"), text: `⇄ LINKS · ${ls.length}` });
     /* a grip under Recents: drag it down to see more rows, up for fewer (0.9.6, Nick) */
-    if (rb) { const g = box.createDiv({ cls: "ivd-vgrip", attr: { "aria-label": "Drag to show more or fewer recents" } }); rb.after(g);
+    if (rb) { const g = box.createDiv({ cls: "ivd-vgrip", attr: { "aria-description": "Drag to show more or fewer recents" } }); rb.after(g);
       g.addEventListener("pointerdown", e => { e.preventDefault(); g.setPointerCapture(e.pointerId); const y0 = e.clientY, n0 = this.recRows(mini);
         const mv = ev => { const n = Math.max(3, Math.min(40, n0 + Math.round((ev.clientY - y0) / 22))); rb.style.setProperty("--ivd-rn", String(n)); g.dataset.n = String(n); };
         const up = () => { g.removeEventListener("pointermove", mv); g.removeEventListener("pointerup", up); if (g.dataset.n) this.plugin.store.set("iv-deck-recrows" + (mini ? "m" : ""), +g.dataset.n); };
@@ -214,9 +214,9 @@ export class DeckView extends ItemView {
 
   /* a note card: header (label, title, buttons), the editor, and its links drawer */
   card(parent, cls, label, path, slot, opts = {}) { const c = parent.createDiv({ cls: "ivd-card " + cls }); const hd = c.createDiv({ cls: "ivd-hd" });
-    for (const [ic, tip, fn, off] of opts.nav || []) { const b = hd.createEl("button", { cls: "ivd-ib ivd-nav", attr: { type: "button", "aria-label": tip } }); setIcon(b, ic); b.disabled = !!off; b.onclick = e => { e.stopPropagation(); fn(); }; }
+    for (const [ic, tip, fn, off] of opts.nav || []) { const b = hd.createEl("button", { cls: "ivd-ib ivd-nav", attr: { type: "button", "aria-description": tip } }); setIcon(b, ic); b.disabled = !!off; b.onclick = e => { e.stopPropagation(); fn(); }; }
     hd.createSpan({ cls: "ivd-lab", text: label }); if (path) hd.createSpan({ cls: "ivd-ttl", text: this.title(path) });   /* the note's name stays in view once you scroll past its title (0.9.12, Nick) */   /* an editor shows its own title; only Previous (no editor) names its note up here (0.9.2, Nick) */ hd.createSpan({ cls: "ivd-sp" });
-    for (const [ic, tip, fn] of opts.btns || []) { const b = hd.createEl("button", { cls: "ivd-ib", attr: { type: "button", "aria-label": tip } }); setIcon(b, ic); b.onclick = e => { e.stopPropagation(); fn(b); }; }
+    for (const [ic, tip, fn] of opts.btns || []) { const b = hd.createEl("button", { cls: "ivd-ib", attr: { type: "button", "aria-description": tip } }); setIcon(b, ic); b.onclick = e => { e.stopPropagation(); fn(b); }; }
     if (path && opts.strip) this.strip(c, path, slot);
     const body = c.createDiv({ cls: "ivd-body" });
     if (!path) { const e_ = body.createDiv({ cls: "ivd-empty" }); e_.createDiv({ text: opts.empty || "Drop a note here" }); e_.createDiv({ cls: "ivd-sub", text: "drag a Recents or Links row · or ⌘-click one" }); }
@@ -232,7 +232,7 @@ export class DeckView extends ItemView {
     for (const el of Array.from(root.querySelectorAll(".ivd-ed"))) el.detach();   /* editors are kept and moved, not rebuilt */
     root.empty(); root.toggleClass("ivd-mini", !!this.st.mini); const S = this.st, P = S.primary;
     /* a strip at the top: the Deck's settings (⚙), top left where a map's menu sits (0.9.3, Nick) */
-    { const top = root.createDiv({ cls: "ivd-top" }), cog = top.createEl("button", { cls: "ivd-ib ivd-cog", attr: { type: "button", "aria-label": "Deck settings" } }); setIcon(cog, "settings");
+    { const top = root.createDiv({ cls: "ivd-top" }), cog = top.createEl("button", { cls: "ivd-ib ivd-cog", attr: { type: "button", "aria-description": "Deck settings" } }); setIcon(cog, "settings");
       top.createSpan({ cls: "ivd-lab", text: S.mini ? "DECK MINI" : "DECK" });
       const pop = top.createDiv({ cls: "ivd-pop" }); pop.hidden = true;
       for (const [k, t] of [["rel", "Show relevance scores"], ["age", "Show time since modified"], ["col", "Color links by Idea Emergence"], ["strip-p", "Note strip on the primary note"], ["strip-s", "Note strip on the support notes"], ["strip-side", "Note strip on the sidekick"]]) {
@@ -240,15 +240,17 @@ export class DeckView extends ItemView {
         const l = pop.createEl("label", { cls: "ivd-sw" }), cb = l.createEl("input", { type: "checkbox" }); cb.checked = this.optD(k, k !== "strip-side"); l.createEl("i"); l.createSpan({ text: t }); cb.onchange = () => this.setOpt(k, cb.checked); }
       { const l = pop.createDiv({ cls: "ivd-sw ivd-rng" }); l.createSpan({ text: "Recents" }); const r = l.createEl("input", { type: "range" }); r.min = "5"; r.max = "50"; r.step = "1"; r.value = String(this.optN()); const v = l.createEl("b", { text: String(this.optN()) });
         r.oninput = () => v.setText(r.value); r.onchange = () => this.setOpt("recn", +r.value); }
+      if (S.mini) { const l = pop.createEl("label", { cls: "ivd-sw" }), cb = l.createEl("input", { type: "checkbox" }); cb.checked = S.drawerDock !== false; l.createEl("i"); l.createSpan({ text: "Drawer beside the note, not over it" });
+        cb.onchange = () => { S.drawerDock = cb.checked; this.save(); this.render(); }; }   /* 0.9.14, Nick: the drawer can stay open to the right without covering the text */
       if (!S.mini) { const r_ = pop.createEl("button", { cls: "ivd-reset", text: "Reset column widths", attr: { type: "button" } }); r_.onclick = () => { S.leftW = 340; S.hudW = 230; S.rightW = 380; this.save(); this.render(); }; }
       cog.onclick = e => { e.stopPropagation(); pop.hidden = !pop.hidden; cog.toggleClass("on", !pop.hidden); };
       this.registerDomEvent(root.ownerDocument, "pointerdown", e => { if (!pop.hidden && !top.contains(e.target)) { pop.hidden = true; cog.removeClass("on"); } }); }
     const want = new Set(); const keep = s => want.add(s);
     if (S.mini) { const pc = this.card(root, "ivd-primary", "", P, "p", { strip: this.optD("strip-p", true), nav: this.navBtns("p"), btns: [["panel-right", "Recents and links", b => { S.drawerMain = !S.drawerMain; this.save(); this.render(); void b; }]], empty: "Open a note (from any tab) and run “Deck: show the active note”" });
-      keep("p"); if (S.drawerMain) { const dr = pc.createDiv({ cls: "ivd-drawer ivd-main-drawer" }); dr.style.setProperty("--ivd-mdw", Math.max(140, Math.min(460, +S.drawerW || 220)) + "px");
+      keep("p"); pc.toggleClass("ivd-docked", !!(S.drawerMain && S.drawerDock)); if (S.drawerMain) { const dr = pc.createDiv({ cls: "ivd-drawer ivd-main-drawer" }); pc.style.setProperty("--ivd-mdw", Math.max(140, Math.min(460, +S.drawerW || 220)) + "px"); dr.style.setProperty("--ivd-mdw", Math.max(140, Math.min(460, +S.drawerW || 220)) + "px");
         /* its left edge can be dragged wider or narrower (0.9.7, Nick); only a CSS width changes while dragging, so nothing re-renders */
         const g = dr.createDiv({ cls: "ivd-grip ivd-grip-l" }); g.addEventListener("pointerdown", e => { e.preventDefault(); g.setPointerCapture(e.pointerId); const x0 = e.clientX, w0 = dr.getBoundingClientRect().width;
-          const mv = ev => { S.drawerW = Math.round(Math.max(140, Math.min(460, w0 - (ev.clientX - x0)))); dr.style.setProperty("--ivd-mdw", S.drawerW + "px"); };
+          const mv = ev => { S.drawerW = Math.round(Math.max(140, Math.min(460, w0 - (ev.clientX - x0)))); dr.style.setProperty("--ivd-mdw", S.drawerW + "px"); pc.style.setProperty("--ivd-mdw", S.drawerW + "px"); };
           const up = () => { g.removeEventListener("pointermove", mv); g.removeEventListener("pointerup", up); this.save(); this.onResize(); }; g.addEventListener("pointermove", mv); g.addEventListener("pointerup", up); });
         const hin = dr.createDiv({ cls: "ivd-hudin" }); this.hudEl = hin; this.hud(hin, P, true); } else this.hudEl = null;
       for (const k of Object.keys(this.eds)) if (!want.has(k)) this.dropEditor(k); return; }
@@ -256,7 +258,7 @@ export class DeckView extends ItemView {
     for (const k of Object.keys(CL)) setW(k, S[k]);
     /* the map's orb tabs (the same list), over the primary: click = primary, ⌘ click = a support slot, drag onto any slot (0.9.5) */
     const orbs = (this.plugin.store.get("iv-tabs") || []).filter(t => t && this.file(t.path));
-    if (orbs.length) { const ob = root.createDiv({ cls: "ivd-orbs" }); for (const t of orbs) { const o = ob.createEl("button", { cls: "ivd-orb" + (t.path === P ? " on" : ""), attr: { type: "button", draggable: "true", "aria-label": this.title(t.path) } });
+    if (orbs.length) { const ob = root.createDiv({ cls: "ivd-orbs" }); for (const t of orbs) { const o = ob.createEl("button", { cls: "ivd-orb" + (t.path === P ? " on" : ""), attr: { type: "button", draggable: "true", "aria-description": this.title(t.path) } });
         const nd = this.G && this.G.idx.get(t.path); o.dataset.l = String(nd ? nd.level : 2); o.onclick = e => { if (e.metaKey || e.ctrlKey) this.openSupport(t.path); else this.openPrimary(t.path); };
         o.addEventListener("dragstart", e => { e.dataTransfer.setData("text/ivd-path", t.path); root.addClass("ivd-dragging"); }); o.addEventListener("dragend", () => root.removeClass("ivd-dragging"));
         o.addEventListener("mouseenter", e => { this.hovPath = t.path; this.hovEl = o; if (e.metaKey || e.ctrlKey) this.showPv(t.path, o); }); o.addEventListener("mouseleave", () => { if (this.hovEl === o) { this.hovPath = null; this.hovEl = null; } }); } }
@@ -276,7 +278,7 @@ export class DeckView extends ItemView {
         { strip: this.optD("strip-s", true), nav: this.navBtns("s" + i), btns: p_ ? [this.drawerBtn("s" + i), ["x", "Close", () => { this.setSlot("s" + i, null); this.save(); this.render(); }]] : [], drawer: true, drop: p => this.openSupport(p, i) });
       if (p_) keep("s" + i); c.addEventListener("pointerdown", () => { if (S.focus !== i) { S.focus = i; this.save(); R.querySelectorAll(".ivd-sup").forEach((el, j) => el.toggleClass("ivd-focus", j === i)); window.setTimeout(() => this.onResize(), 260); } }, true); }
     /* every column can be made wider or narrower within limits (0.9.2 the sidekick; 0.9.3 all of them, Nick): a grip on the left column's right edge, and on the left edges of the HUD and the supports */
-    const grip = (host, k, side, sign) => { const g = host.createDiv({ cls: "ivd-grip ivd-grip-" + side, attr: { "aria-label": "Drag to resize" } });
+    const grip = (host, k, side, sign) => { const g = host.createDiv({ cls: "ivd-grip ivd-grip-" + side, attr: { "aria-description": "Drag to resize" } });
       g.addEventListener("pointerdown", e => { e.preventDefault(); g.setPointerCapture(e.pointerId); const x0 = e.clientX, w0 = S[k]; root.addClass("ivd-resizing");
         const mv = ev => { setW(k, w0 + sign * (ev.clientX - x0)); this.onResize(); };
         const up = () => { g.removeEventListener("pointermove", mv); g.removeEventListener("pointerup", up); root.removeClass("ivd-resizing"); this.save(); };
