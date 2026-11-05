@@ -1902,3 +1902,6 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm.ivm.ivm.ivm .ckseg{margin-top:6px;padding:3px 0 4px}   /* room under the switches above (0.8.332) */
 .ivm.ivm .ckany .ckgame{margin-top:8px}
 .ivm.ivm.ivm.ivm .ckdyn > .eol{font:600 10.5px var(--mono);letter-spacing:.08em;color:var(--muted);min-width:0}   /* DYNAMIC: (0.8.334) */
+/* Display: a little air round the sliders (Show, HUD opacity), so the switches under them don't touch (0.8.336, Nick: "these ones are too tight") */
+.ivm.ivm.ivm #disppop > :has(input[type=range]):not(:has(.seg)):not(.thsec){padding-top:3px;padding-bottom:6px}
+.ivm.ivm #disppop .ctrrk.tcsub{margin-top:2px}
