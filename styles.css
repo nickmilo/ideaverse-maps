@@ -2004,3 +2004,14 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
   .ivd.ivd-leftopen .ivd-left{display:flex;position:absolute;left:34px;top:46px;bottom:12px;width:var(--ivd-lw,340px);z-index:15;padding:0;filter:drop-shadow(0 16px 32px rgba(0,0,0,.4))}
 }
 .ivd{position:relative}
+/* the HUD as the primary note's drawer (0.9.6, Nick): joined to the primary's right edge, its seam the grip; narrow it to the names' start, widen it for long names */
+.ivd .ivd-mid .ivd-primary{border-top-right-radius:0;border-bottom-right-radius:0}
+.ivd .ivd-hud{margin-left:-12px;padding:8px 6px 8px 8px;background:color-mix(in srgb,var(--background-primary) 55%,var(--background-secondary));border:1px solid color-mix(in srgb,var(--ivd-acc) 50%,var(--ivd-line));border-left:1px dashed var(--ivd-line);border-radius:0 12px 12px 0;overflow-x:hidden}
+.ivd .ivd-hud .ivd-grip-l{left:-4px;width:8px}
+.ivd .ivd-hud .ivd-grip-l::after{content:"";position:absolute;left:2px;top:50%;width:4px;height:38px;margin-top:-19px;border-radius:2px;background:var(--ivd-line)}
+.ivd .ivd-hud .ivd-grip-l:hover::after{background:var(--text-accent)}
+.ivd-vgrip{flex:none;height:9px;margin:2px 6px 0;cursor:row-resize;position:relative}
+.ivd-vgrip::after{content:"";position:absolute;left:50%;top:3px;width:34px;height:3px;margin-left:-17px;border-radius:2px;background:var(--ivd-line)}
+.ivd-vgrip:hover::after{background:var(--text-accent)}
+.ivd-hudin{display:flex;flex-direction:column;gap:1px;min-height:0;flex:1;overflow-y:auto;overflow-x:hidden}
+.ivd .ivd-hud{overflow:visible}

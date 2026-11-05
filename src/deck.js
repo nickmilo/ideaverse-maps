@@ -132,10 +132,17 @@ export class DeckView extends ItemView {
     r.addEventListener("dragend", () => this.contentEl.removeClass("ivd-dragging")); return r; }
   hud(box, path, mini, linksOnly) { box.empty(); const rh = linksOnly ? null : box.createDiv({ cls: "ivd-h", text: "◷ RECENTS" });
     /* Recents scroll in their own box, as many as Show says (0.9.3, Nick: "I should be able to scroll through the recents") */
-    const rb = linksOnly ? null : box.createDiv({ cls: "ivd-recs" }); if (rb) rb.style.setProperty("--ivd-rn", String(Math.min(this.optN(), mini ? 8 : 10)));
+    const rb = linksOnly ? null : box.createDiv({ cls: "ivd-recs" }); if (rb) rb.style.setProperty("--ivd-rn", String(Math.min(this.optN(), this.recRows(mini))));
     if (!linksOnly) for (const f of this.recents(this.optN())) this.row(rb, f.path, "", f.path === path ? "var(--ivd-acc)" : "var(--ivd-recent)", this.opt("age") ? this.age(f.stat.mtime) : "");
     const ls = path ? this.linksOf(path) : []; box.createDiv({ cls: "ivd-h" + (linksOnly ? "" : " ivd-h2"), text: `⇄ LINKS · ${ls.length}` });
+    /* a grip under Recents: drag it down to see more rows, up for fewer (0.9.6, Nick) */
+    if (rb) { const g = box.createDiv({ cls: "ivd-vgrip", attr: { "aria-label": "Drag to show more or fewer recents" } }); rb.after(g);
+      g.addEventListener("pointerdown", e => { e.preventDefault(); g.setPointerCapture(e.pointerId); const y0 = e.clientY, n0 = this.recRows(mini);
+        const mv = ev => { const n = Math.max(3, Math.min(40, n0 + Math.round((ev.clientY - y0) / 22))); rb.style.setProperty("--ivd-rn", String(n)); g.dataset.n = String(n); };
+        const up = () => { g.removeEventListener("pointermove", mv); g.removeEventListener("pointerup", up); if (g.dataset.n) this.plugin.store.set("iv-deck-recrows" + (mini ? "m" : ""), +g.dataset.n); };
+        g.addEventListener("pointermove", mv); g.addEventListener("pointerup", up); }); }
     for (const l of ls) this.row(box, l.p, l.a, l.c, this.opt("rel") ? String(l.s) : ""); void rh; }
+  recRows(mini) { const v = +this.plugin.store.get("iv-deck-recrows" + (mini ? "m" : "")); return v >= 3 && v <= 40 ? v : mini ? 8 : 10; }
   renderHud() { if (this.hudEl) this.hud(this.hudEl, this.st.primary, this.st.mini); for (const [k, el] of Object.entries(this.drawerEls || {})) if (el && !el.hidden && !el.classList.contains("ivd-main-drawer")) this.hud(el, el.dataset.path, true, true); }
 
   /* a note card: header (label, title, buttons), the editor, and its links drawer */
@@ -173,7 +180,7 @@ export class DeckView extends ItemView {
     if (S.mini) { const pc = this.card(root, "ivd-primary", "", P, "p", { strip: this.optD("strip-p", true), nav: this.navBtns("p"), btns: [["panel-right", "Recents and links", b => { S.drawerMain = !S.drawerMain; this.save(); this.render(); void b; }]], empty: "Open a note (from any tab) and run “Deck: show the active note”" });
       keep("p"); if (S.drawerMain) { const dr = pc.createDiv({ cls: "ivd-drawer ivd-main-drawer" }); this.hudEl = dr; this.hud(dr, P, true); } else this.hudEl = null;
       for (const k of Object.keys(this.eds)) if (!want.has(k)) this.dropEditor(k); return; }
-    const CL = { leftW: [240, 560, 340, "--ivd-lw"], hudW: [180, 340, 230, "--ivd-hw"], rightW: [280, 600, 380, "--ivd-rw"] }, setW = (k, v) => { const [a, b, d, cv] = CL[k]; S[k] = Math.round(Math.max(a, Math.min(b, +v || d))); root.style.setProperty(cv, S[k] + "px"); };
+    const CL = { leftW: [240, 560, 340, "--ivd-lw"], hudW: [120, 440, 230, "--ivd-hw"], rightW: [280, 600, 380, "--ivd-rw"] }, setW = (k, v) => { const [a, b, d, cv] = CL[k]; S[k] = Math.round(Math.max(a, Math.min(b, +v || d))); root.style.setProperty(cv, S[k] + "px"); };
     for (const k of Object.keys(CL)) setW(k, S[k]);
     /* the map's orb tabs (the same list), over the primary: click = primary, ⌘ click = a support slot, drag onto any slot (0.9.5) */
     const orbs = (this.plugin.store.get("iv-tabs") || []).filter(t => t && this.file(t.path));
@@ -191,7 +198,7 @@ export class DeckView extends ItemView {
     /* middle: the primary note */
     this.card(M, "ivd-primary", "PRIMARY", P, "p", { strip: this.optD("strip-p", true), nav: this.navBtns("p"), btns: P ? [["pin", "Pin as the sidekick", () => { this.setSlot("side", P); this.save(); this.render(); }]] : [], drop: p => this.openPrimary(p) }); if (P) keep("p");
     /* its recents and links, straight, right beside it */
-    this.hudEl = H; this.hud(H, P, false);
+    { const Hi = H.createDiv({ cls: "ivd-hudin" }); this.hudEl = Hi; this.hud(Hi, P, false); }   /* content inside, so a refresh keeps the grip on H */
     /* right: two support slots; the focused one is taller */
     for (const i of [0, 1]) { const p_ = S.sup[i], c = this.card(R, "ivd-sup" + (S.focus === i ? " ivd-focus" : ""), "SUPPORT", p_, "s" + i,
         { strip: this.optD("strip-s", false), nav: this.navBtns("s" + i), btns: p_ ? [this.drawerBtn("s" + i), ["x", "Close", () => { this.setSlot("s" + i, null); this.save(); this.render(); }]] : [], drawer: true, drop: p => this.openSupport(p, i) });
