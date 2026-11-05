@@ -181,7 +181,7 @@ export class DeckView extends ItemView {
     { const top = root.createDiv({ cls: "ivd-top" }), cog = top.createEl("button", { cls: "ivd-ib ivd-cog", attr: { type: "button", "aria-label": "Deck settings" } }); setIcon(cog, "settings");
       top.createSpan({ cls: "ivd-lab", text: S.mini ? "DECK MINI" : "DECK" });
       const pop = top.createDiv({ cls: "ivd-pop" }); pop.hidden = true;
-      for (const [k, t] of [["rel", "Show relevance scores"], ["age", "Show time since modified"], ["col", "Color links by Idea Emergence"], ["strip-p", "Level strip on the primary note"], ["strip-s", "Level strip on the support notes"], ["strip-side", "Level strip on the sidekick"]]) {
+      for (const [k, t] of [["rel", "Show relevance scores"], ["age", "Show time since modified"], ["col", "Color links by Idea Emergence"], ["strip-p", "Note strip on the primary note"], ["strip-s", "Note strip on the support notes"], ["strip-side", "Note strip on the sidekick"]]) {
         if (S.mini && k.startsWith("strip-") && k !== "strip-p") continue;
         const l = pop.createEl("label", { cls: "ivd-sw" }), cb = l.createEl("input", { type: "checkbox" }); cb.checked = this.optD(k, k !== "strip-side"); l.createEl("i"); l.createSpan({ text: t }); cb.onchange = () => this.setOpt(k, cb.checked); }
       { const l = pop.createDiv({ cls: "ivd-sw ivd-rng" }); l.createSpan({ text: "Recents" }); const r = l.createEl("input", { type: "range" }); r.min = "5"; r.max = "50"; r.step = "1"; r.value = String(this.optN()); const v = l.createEl("b", { text: String(this.optN()) });
