@@ -3042,6 +3042,20 @@ function ckOrbit(dt){ if (!drifting || view !== "cockpit" || CK.wd || CK.keys.si
   const c_ = Math.cos(th), s_ = Math.sin(th), ad = a[0] * v[0] + a[1] * v[1] + a[2] * v[2], cr = [a[1] * v[2] - a[2] * v[1], a[2] * v[0] - a[0] * v[2], a[0] * v[1] - a[1] * v[0]];
   for (let q = 0; q < 3; q++) CK.P[q] = T[q] + v[q] * c_ + cr[q] * s_ + a[q] * ad * (1 - c_);
   const [ty_, tp_] = ckLook(CK.P, T); ckUpright(); CK.yaw += Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)) * Math.min(1, dt * 6); CK.pitch += (tp_ - CK.pitch) * Math.min(1, dt * 6); CK.roll *= Math.pow(.2, dt); }
+/* a link picked in the Links HUD swings into view (0.8.324, Nick: "the starship orbits around the currently active note, so that whatever linked note was selected
+   essentially rolls or orbits into frame"): the ship circles the note it's at, same distance and height, until the picked note sits just beside it, not behind it */
+let CKSW = null;
+function ckSwingTo(j){ if (CKW !== "sf" || CK.c < 0 || j === CK.c) return; const P = ckSF().P, T = [P[3 * CK.c], P[3 * CK.c + 1], P[3 * CK.c + 2]], L = [P[3 * j], P[3 * j + 1], P[3 * j + 2]];
+  const [xc, yc, zc] = ckCam(L[0], L[1], L[2]); if (zc > 0 && Math.abs(Math.atan2(xc, zc)) < .45 && Math.abs(Math.atan2(yc, zc)) < .32) return;   /* already in frame */
+  const wrap = a => Math.atan2(Math.sin(a), Math.cos(a)), ac = Math.atan2(CK.P[0] - T[0], CK.P[2] - T[2]), opp = Math.atan2(T[0] - L[0], T[2] - L[2]);
+  const c1 = opp + .5, c2 = opp - .5, tgt = Math.abs(wrap(c1 - ac)) < Math.abs(wrap(c2 - ac)) ? c1 : c2, da = wrap(tgt - ac);
+  CKSW = { T, da, done: 0, t0: win.performance.now(), dur: 900 + Math.abs(da) * 420 }; CK.v = 0; CK.auto = false; CK.settle = null; }
+function ckSwingTick(){ if (!CKSW) return; if (view !== "cockpit" || CK.keys.size || CK.drag) { CKSW = null; return; }
+  const p = Math.min(1, (win.performance.now() - CKSW.t0) / CKSW.dur), e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2, step = CKSW.da * e - CKSW.done; CKSW.done += step;
+  const T = CKSW.T, dx = CK.P[0] - T[0], dz = CK.P[2] - T[2], c_ = Math.cos(step), s_ = Math.sin(step);   /* the azimuth grows by step (x = sin, z = cos) */
+  CK.P[0] = T[0] + dx * c_ + dz * s_; CK.P[2] = T[2] - dx * s_ + dz * c_;
+  const [ty_, tp_] = ckLook(CK.P, T); ckUpright(); CK.yaw += Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)) * (p >= 1 ? 1 : .5); CK.pitch += (tp_ - CK.pitch) * (p >= 1 ? 1 : .5); CK.roll *= .9;
+  if (p >= 1) CKSW = null; }
 function ckGameTick(dt){ if (CK.shake > 0) { CK.shake = Math.max(0, CK.shake - dt * 2.2); CK.roll += (Math.random() - .5) * .18 * CK.shake; CK.yaw += (Math.random() - .5) * .012 * CK.shake; }
   /* a right answer flies the whole way (0.8.110, Nick: "don't truncate the jump"): turn toward the note, then autopilot all the way, with the hyperspace streaks, as Wander's Drift does */
   const gj = CK.gj; if (!gj) return; const now = win.performance.now(), el = (now - gj.t0) / 1000;
@@ -3056,7 +3070,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   const K = CK.keys, turn = 1.3 * dt;
   if (CK.wd && (K.size || CK.drag)) ckWanderStop();
   if (CK.wd) ckWanderTick(dt);
-  ckGameTick(dt); ckOrbit(dt);
+  ckGameTick(dt); ckOrbit(dt); ckSwingTick();
   if (K.has("x") || K.has("ArrowLeft")) { CK.yaw -= turn * ckUp(); CK.roll -= turn * 1.2; CK.auto = false; }
   if (K.has("v") || K.has("ArrowRight")) { CK.yaw += turn * ckUp(); CK.roll += turn * 1.2; CK.auto = false; }
   /* A and G orbit: the ship swings round the note it's on (or the one locked, in the links world), keeping its distance and its eyes on it */
@@ -5343,7 +5357,7 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
       const nm = r.createSpan({ cls: "rcn" + (HUDTC || g_ ? " lkc" : ""), text: N[j].title }); if (g_) nm.setCssProps({ "--lc": collCoral() }); else if (HUDTC) nm.setCssProps({ "--lc": col });
       if (HUDR && D_.sc.has(j)) r.createSpan({ cls: "rca lks", text: String(D_.sc.get(j)) });
       /* in the Starship a click locks onto that note's panel, a second click flies there, as its own list did */
-      r.onclick = e => { e.stopPropagation(); if (openKind(e)) { openAs(j, openKind(e)); return; } if (D_.ck) { const was = (CK.items[CK.lock] || {}).i === j; ckLockNote(j); if (was) CK.auto = true; RECKEY = ""; return; } if (shiftLink(j, e)) return; navTo(j); toEditor(j); };
+      r.onclick = e => { e.stopPropagation(); if (openKind(e)) { openAs(j, openKind(e)); return; } if (D_.ck) { const was = (CK.items[CK.lock] || {}).i === j; ckLockNote(j); if (was) CK.auto = true; else ckSwingTo(j); RECKEY = ""; return; } if (shiftLink(j, e)) return; navTo(j); toEditor(j); };
       r.addEventListener("pointerenter", () => { if (D_.ck) { CK.hovS = j; CK.hovEl = r; return; } HUDHOV = j; LKHV = r; RECHV = j; RECHVEL = r; recPv(); draw(); });
       r.addEventListener("pointerleave", () => { if (D_.ck) { if (CK.hovS === j) { CK.hovS = -1; CK.hovEl = null; } return; } if (HUDHOV === j) { HUDHOV = -1; LKHV = null; } if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } draw(); }); } } }
   if (recShow) recGrip(RECEL); if (lkShow) recGrip(LKEL); RECEL.setCssProps({ "--rcrows": String(RECROWS) }); if (both) recVGrip();
