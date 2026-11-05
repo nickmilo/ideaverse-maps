@@ -7706,11 +7706,8 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       const pb = sr.createEl("button", { cls: "ckplay", text: "▶", attr: { type: "button", "aria-label": "Start Wander Mode (P)" } }); pb.onclick = e => { e.stopPropagation(); setPlaying(!playing); };
       FUI.ckplay = () => { pb.setText(playing && view === "cockpit" ? "■" : "▶"); }; }
     /* Wander's pace, here too (0.8.164, Nick: the Cockpit had no seconds slider): how long the ship stays with each note */
-    { const sr = fa.createDiv({ cls: "eorow arnrow ckseg" }); sr.createSpan({ cls: "eol", text: "Pace" }); const seg = sr.createDiv({ cls: "seg" });
-      const sync_ = () => seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(+x.dataset.s === playSec)));
-      for (const s_ of [4, 6, 10, 15, 20]) { const b = seg.createEl("button", { text: s_ + " s", attr: { type: "button", "data-s": String(s_) } });
-        b.onclick = e => { e.stopPropagation(); playSec = s_; save("iv-psec", playSec); try { syncPlay(); } catch (_) { /* dock not ready */ } sync_(); }; }
-      sync_(); const f2_ = FUI.emoany; FUI.emoany = () => { if (f2_) f2_(); sync_(); }; }
+    /* Pace lives in the Animations dock; here, a way there (0.8.331, Nick: "Instead of showing pace in the dropdown, have a link that will say 'Open Animation'") */
+    { const ol = fa.createEl("button", { cls: "drow dlink ckanim", text: "Open Animations ›", attr: { type: "button" } }); ol.onclick = e => { e.stopPropagation(); closePops(); const t_ = $("#anitab"); if (t_ && !t_.hidden) t_.click(); }; }
     /* the layers in two small groups, each under a mini header (0.8.302, Nick: "HUD Artifacts" and "Cosmotic Elements", as in the cosmos); a "?" beside a switch says what it does */
     { const QH = { rings: "Rings with tick marks round the big hubs near you.", read: "A small readout beside the note you're at: its level, score, links and years.",
         rel: ["How close a linked note is to the cockpit note, 100 for the closest; the lists down the sides are in this order, with up links always first.",

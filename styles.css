@@ -1894,3 +1894,8 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm.ivm.ivm.ivm .ckseg > .eol{min-width:52px}
 .ivm.ivm.ivm.ivm .ckseg .ckplay{margin-left:2px}
 .ivm.ivm.ivm.ivm[data-view="cockpit"] .playbar label.pmaps:has(#pmaps),.ivm.ivm.ivm.ivm[data-view="cockpit"] .playbar label.pmaps:has(#ptrail){display:none}
+/* See-through tabs reach the left side too (0.8.331, Nick): the tucked primary note tab, Animations and Legend tabs, and the open Animations dock follow HUD opacity; the open primary note doesn't */
+.ivm.ivm.tabclr .edtab-left,.ivm.ivm.tabclr .anitab,.ivm.ivm.tabclr .legtab,.ivm.ivm.tabclr #animdock{background:color-mix(in srgb,var(--bg) var(--rcop,94%),transparent);box-shadow:none}
+/* Open Animations › in the Starship menu: the Display menu's link rows (Assign emojis ›) */
+.ivm.ivm.ivm button.ckanim{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:6px;font:500 12.5px var(--font-interface,inherit);cursor:pointer;white-space:nowrap;border:none;background:none;box-shadow:none;height:auto;width:100%;justify-content:flex-start;color:var(--muted)}
+.ivm.ivm.ivm button.ckanim:hover{background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink)}
