@@ -1851,3 +1851,5 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .ivm-qhcard{position:absolute;left:var(--qx,0);top:var(--qy,0);z-index:60;max-width:280px;padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.35);font:500 11.5px/1.45 var(--body);color:var(--ink);pointer-events:none}
 .ivm .ivm-qhcard[hidden]{display:none}
 .ivm .ivm-qhcard p{margin:0 0 6px}.ivm .ivm-qhcard p:last-child{margin:0}
+/* the Recents and Links tabs, tucked away, follow the HUD's Opacity: at 0% only their thin outline and name stay, so the sky shows through (0.8.304, Nick) */
+.ivm .dtab.rectab,.ivm .dtab.hudtab{background:color-mix(in srgb,var(--bg) var(--rcop,94%),transparent);box-shadow:none}

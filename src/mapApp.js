@@ -5258,7 +5258,7 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
   /* two panels on one arc (0.8.287, Nick): Recents, and Links below it in its own slot; either tucks to its own tab and the other stays where it is */
   const recShow = on && recIsOpen(), lkShow = lkOn() && !HUDCOL, both = recShow && lkShow;
   RECTAB.hidden = !on || recIsOpen(); RECEL.hidden = !recShow; LKEL.hidden = !lkShow;
-  for (const P of [RECTAB, RECEL, LKEL]) P.setCssProps({ "--hr": R_ + "px" });
+  for (const P of [RECTAB, RECEL, LKEL]) P.setCssProps({ "--hr": R_ + "px" }); root.setCssProps({ "--rcop": RECOP + "%" });   /* the HUD tabs share the panels' opacity (0.8.304) */
   /* where they sit: Recents alone near the top (as Nick liked it); with Links, a little lower, out of the corner. Links always in the same slot, just under where Recents
      ends when it's showing 7 notes, so it never moves when Recents tucks away (0.8.286/0.8.287, Nick: "the links are always going to be a little bit lower on the right-hand side") */
   const Hm = $("#main").clientHeight || 800, rTop = both ? Math.max(44, Math.round(Hm * .075)) : 50, lTop = Math.max(44, Math.round(Hm * .075)) + (RECPH || 190) + 4;
@@ -7835,7 +7835,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     const r2 = DI.p.createDiv({ cls: "eorow ctrrk tchoice" }); r2.createSpan({ cls: "eol", text: "Show" }); const sl = r2.createEl("input", { type: "range", attr: { min: "5", max: "50", step: "1", "aria-label": "How many recent notes to show" } }); sl.value = String(RECN); const sv = r2.createSpan({ cls: "eov", text: String(RECN) }); r2.hidden = !RECON;
     sl.oninput = () => { RECN = +sl.value; sv.setText(String(RECN)); RECKEY = ""; recSync(); }; sl.onchange = () => save("iv-recn", RECN); sl.onclick = e => e.stopPropagation();
     const r6 = DI.p.createDiv({ cls: "eorow ctrrk tchoice" }); r6.createSpan({ cls: "eol", text: "Opacity" }); const so = r6.createEl("input", { type: "range", attr: { min: "0", max: "100", step: "1", "aria-description": "Recents panel opacity" } }); so.value = String(RECOP); const ov = r6.createSpan({ cls: "eov", text: RECOP + "%" }); r6.hidden = !RECON;
-    so.oninput = () => { RECOP = +so.value; ov.setText(RECOP + "%"); for (const P of [RECEL, LKEL]) if (P) P.setCssProps({ "--rcop": RECOP + "%" }); }; so.onchange = () => save("iv-recop", RECOP); so.onclick = e => e.stopPropagation();
+    so.oninput = () => { RECOP = +so.value; ov.setText(RECOP + "%"); root.setCssProps({ "--rcop": RECOP + "%" }); for (const P of [RECEL, LKEL]) if (P) P.setCssProps({ "--rcop": RECOP + "%" }); }; so.onchange = () => save("iv-recop", RECOP); so.onclick = e => e.stopPropagation();
     const l7 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c7 = l7.createEl("input", { type: "checkbox" }); c7.checked = RECEMO; l7.createEl("i", { cls: "sw" }); l7.createSpan({ text: "Emojis" }); l7.hidden = !RECON;
     c7.onchange = () => { RECEMO = c7.checked; save("iv-recemo", RECEMO); if (RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; recSync(); }); RECKEY = ""; recSync(); };
     const l5 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c5 = l5.createEl("input", { type: "checkbox" }); c5.checked = RECAGE; l5.createEl("i", { cls: "sw" }); l5.createSpan({ text: "Show time since modified" }); l5.hidden = !RECON;
