@@ -101,10 +101,23 @@ export class DeckView extends ItemView {
   opt(k) { const v = this.plugin.store.get("iv-deck-" + k); return v == null ? true : v === true; }
   optD(k, d) { const v = this.plugin.store.get("iv-deck-" + k); return v == null ? d : v === true; }
   /* the strip under a note's header, as in the map's editors: level · in · out · rank (0.9.3, Nick) */
-  strip(host, path) { this.ensureGraph(); const nd = this.G && this.G.idx.get(path), rl = this.app.metadataCache.resolvedLinks || {}; let inn = 0; for (const m of Object.values(rl)) if (m && m[path]) inn++;
-    const out = Object.keys(rl[path] || {}).filter(t => t !== path).length, b = host.createDiv({ cls: "ivd-strip" });
+  /* the note strip, as in the map's editors (0.9.7, Nick: "as full-featured as the normal" one): L# · up · related │ in · out │ #rank · folder; each pill opens its list */
+  strip(host, path, slot) { this.ensureGraph(); const nd = this.G && this.G.idx.get(path), rl = this.app.metadataCache.resolvedLinks || {}, st = this.plugin.settings;
+    const names = v => (Array.isArray(v) ? v : String(v || "").split(",")).map(x => String(x).trim().toLowerCase()).filter(Boolean), UP = names(st.upProps || "up"), RE = names(st.relatedProps || "related");
+    const f = this.file(path), fm = (f && this.app.metadataCache.getFileCache(f) || {}).frontmatter || {}, fmL = keys => { const out = []; for (const [k, v] of Object.entries(fm)) if (keys.includes(k.toLowerCase())) for (const x of Array.isArray(v) ? v : [v]) { const m = /\[\[([^\]|#]+)/.exec(String(x || "")); const t = m && this.app.metadataCache.getFirstLinkpathDest(m[1], path); if (t) out.push(t.path); } return [...new Set(out)]; };
+    const L = { up: fmL(UP), related: fmL(RE), out: Object.keys(rl[path] || {}).filter(t => t !== path && t.endsWith(".md")), in: Object.entries(rl).filter(([k, m]) => k !== path && m && m[path]).map(([k]) => k) };
+    const b = host.createDiv({ cls: "ivd-strip" }), dr = host.createDiv({ cls: "ivd-sdrop" }), key = "strip:" + (slot || path), open = this.stripOpen && this.stripOpen[key];
     if (nd) { const lv = b.createSpan({ cls: "ivd-lv", text: "L" + nd.level }); lv.dataset.l = String(nd.level); }
-    b.createSpan({ text: `${inn} in · ${out} out` }); const r = this.G && this.G.rk.get(path); if (r) b.createSpan({ cls: "ivd-rk", text: "#" + r.toLocaleString() }); }
+    const chip = (k, label, cls) => { const c = b.createEl("button", { cls: "ivd-chip " + cls + (open === k ? " on" : ""), text: label, attr: { type: "button" } });
+      c.onclick = e => { e.stopPropagation(); (this.stripOpen ||= {})[key] = open === k ? "" : k; this.render(); }; };
+    const bar = () => b.createSpan({ cls: "ivd-sbar" });
+    chip("up", L.up.length ? `${L.up.length} up` : "up", "ivd-sup" + (L.up.length ? "" : " ivd-sz")); chip("related", L.related.length ? `${L.related.length} related` : "related", "ivd-srel" + (L.related.length ? "" : " ivd-sz"));
+    bar(); chip("in", `${L.in.length} in`, ""); chip("out", `${L.out.length} out`, ""); bar();
+    const r = this.G && this.G.rk.get(path); if (r) b.createSpan({ cls: "ivd-rk", text: "#" + r.toLocaleString() });
+    { const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : ""; const fo = b.createSpan({ cls: "ivd-fold" }); setIcon(fo.createSpan({ cls: "ivd-fold-i" }), "folder"); fo.createSpan({ text: dir ? dir.split("/").pop() : "Vault root" }); }
+    if (!open || !L[open]) { dr.hidden = true; return; }
+    dr.createDiv({ cls: "ivd-h", text: `${open.toUpperCase()} · ${L[open].length}` }); const ls = dr.createDiv({ cls: "ivd-sdl" });
+    for (const p of L[open].sort((a, c) => this.title(a).localeCompare(this.title(c)))) this.row(ls, p, "", "var(--ivd-link)"); }
   optN() { const v = +this.plugin.store.get("iv-deck-recn"); return v >= 5 && v <= 50 ? v : 30; }
   setOpt(k, v) { this.plugin.store.set("iv-deck-" + k, v); for (const l of this.app.workspace.getLeavesOfType(DECK_TYPE)) if (l.view instanceof DeckView) l.view.render(); }
   recents(n) { return this.app.vault.getMarkdownFiles().sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, n); }
@@ -150,7 +163,7 @@ export class DeckView extends ItemView {
     for (const [ic, tip, fn, off] of opts.nav || []) { const b = hd.createEl("button", { cls: "ivd-ib ivd-nav", attr: { type: "button", "aria-label": tip } }); setIcon(b, ic); b.disabled = !!off; b.onclick = e => { e.stopPropagation(); fn(); }; }
     hd.createSpan({ cls: "ivd-lab", text: label }); if (path && opts.readOnly) hd.createSpan({ cls: "ivd-ttl", text: this.title(path) });   /* an editor shows its own title; only Previous (no editor) names its note up here (0.9.2, Nick) */ hd.createSpan({ cls: "ivd-sp" });
     for (const [ic, tip, fn] of opts.btns || []) { const b = hd.createEl("button", { cls: "ivd-ib", attr: { type: "button", "aria-label": tip } }); setIcon(b, ic); b.onclick = e => { e.stopPropagation(); fn(b); }; }
-    if (path && opts.strip) this.strip(c, path);
+    if (path && opts.strip) this.strip(c, path, slot);
     const body = c.createDiv({ cls: "ivd-body" });
     if (!path) { const e_ = body.createDiv({ cls: "ivd-empty" }); e_.createDiv({ text: opts.empty || "Drop a note here" }); e_.createDiv({ cls: "ivd-sub", text: "drag a Recents or Links row · or ⌘-click one" }); }
     else if (opts.readOnly) { const pv = body.createDiv({ cls: "ivd-pv markdown-rendered" }); void this.app.vault.cachedRead(this.file(path)).then(t => { void MarkdownRenderer.render(this.app, t.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").slice(0, 900), pv, path, this); }); }
@@ -178,7 +191,12 @@ export class DeckView extends ItemView {
       this.registerDomEvent(root.ownerDocument, "pointerdown", e => { if (!pop.hidden && !top.contains(e.target)) { pop.hidden = true; cog.removeClass("on"); } }); }
     const want = new Set(); const keep = s => want.add(s);
     if (S.mini) { const pc = this.card(root, "ivd-primary", "", P, "p", { strip: this.optD("strip-p", true), nav: this.navBtns("p"), btns: [["panel-right", "Recents and links", b => { S.drawerMain = !S.drawerMain; this.save(); this.render(); void b; }]], empty: "Open a note (from any tab) and run “Deck: show the active note”" });
-      keep("p"); if (S.drawerMain) { const dr = pc.createDiv({ cls: "ivd-drawer ivd-main-drawer" }); this.hudEl = dr; this.hud(dr, P, true); } else this.hudEl = null;
+      keep("p"); if (S.drawerMain) { const dr = pc.createDiv({ cls: "ivd-drawer ivd-main-drawer" }); dr.style.setProperty("--ivd-mdw", Math.max(140, Math.min(460, +S.drawerW || 220)) + "px");
+        /* its left edge can be dragged wider or narrower (0.9.7, Nick); only a CSS width changes while dragging, so nothing re-renders */
+        const g = dr.createDiv({ cls: "ivd-grip ivd-grip-l" }); g.addEventListener("pointerdown", e => { e.preventDefault(); g.setPointerCapture(e.pointerId); const x0 = e.clientX, w0 = dr.getBoundingClientRect().width;
+          const mv = ev => { S.drawerW = Math.round(Math.max(140, Math.min(460, w0 - (ev.clientX - x0)))); dr.style.setProperty("--ivd-mdw", S.drawerW + "px"); };
+          const up = () => { g.removeEventListener("pointermove", mv); g.removeEventListener("pointerup", up); this.save(); this.onResize(); }; g.addEventListener("pointermove", mv); g.addEventListener("pointerup", up); });
+        const hin = dr.createDiv({ cls: "ivd-hudin" }); this.hudEl = hin; this.hud(hin, P, true); } else this.hudEl = null;
       for (const k of Object.keys(this.eds)) if (!want.has(k)) this.dropEditor(k); return; }
     const CL = { leftW: [240, 560, 340, "--ivd-lw"], hudW: [120, 440, 230, "--ivd-hw"], rightW: [280, 600, 380, "--ivd-rw"] }, setW = (k, v) => { const [a, b, d, cv] = CL[k]; S[k] = Math.round(Math.max(a, Math.min(b, +v || d))); root.style.setProperty(cv, S[k] + "px"); };
     for (const k of Object.keys(CL)) setW(k, S[k]);

@@ -2015,3 +2015,26 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivd-vgrip:hover::after{background:var(--text-accent)}
 .ivd-hudin{display:flex;flex-direction:column;gap:1px;min-height:0;flex:1;overflow-y:auto;overflow-x:hidden}
 .ivd .ivd-hud{overflow:visible}
+/* the note strip in the Deck (0.9.7): the map's strip, pill for pill */
+.ivd-strip{gap:7px;padding:4px 12px 5px;font:400 11.5px var(--font-interface);white-space:nowrap;overflow-x:auto;scrollbar-width:none}
+.ivd-lv{font-family:var(--font-monospace);font-weight:700}
+.ivd .ivd-chip{appearance:none;background:none;box-shadow:none;margin:0;height:auto;font:inherit;font-size:11px;line-height:1;padding:3px 8px;border:1px solid var(--ivd-line);border-radius:10px;color:var(--text-muted);cursor:pointer;white-space:nowrap}
+.ivd .ivd-chip:hover,.ivd .ivd-chip.on{border-color:var(--interactive-accent);color:var(--text-normal)}
+.ivd .ivd-chip.ivd-sup{border-color:color-mix(in srgb,var(--ivd-upp) 55%,var(--ivd-line))}
+.ivd .ivd-chip.ivd-srel{border-color:color-mix(in srgb,var(--ivd-rel) 55%,var(--ivd-line))}
+.ivd .ivd-chip.ivd-sup.on,.ivd .ivd-chip.ivd-sup:hover{border-color:var(--ivd-upp);background:color-mix(in srgb,var(--ivd-upp) 12%,transparent)}
+.ivd .ivd-chip.ivd-srel.on,.ivd .ivd-chip.ivd-srel:hover{border-color:var(--ivd-rel);background:color-mix(in srgb,var(--ivd-rel) 12%,transparent)}
+.ivd .ivd-chip.ivd-sz{opacity:.45;border-style:dashed}
+.ivd .ivd-chip.ivd-sz:hover,.ivd .ivd-chip.ivd-sz.on{opacity:1}
+.ivd-sbar{width:1px;height:13px;background:var(--ivd-line);flex:none;margin:0 1px}
+.ivd-rk{margin-left:0;font-family:var(--font-monospace);color:var(--text-normal);padding:3px 8px;border:1px solid var(--ivd-line);border-radius:10px;font-size:11px;line-height:1}
+.ivd-fold{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis}
+.ivd-fold-i{display:inline-flex}.ivd-fold-i svg{width:12px;height:12px}
+.ivd-sdrop{flex:none;margin:6px 10px 4px;border:1px solid var(--ivd-line);border-radius:8px;background:var(--background-secondary);padding:4px 4px 6px;max-height:40%;display:flex;flex-direction:column}
+.ivd-sdrop[hidden]{display:none}
+.ivd-sdl{overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+.ivd-main-drawer{width:var(--ivd-mdw,220px)}
+.ivd-main-drawer .ivd-grip-l{left:-3px;width:7px}
+.ivd-main-drawer .ivd-grip-l::after{content:"";position:absolute;left:2px;top:50%;width:3px;height:34px;margin-top:-17px;border-radius:2px;background:var(--ivd-line)}
+.ivd-main-drawer .ivd-grip-l:hover::after{background:var(--text-accent)}
+.ivd .ivd-main-drawer{overflow:visible;padding:8px 4px 8px 8px}
