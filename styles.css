@@ -1647,7 +1647,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 /* ---------- Starfield theme (0.8.224, Nick, from the Nebula mockup): deep space, pink for the chrome, link colors that say how notes relate ---------- */
 .ivm[data-theme="starfield"],.ivm-tip[data-theme="starfield"]{--g5a:#ffcf5a; --g5b:#ff8fc0; --g4a:#b9a6ff; --g4b:#6f7dff; --g3a:#6fd3ff; --g3b:#4b6cd6;
   --bg:#06070f; --panel:#0e0c1d; --line:#231f3d; --ink:#e4e2f5; --muted:#a59fc4; --title:#ff8fc0;
-  --accent:#ff8fc0; --accent-soft:rgba(255,143,192,.14); --up:#6fd3ff; --down:#5fe0a8; --rel:#c9a2ff; --upp:#ffcf5a; --prop:#a9b4c8;
+  --accent:#ff8fc0; --accent-soft:rgba(255,143,192,.14); --up:#6fbcff; --down:#6fe08f; --rel:#c9a2ff; --upp:#ffcf5a; --prop:#a9b4c8;
   --band-a:rgba(185,166,255,.025); --band-b:rgba(185,166,255,0);
   --l2:hsla(151,54%,64%,.7); --l1:hsla(250,30%,80%,.3); --sl2:hsla(151,54%,64%,.9); --sl1:hsla(250,30%,80%,.6); --qa:.05; --edge-faint:rgba(185,166,255,.22);
   --display:var(--font-interface); --dw:700; color-scheme:dark;}
@@ -1686,7 +1686,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card .carddrop .sdsub.sd-down{box-shadow:inset 2px 0 0 var(--down, var(--color-green))}
 .ivm-card .carddrop .sdsub.sd-up,.ivm-card .carddrop .sdsub.sd-down{padding-left:8px}   /* a little air between the colored line and the names (0.8.243, Nick) */
 /* every link in every note colored by Idea Emergence (0.8.234): up property gold, related purple, above blue, below green, other properties slate */
-body.ivm-linkcolors.theme-dark{--ivk-upp:#ffcf5a;--ivk-rel:#c9a2ff;--ivk-up:#6fd3ff;--ivk-down:#5fe0a8;--ivk-prop:#ff9e7d;--ivk-none:#eceef5;--ivk-noneb:rgba(236,238,245,.45)}
+body.ivm-linkcolors.theme-dark{--ivk-upp:#ffcf5a;--ivk-rel:#c9a2ff;--ivk-up:#6fbcff;--ivk-down:#6fe08f;--ivk-prop:#ff9e7d;--ivk-none:#eceef5;--ivk-noneb:rgba(236,238,245,.45)}
 body.ivm-linkcolors.theme-light{--ivk-upp:#a8770a;--ivk-rel:#7c3aed;--ivk-up:#1f78b4;--ivk-down:#178a5c;--ivk-prop:#d0582f;--ivk-none:#262833;--ivk-noneb:rgba(38,40,51,.4)}
 body.ivm-linkcolors [data-ivk]{text-decoration-color:currentColor}
 body.ivm-linkcolors [data-ivk="upp"],body.ivm-linkcolors [data-ivk="upp"] *{color:var(--ivk-upp)}
@@ -1832,7 +1832,7 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"] *,.ivm-card.ivm-
 .ivm-card.sf-th{--metadata-label-font-size:10px}
 .ivm-card.ivm-card.sf-th .metadata-property-key,.ivm-card.ivm-card.sf-th .metadata-property-key-input,.ivm-card.ivm-card.sf-th input.metadata-property-key-input{font-size:10px;letter-spacing:.08em}
 /* with Display → Starfield link colors on, "Color all links" follows the map: below red (0.8.294, Nick); other properties stay coral */
-body.ivm-linkcolors.ivm-sflinks.theme-dark{--ivk-upp:#ffcf6e;--ivk-up:#6fd3ff;--ivk-down:#ff6f61;--ivk-rel:#c9a2ff}
+body.ivm-linkcolors.ivm-sflinks.theme-dark{--ivk-upp:#ffcf6e;--ivk-up:#6fbcff;--ivk-down:#ff6f61;--ivk-rel:#c9a2ff}
 body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;--ivk-down:#d0453f;--ivk-rel:#8a3ff0}
 /* Links HUD: a property's group header and its rows (0.8.297, Nick: option H2) */
 .ivm .ivm-recents .lkg{appearance:none;background:none;border:0;box-shadow:none;height:auto;padding:6px 12px 2px 14px;margin:0;align-self:stretch;text-align:left;font:600 9px var(--mono);letter-spacing:.1em;color:#ff9e7d;cursor:pointer;flex:none}

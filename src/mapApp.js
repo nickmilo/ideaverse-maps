@@ -2697,7 +2697,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
     let dir = [away[0] / la - fw[0] * .3, away[1] / la - fw[1] * .3 - .35, away[2] / la - fw[2] * .3]; const l = Math.hypot(...dir) || 1; dir = dir.map(v => v / l);
     CK.settle = { flow: (CK.arrV || 0) > 150, vin: Math.min(CK.arrV || 0, 1800), aF: CK.arrF, _r: (CK.arrV = 0), P0: CK.P.slice(), P1: [T[0] + dir[0] * D, T[1] + dir[1] * D, T[2] + dir[2] * D], T, t0: win.performance.now() }; CK.lookT = null; }
   CK.kind = new Map(); for (const [k_, key] of [["above", "up"], ["below", "down"], ["up", "upp"], ["related", "rel"]]) for (const j of L[k_]) CK.kind.set(j, key);
-  try { CK.SL = SPACELINK(); } catch (_) { CK.SL = { up: "#6fd3ff", down: "#ff7a6b", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }; }
+  try { CK.SL = SPACELINK(); } catch (_) { CK.SL = { up: "#6fbcff", down: "#ff7a6b", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }; }
   CK.sOff = [0, 0]; CK.upL = L.up.filter(j => vis[j]); if (view === "cockpit") win.setTimeout(() => { if (!dead && view === "cockpit") legend(); }, 0);
   const upS = new Set(L.up), ord = (a, b) => (upS.has(b) ? 1 : 0) - (upS.has(a) ? 1 : 0) || rv(b) - rv(a) || N[b].score - N[a].score;   /* up links always first (0.8.122, Nick) */
   CK.inL = [...L.in].sort(ord); CK.outL = [...L.out].sort(ord);
@@ -4373,7 +4373,7 @@ const COLORS = ["bg","panel","line","ink","muted","accent","accent-soft","up","d
 let probe = null;   // colors go through the browser once, so the canvas gets plain rgb() even when a theme writes color-mix() or Obsidian's own variables
 // Display → Starfield link colors (0.8.7, Nick): blue above, red below (since 0.8.208), gold up, lilac related, slate other, on every map and in the note panel
 let SFLINKS = pref("iv-sflinks", false) === true;
-const SFDARK = { up: "#6fd3ff", down: "#ff6f61", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }, SFLIGHT = { up: "#1f86c4", down: "#d0453f", rel: "#8a3ff0", upp: "#b8860b", prop: "#6b7c93" };   // blue above, red below (swapped in 0.8.208, Nick: blue above is a nod to the Architect's blue); up is gold, clear of both
+const SFDARK = { up: "#6fbcff", down: "#ff6f61", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }, SFLIGHT = { up: "#1f86c4", down: "#d0453f", rel: "#8a3ff0", upp: "#b8860b", prop: "#6b7c93" };   // blue above, red below (swapped in 0.8.208, Nick: blue above is a nod to the Architect's blue); up is gold, clear of both
 function applySfLinks(){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || th === "starfield" || (th === "obsidian" && doc.body.classList.contains("theme-dark"));
   const P = dark ? SFDARK : SFLIGHT; for (const kk of Object.keys(P)) { if (SFLINKS) root.style.setProperty("--" + kk, P[kk]); else root.style.removeProperty("--" + kk); }
   let t = null; try { t = tip; } catch { t = null; } if (t) for (const kk of Object.keys(P)) { if (SFLINKS) t.style.setProperty("--" + kk, P[kk]); else t.style.removeProperty("--" + kk); } }
@@ -5308,7 +5308,8 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
         gh.onclick = e => { e.stopPropagation(); if (LKFOLD[g_]) delete LKFOLD[g_]; else LKFOLD[g_] = true; save("iv-lkfold", LKFOLD); RECKEY = ""; recSync(); }; if (fo) continue; }   /* a property's group folds, remembered (0.8.297) */
     for (const j of js) { if (!N[j]) continue; const dimJ = D_.ck && CK.only ? !(CK.only === "in" ? D_.inS.has(j) : D_.outS.has(j)) : false;   /* the Starship's F / R scopes dim the other side */
       const r = lbox.createEl("button", { cls: "rcr lkr" + (D_.ck && j === D_.lock ? " on" : "") + (dimJ ? " dim" : ""), attr: { type: "button" } });
-      const col = D_.upS.has(j) ? (SL.upp || css.upp || ink) : (N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1) || ink;
+      /* each name in the color of its line, map or Starship: up gold, related purple, above blue, below green (0.8.301, Nick: Forgetting curve was blue here, green on the map) */
+      const col = (D_.ck ? (SL[CK.kind.get(j) || "prop"] || (CK.SL || {})[CK.kind.get(j) || "prop"]) : (() => { try { return edgeColor(sel, j, upOf(sel, j)); } catch (_) { return ""; } })()) || ink;
       if (!HUDTC) { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": col }); }
       if (g_) r.addClass("lkin"); else r.createSpan({ cls: "lka", text: D_.inS.has(j) && D_.outS.has(j) ? "↔" : D_.inS.has(j) ? "←" : "→" });
       const nm = r.createSpan({ cls: "rcn" + (HUDTC || g_ ? " lkc" : ""), text: N[j].title }); if (g_) nm.setCssProps({ "--lc": collCoral() }); else if (HUDTC) nm.setCssProps({ "--lc": col });
@@ -5527,7 +5528,7 @@ const EDV = (bg, panel, ink, muted, line, acc, accS) => { const faint = `color-m
     "--tag-color": acc, "--tag-background": accS, "--tag-color-hover": acc, "--tag-background-hover": accS, "--pill-color": muted, "--pill-border-color": line, "--metadata-label-text-color": muted, "--metadata-input-text-color": ink,
     "--table-border-color": line, "--table-header-background": panel, "--callout-border-opacity": ".25", "--scrollbar-thumb-bg": `color-mix(in srgb,${muted} 35%,transparent)` }; };
 /* Editor theme → Starfield (0.8.232, Nick): the Starfield look in the editors whatever the map wears; its palette, as on .ivm[data-theme="starfield"] */
-const SFPAL = { "--bg": "#06070f", "--panel": "#0e0c1d", "--ink": "#e4e2f5", "--muted": "#a59fc4", "--line": "#231f3d", "--accent": "#ff8fc0", "--accent-soft": "rgba(255,143,192,.14)", "--upp": "#ffcf5a", "--rel": "#c9a2ff", "--up": "#6fd3ff", "--down": "#5fe0a8", "--prop": "#a9b4c8" };
+const SFPAL = { "--bg": "#06070f", "--panel": "#0e0c1d", "--ink": "#e4e2f5", "--muted": "#a59fc4", "--line": "#231f3d", "--accent": "#ff8fc0", "--accent-soft": "rgba(255,143,192,.14)", "--upp": "#ffcf5a", "--rel": "#c9a2ff", "--up": "#6fbcff", "--down": "#6fe08f", "--prop": "#a9b4c8" };
 function edLook(el){ const SFE = CARDTH === "starfield", th = SFE ? "starfield" : root.dataset.theme, dark = th === "lyt" || th === "dark" || th === "starfield" || (th === "obsidian" && doc.body.classList.contains("theme-dark")), m = SFE || (CARDTH === "map" && th !== "obsidian");
   /* Editor mode (0.8.271, Nick): with the Obsidian theme, Light or Dark forces that side of your Obsidian theme in the editors, whatever Obsidian itself is set to */
   const fm = !m && CARDMODE !== "auto", fd = CARDMODE === "dark";
