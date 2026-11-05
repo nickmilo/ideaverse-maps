@@ -7938,8 +7938,8 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       for (const f of FOLD) row(f, 0);
       const nA = Object.keys(EMOF).length; link.setText(nA ? `Assign emojis (${nA}) ›` : "Assign emojis ›"); };
     FUI.emo = render;
-    link.onclick = e => { e.stopPropagation(); pick = null; st.setText(""); render(); DI.p.classList.add("emomode"); };
-    back.onclick = e => { e.stopPropagation(); DI.p.classList.remove("emomode"); };
+    link.onclick = e => { e.stopPropagation(); pick = null; st.setText(""); render(); DI.p.classList.add("emomode"); DI.p.scrollTop = 0; };
+    back.onclick = e => { e.stopPropagation(); DI.p.classList.remove("emomode"); link.scrollIntoView({ block: "nearest" }); };   /* back where you left the list (0.8.321) */
     // Copy from a base column: each folder takes the emoji most of its notes have there (half or more), unless it's the same as its folder's above
     imp.onclick = async e => { e.stopPropagation(); st.setText("Reading the base…"); const r = host.emojis ? await host.emojis() : { err: "this needs a newer Obsidian" };
       if (r.err) { st.setText(`Couldn't read emojis: ${r.err}`); return; }
