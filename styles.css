@@ -1876,7 +1876,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftseg .dship{display:none}
 .ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftseg .dflat{display:inline-block}   /* Dynamic at Calm, Slow or Lively (0.8.327, Nick) */
 .ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftseg .dearth,.ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftbar .dwob{display:none}
-.ivm .ivm-sfsw{opacity:.8;transition:opacity .15s}
+.ivm .ivm-sfsw{opacity:.55;transition:opacity .15s}   /* quieter (0.8.346, Nick) */
 .ivm .ivm-sfsw:hover{opacity:1}
 .ivm .ivm-sfsw.sfbeside{left:var(--sfl);top:var(--sft);transform:translateY(-50%)}   /* beside the orb tabs, at 80% (0.8.323, Nick) */
 /* the Starship menu's Wander and Pace: the Display menu's small text choices (0.8.330, Nick: "too big… take a note from the display settings menu") */

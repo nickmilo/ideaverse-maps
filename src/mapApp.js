@@ -5864,7 +5864,7 @@ function sfShip(on){ const [fl, fr] = freeLR(), mx = (fl + fr) / 2, my = (isPhon
       land(0); }, 170); }   /* at once, in the same beat as the switch, so no frame of the fitted chart shows */
   win.setTimeout(sfSwSync, 0); }
 const sfSw = (() => { const w = $("#main").createDiv({ cls: "ivm-sfsw seg" }); w.hidden = true;
-  for (const [m, t] of [["ship", "Starship"], ["chart", "Chart"]])   /* Starship first (0.8.323, Nick) */ { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); sfShip(m === "ship"); }; }
+  for (const [m, t] of [["ship", "Ship"], ["chart", "Chart"]])   /* Starship first (0.8.323, Nick) */ { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); sfShip(m === "ship"); }; }
   w.createSpan({ cls: "sfk", text: "C", attr: { "aria-hidden": "true" } });   /* the key that toggles them */
   for (const ty of ["pointerdown", "wheel", "click"]) w.addEventListener(ty, ev => ev.stopPropagation()); win.setTimeout(() => sfSwSync(), 0); return w; })();
 /* Starfield leads with the Starship (0.8.320, Nick: "Starfield on its own is so powerful that it should be the lead"); Star Chart is the 2D chart as its own map, and C still swaps */
