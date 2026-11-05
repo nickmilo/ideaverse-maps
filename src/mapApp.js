@@ -5218,7 +5218,7 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
   for (const P of [RECTAB, RECEL, LKEL]) P.setCssProps({ "--hr": R_ + "px" });
   /* where they sit: Recents alone near the top (as Nick liked it); with Links, a little lower, out of the corner. Links always in the same slot, just under where Recents
      ends when it's showing 7 notes, so it never moves when Recents tucks away (0.8.286/0.8.287, Nick: "the links are always going to be a little bit lower on the right-hand side") */
-  const Hm = $("#main").clientHeight || 800, rTop = both ? Math.max(50, Math.round(Hm * .1)) : 50, lTop = Math.max(50, Math.round(Hm * .1)) + (RECPH || 190) + 4;
+  const Hm = $("#main").clientHeight || 800, rTop = both ? Math.max(44, Math.round(Hm * .075)) : 50, lTop = Math.max(44, Math.round(Hm * .075)) + (RECPH || 190) + 4;
   RECEL.classList.toggle("paired", both); RECEL.setCssProps({ "--rct": rTop + "px" }); LKEL.setCssProps({ "--lkt": lTop + "px" });
   if (on && !recIsOpen()) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); }
   if (!(recShow || lkShow)) { if (RECHV >= 0 && RECHVEL && !RECHVEL.isConnected) { RECHV = -1; RECHVEL = null; } return; }
