@@ -2736,7 +2736,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   const TLp = senseT != null, tnow = performance.now(), flash = [];   /* the Timelapse in the Starship (0.8.348, Nick): only the notes made by the date show; each new one flares as it's born */
   for (let i = 0; i < n; i++) { if (!vis[i] || (TLp && !born(i) && i !== ck)) continue; const dx = P[3 * i] - X0, dy = P[3 * i + 1] - Y0, dz = P[3 * i + 2] - Z0, xc = cyw * dx - syw * dz, z1 = syw * dx + cyw * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1;
     if (zc < 6) continue; const px = cx + F * xc / zc, py = cy + F * yc / zc; if (px < -20 || px > W + 20 || py < -20 || py > VH + 20) continue;
-    if (TLp && POP[i] && tnow - POP[i] < 1400 && tnow >= POP[i]) flash.push([i, px, py, (tnow - POP[i]) / 1400, zc]);
+    if (TLp && POP[i] && tnow - POP[i] < 1800 && tnow >= POP[i]) { const fp_ = (tnow - POP[i]) / 1800; flash.push([i, px, py, fp_, zc]); if (fp_ < .62 && i !== ck) continue; }   /* still on its way in: no dot yet */
     if (hm) { const dd = (px - hm[0]) ** 2 + (py - hm[1]) ** 2; if (dd < hb) { hb = dd; hi = i; hp = [px, py]; } }
     const lv = N[i].level, r = Math.max(.5, Math.min(lv >= 4 ? 9 : 5, (lv >= 5 ? 26 : lv === 4 ? 18 : lv === 3 ? 12 : lv === 2 ? 7 : 5) * F / zc / 9));
     if (emoL && EMOI[i] && zc < 1500) { emoL.push([i, px, py, Math.max(11, Math.min(30, 9000 / zc)), zc, r]); continue; }
@@ -2755,7 +2755,17 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   for (const [key, a] of bins) { g.fillStyle = SPAL[key]; g.globalAlpha = .8; g.beginPath(); for (let q = 0; q < a.length; q += 3) { const r = a[q + 2]; if (r < 1.2) g.rect(a[q] - r, a[q + 1] - r, 2 * r, 2 * r); else { g.moveTo(a[q] + r, a[q + 1]); g.arc(a[q], a[q + 1], r, 0, 6.2832); } } g.fill(); }
   for (const [i, px, py, r] of bright) { const col = SPAL[SC[i]], s = r * 6; g.globalAlpha = .45; g.drawImage(sprite(col), px - s / 2, py - s / 2, s, s); g.globalAlpha = 1; g.fillStyle = i === ck ? "#ffffff" : col; g.beginPath(); g.arc(px, py, Math.max(1, r * .7), 0, 6.2832); g.fill(); }
   g.globalCompositeOperation = "source-over";
-  if (TLp) { for (const [i, px, py, p_, zc] of flash) { const col = ckCol(N[i].level), e = 1 - p_, R0 = Math.max(3, Math.min(14, 2600 / zc)); g.globalAlpha = .9 * e; g.strokeStyle = col; g.lineWidth = 1.5; g.beginPath(); g.arc(px, py, R0 + 26 * p_, 0, 6.2832); g.stroke();
+  if (TLp) { /* each new star arrives the way Timelapse's effect says (0.8.353, Nick): Comets streak in, Rain falls, Swirl out spirals from the note you're at, Swirl in spirals in from afar; then a flare */
+    const ctr = CK.cPos || [cx, cy], ease = t => 1 - Math.pow(1 - t, 3);
+    const posAt = (i, px, py, t) => { const h = hash(N[i].path, 31), e = ease(Math.min(1, t)), k_ = 1 - e;
+      if (senseFx === "rain") return [px + (h - .5) * 30 * k_, py - 260 * k_];
+      if (senseFx === "swirl") { const a0 = Math.atan2(py - ctr[1], px - ctr[0]), d0 = Math.hypot(px - ctr[0], py - ctr[1]), a = a0 - 2.4 * k_, d = d0 * e; return [ctr[0] + Math.cos(a) * d, ctr[1] + Math.sin(a) * d]; }
+      if (senseFx === "swirlin") { const a = h * 6.2832 + 3 * k_, d = 320 * k_; return [px + Math.cos(a) * d, py + Math.sin(a) * d]; }
+      const a = h * 6.2832, d = 340 * k_; return [px + Math.cos(a) * d, py + Math.sin(a) * d]; };   /* comets */
+    for (const [i, px, py, p_, zc] of flash) { const col = ckCol(N[i].level), tr = Math.min(1, p_ / .62), R0 = Math.max(3, Math.min(14, 2600 / zc));
+      if (tr < 1) { const hd = posAt(i, px, py, tr), tl = posAt(i, px, py, Math.max(0, tr - .18)); g.globalAlpha = .85; g.strokeStyle = col; g.lineWidth = 2; g.lineCap = "round"; g.beginPath(); g.moveTo(tl[0], tl[1]); g.lineTo(hd[0], hd[1]); g.stroke();
+        g.fillStyle = "#ffffff"; g.beginPath(); g.arc(hd[0], hd[1], 2.4, 0, 6.2832); g.fill(); continue; }
+      const q = (p_ - .62) / .38, e = 1 - q; g.globalAlpha = .9 * e; g.strokeStyle = col; g.lineWidth = 1.5; g.beginPath(); g.arc(px, py, R0 + 22 * q, 0, 6.2832); g.stroke();
       g.globalAlpha = e; g.fillStyle = "#ffffff"; g.beginPath(); g.arc(px, py, Math.max(1.5, R0 * .5 * e), 0, 6.2832); g.fill(); }
     /* the date, quiet, high in the sky */ const dl = senseDateLabel(senseStepStart != null ? senseStepStart : senseT); g.globalAlpha = .55; g.font = `600 30px ${font}`; g.textAlign = "center"; g.fillStyle = "#eef1ff"; g.fillText(dl, cx, Math.max(84, VH * .14)); g.textAlign = "left"; g.globalAlpha = 1; }
   if (emoL) { emoL.sort((a, b) => a[4] - b[4]); const far = emoL.splice(40); g.fillStyle = "#cfd8ee"; g.globalAlpha = .7; g.beginPath(); for (const q of far) g.rect(q[1] - 1, q[2] - 1, 2, 2); g.fill();   /* only the 40 nearest show their emoji */
