@@ -5493,7 +5493,9 @@ function edTint(o){ if (!o || !o.el || o.el.hidden) return;
   if (!(sf || pref("iv-linkcolor", false) === true) || i == null) { for (const e of els) if (e.dataset.ivk) delete e.dataset.ivk; return; }
   const M = new Map(); for (const [t, p] of host.linkTargets(o.path)) if (!M.has(t)) M.set(t, p);
   const kindOf = p => { const j = PIDX.get(p); if (j == null || j === i) return ""; const kk = EKIND.get(i*n + j); if (kk === undefined && !out[i].includes(j)) return ""; return kk === 1 ? "upp" : kk === 4 ? "rel" : kk === 5 || kk === 3 ? "prop" : upOf(i, j) ? "up" : "down"; };
+  const CK_ = new Set(host.collectionKeys ? host.collectionKeys() : ["collections"]);
   for (const e of els) { const key = String(e.getAttribute("data-href") || e.textContent || "").trim().toLowerCase(); if (!key) continue;
+    { const mp = e.closest(".metadata-property"); if (mp && CK_.has(String(mp.getAttribute("data-property-key") || "").toLowerCase())) { if (e.dataset.ivk !== "prop") e.dataset.ivk = "prop"; continue; } }   /* a collection is a property link: slate (0.8.277) */
     const p = M.get(key) || M.get(key.split("|")[0].split("#")[0].trim()) || M.get(key.split("|").pop().trim()); const kd = p ? kindOf(p) : ""; if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } }   /* the link colors always come along (the up/related pills) */
 const clampN = (v, a, b) => Math.round(Math.max(a, Math.min(b, v)));
 // the side editors' widths can be dragged at their inner edge (0.8.31); otherwise a share of the map

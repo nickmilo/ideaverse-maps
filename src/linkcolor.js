@@ -18,6 +18,8 @@ export function registerLinkColors(plugin) {
   const mark = (root, path, m) => { const M = targets(app, path);
     for (const e of root.querySelectorAll(SEL)) { if (e.closest(".ivm-card")) continue;   /* the map's own editors do their own */
       const key = String(e.getAttribute("data-href") || e.textContent || "").trim().toLowerCase(); if (!key) continue;
+      { const mp = e.closest(".metadata-property"), v = plugin.settings.collectionProps, CK = (Array.isArray(v) ? v : String(v || "collections").split(",")).map(x => String(x).trim().toLowerCase());
+        if (mp && CK.includes(String(mp.getAttribute("data-property-key") || "").toLowerCase())) { if (e.dataset.ivk !== "prop") e.dataset.ivk = "prop"; continue; } }
       const p = M.get(key) || M.get(key.split("|")[0].split("#")[0].trim()) || M.get(key.split("|").pop().trim()), kd = p ? m.linkKind(path, p) : "";
       if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } };
   const run = () => { const yes = on(); document.body.classList.toggle("ivm-linkcolors", yes); if (!yes) return; const m = mapApi(); if (!m) return;
