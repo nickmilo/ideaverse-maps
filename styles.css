@@ -1912,7 +1912,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 
 /* ---------- the Deck (0.9.1): writing first, no graph ---------- */
 .ivd{--ivd-upp:#e8bf45;--ivd-rel:#b48cf2;--ivd-up:#5aa9ec;--ivd-down:#4fc77a;--ivd-prop:#8e9ab0;--ivd-link:var(--text-accent);--ivd-recent:var(--text-normal);--ivd-acc:#e8bf45;--ivd-line:var(--background-modifier-border);
-  container-type:inline-size;display:grid;grid-template-columns:minmax(220px,300px) minmax(480px,1fr) 230px minmax(300px,400px);gap:12px;padding:12px;box-sizing:border-box;height:100%;overflow:hidden;background:var(--background-secondary)}
+  container-type:inline-size;display:grid;grid-template-columns:var(--ivd-lw,340px) minmax(440px,1fr) 230px minmax(300px,400px);gap:12px;padding:12px;box-sizing:border-box;height:100%;overflow:hidden;background:var(--background-secondary)}
 .theme-dark .ivd{--ivd-upp:#ffcf5a;--ivd-rel:#c9a2ff;--ivd-up:#6fbcff;--ivd-down:#6fe08f;--ivd-prop:#a9b4c8;--ivd-acc:#f2d45c}
 .ivd-left,.ivd-right{display:flex;flex-direction:column;gap:12px;min-height:0}
 .ivd-mid{display:flex;min-height:0}
@@ -1957,3 +1957,9 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 /* Deck Mini: the note fills the window; recents and links in its drawer */
 .ivd.ivd-mini{display:flex;padding:8px}
 .ivd.ivd-mini .ivd-primary{flex:1}
+.ivd .ivd-nav{border-color:transparent;width:22px;height:22px}
+.ivd .ivd-nav:disabled{opacity:.3;cursor:default}
+.ivd .ivd-nav+.ivd-lab{margin-left:2px}
+.ivd-left{position:relative}
+.ivd-grip{position:absolute;top:0;bottom:0;right:-9px;width:6px;cursor:col-resize;border-radius:3px;z-index:6}
+.ivd-grip:hover,.ivd-grip:active{background:color-mix(in srgb,var(--text-accent) 40%,transparent)}

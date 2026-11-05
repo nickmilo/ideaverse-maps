@@ -11,7 +11,7 @@ const KIND_COL = { upp: "var(--ivd-upp)", rel: "var(--ivd-rel)", up: "var(--ivd-
 
 export class DeckView extends ItemView {
   constructor(leaf, plugin) { super(leaf); this.plugin = plugin;
-    this.st = { mini: false, primary: null, prev: null, sup: [null, null], focus: 0, side: null, drawers: {}, drawerMain: true };
+    this.st = { mini: false, primary: null, prev: null, sup: [null, null], focus: 0, side: null, drawers: {}, drawerMain: true, hist: {}, leftW: 340 };
     this.eds = {}; }
   getViewType() { return DECK_TYPE; }
   getDisplayText() { return this.st.mini ? "Deck Mini" : "Deck"; }
@@ -61,9 +61,17 @@ export class DeckView extends ItemView {
   file(p) { const f = p && this.app.vault.getAbstractFileByPath(p); return f instanceof TFile ? f : null; }
   title(p) { const f = this.file(p); return f ? f.basename : ""; }
 
-  openPrimary(path) { if (!path || path === this.st.primary) return; if (this.st.primary) this.st.prev = this.st.primary; this.st.primary = path; this.save(); this.render(); }
+  openPrimary(path) { if (!path || path === this.st.primary) return; this.setSlot("p", path); this.save(); this.render(); }
+  /* each support slot and the sidekick keep their own back and forward (0.9.2, Nick) */
+  getSlot(key) { const S = this.st; return key === "side" ? S.side : key === "p" ? S.primary : S.sup[+key.slice(1)]; }
+  setSlot(key, path, viaHist) { const S = this.st, cur = this.getSlot(key); if (cur === path) return; if (key === "p" && cur) S.prev = cur;
+    const h = (S.hist[key] ||= { back: [], fwd: [] }); if (!viaHist) { if (cur) h.back.push(cur); if (h.back.length > 50) h.back.shift(); h.fwd = []; }
+    if (key === "side") S.side = path; else if (key === "p") S.primary = path; else S.sup[+key.slice(1)] = path; }
+  go(key, dir) { const S = this.st, h = S.hist[key]; if (!h) return; const from = dir < 0 ? h.back : h.fwd, to = dir < 0 ? h.fwd : h.back; const p = from.pop(); if (!p) return;
+    const cur = this.getSlot(key); if (cur) to.push(cur); this.setSlot(key, p, true); if (key[0] === "s" && key !== "side") S.focus = +key.slice(1); this.save(); this.render(); }
+  navBtns(key) { const h = this.st.hist[key] || { back: [], fwd: [] }; return [["arrow-left", "Back", () => this.go(key, -1), !h.back.length], ["arrow-right", "Forward", () => this.go(key, 1), !h.fwd.length]]; }
   openSupport(path, slot) { if (!path) return; const s = this.st.sup; let i = slot != null ? slot : s.indexOf(null); if (i < 0) i = this.st.focus === 0 ? 1 : 0;   /* the empty slot, else the one you're not in */
-    s[i] = path; this.st.focus = i; this.save(); this.render(); }
+    this.setSlot("s" + i, path); this.st.focus = i; this.save(); this.render(); }
 
   /* what a note links to and what links to it, with the map's colors when the map is open */
   linksOf(path) { const app = this.app, mc = app.metadataCache, out = new Map(), inn = new Set(), rl = mc.resolvedLinks || {};
@@ -91,7 +99,8 @@ export class DeckView extends ItemView {
 
   /* a note card: header (label, title, buttons), the editor, and its links drawer */
   card(parent, cls, label, path, slot, opts = {}) { const c = parent.createDiv({ cls: "ivd-card " + cls }); const hd = c.createDiv({ cls: "ivd-hd" });
-    hd.createSpan({ cls: "ivd-lab", text: label }); if (path) hd.createSpan({ cls: "ivd-ttl", text: this.title(path) }); hd.createSpan({ cls: "ivd-sp" });
+    for (const [ic, tip, fn, off] of opts.nav || []) { const b = hd.createEl("button", { cls: "ivd-ib ivd-nav", attr: { type: "button", "aria-label": tip } }); setIcon(b, ic); b.disabled = !!off; b.onclick = e => { e.stopPropagation(); fn(); }; }
+    hd.createSpan({ cls: "ivd-lab", text: label }); if (path && opts.readOnly) hd.createSpan({ cls: "ivd-ttl", text: this.title(path) });   /* an editor shows its own title; only Previous (no editor) names its note up here (0.9.2, Nick) */ hd.createSpan({ cls: "ivd-sp" });
     for (const [ic, tip, fn] of opts.btns || []) { const b = hd.createEl("button", { cls: "ivd-ib", attr: { type: "button", "aria-label": tip } }); setIcon(b, ic); b.onclick = e => { e.stopPropagation(); fn(b); }; }
     const body = c.createDiv({ cls: "ivd-body" });
     if (!path) { const e_ = body.createDiv({ cls: "ivd-empty" }); e_.createDiv({ text: opts.empty || "Drop a note here" }); e_.createDiv({ cls: "ivd-sub", text: "drag a Recents or Links row · or ⌘-click one" }); }
@@ -110,19 +119,26 @@ export class DeckView extends ItemView {
     if (S.mini) { const pc = this.card(root, "ivd-primary", "", P, "p", { btns: [["panel-right", "Recents and links", b => { S.drawerMain = !S.drawerMain; this.save(); this.render(); void b; }]], empty: "Open a note (from any tab) and run “Deck: show the active note”" });
       keep("p"); if (S.drawerMain) { const dr = pc.createDiv({ cls: "ivd-drawer ivd-main-drawer" }); this.hudEl = dr; this.hud(dr, P, true); } else this.hudEl = null;
       for (const k of Object.keys(this.eds)) if (!want.has(k)) this.dropEditor(k); return; }
+    root.style.setProperty("--ivd-lw", Math.max(240, Math.min(560, +S.leftW || 340)) + "px");
     const L = root.createDiv({ cls: "ivd-left" }), M = root.createDiv({ cls: "ivd-mid" }), H = root.createDiv({ cls: "ivd-hud" }), R = root.createDiv({ cls: "ivd-right" });
     /* left: the previous primary (read-only, click to swap back) and the pinned sidekick */
     const pv = this.card(L, "ivd-prev", "PREVIOUS", S.prev, "prev", { readOnly: true, empty: "The note you were on shows here" });
-    if (S.prev) pv.onclick = () => { const a = S.primary; S.primary = S.prev; S.prev = a; this.save(); this.render(); };
-    this.card(L, "ivd-side", "SIDEKICK", S.side, "side", { btns: S.side ? [this.drawerBtn("side"), ["pin-off", "Unpin the sidekick", () => { S.side = null; this.save(); this.render(); }]] : [], drawer: true, empty: "Pin a note here: a map of content, usually", drop: p => { S.side = p; this.save(); this.render(); } }); if (S.side) keep("side");
+    if (S.prev) pv.onclick = () => { this.setSlot("p", S.prev); this.save(); this.render(); };
+    this.card(L, "ivd-side", "SIDEKICK", S.side, "side", { nav: this.navBtns("side"), btns: S.side ? [this.drawerBtn("side"), ["pin-off", "Unpin the sidekick", () => { this.setSlot("side", null); this.save(); this.render(); }]] : [], drawer: true, empty: "Pin a note here: a map of content, usually", drop: p => { this.setSlot("side", p); this.save(); this.render(); } }); if (S.side) keep("side");
     /* middle: the primary note */
-    this.card(M, "ivd-primary", "PRIMARY", P, "p", { btns: P ? [["pin", "Pin as the sidekick", () => { S.side = P; this.save(); this.render(); }]] : [], drop: p => this.openPrimary(p) }); if (P) keep("p");
+    this.card(M, "ivd-primary", "PRIMARY", P, "p", { nav: this.navBtns("p"), btns: P ? [["pin", "Pin as the sidekick", () => { this.setSlot("side", P); this.save(); this.render(); }]] : [], drop: p => this.openPrimary(p) }); if (P) keep("p");
     /* its recents and links, straight, right beside it */
     this.hudEl = H; this.hud(H, P, false);
     /* right: two support slots; the focused one is taller */
-    for (const i of [0, 1]) { const p_ = S.sup[i], c = this.card(R, "ivd-sup" + (S.focus === i ? " ivd-focus" : ""), i ? "SUPPORT · BOTTOM" : "SUPPORT · TOP", p_, "s" + i,
-        { btns: p_ ? [this.drawerBtn("s" + i), ["x", "Close", () => { S.sup[i] = null; this.save(); this.render(); }]] : [], drawer: true, drop: p => this.openSupport(p, i) });
+    for (const i of [0, 1]) { const p_ = S.sup[i], c = this.card(R, "ivd-sup" + (S.focus === i ? " ivd-focus" : ""), "SUPPORT", p_, "s" + i,
+        { nav: this.navBtns("s" + i), btns: p_ ? [this.drawerBtn("s" + i), ["x", "Close", () => { this.setSlot("s" + i, null); this.save(); this.render(); }]] : [], drawer: true, drop: p => this.openSupport(p, i) });
       if (p_) keep("s" + i); c.addEventListener("pointerdown", () => { if (S.focus !== i) { S.focus = i; this.save(); R.querySelectorAll(".ivd-sup").forEach((el, j) => el.toggleClass("ivd-focus", j === i)); window.setTimeout(() => this.onResize(), 260); } }, true); }
+    /* drag the left column's edge to make the sidekick wider (0.9.2, Nick) */
+    { const g = L.createDiv({ cls: "ivd-grip", attr: { "aria-label": "Drag to resize the sidekick" } });
+      g.addEventListener("pointerdown", e => { e.preventDefault(); g.setPointerCapture(e.pointerId); const x0 = e.clientX, w0 = L.getBoundingClientRect().width;
+        const mv = ev => { S.leftW = Math.round(Math.max(240, Math.min(560, w0 + ev.clientX - x0))); root.style.setProperty("--ivd-lw", S.leftW + "px"); this.onResize(); };
+        const up = () => { g.removeEventListener("pointermove", mv); g.removeEventListener("pointerup", up); this.save(); };
+        g.addEventListener("pointermove", mv); g.addEventListener("pointerup", up); }); }
     for (const k of Object.keys(this.eds)) if (!want.has(k)) this.dropEditor(k);
     for (const [k, el] of Object.entries(this.drawerEls)) { const b = el.parentElement.querySelector('.ivd-ib[aria-label="Links drawer"]'); if (b) b.toggleClass("on", !!S.drawers[k]); }
     window.setTimeout(() => this.onResize(), 50); }
