@@ -7602,7 +7602,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       for (const s_ of [4, 6, 10, 15, 20]) { const b = seg.createEl("button", { text: s_ + " s", attr: { type: "button", "data-s": String(s_) } });
         b.onclick = e => { e.stopPropagation(); playSec = s_; save("iv-psec", playSec); try { syncPlay(); } catch (_) { /* dock not ready */ } sync_(); }; }
       sync_(); const f2_ = FUI.emoany; FUI.emoany = () => { if (f2_) f2_(); sync_(); }; }
-    /* the layers in two small groups, each under a mini header (0.8.302, Nick: "HUD Artifacts" and "Cosmetic Elements"); a "?" beside a switch says what it does */
+    /* the layers in two small groups, each under a mini header (0.8.302, Nick: "HUD Artifacts" and "Cosmotic Elements", as in the cosmos); a "?" beside a switch says what it does */
     { const QH = { rings: "Rings with tick marks round the big hubs near you.", read: "A small readout beside the note you're at: its level, score, links and years.",
         rel: ["How close a linked note is to the cockpit note, 100 for the closest; the lists down the sides are in this order, with up links always first.",
           "1. Each pair of notes gets a weight: every link between them added up, either direction (up or related 2, a link in the text 1, another property 0.6, navigation 0.5; collections don't count), ×1.25 if they link both ways.",
@@ -7618,7 +7618,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
           c_.checked = k_ === "frame" ? CKFRAME : !!CKX[k_]; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: lab }); qHelp(l_, QH[k_]);
           c_.onchange = () => { if (k_ === "frame") { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); return; } CKX = { ...CKX, [k_]: c_.checked }; save("iv-ckx", CKX); if (k_ === "turn") CKSF.ver = -1; if (k_ === "emo" && c_.checked && !EMOI) void loadEmo(); }; } };
       grp("HUD artifacts", ["rings", "read", "rel", "posts", "dial", "mini", "card", "mirror", "frame"]);
-      grp("Cosmetic elements", ["names", "gas", "gasp", "orb", "lines", "twinkle", "turn", "haze", "emo"]); }
+      grp("Cosmotic elements", ["names", "gas", "gasp", "orb", "lines", "twinkle", "turn", "haze", "emo"]); }
     /* the game, near the bottom (0.8.302, Nick: "too prioritized right now") */
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKG; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "True or false (a game: right answers jump you there)" }); qHelp(l_, "A quiz about the notes around you. Answer right and the ship jumps to the note in question.");
       c_.onchange = () => { CKG = c_.checked; save("iv-ckgame", CKG); if (CKG && CK.wd) ckWanderStop(); CK.gs = 0; ckGameNew(); }; }
