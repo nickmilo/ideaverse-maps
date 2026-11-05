@@ -1759,3 +1759,26 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm .dtab.rectab,.ivm .edtab-right,.ivm .dtab.hudtab{max-height:22%}
 /* the primary note's Focus button (0.8.272): lit while its note is focused */
 .ivm-card .cardhd .cardfoc[aria-pressed="true"]{color:var(--interactive-accent);border-color:var(--interactive-accent)}
+
+/* link colors that win (0.8.274, Nick: "I don't think it works"): Obsidian's own link rules outrank a plain color, so each mark sets the link color variables
+   (which Obsidian's rules then use, children included) as well as the color, at a weight that wins */
+body.ivm-linkcolors [data-ivk="upp"]{--link-color:var(--ivk-upp);--link-color-hover:var(--ivk-upp);--link-unresolved-color:var(--ivk-upp)}
+body.ivm-linkcolors [data-ivk="rel"]{--link-color:var(--ivk-rel);--link-color-hover:var(--ivk-rel);--link-unresolved-color:var(--ivk-rel)}
+body.ivm-linkcolors [data-ivk="up"]{--link-color:var(--ivk-up);--link-color-hover:var(--ivk-up);--link-unresolved-color:var(--ivk-up)}
+body.ivm-linkcolors [data-ivk="down"]{--link-color:var(--ivk-down);--link-color-hover:var(--ivk-down);--link-unresolved-color:var(--ivk-down)}
+body.ivm-linkcolors [data-ivk="prop"]{--link-color:var(--ivk-prop);--link-color-hover:var(--ivk-prop);--link-unresolved-color:var(--ivk-prop)}
+body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="upp"],body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="upp"] *{color:var(--ivk-upp)}
+body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="rel"],body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="rel"] *{color:var(--ivk-rel)}
+body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="up"],body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="up"] *{color:var(--ivk-up)}
+body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="down"],body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="down"] *{color:var(--ivk-down)}
+body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="prop"],body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="prop"] *{color:var(--ivk-prop)}
+.ivm-card.ivm-card:not(.sf-th) [data-ivk="upp"]{--link-color:var(--upp);--link-color-hover:var(--upp)}
+.ivm-card.ivm-card:not(.sf-th) [data-ivk="rel"]{--link-color:var(--rel);--link-color-hover:var(--rel)}
+.ivm-card.ivm-card:not(.sf-th) [data-ivk="up"]{--link-color:var(--up);--link-color-hover:var(--up)}
+.ivm-card.ivm-card:not(.sf-th) [data-ivk="down"]{--link-color:var(--down);--link-color-hover:var(--down)}
+.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"]{--link-color:var(--prop);--link-color-hover:var(--prop)}
+.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="upp"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="upp"] *{color:var(--upp)}
+.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="rel"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="rel"] *{color:var(--rel)}
+.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="up"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="up"] *{color:var(--up)}
+.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="down"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="down"] *{color:var(--down)}
+.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"] *{color:var(--prop)}
