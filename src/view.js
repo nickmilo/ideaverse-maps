@@ -1,5 +1,5 @@
 import { BaseQ, NeedThis, Unsupported } from "./baseq.js";
-import { Component, FuzzySuggestModal, ItemView, MarkdownRenderer, MarkdownView, Notice, TFile, TFolder, normalizePath } from "obsidian";
+import { Component, FuzzySuggestModal, ItemView, MarkdownRenderer, MarkdownView, Modal, Notice, TFile, TFolder, normalizePath } from "obsidian";
 
 /** Pick a folder in the vault, or type a new one (resolves null if closed without choosing). */
 const SAVED_NAME = "Maps of the Ideaverse - saved views.json";
@@ -39,6 +39,15 @@ import { CREATOR_IMG } from "./creator.js";
 
 export const VIEW_TYPE = "ideaverse-maps";
 
+/* asks before deleting a note that's open in the map (0.8.298) */
+class DeleteGuard extends Modal {
+  constructor(app, file) { super(app); this.file = file; }
+  onOpen() { const { contentEl } = this; contentEl.createEl("h3", { text: `Delete "${this.file.basename}"?` });
+    contentEl.createEl("p", { text: "It's the note open in Maps of the Ideaverse. It goes to the trash, where you can restore it." });
+    const row = contentEl.createDiv({ cls: "modal-button-container" }); const no = row.createEl("button", { text: "Cancel" }), yes = row.createEl("button", { cls: "mod-warning", text: "Delete" });
+    no.onclick = () => this.close(); yes.onclick = async () => { this.close(); try { await this.app.fileManager.trashFile(this.file); } catch (e) { new Notice(`Couldn't delete ${this.file.basename}: ${e && e.message ? e.message : e}`); } };
+    window.setTimeout(() => no.focus(), 0); }   /* Cancel has the focus, so a stray Enter keeps the note */
+  onClose() { this.contentEl.empty(); } }
 export class MapView extends ItemView {
   constructor(leaf, plugin) {
     super(leaf);
@@ -70,7 +79,13 @@ export class MapView extends ItemView {
        arms it for a minute, and one note is caught; clicking tabs, or anything else, never is */
     const intent = () => !!this.plugin.cmdIntent && Date.now() - this.plugin.cmdIntent < 60000;
     if (!this.plugin.cmdPatched) { const C = /** @type {any} */ (app).commands, plugin = this.plugin; if (C && typeof C.executeCommand === "function") { plugin.cmdPatched = true; const oc = C.executeCommand;
-      C.executeCommand = function (cmd, ...rest) { try { const id = cmd && cmd.id ? String(cmd.id) : ""; if (id && !id.startsWith("ideaverse-maps:") && !id.startsWith("workspace:") && app.workspace.getActiveViewOfType(MapView)) plugin.cmdIntent = Date.now(); } catch { /* never in the way */ } return oc.call(this, cmd, ...rest); };
+      C.executeCommand = function (cmd, ...rest) {
+        /* "Delete current file" aimed at a note open in the map (its primary or support note, or the map in front) always asks first, by name, even with Obsidian's
+           confirmation off (0.8.298, Nick lost "Ursula K. Le Guin" to a stray ⌘⌥⌫ while it was the primary note) */
+        try { if (cmd && cmd.id === "app:delete-file") { const f = app.workspace.getActiveFile(), W = app.workspace; let inMap = !!W.getActiveViewOfType(MapView);
+            if (f && !inMap) W.iterateAllLeaves(l => { if (l.ivmCard && l.view && l.view.file && l.view.file.path === f.path) inMap = true; });
+            if (f instanceof TFile && inMap) { new DeleteGuard(app, f).open(); return true; } } } catch { /* never in the way */ }
+        try { const id = cmd && cmd.id ? String(cmd.id) : ""; if (id && !id.startsWith("ideaverse-maps:") && !id.startsWith("workspace:") && app.workspace.getActiveViewOfType(MapView)) plugin.cmdIntent = Date.now(); } catch { /* never in the way */ } return oc.call(this, cmd, ...rest); };
       plugin.register(() => { C.executeCommand = oc; plugin.cmdPatched = false; }); } }
     const wants = (leaf, f) => intent() && !!f && !leaf.ivmCard && f instanceof TFile && f.extension === "md" && !!this.map && !!this.map.openPrimary && !known.has(leaf) && app.workspace.getActiveViewOfType(MapView) === this
       && !(this.plugin.ownOpenT && Date.now() - this.plugin.ownOpenT < 1500) && !(leaf.view && leaf.view.containerEl && this.contentEl.contains(leaf.view.containerEl));
