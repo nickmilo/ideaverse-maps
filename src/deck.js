@@ -29,6 +29,10 @@ export class DeckView extends ItemView {
     this.registerEvent(this.app.vault.on("rename", (f, old) => { let ch = false; const fix = p => { if (p === old) { ch = true; return f.path; } return p; };
       this.st.primary = fix(this.st.primary); this.st.prev = fix(this.st.prev); this.st.side = fix(this.st.side); this.st.sup = this.st.sup.map(fix); if (ch) { this.save(); this.render(); } }));
     this.registerDomEvent(this.contentEl, "pointerdown", e => this.armLinks(e), true);
+    /* ⌘ held over a Recents or Links row (or an orb): its preview, which you can drag onto a slot (0.9.5, Nick) */
+    const D = this.contentEl.ownerDocument;
+    this.registerDomEvent(D, "keydown", e => { if ((e.key === "Meta" || e.key === "Control") && this.hovPath) this.showPv(this.hovPath, this.hovEl); });
+    this.registerDomEvent(D, "keyup", e => { if (e.key === "Meta" || e.key === "Control") this.hidePv(); });
     this.render(); }
   async onClose() { for (const k of Object.keys(this.eds)) this.eds[k].close(); this.eds = {}; }
   onResize() { for (const k of Object.keys(this.eds)) this.eds[k].resize(); }
@@ -107,10 +111,23 @@ export class DeckView extends ItemView {
   age(ms) { const s = (Date.now() - ms) / 1000; return s < 3600 ? Math.max(1, Math.round(s / 60)) + "m" : s < 86400 ? Math.round(s / 3600) + "h" : Math.round(s / 86400) + "d"; }
 
   /* one row: click = primary; ⌘ click = a support slot; drag it onto a slot */
+  showPv(path, anchor) { if (!path || !anchor || !anchor.isConnected) return; if (this.pvEl && this.pvEl.dataset.path === path) return; this.hidePv(true);
+    const root = this.contentEl, pv = root.createDiv({ cls: "ivd-pvcard", attr: { draggable: "true" } }); pv.dataset.path = path; this.pvEl = pv;
+    pv.createDiv({ cls: "ivd-pvt", text: this.title(path) }); const body = pv.createDiv({ cls: "ivd-pvb markdown-rendered" }); pv.createDiv({ cls: "ivd-pvh", text: "drag to a slot · click to open" });
+    const f = this.file(path); if (f) void this.app.vault.cachedRead(f).then(t => { if (pv.isConnected) void MarkdownRenderer.render(this.app, t.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").slice(0, 700), body, path, this); });
+    const r = anchor.getBoundingClientRect(), m = root.getBoundingClientRect(), w = 300; let x = r.left - m.left - w - 10; if (x < 8) x = r.right - m.left + 10; let y = r.top - m.top - 20; y = Math.max(8, Math.min(y, m.height - 260));
+    pv.style.left = x + "px"; pv.style.top = y + "px";
+    pv.addEventListener("dragstart", e => { e.dataTransfer.setData("text/ivd-path", path); e.dataTransfer.effectAllowed = "copy"; root.addClass("ivd-dragging"); this.pvDrag = true; });
+    pv.addEventListener("dragend", () => { root.removeClass("ivd-dragging"); this.pvDrag = false; this.hidePv(true); });
+    pv.addEventListener("mouseleave", () => { if (!this.pvDrag) this.hidePv(); });
+    pv.onclick = e => { if (e.metaKey || e.ctrlKey) this.openSupport(path); else this.openPrimary(path); this.hidePv(true); }; }
+  hidePv(force) { const pv = this.pvEl; if (!pv) return; if (!force && (this.pvDrag || pv.matches(":hover"))) return; pv.remove(); this.pvEl = null; }
   row(box, path, a, col, right) { const r = box.createEl("button", { cls: "ivd-row", attr: { type: "button", draggable: "true" } });
     if (a) r.createSpan({ cls: "ivd-a", text: a }); const t = r.createSpan({ cls: "ivd-t", text: this.title(path) }); t.style.setProperty("--c", col || "var(--ivd-link)");
     if (right) r.createSpan({ cls: "ivd-n", text: right });
     r.onclick = e => { e.preventDefault(); if (e.metaKey || e.ctrlKey) this.openSupport(path); else this.openPrimary(path); };
+    r.addEventListener("mouseenter", e => { this.hovPath = path; this.hovEl = r; if (e.metaKey || e.ctrlKey) this.showPv(path, r); });
+    r.addEventListener("mouseleave", () => { if (this.hovEl === r) { this.hovPath = null; this.hovEl = null; } window.setTimeout(() => this.hidePv(), 120); });
     r.addEventListener("dragstart", e => { e.dataTransfer.setData("text/ivd-path", path); e.dataTransfer.effectAllowed = "copy"; this.contentEl.addClass("ivd-dragging"); });
     r.addEventListener("dragend", () => this.contentEl.removeClass("ivd-dragging")); return r; }
   hud(box, path, mini, linksOnly) { box.empty(); const rh = linksOnly ? null : box.createDiv({ cls: "ivd-h", text: "◷ RECENTS" });
@@ -158,6 +175,14 @@ export class DeckView extends ItemView {
       for (const k of Object.keys(this.eds)) if (!want.has(k)) this.dropEditor(k); return; }
     const CL = { leftW: [240, 560, 340, "--ivd-lw"], hudW: [180, 340, 230, "--ivd-hw"], rightW: [280, 600, 380, "--ivd-rw"] }, setW = (k, v) => { const [a, b, d, cv] = CL[k]; S[k] = Math.round(Math.max(a, Math.min(b, +v || d))); root.style.setProperty(cv, S[k] + "px"); };
     for (const k of Object.keys(CL)) setW(k, S[k]);
+    /* the map's orb tabs (the same list), over the primary: click = primary, ⌘ click = a support slot, drag onto any slot (0.9.5) */
+    const orbs = (this.plugin.store.get("iv-tabs") || []).filter(t => t && this.file(t.path));
+    if (orbs.length) { const ob = root.createDiv({ cls: "ivd-orbs" }); for (const t of orbs) { const o = ob.createEl("button", { cls: "ivd-orb" + (t.path === P ? " on" : ""), attr: { type: "button", draggable: "true", "aria-label": this.title(t.path) } });
+        const nd = this.G && this.G.idx.get(t.path); o.dataset.l = String(nd ? nd.level : 2); o.onclick = e => { if (e.metaKey || e.ctrlKey) this.openSupport(t.path); else this.openPrimary(t.path); };
+        o.addEventListener("dragstart", e => { e.dataTransfer.setData("text/ivd-path", t.path); root.addClass("ivd-dragging"); }); o.addEventListener("dragend", () => root.removeClass("ivd-dragging"));
+        o.addEventListener("mouseenter", e => { this.hovPath = t.path; this.hovEl = o; if (e.metaKey || e.ctrlKey) this.showPv(t.path, o); }); o.addEventListener("mouseleave", () => { if (this.hovEl === o) { this.hovPath = null; this.hovEl = null; } }); } }
+    /* a narrow window: the left column folds into two edge tabs, and opens over the primary when one is clicked (0.9.5) */
+    { const et = root.createDiv({ cls: "ivd-etabs" }); for (const [t, k] of [["PREVIOUS", "prev"], ["SIDEKICK", "side"]]) { const b = et.createEl("button", { cls: "ivd-etab ivd-etab-" + k, text: t, attr: { type: "button" } }); b.onclick = () => { root.toggleClass("ivd-leftopen", !root.hasClass("ivd-leftopen")); this.onResize(); }; } }
     const L = root.createDiv({ cls: "ivd-left" }), M = root.createDiv({ cls: "ivd-mid" }), H = root.createDiv({ cls: "ivd-hud" }), R = root.createDiv({ cls: "ivd-right" });
     /* left: the previous primary (read-only, click to swap back) and the pinned sidekick */
     const pv = this.card(L, "ivd-prev", "PREVIOUS", S.prev, "prev", { readOnly: true, empty: "The note you were on shows here" });

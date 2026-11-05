@@ -1988,3 +1988,19 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivd-lv{font-weight:600;color:var(--text-normal)}
 .ivd-lv[data-l="5"]{color:var(--ivd-upp)}.ivd-lv[data-l="4"]{color:var(--ivd-rel)}.ivd-lv[data-l="3"]{color:var(--ivd-up)}.ivd-lv[data-l="2"]{color:var(--ivd-down)}
 .ivd-rk{margin-left:auto}
+.ivd-pvcard{position:absolute;z-index:40;width:300px;max-height:250px;overflow:hidden;display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:10px;background:var(--background-primary);border:1px solid color-mix(in srgb,var(--text-accent) 55%,var(--ivd-line));box-shadow:0 16px 40px rgba(0,0,0,.45);cursor:grab}
+.ivd-pvt{font-weight:600;font-size:14px;color:var(--text-accent)}
+.ivd-pvb{font-size:12px;line-height:1.5;overflow:hidden;flex:1;min-height:0;pointer-events:none}
+.ivd-pvh{font:500 10.5px var(--font-monospace);color:var(--text-muted)}
+.ivd-orbs{position:absolute;left:0;right:0;top:17px;display:flex;justify-content:center;gap:9px;height:16px;pointer-events:none;z-index:4}
+.ivd .ivd-orb{pointer-events:auto;appearance:none;width:14px;height:14px;padding:0;border:0;border-radius:50%;box-shadow:none;cursor:pointer;background:var(--ivd-down)}
+.ivd .ivd-orb[data-l="5"]{background:var(--ivd-upp);border-radius:3px}.ivd .ivd-orb[data-l="4"]{background:var(--ivd-rel);border-radius:2px;transform:rotate(45deg) scale(.85)}.ivd .ivd-orb[data-l="3"]{background:var(--ivd-up)}
+.ivd .ivd-orb.on{box-shadow:0 0 0 2px var(--background-secondary),0 0 0 3.5px currentColor;color:var(--ivd-acc)}
+.ivd-etabs{display:none}
+@container (max-width:1300px){
+  .ivd-etabs{display:flex;flex-direction:column;gap:8px;position:absolute;left:0;top:52px;z-index:20}
+  .ivd .ivd-etab{appearance:none;writing-mode:vertical-rl;transform:rotate(180deg);padding:12px 5px;border:1px solid var(--ivd-line);border-left:0;border-radius:8px 0 0 8px;background:var(--background-primary);box-shadow:none;font:600 9.5px var(--font-monospace);letter-spacing:.12em;color:var(--text-muted);cursor:pointer;height:auto}
+  .ivd .ivd-etab-side{color:var(--ivd-rel)}
+  .ivd.ivd-leftopen .ivd-left{display:flex;position:absolute;left:34px;top:46px;bottom:12px;width:var(--ivd-lw,340px);z-index:15;padding:0;filter:drop-shadow(0 16px 32px rgba(0,0,0,.4))}
+}
+.ivd{position:relative}
