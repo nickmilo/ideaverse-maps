@@ -6419,7 +6419,7 @@ cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.data
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 dbg.__lfx = (add = true) => linkFxTry(add);
-dbg.__k = () => k;
+dbg.__k = () => k; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
 dbg.__hud = () => [HUDHOV, !!LKHV, !!(LKHV && LKHV.isConnected), HUDHOV >= 0 && !!vis[HUDHOV], HUDHOV >= 0 ? [sx(X[HUDHOV]), sy(Y[HUDHOV])] : null];
 dbg.__ck = () => [CK.yaw, CK.pitch];
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
