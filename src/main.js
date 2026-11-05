@@ -3,6 +3,7 @@ import { MapView, VIEW_TYPE } from "./view.js";
 import { registerBases } from "./bases.js";
 import { registerEmbeds } from "./embed.js";
 import { registerLinkColors } from "./linkcolor.js";
+import { registerDeck } from "./deck.js";
 import { MapsSettingTab, detectDefaults } from "./settings.js";
 import { DEFAULTS, EXTRACT_VERSION, scanVault } from "./scan.js";
 
@@ -32,6 +33,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
     registerLinkColors(this);   // every link in every note colored by Idea Emergence, when Display asks (0.8.234)
     /* the dev layout (⌘⌥⌃K) is retired (0.8.351, Nick): its saved menu layout is cleared, so the maps menu is the default for everyone: Emergence, Ideaverse, Starfield, Calendar */
     for (const k of ["iv-devlayout", "iv-devon"]) if (this.store.get(k) != null) this.store.set(k, undefined);
+    registerDeck(this);   // the Deck and Deck Mini: writing first, no graph (0.9.1)
     registerEmbeds(this);   // a map inside a note: a ```moti code block, or ![[name.moti]] (0.8.171)
 
     // offer a rescan when notes change (watched only once the vault has loaded, so startup doesn't count)
