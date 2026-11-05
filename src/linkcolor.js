@@ -20,7 +20,10 @@ export function registerLinkColors(plugin) {
       const key = String(e.getAttribute("data-href") || e.textContent || "").trim().toLowerCase(); if (!key) continue;
       { const mp = e.closest(".metadata-property"), v = plugin.settings.collectionProps, CK = (Array.isArray(v) ? v : String(v || "collections").split(",")).map(x => String(x).trim().toLowerCase());
         if (mp && CK.includes(String(mp.getAttribute("data-property-key") || "").toLowerCase())) { if (e.dataset.ivk !== "prop") e.dataset.ivk = "prop"; continue; } }
-      const p = M.get(key) || M.get(key.split("|")[0].split("#")[0].trim()) || M.get(key.split("|").pop().trim()), kd = p ? m.linkKind(path, p) : "";
+      /* a link inside an embedded note belongs to that note: colored by how its note relates to the embedded one, not to this one (0.8.279) */
+      let from = path, MM = M; { const em = e.closest(".markdown-embed-content, .markdown-embed .markdown-preview-view"), host_ = em && em.closest(".internal-embed[src]");
+        if (host_) { const t = app.metadataCache.getFirstLinkpathDest(String(host_.getAttribute("src") || "").split("#")[0], path); if (t instanceof TFile) { from = t.path; MM = targets(app, from); } } }
+      const p = MM.get(key) || MM.get(key.split("|")[0].split("#")[0].trim()) || MM.get(key.split("|").pop().trim()), kd = p ? m.linkKind(from, p) : "";
       if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } };
   const run = () => { const yes = on(); document.body.classList.toggle("ivm-linkcolors", yes); if (!yes) return; const m = mapApi(); if (!m) return;
     app.workspace.iterateAllLeaves(l => { const v = l.view; if (v && v.getViewType && v.getViewType() === "markdown" && v.file) mark(v.containerEl, v.file.path, m); }); };
