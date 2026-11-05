@@ -26,8 +26,17 @@ export function registerLinkColors(plugin) {
         if (host_) { const t = app.metadataCache.getFirstLinkpathDest(String(host_.getAttribute("src") || "").split("#")[0], path); if (t instanceof TFile) { from = t.path; MM = targets(app, from); } } }
       const p = MM.get(key) || MM.get(key.split("|")[0].split("#")[0].trim()) || MM.get(key.split("|").pop().trim()), kd = (p ? m.linkKind(from, p) : "") || (m.hasNote && m.hasNote(from) && e.matches(LINK) ? "none" : "");   /* a placeholder (0.8.280) */
       if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } };
+  /* the backlinks pane (0.8.282, Nick): each note's title colored by how it relates to the note the pane is for. A backlink is a link the other way,
+     so its kind is read from that note's side and turned round: a note whose up is this one sits below it (green), and so on */
+  const FLIP = { upp: "down", up: "down", down: "up", rel: "rel", prop: "prop" };
+  const markBL = (bl, path, m) => { const L = bl && bl.backlinkDom && bl.backlinkDom.resultDomLookup; if (!L || !path) return;
+    for (const [f, rd] of L) { const el = rd && rd.selfEl && (rd.selfEl.querySelector(".tree-item-inner") || rd.selfEl); if (!el || !f || !f.path) continue;
+      const kd = m.linkKind(path, f.path) || FLIP[m.linkKind(f.path, path)] || "";
+      if ((el.dataset.ivk || "") !== kd) { if (kd) el.dataset.ivk = kd; else delete el.dataset.ivk; } } };
   const run = () => { const yes = on(); document.body.classList.toggle("ivm-linkcolors", yes); if (!yes) return; const m = mapApi(); if (!m) return;
-    app.workspace.iterateAllLeaves(l => { const v = l.view; if (v && v.getViewType && v.getViewType() === "markdown" && v.file) mark(v.containerEl, v.file.path, m); }); };
+    app.workspace.iterateAllLeaves(l => { const v = l.view; const ty = v && v.getViewType && v.getViewType();
+      if (ty === "markdown" && v.file) { mark(v.containerEl, v.file.path, m); if (v.backlinks) markBL(v.backlinks, v.file.path, m); }   /* backlinks at the bottom of a note too */
+      else if (ty === "backlink" && v.backlink) markBL(v.backlink, (v.file && v.file.path) || (v.backlink.file && v.backlink.file.path), m); }); };
   const soon = () => { window.clearTimeout(t); t = window.setTimeout(run, 200); };
   plugin.linkColorsRun = soon;
   app.workspace.onLayoutReady(() => {
