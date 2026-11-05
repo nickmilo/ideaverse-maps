@@ -3044,7 +3044,7 @@ function ckGameAnswer(v){ const q = CK.gq, G = CK.gEl; if (!q || !G || G.bt.disa
 /* Orbit in the Starship (0.8.322, Nick: "orbit around the selected note"): Lateral swings level round the note you're at; Dynamic mostly goes left or right,
    now and then tilting its circle about 30° so the ship climbs or dives as it goes, and turns back toward level before it gets too high or low */
 const CKO = { phi: 0, phiT: 0, dir: 1, dirT: 1, next: 0 };
-function ckOrbit(dt){ if (!drifting || view !== "cockpit" || CK.wd || CK.keys.size || CK.drag || CK.auto || CKSW || CK.warp || CK.hyper || CK.glide) return;   /* a fly or a jump (a second click) goes ahead; Orbit picks up again round the note you arrive at (0.8.337, Nick) */
+function ckOrbit(dt){ if (!drifting || view !== "cockpit" || (CK.wd && CK.wd.phase !== "linger") || CK.keys.size || CK.drag || CK.auto || CKSW || CK.warp || CK.hyper || CK.glide) return;   /* a fly or a jump (a second click) goes ahead; Orbit picks up again round the note you arrive at (0.8.337, Nick) */
   let T = null; if (CKW === "sf" && CK.c >= 0) { const P = ckSF().P; T = [P[3 * CK.c], P[3 * CK.c + 1], P[3 * CK.c + 2]]; } else { const it = CK.items[CK.lock]; if (it) T = [it.x, it.y, it.z]; } if (!T) return;
   CK.auto = false; CK.settle = null; CK.v *= Math.pow(.05, dt);
   const v = [CK.P[0] - T[0], CK.P[1] - T[1], CK.P[2] - T[2]], r = Math.hypot(v[0], v[1], v[2]) || 1, el = Math.asin(Math.max(-1, Math.min(1, v[1] / r))), now = win.performance.now() / 1000;
@@ -3400,7 +3400,7 @@ const DATEK = new Set(["created","createdat","created_at","created on","date cre
    that have that property are automatically filtered"): a span of years (1929 - 2018) is a bar; a lone year or date is a one-year bar */
 const tlVal = v => { const f = Array.isArray(v) ? v[0] : v; if (f == null || f === "" || (typeof f === "string" && f.includes("[["))) return null;   /* a link (prev, next) is a note, not a date */ const sp = yspan(f); if (sp) return sp; const x = asNum(f); if (x != null && Number.isInteger(x) && x >= 1000 && x <= 2200) return [x, x];
   if (typeof f === "string") { const d = parseDay(f); if (d) { const y = +d.slice(0, 4); if (y) return [y, y]; } } return null; };
-let TLC = null, tlUI = () => {};
+let TLC = null, tlUI = () => {}, QHELP = null;   /* QHELP: qHelp, reachable from blocks built before it */
 function tlCands(){ if (TLC && TLC.n === n) return TLC.list; const st = new Map(), step = Math.max(1, Math.floor(n / 6000));
   for (let i = 0; i < n; i += step) { if (ARCH[i]) continue; const fm = fmOf(i); if (!fm) continue; for (const k_ of Object.keys(fm)) { if (k_ === "position" || DATEK.has(k_.toLowerCase()) || /^(modified|updated|updatedat|last.?modified)$/i.test(k_)) continue;
       const v = fm[k_]; if (v == null || v === "" || (Array.isArray(v) && !v.length)) continue; let o = st.get(k_); if (!o) st.set(k_, o = { n: 0, ok: 0, span: 0 }); o.n++; const t = tlVal(v); if (t) { o.ok++; if (t[0] !== t[1] || (typeof (Array.isArray(v) ? v[0] : v) === "string" && yspan(Array.isArray(v) ? v[0] : v))) o.span++; } } }
@@ -6502,7 +6502,7 @@ cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.data
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 dbg.__lfx = (add = true) => linkFxTry(add);
-dbg.__k = () => k; dbg.__ckp = () => ({ T: CK.c >= 0 && CKW === "sf" ? [0, 1, 2].map(q => Math.round(ckSF().P[3 * CK.c + q])) : null, v: Math.round(CK.v), P: CK.P.map(Math.round), c: CK.c, view, d: drifting, wd: !!CK.wd, ks: CK.keys.size, dr: !!CK.drag, w: CKW }); dbg.__pd = () => { const o = postersDetect(); return { across: o.across.map(a => a.id), cur: PSC().cur }; }; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
+dbg.__k = () => k; dbg.__ckp = () => ({ T: CK.c >= 0 && CKW === "sf" ? [0, 1, 2].map(q => Math.round(ckSF().P[3 * CK.c + q])) : null, v: Math.round(CK.v), P: CK.P.map(Math.round), c: CK.c, view, d: drifting, wd: CK.wd ? CK.wd.phase : 0, au: !!CK.auto, gl: !!CK.glide, wp: CK.warp, hy: CK.hyper, ks: CK.keys.size, dr: !!CK.drag, w: CKW }); dbg.__pd = () => { const o = postersDetect(); return { across: o.across.map(a => a.id), cur: PSC().cur }; }; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
 dbg.__hud = () => [HUDHOV, !!LKHV, !!(LKHV && LKHV.isConnected), HUDHOV >= 0 && !!vis[HUDHOV], HUDHOV >= 0 ? [sx(X[HUDHOV]), sy(Y[HUDHOV])] : null];
 dbg.__ck = () => [CK.yaw, CK.pitch];
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
@@ -6759,7 +6759,12 @@ let ckwmSync = () => {};
   const head = dock.createDiv({ cls: "anihead" }); head.createSpan({ cls: "pl", text: "Animations" });
   const body = dock.createDiv({ cls: "anibody" });
   const SECS = [["time", "Timelapse", $("#timebar"), $("#tlplay")], ["wander", "Wander Mode", $("#playbar"), $("#pplay")], ["orbit", "Orbit", $("#driftbar"), $("#dplay")]];
-  for (const s_ of SECS) { const w = body.createDiv({ cls: "aniwrap", attr: { "data-a": s_[0] } }); w.createDiv({ cls: "anilbl", text: s_[1] }); w.appendChild(s_[2]); s_[2].classList.add("anisec"); s_.push(w); }
+  /* a "?" on Wander Mode and Orbit that explains their choices, for the map you're on (0.8.338, Nick) */
+  const AHELP = { wander: () => view === "cockpit" ? "Links: fly from the note you're at to one of its links, linger, then on to the next.\n\nJumps: hyperspace jumps across the whole sky, to notes far from here.\n\nDrift: a slow cruise, looking from note to note without landing.\n\nThe seconds set how long the ship stays with each note. With Orbit on too, the ship circles each note while it lingers."
+      : "Random: jump to any note on the map.\n\nTrails: walk from a note to one it links to, and on.\n\nMaps: stay on the same note; each step shows it on another map.\n\nThe seconds set how long each step lasts.",
+    orbit: () => view === "cockpit" ? "The ship circles the note you're at, mostly left or right, now and then climbing or diving about 30°, and never quite level.\n\nCalm, Slow and Lively set the speed. G starts and stops it."
+      : "The map drifts on its own: flat maps glide and breathe; globes and 3D maps turn.\n\nCalm, Slow and Lively (or Earth, Mercury and LYT Speed on a globe) set the speed. O starts and stops it." };
+  for (const s_ of SECS) { const w = body.createDiv({ cls: "aniwrap", attr: { "data-a": s_[0] } }); const lb_ = w.createDiv({ cls: "anilbl", text: s_[1] }); if (AHELP[s_[0]]) win.setTimeout(() => { if (QHELP) QHELP(lb_, AHELP[s_[0]]); }, 0); w.appendChild(s_[2]); s_[2].classList.add("anisec"); s_.push(w); }
   const col = head.createEl("button", { cls: "acol" });
   // tucked: a vertical tab like the legend's, just above it (or above the open legend)
   const atab = cv.parentElement.createEl("button", { cls: "legtab anitab", text: "Animations", attr: { id: "anitab", "aria-label": "Show animations", "aria-expanded": "false" } });
@@ -7697,7 +7702,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "kandinsky"; }; }
   /* a "?" after a menu switch: hover (or tap) it for a line or two on what the switch does (0.8.302, Nick). The card is the map's own, never a system tooltip */
 let QHC = null, RELHELP = "";   /* RELHELP: the relevance score, explained (shared by the Starship and Display) */
-function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh", text: "?" }); const show = () => { if (!QHC) QHC = $("#main").createDiv({ cls: "ivm-qhcard" }); QHC.empty(); for (const p_ of String(text).split("\n\n")) QHC.createEl("p", { text: p_ });
+QHELP = (el, text) => qHelp(el, text);
+function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh", text: "?" }); const show = () => { if (!QHC) QHC = $("#main").createDiv({ cls: "ivm-qhcard" }); QHC.empty(); for (const p_ of String(typeof text === "function" ? text() : text).split("\n\n")) QHC.createEl("p", { text: p_ });   /* text can follow the map you're on */
     const r = q.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); QHC.hidden = false; const w = QHC.offsetWidth, h = QHC.offsetHeight; let x = r.right - m.left + 8, y = r.top - m.top - 6; if (x + w > m.width - 8) x = r.left - m.left - w - 8; if (y + h > m.height - 8) y = m.height - h - 8;
     QHC.setCssProps({ "--qx": Math.max(8, x) + "px", "--qy": Math.max(8, y) + "px" }); };
   q.addEventListener("pointerenter", show); q.addEventListener("pointerleave", () => { if (QHC) QHC.hidden = true; });
