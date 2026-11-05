@@ -3026,6 +3026,22 @@ function ckGameNew(){ const c = CK.c, G = CK.gEl; if (!G) return; if (!CKG || c 
 function ckGameAnswer(v){ const q = CK.gq, G = CK.gEl; if (!q || !G || G.bt.disabled) return; G.bt.disabled = G.bf.disabled = true;
   if (v === q.v) { CK.gs = (CK.gs || 0) + 1; if (CK.gs > CKBEST) { CKBEST = CK.gs; save("iv-ckbest", CKBEST); } G.gc.addClass("ok"); G.hd.setText(`Correct · streak ${CK.gs} · flying to ${N[q.j].title}`); ckLockNote(q.j); CK.gj = { j: q.j, t0: win.performance.now(), phase: "look" }; }
   else { CK.gs = 0; G.gc.addClass("no"); G.hd.setText(`Not quite: it's ${q.v ? "true" : "false"}`); CK.shake = 1; win.setTimeout(() => { if (!dead && CKG) ckGameNew(); }, 2200); } }
+/* Orbit in the Starship (0.8.322, Nick: "orbit around the selected note"): Lateral swings level round the note you're at; Dynamic mostly goes left or right,
+   now and then tilting its circle about 30° so the ship climbs or dives as it goes, and turns back toward level before it gets too high or low */
+const CKO = { phi: 0, phiT: 0, dir: 1, dirT: 1, next: 0 };
+function ckOrbit(dt){ if (!drifting || view !== "cockpit" || CK.wd || CK.keys.size || CK.drag) return;
+  let T = null; if (CKW === "sf" && CK.c >= 0) { const P = ckSF().P; T = [P[3 * CK.c], P[3 * CK.c + 1], P[3 * CK.c + 2]]; } else { const it = CK.items[CK.lock]; if (it) T = [it.x, it.y, it.z]; } if (!T) return;
+  CK.auto = false; CK.settle = null; CK.v *= Math.pow(.05, dt);
+  const v = [CK.P[0] - T[0], CK.P[1] - T[1], CK.P[2] - T[2]], r = Math.hypot(v[0], v[1], v[2]) || 1, el = Math.asin(Math.max(-1, Math.min(1, v[1] / r))), now = win.performance.now() / 1000;
+  if (CKORB === "dyn") { if (now > CKO.next) { CKO.next = now + 9 + Math.random() * 8; const q = Math.random();
+      CKO.phiT = q < .45 ? 0 : (q < .725 ? 1 : -1) * Math.PI / 6; if (Math.random() < .3) CKO.dirT = -CKO.dirT; }
+    if (Math.abs(el) > .6 && Math.sign(CKO.phiT) * Math.sign(el) * CKO.dir > 0) CKO.phiT = -CKO.phiT;   /* heading further from level: tilt the other way */
+    CKO.phi += (CKO.phiT - CKO.phi) * Math.min(1, dt * .5); CKO.dir += (CKO.dirT - CKO.dir) * Math.min(1, dt * .6); }
+  else { CKO.phi += (0 - CKO.phi) * Math.min(1, dt * .8); CKO.dir += (1 - CKO.dir) * Math.min(1, dt * .8); CKO.phiT = 0; CKO.dirT = 1; }
+  const sp = .16, th = sp * CKO.dir * dt, side = [Math.cos(CK.yaw), 0, -Math.sin(CK.yaw)], cf = Math.cos(CKO.phi), sf_ = Math.sin(CKO.phi), a = [side[0] * sf_, cf, side[2] * sf_], an = Math.hypot(a[0], a[1], a[2]); a[0] /= an; a[1] /= an; a[2] /= an;
+  const c_ = Math.cos(th), s_ = Math.sin(th), ad = a[0] * v[0] + a[1] * v[1] + a[2] * v[2], cr = [a[1] * v[2] - a[2] * v[1], a[2] * v[0] - a[0] * v[2], a[0] * v[1] - a[1] * v[0]];
+  for (let q = 0; q < 3; q++) CK.P[q] = T[q] + v[q] * c_ + cr[q] * s_ + a[q] * ad * (1 - c_);
+  const [ty_, tp_] = ckLook(CK.P, T); ckUpright(); CK.yaw += Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)) * Math.min(1, dt * 6); CK.pitch += (tp_ - CK.pitch) * Math.min(1, dt * 6); CK.roll *= Math.pow(.2, dt); }
 function ckGameTick(dt){ if (CK.shake > 0) { CK.shake = Math.max(0, CK.shake - dt * 2.2); CK.roll += (Math.random() - .5) * .18 * CK.shake; CK.yaw += (Math.random() - .5) * .012 * CK.shake; }
   /* a right answer flies the whole way (0.8.110, Nick: "don't truncate the jump"): turn toward the note, then autopilot all the way, with the hyperspace streaks, as Wander's Drift does */
   const gj = CK.gj; if (!gj) return; const now = win.performance.now(), el = (now - gj.t0) / 1000;
@@ -3040,7 +3056,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   const K = CK.keys, turn = 1.3 * dt;
   if (CK.wd && (K.size || CK.drag)) ckWanderStop();
   if (CK.wd) ckWanderTick(dt);
-  ckGameTick(dt);
+  ckGameTick(dt); ckOrbit(dt);
   if (K.has("x") || K.has("ArrowLeft")) { CK.yaw -= turn * ckUp(); CK.roll -= turn * 1.2; CK.auto = false; }
   if (K.has("v") || K.has("ArrowRight")) { CK.yaw += turn * ckUp(); CK.roll += turn * 1.2; CK.auto = false; }
   /* A and G orbit: the ship swings round the note it's on (or the one locked, in the links world), keeping its distance and its eyes on it */
@@ -4309,7 +4325,7 @@ function driftPick(){ const gals = BODIES.filter(b => b.kind === "gal" && b.memb
   if (!gals.length) return -1; let tot = 0; for (const b of gals) tot += Math.sqrt(b.members.length);
   let r = Math.random()*tot; for (const b of gals) { r -= Math.sqrt(b.members.length); if (r <= 0 && b.id !== driftGal) return b.id; } return gals[0].id; }
 function driftFrame(now){
-  if (!drifting) return; driftRaf = RAF(driftFrame);
+  if (!drifting) return; driftRaf = RAF(driftFrame); if (view === "cockpit") return;   /* the Starship orbits in its own loop (ckOrbit) */
   if (!(s3dOn() || sphOn() || geo3On())) { const dt = Math.min(.1, (now - driftLast)/1000); driftLast = now; if (!dt || morphing) return;   // flat maps: a slow glide and a gentle in-and-out, faster at Lively
     const sp = DRIFT[earthy() ? "slow" : dSp()][0]/.035, t = (now - driftT0)/1000*sp;
     if (domeOn()) { domeYaw += .03*sp*dt; domeProject(); X.set(DX); Y.set(DY); }
@@ -6427,7 +6443,7 @@ cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.data
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 dbg.__lfx = (add = true) => linkFxTry(add);
-dbg.__k = () => k; dbg.__pd = () => { const o = postersDetect(); return { across: o.across.map(a => a.id), cur: PSC().cur }; }; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
+dbg.__k = () => k; dbg.__ckp = () => ({ T: CK.c >= 0 && CKW === "sf" ? [0, 1, 2].map(q => Math.round(ckSF().P[3 * CK.c + q])) : null, v: Math.round(CK.v), P: CK.P.map(Math.round), c: CK.c, view, d: drifting, wd: !!CK.wd, ks: CK.keys.size, dr: !!CK.drag, w: CKW }); dbg.__pd = () => { const o = postersDetect(); return { across: o.across.map(a => a.id), cur: PSC().cur }; }; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
 dbg.__hud = () => [HUDHOV, !!LKHV, !!(LKHV && LKHV.isConnected), HUDHOV >= 0 && !!vis[HUDHOV], HUDHOV >= 0 ? [sx(X[HUDHOV]), sy(Y[HUDHOV])] : null];
 dbg.__ck = () => [CK.yaw, CK.pitch];
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
@@ -7118,9 +7134,12 @@ POPS.push(['#vseg button[data-v="stars"]', "#starpop", "#vsegms"]);
 const wobLab = doc.createElement("label"); wobLab.className = "pmaps dwob"; wobLab.title = "With Earth, Mercury or LYT: the tilt rocks gently once a turn, like a spinning top";
 { const cb = doc.createElement("input"); cb.type = "checkbox"; cb.id = "dwob"; cb.checked = WOB; const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = "Wobble like the Earth"; wobLab.append(cb, sw, t);
   cb.onchange = () => { WOB = cb.checked; save("iv-wob", WOB); }; $("#driftbar").appendChild(wobLab); }
-const syncDrift = () => { root.querySelectorAll("#driftseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.d === dSp()))); wobLab.classList.toggle("dim", !earthy()); };
-root.querySelectorAll("#driftseg button").forEach(b => b.onclick = () => { const d = b.dataset.d; if (globeSet()) { DSG = d; save("iv-drift3", d); } else { DSF = d; save("iv-drift", d); } syncDrift(); });
-root.querySelectorAll("#driftseg button").forEach(b => { if (!b.classList.contains("dearth")) b.classList.add("dflat"); });
+/* the Starship's own Orbit (0.8.322, Nick): round the note you're at, Lateral (a level circle) or Dynamic (left or right, now and then climbing or diving at about 30°) */
+let CKORB = pref("iv-ckorb", "lat") === "dyn" ? "dyn" : "lat";
+{ const seg_ = root.querySelector("#driftseg"); if (seg_) for (const [d, t, tip] of [["lat", "Lateral", "A level circle round the note"], ["dyn", "Dynamic", "Mostly left or right, now and then climbing or diving at about 30°"]]) { const b = doc.createElement("button"); b.dataset.d = d; b.className = "dship"; b.textContent = t; b.setAttribute("aria-label", tip); seg_.appendChild(b); } }
+const syncDrift = () => { root.querySelectorAll("#driftseg button").forEach(b => b.setAttribute("aria-pressed", String(b.classList.contains("dship") ? b.dataset.d === CKORB : b.dataset.d === dSp()))); wobLab.classList.toggle("dim", !earthy()); };
+root.querySelectorAll("#driftseg button").forEach(b => b.onclick = () => { const d = b.dataset.d; if (b.classList.contains("dship")) { CKORB = d; save("iv-ckorb", d); syncDrift(); return; } if (globeSet()) { DSG = d; save("iv-drift3", d); } else { DSF = d; save("iv-drift", d); } syncDrift(); });
+root.querySelectorAll("#driftseg button").forEach(b => { if (!b.classList.contains("dearth") && !b.classList.contains("dship")) b.classList.add("dflat"); });
 $("#dplay").onclick = () => drifting ? driftStop() : driftStart(); syncDrift();
 { const c3 = pref("iv-cam3", null); if (Array.isArray(c3)) { yaw3 = +c3[0] || yaw3; pitch3 = +c3[1] || pitch3; } }
 // a third Starfield mode, Star Chart (0.8.2): its row sits under 3D
