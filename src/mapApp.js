@@ -5492,7 +5492,7 @@ function edTint(o){ if (!o || !o.el || o.el.hidden) return;
   const els = o.el.querySelectorAll("a.internal-link, .cm-hmd-internal-link, .multi-select-pill-content, .internal-link");
   if (!(sf || pref("iv-linkcolor", false) === true) || i == null) { for (const e of els) if (e.dataset.ivk) delete e.dataset.ivk; return; }
   const M = new Map(); for (const [t, p] of host.linkTargets(o.path)) if (!M.has(t)) M.set(t, p);
-  const kindOf = p => { const j = PIDX.get(p); if (j == null || j === i) return ""; const kk = EKIND.get(i*n + j); if (kk === undefined && !out[i].includes(j)) return ""; return kk === 1 ? "upp" : kk === 4 ? "rel" : kk === 5 ? "prop" : upOf(i, j) ? "up" : "down"; };
+  const kindOf = p => { const j = PIDX.get(p); if (j == null || j === i) return ""; const kk = EKIND.get(i*n + j); if (kk === undefined && !out[i].includes(j)) return ""; return kk === 1 ? "upp" : kk === 4 ? "rel" : kk === 5 || kk === 3 ? "prop" : upOf(i, j) ? "up" : "down"; };
   for (const e of els) { const key = String(e.getAttribute("data-href") || e.textContent || "").trim().toLowerCase(); if (!key) continue;
     const p = M.get(key) || M.get(key.split("|")[0].split("#")[0].trim()) || M.get(key.split("|").pop().trim()); const kd = p ? kindOf(p) : ""; if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } }   /* the link colors always come along (the up/related pills) */
 const clampN = (v, a, b) => Math.round(Math.max(a, Math.min(b, v)));
@@ -8162,7 +8162,7 @@ return {
   /** a note opened elsewhere while the map is in front: show it as the primary note (0.8.218). False when the map can't (not in the map, or filtered out) */
   hasNote(path){ return PIDX.has(path); },
   /** how the note at toPath relates to the one at fromPath, for link colors everywhere (0.8.234): upp, rel, up, down, prop, or "" */
-  linkKind(fromPath, toPath){ const i = PIDX.get(fromPath), j = PIDX.get(toPath); if (i == null || j == null || i === j || dead) return ""; const kk = EKIND.get(i*n + j); if (kk === undefined && !out[i].includes(j)) return ""; return kk === 1 ? "upp" : kk === 4 ? "rel" : kk === 5 ? "prop" : upOf(i, j) ? "up" : "down"; },
+  linkKind(fromPath, toPath){ const i = PIDX.get(fromPath), j = PIDX.get(toPath); if (i == null || j == null || i === j || dead) return ""; const kk = EKIND.get(i*n + j); if (kk === undefined && !out[i].includes(j)) return ""; return kk === 1 ? "upp" : kk === 4 ? "rel" : kk === 5 || kk === 3 ? "prop" : upOf(i, j) ? "up" : "down"; },
   openPrimary(path){ const i = PIDX.get(path); if (i == null || dead || !edOn() || !vis[i]) return false; if (EDS.left.col) EDS.left.collapse(false); select(i); navTo(i); draw(); return true; },
   editIn(path, which){ const i = PIDX.get(path); if (i == null || dead) return false;
     if (!EDITM) { EDITM = true; save("iv-editm", true);
