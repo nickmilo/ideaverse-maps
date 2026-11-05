@@ -1807,3 +1807,5 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"] *,.ivm-card.ivm-
 .ivm .ivm-recents .rch.lksub{margin-top:6px}
 .ivm .ivm-recents .lka{flex:none;width:12px;text-align:center;color:var(--muted);font-size:11px}
 .ivm .ivm-recents .rcn.lkc{color:var(--lc)}
+/* the HUD sits in the middle of the map's height (0.8.285, Nick: "vertically center the combined HUD"); it grows up and down from there */
+.ivm .ivm-recents,.ivm .ivm-recents.paired{top:0;bottom:0;margin:auto 0;height:fit-content;max-height:calc(100% - 64px)}
