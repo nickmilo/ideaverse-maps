@@ -3044,7 +3044,7 @@ function ckGameAnswer(v){ const q = CK.gq, G = CK.gEl; if (!q || !G || G.bt.disa
 /* Orbit in the Starship (0.8.322, Nick: "orbit around the selected note"): Lateral swings level round the note you're at; Dynamic mostly goes left or right,
    now and then tilting its circle about 30° so the ship climbs or dives as it goes, and turns back toward level before it gets too high or low */
 const CKO = { phi: 0, phiT: 0, dir: 1, dirT: 1, next: 0 };
-function ckOrbit(dt){ if (!drifting || view !== "cockpit" || CK.wd || CK.keys.size || CK.drag) return;
+function ckOrbit(dt){ if (!drifting || view !== "cockpit" || CK.wd || CK.keys.size || CK.drag || CK.auto || CKSW || CK.warp || CK.hyper || CK.glide) return;   /* a fly or a jump (a second click) goes ahead; Orbit picks up again round the note you arrive at (0.8.337, Nick) */
   let T = null; if (CKW === "sf" && CK.c >= 0) { const P = ckSF().P; T = [P[3 * CK.c], P[3 * CK.c + 1], P[3 * CK.c + 2]]; } else { const it = CK.items[CK.lock]; if (it) T = [it.x, it.y, it.z]; } if (!T) return;
   CK.auto = false; CK.settle = null; CK.v *= Math.pow(.05, dt);
   const v = [CK.P[0] - T[0], CK.P[1] - T[1], CK.P[2] - T[2]], r = Math.hypot(v[0], v[1], v[2]) || 1, el = Math.asin(Math.max(-1, Math.min(1, v[1] / r))), now = win.performance.now() / 1000;
