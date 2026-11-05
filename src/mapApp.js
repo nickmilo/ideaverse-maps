@@ -4406,9 +4406,9 @@ function driftFrame(now){
   const cxw = (vx - tx)/k, cyw = (vy - ty)/k, e = Math.min(1, dt*1.6);
   const ncx = cxw + (gx - cxw)*e, ncy = cyw + (gy - cyw)*e; k = k + (kk - k)*e; tx = vx - ncx*k; ty = vy - ncy*k;
   render(); }
-function driftStart(){ if (drifting) return; drifting = true; driftK0 = fitTarget().k*.95; driftT0 = driftLast = performance.now(); driftCyc = -1;
+function driftStart(){ if (drifting) return; drifting = true; win.setTimeout(() => { if (FUI.ckplay) FUI.ckplay(); }, 0); driftK0 = fitTarget().k*.95; driftT0 = driftLast = performance.now(); driftCyc = -1;
   $("#dplay").textContent = "❚❚"; $("#dplay").setAttribute("aria-label", "Stop drifting"); driftRaf = RAF(driftFrame); }
-function driftStop(){ if (!drifting) return; drifting = false; win.cancelAnimationFrame(driftRaf); const b = $("#dplay"); if (b) { b.textContent = "▶"; b.setAttribute("aria-label", "Drift"); }
+function driftStop(){ if (!drifting) return; drifting = false; win.setTimeout(() => { if (FUI.ckplay) FUI.ckplay(); }, 0); win.cancelAnimationFrame(driftRaf); const b = $("#dplay"); if (b) { b.textContent = "▶"; b.setAttribute("aria-label", "Drift"); }
   buildGrid(); if (geo3On()) g3Keep(); else if (sphOn()) csKeep(); else if (s3dOn()) save("iv-cam3", [yaw3, pitch3]); draw(); }
 function bodyPos(b){ if (s3dOn() && B3[b.id]) return [B3[b.id].px, B3[b.id].py]; return [UC.x + b.x, UC.y + b.y]; }
 function halos3D(dim){   // in 3D the cached glow can't follow the camera: each galaxy gets a soft halo, flattened as its disk turns edge-on
@@ -7707,15 +7707,13 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       c_.onchange = () => { CKINV = c_.checked; save("iv-ckinv", CKINV); }; }
     if (Platform.isMobile && !Platform.isIosApp) { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKTILT;   /* not on iPhone or iPad: the Obsidian app there doesn't pass the phone's motion to plugins (0.8.142, Nick tried) */ l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Look around by moving the phone" });
       c_.onchange = async () => { c_.checked = await ckTiltSet(c_.checked); }; }
-    { const sr = fa.createDiv({ cls: "eorow arnrow ckseg" }); sr.createSpan({ cls: "eol", text: "Wander" }); const seg = sr.createDiv({ cls: "seg" });
-      for (const [v, t_] of [["links", "Links"], ["jumps", "Jumps"], ["drift", "Drift"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKWM === v) } });
-        b.dataset.w = v; b.onclick = e => { e.stopPropagation(); CKWM = v; save("iv-ckwm", v); ckwmSync(); if (CK.wd) { ckWander(false); ckWander(true); } }; }
-      { const s0 = ckwmSync; ckwmSync = () => { s0(); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.w === CKWM))); }; }
-      const pb = sr.createEl("button", { cls: "ckplay", text: "▶", attr: { type: "button", "aria-label": "Start Wander Mode (P)" } }); pb.onclick = e => { e.stopPropagation(); setPlaying(!playing); };
-      FUI.ckplay = () => { pb.setText(playing && view === "cockpit" ? "■" : "▶"); };
-      /* Animations ›, right after ▶ (0.8.332, Nick: "Open animation should not need to be on its own line") */
-      const al = sr.createEl("button", { cls: "ckanim", text: "Animations ›", attr: { type: "button" } }); al.onclick = e => { e.stopPropagation(); closePops(); const t_ = $("#anitab"); if (t_ && !t_.hidden) t_.click(); }; }
-    /* Wander's pace, here too (0.8.164, Nick: the Cockpit had no seconds slider): how long the ship stays with each note */
+    /* Dynamic: Wander, Orbit, More (0.8.334, Nick): Wander and Orbit start or stop with their last settings (underlined while running); More opens the Animations dock, where their choices live */
+    { const sr = fa.createDiv({ cls: "eorow arnrow ckseg ckdyn" }); sr.createSpan({ cls: "eol", text: "DYNAMIC:" }); const seg = sr.createDiv({ cls: "seg" });
+      const bw = seg.createEl("button", { text: "Wander", attr: { type: "button" } }), bo = seg.createEl("button", { text: "Orbit", attr: { type: "button" } }), bm = seg.createEl("button", { text: "More", attr: { type: "button" } });
+      bw.onclick = e => { e.stopPropagation(); setPlaying(!playing); FUI.ckplay(); };
+      bo.onclick = e => { e.stopPropagation(); drifting ? driftStop() : driftStart(); FUI.ckplay(); };
+      bm.onclick = e => { e.stopPropagation(); closePops(); const t_ = $("#anitab"); if (t_ && !t_.hidden) t_.click(); };
+      FUI.ckplay = () => { bw.setAttribute("aria-pressed", String(!!(playing && view === "cockpit"))); bo.setAttribute("aria-pressed", String(!!drifting)); }; FUI.ckplay(); }
     /* the layers in two small groups, each under a mini header (0.8.302, Nick: "HUD Artifacts" and "Cosmotic Elements", as in the cosmos); a "?" beside a switch says what it does */
     { const QH = { rings: "Rings with tick marks round the big hubs near you.", read: "A small readout beside the note you're at: its level, score, links and years.",
         rel: ["How close a linked note is to the cockpit note, 100 for the closest; the lists down the sides are in this order, with up links always first.",
