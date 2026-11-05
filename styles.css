@@ -2123,3 +2123,6 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivd .ivd-card .cardstrip .schip.sfoc.on{border-color:var(--interactive-accent);color:var(--interactive-accent)}
 .ivd .ivd-card .sfold-tip{position:absolute;left:var(--tx);top:var(--ty);z-index:60;pointer-events:none;white-space:nowrap;font:600 11px var(--font-interface);color:var(--text-normal);background:var(--background-primary);border:1px solid var(--ivd-line);border-radius:5px;padding:3px 7px}
 .ivd .ivd-card{--upp:var(--ivd-upp);--rel:var(--ivd-rel)}
+.ivd .ivd-hd .ivd-ttl{font-size:12.5px;font-weight:600;color:var(--text-normal);flex:1 1 auto}
+.ivd .ivd-hd .ivd-ttl+.ivd-sp{flex:0}
+.ivd .ivd-hd .ivd-lab{flex:none}

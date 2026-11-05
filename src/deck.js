@@ -215,7 +215,7 @@ export class DeckView extends ItemView {
   /* a note card: header (label, title, buttons), the editor, and its links drawer */
   card(parent, cls, label, path, slot, opts = {}) { const c = parent.createDiv({ cls: "ivd-card " + cls }); const hd = c.createDiv({ cls: "ivd-hd" });
     for (const [ic, tip, fn, off] of opts.nav || []) { const b = hd.createEl("button", { cls: "ivd-ib ivd-nav", attr: { type: "button", "aria-label": tip } }); setIcon(b, ic); b.disabled = !!off; b.onclick = e => { e.stopPropagation(); fn(); }; }
-    hd.createSpan({ cls: "ivd-lab", text: label }); if (path && opts.readOnly) hd.createSpan({ cls: "ivd-ttl", text: this.title(path) });   /* an editor shows its own title; only Previous (no editor) names its note up here (0.9.2, Nick) */ hd.createSpan({ cls: "ivd-sp" });
+    hd.createSpan({ cls: "ivd-lab", text: label }); if (path) hd.createSpan({ cls: "ivd-ttl", text: this.title(path) });   /* the note's name stays in view once you scroll past its title (0.9.12, Nick) */   /* an editor shows its own title; only Previous (no editor) names its note up here (0.9.2, Nick) */ hd.createSpan({ cls: "ivd-sp" });
     for (const [ic, tip, fn] of opts.btns || []) { const b = hd.createEl("button", { cls: "ivd-ib", attr: { type: "button", "aria-label": tip } }); setIcon(b, ic); b.onclick = e => { e.stopPropagation(); fn(b); }; }
     if (path && opts.strip) this.strip(c, path, slot);
     const body = c.createDiv({ cls: "ivd-body" });
