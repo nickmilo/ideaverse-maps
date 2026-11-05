@@ -5226,8 +5226,7 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
   const hd = RECEL.createDiv({ cls: "rch cardhd-tuck" }); hd.createSpan({ cls: "rct", text: `◷  RECENTS · ${L.length}` });
   /* tucks away as the editors do (0.8.242, Nick: "we already have specs"): a click on its header (not on the switch) or on ›, and it waits as a tab on the edge */
   hd.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest("label, input, button")) return; e.stopPropagation(); RECOPEN = false; save("iv-recopen", false); RECKEY = ""; recSync(); });
-  const sw = hd.createEl("label", { cls: "mini lcemo rcemo" }); const cb = sw.createEl("input", { type: "checkbox" }); cb.checked = RECEMO; sw.createEl("i", { cls: "sw" }); sw.createSpan({ text: "Emojis" });
-  cb.onchange = () => { RECEMO = cb.checked; save("iv-recemo", RECEMO); if (RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; recSync(); }); RECKEY = ""; recSync(); };
+  /* the Emojis switch lives in Display now (0.8.270, Nick) */
   const x = hd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Recents away" } }); x.onclick = e => { e.stopPropagation(); RECOPEN = false; save("iv-recopen", false); RECKEY = ""; recSync(); };
   const box = RECEL.createDiv({ cls: "rcl" + (RECLEFT ? " rcleft" : "") }); recGrip();
   /* laid out as Links is (0.8.239, Nick): 11px names on 14.5px rows, right-aligned, the age where Links shows its score, the emoji (or dot) at the end,
@@ -7731,9 +7730,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     sl.oninput = () => { RECN = +sl.value; sv.setText(String(RECN)); RECKEY = ""; recSync(); }; sl.onchange = () => save("iv-recn", RECN); sl.onclick = e => e.stopPropagation();
     const r6 = DI.p.createDiv({ cls: "eorow ctrrk tchoice" }); r6.createSpan({ cls: "eol", text: "Opacity" }); const so = r6.createEl("input", { type: "range", attr: { min: "30", max: "100", step: "1", "aria-description": "Recents panel opacity" } }); so.value = String(RECOP); const ov = r6.createSpan({ cls: "eov", text: RECOP + "%" }); r6.hidden = !RECON;
     so.oninput = () => { RECOP = +so.value; ov.setText(RECOP + "%"); if (RECEL) RECEL.setCssProps({ "--rcop": RECOP + "%" }); }; so.onchange = () => save("iv-recop", RECOP); so.onclick = e => e.stopPropagation();
+    const l7 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c7 = l7.createEl("input", { type: "checkbox" }); c7.checked = RECEMO; l7.createEl("i", { cls: "sw" }); l7.createSpan({ text: "Emojis" }); l7.hidden = !RECON;
+    c7.onchange = () => { RECEMO = c7.checked; save("iv-recemo", RECEMO); if (RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; recSync(); }); RECKEY = ""; recSync(); };
     const l5 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c5 = l5.createEl("input", { type: "checkbox" }); c5.checked = RECAGE; l5.createEl("i", { cls: "sw" }); l5.createSpan({ text: "Show time since modified" }); l5.hidden = !RECON;
     c5.onchange = () => { RECAGE = c5.checked; save("iv-recage", RECAGE); RECKEY = ""; recSync(); };
-    cb.onchange = () => { RECON = cb.checked; save("iv-recent", RECON); r2.hidden = l5.hidden = r6.hidden = !RECON; recSync(); }; }
+    cb.onchange = () => { RECON = cb.checked; save("iv-recent", RECON); r2.hidden = l5.hidden = r6.hidden = l7.hidden = !RECON; recSync(); }; }
   /* Color all links by Idea Emergence (0.8.234, Nick: "color ALL links in all Obsidian windows by Idea Emergence") */
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = pref("iv-linkcolor", false) === true; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Color all links by Idea Emergence" });
     cb.onchange = () => { save("iv-linkcolor", cb.checked); if (host.linkColors) host.linkColors(); for (const o of Object.values(EDS)) edTint(o); }; }
