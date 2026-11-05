@@ -78,7 +78,7 @@ export class DeckView extends ItemView {
   ensureGraph() { if (this.G || this.gLoading) return; this.gLoading = true;
     void this.plugin.getGraph().then(g => { const idx = new Map(), ek = new Map(); for (const nd of g.nodes) idx.set(nd.path, nd); const byId = new Map(g.nodes.map(nd => [nd.id, nd]));
       for (const [a, b, k] of g.edges) { const A = byId.get(a), B = byId.get(b); if (A && B) ek.set(A.path + "\u0000" + B.path, k); }
-      const rk = new Map(); [...g.nodes].filter(nd => !nd.archived).sort((a, b) => (b.score || 0) - (a.score || 0)).forEach((nd, q) => rk.set(nd.path, q + 1)); this.G = { idx, ek, rk }; this.render(); return; this.gLoading = false; this.renderHud(); }).catch(() => { this.gLoading = false; }); }
+      const rk = new Map(); [...g.nodes].filter(nd => !nd.archived).sort((a, b) => (b.score || 0) - (a.score || 0)).forEach((nd, q) => rk.set(nd.path, q + 1)); this.G = { idx, ek, rk }; this.gLoading = false; this.render(); }).catch(() => { this.gLoading = false; }); }
   kindOf(from, to, o, i) { const G = this.G; if (!G) return ""; const k = G.ek.get(from + "\u0000" + to), kb = G.ek.get(to + "\u0000" + from);
     if (k === 1) return "upp"; if (k === 4 || kb === 4) return "rel"; if (k === 5 || k === 3) return "prop"; if (kb === 1) return "down";
     const A = G.idx.get(from), B = G.idx.get(to); if (!A || !B) return ""; if (B.level !== A.level) return B.level > A.level ? "up" : "down"; return (B.score || 0) >= (A.score || 0) ? "up" : "down"; }
