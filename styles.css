@@ -1784,8 +1784,8 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="prop"],body.ivm-linkcol
 .ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"] *{color:var(--ivc-prop)}
 /* Recents beside Links (0.8.275): it rises to the top, 7 rows show and the rest scroll; Links hangs below it */
 .ivm .ivm-recents.paired{top:12px}
-.ivm .ivm-recents.paired .rcl{max-height:calc(17.5px * 7 + 17px);overflow-y:auto;scrollbar-width:none}
-.ivm .ivm-recents.paired .rcl::-webkit-scrollbar{display:none}
+.ivm .ivm-recents.paired .rcl.rcrec{max-height:calc(17.5px * 7 + 17px);flex:none;overflow-y:auto;scrollbar-width:none}
+.ivm .ivm-recents.paired .rcl.rcrec::-webkit-scrollbar{display:none}
 .ivm .ivm-recents .rcl .rcr{flex:none}
 /* Recents rows grow a touch on hover (0.8.278, Nick) */
 .ivm .ivm-recents .rcr{transition:transform .12s ease}
@@ -1800,3 +1800,10 @@ body.ivm-linkcolors [data-ivk="none"]{--link-color:var(--ivk-none);--link-color-
 .ivm-card.ivm-card [data-ivk="none"]{--link-color:var(--ivc-none);--link-color-hover:var(--ivc-none);--link-unresolved-color:var(--ivc-none);--link-unresolved-opacity:1;--ivn:var(--ivc-none);--ivnb:var(--ivc-noneb)}
 body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"],.ivm-card.ivm-card.ivm-card [data-ivk="none"]{color:var(--ivn);opacity:1;text-decoration:none;border:1px dashed var(--ivnb);border-radius:4px;padding:0 4px}
 body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"] *,.ivm-card.ivm-card.ivm-card [data-ivk="none"] *{color:var(--ivn);text-decoration:none}
+
+/* Links in the Recents panel (0.8.284, Nick): a second section under Recents, the same rows and curve; either section tucks to its own tab */
+.ivm .ivm-recents .rcl.lkl{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:none}
+.ivm .ivm-recents .rcl.lkl::-webkit-scrollbar{display:none}
+.ivm .ivm-recents .rch.lksub{margin-top:6px}
+.ivm .ivm-recents .lka{flex:none;width:12px;text-align:center;color:var(--muted);font-size:11px}
+.ivm .ivm-recents .rcn.lkc{color:var(--lc)}

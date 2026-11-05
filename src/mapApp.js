@@ -103,7 +103,7 @@ const emoAny = () => Object.keys(EMON).some(k_ => EMON[k_] === true);
 // and only a note with none falls back to the base column (Settings → Emoji labels)
 let EMOF = (() => { const o = pref("iv-emofold", null); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; })();
 let EMOI = null;   // note index → its emoji
-let VISV = 0, RECCK = false, RECBOT = 0;   /* RECBOT: where the open Recents panel ends, in map pixels, when it shares the edge with Links (0 otherwise) */   // bumps whenever what shows changes (Recent caches by it)
+let VISV = 0, RECCK = false;   // bumps whenever what shows changes (Recent caches by it)
 const emoBuild = () => { const has = Object.keys(EMOF).length > 0; if (!has && !EMO) { EMOI = null; return; }
   EMOI = N.map(d => { if (has) { let q = d.path; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (EMOF[q]) return EMOF[q]; } } return EMO ? EMO.get(d.path) : undefined; }); };
 emoBuild();
@@ -5153,7 +5153,7 @@ cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
 // ---------- HUD links (0.8.143, Nick): the Cockpit's list of the picked note's links, down the right of any map ----------
 // each linked note once (← links in, → links out, ↔ both), up links first, then by relevance; hover lights a name and draws a line to its note; click goes there.
 // Display → HUD links, with Relevance scores beneath it
-let HUDCOL = pref("iv-hudcol", false) === true, HUDPV = pref("iv-hudpv", false) === true, HUDOFF = 0, HUDBOX = null, HUDTAB = null, HUDPVE = null, HUDPVP = null;
+let HUDCOL = pref("iv-hudcol", false) === true, HUDPV = pref("iv-hudpv", false) === true, HUDBOX = null, HUDTAB = null, HUDPVE = null, HUDPVP = null;
 // the list tucks away to a tab on the right edge (0.8.145, Nick: "like we've done with the Legend"): a click on its header tucks it, the tab brings it back; the Cockpit's list too
 function hudTab(nLinks){ if (!HUDTAB) { HUDTAB = $("#main").createEl("button", { cls: "dtab hudtab", attr: { type: "button", "aria-label": "Show the links", title: "Show the links" } }); HUDTAB.hidden = true;
     HUDTAB.addEventListener("pointerdown", e => e.stopPropagation()); HUDTAB.onclick = e => { e.stopPropagation(); hudCol(false); }; }
@@ -5164,33 +5164,19 @@ function hudPv(j, x, y, force){ if (j < 0 && typeof RECHV !== "undefined" && REC
   if (!HUDPVE || HUDPVP !== p) { if (HUDPVE) HUDPVE.remove(); const e = $("#main").createDiv({ cls: "ivm-card ivm-pv hudpv" }); e.createDiv({ cls: "pvt", text: N[j].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } HUDPVE = e; HUDPVP = p; }
   const c = cv.getBoundingClientRect(), pr = $("#main").getBoundingClientRect(), pw = 230, ph = 140; HUDPVE.hidden = false;
   HUDPVE.setCssProps({ "--pvx": Math.round(c.left - pr.left + Math.max(8, x - pw - 14)) + "px", "--pvy": Math.round(c.top - pr.top + Math.max(8, Math.min(H - ph - 8, y - ph / 2))) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); }
-let HUDL = pref("iv-hudl", false) === true, HUDR = pref("iv-hudr", true) !== false, HUDH = [], HUDHOV = -1, HUDC = { i: -2, list: [], rel: null };
+let HUDL = pref("iv-hudl", false) === true, HUDR = pref("iv-hudr", true) !== false, HUDHOV = -1, HUDC = { i: -2, list: [], rel: null };
 function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && RADJ) return HUDC; const L = stripLists(i), inS = new Set(L.in), outS = new Set(L.out), upS = new Set(L.up); let rel = null; try { rel = relFrom(i); } catch (_) { rel = null; }
   const all = [...new Set([...L.in, ...L.out])].filter(j => j !== i && N[j] && vis[j]), rv = j => rel ? rel[j] : N[j].score / 1e3; let mx = 0; for (const j of all) mx = Math.max(mx, rv(j));
   all.sort((a, b) => (upS.has(b) ? 1 : 0) - (upS.has(a) ? 1 : 0) || rv(b) - rv(a) || N[b].score - N[a].score);
-  return (HUDC = { i, rj: RADJ, list: all, inS, outS, upS, sc: new Map(all.map(j => [j, mx > 0 ? Math.round(100 * rv(j) / mx) : 0])) }); }
-function drawHudLinks(){ HUDH = []; HUDBOX = null; if (view === "cockpit") { hudPv(-1); return; } if (!HUDL || sel < 0 || !vis[sel] || isPhone()) { hudTab(0); hudPv(-1); return; } const D_ = hudData(sel), n_ = D_.list.length; hudTab(n_); if (!n_ || HUDCOL) { hudPv(-1); return; }
-  if (HUDC.offFor !== sel) { HUDC.offFor = sel; HUDOFF = 0; }
-  let R_ = W - sideW(); try { if (EDS && !EDS.right.el.hidden && !EDS.right.col) R_ = Math.min(R_, edRect("right").x - 8); } catch (_) { /* no editors */ }
-  const top = RECBOT > 0 ? Math.max(74, RECBOT + 34) : 74, bot = H - 120, lh = 14.5, cap = Math.max(4, Math.min(n_, Math.floor((bot - top) / lh) - 1)), off = HUDOFF = Math.max(0, Math.min(n_ - cap, Math.round(HUDOFF))), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* the wheel scrolls it (0.8.144) */ cy = RECBOT > 0 ? top + 14 + (rows - 1) / 2 * lh : (top + bot) / 2,   /* under Recents the arc centres on the rows themselves, so they don't all tip at once (0.8.281) */ Ry = Math.max(300, (bot - top) * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))));
-  ctx.save(); ctx.font = `500 11px ${css.body}`; ctx.textBaseline = "middle"; ctx.textAlign = "right"; const ink = css.ink || "#ddd", SL = (() => { try { return SPACELINK(); } catch (_) { return {}; } })();
-  const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry;   /* under Recents: Links hangs from just below it (0.8.275) */ return [R_ - 30 - 60 * (1 - Math.sqrt(Math.max(0, 1 - u * u))), y, Math.asin(Math.max(-1, Math.min(1, u))) * .25]; };
-  const [hx, hy] = at(-1.3); ctx.globalAlpha = .6; ctx.font = `600 9.5px ${css.body}`; ctx.fillStyle = css.accent || "#7dffb0"; const htx = (n_ > cap ? `LINKS · ${off + 1}–${off + cap} of ${n_}` : `LINKS · ${n_}`) + "  ›"; ctx.fillText(htx, hx, hy); HUDH.push([hx - ctx.measureText(htx).width - 4, hy - 9, ctx.measureText(htx).width + 8, 18, -5]);   /* the header tucks the list away */ ctx.font = `500 11px ${css.body}`;
-  for (let r = 0; r < rows; r++) { const [x, y, tl] = at(r), more = r === cap, j = more ? -1 : D_.list[off + r], hv = j >= 0 && j === HUDHOV;
-    const tw0 = more ? 120 : (() => { if (!N[j]) return 0; return Math.min(175, ctx.measureText(N[j].title).width) + 30; })(), lim = 7 / Math.max(40, tw0), tl_ = Math.max(-lim, Math.min(lim, tl));   /* a wide row tilts less, so its far end never drifts into the next row, as on Recents (0.8.281) */
-    ctx.save(); ctx.translate(x, y); ctx.rotate(tl_); if (hv) ctx.scale(1.03, 1.03);   /* a row grows 3% under the pointer, as on Recents (0.8.281, Nick) */
-    if (more) { ctx.globalAlpha = .6; ctx.fillStyle = css.muted || ink; ctx.fillText(below > 0 ? `+${below} more  ↓` : "↑  back to the top", 0, 0); ctx.restore(); HUDH.push([x - 120, y - lh / 2, 126, lh, -6]); continue; }
-    if (!N[j]) continue; let tt = N[j].title; while (ctx.measureText(tt).width > 175 && tt.length > 4) tt = tt.slice(0, -2); if (tt !== N[j].title) tt += "…"; tt = (D_.inS.has(j) && D_.outS.has(j) ? "↔ " : D_.inS.has(j) ? "← " : "→ ") + tt;
-    const tw = ctx.measureText(tt).width;
-    if (hv) { ctx.globalAlpha = .9; ctx.fillStyle = css.bg || "#111"; ctx.beginPath(); ctx.roundRect(-tw - 26, -9, tw + 30, 18, 9); ctx.fill(); }
-    ctx.globalAlpha = hv ? 1 : .78; ctx.fillStyle = D_.upS.has(j) ? (SL.upp || css.upp || ink) : (N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1) || ink; ctx.beginPath(); ctx.arc(-4, 0, 2.6, 0, 6.2832); ctx.fill();
-    ctx.lineWidth = 3; ctx.strokeStyle = css.bg || "#111"; ctx.globalAlpha = hv ? 1 : .85; ctx.strokeText(tt, -12, 0); ctx.fillStyle = hv ? (css.accent || ink) : ink; ctx.fillText(tt, -12, 0);
-    if (HUDR) { const sc = String(D_.sc.get(j)); ctx.font = `600 9.5px ${css.mono || css.body}`; ctx.globalAlpha = .75; ctx.fillStyle = css.accent || "#7fe7ff"; ctx.fillText(sc, -tw - 18, 0); ctx.font = `500 11px ${css.body}`; }
-    ctx.restore(); HUDH.push([x - tw - 50, y - lh / 2, tw + 56, lh, j]);
-    if (hv) hudPv(j, x - tw - 40, y, CMDK);   /* ⌘ shows it on a HUD row too, as on the map (0.8.214, Nick expected it); the switch makes it automatic */
-    if (hv && vis[j]) { ctx.save(); ctx.globalAlpha = .6; ctx.strokeStyle = css.accent || ink; ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - tw - 30, y); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); ctx.restore(); } }
-  if (!(HUDHOV >= 0 && D_.list.includes(HUDHOV))) hudPv(-1); { const [bx0] = at(0); HUDBOX = [bx0 - 260, top - 30, R_ - bx0 + 260, bot - top + 40]; }
-  ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
+  return (HUDC = { i, rj: RADJ, v: (HUDC.v || 0) + 1, list: all, inS, outS, upS, sc: new Map(all.map(j => [j, mx > 0 ? Math.round(100 * rv(j) / mx) : 0])) }); }
+/* Links lives in the Recents panel now (0.8.284, Nick: "do opt 2, but each needs to work independently"): one background, one curve, two sections; each tucks to its own
+   edge tab. The map only draws the dashed line from a hovered row to its note, and keeps HUDBOX (the panel, in map pixels) for maps that leave it room */
+let LKHV = null, HUDTC = pref("iv-hudtc", true) !== false;   /* LKHV: the Links row under the pointer; HUDTC: names in their level's color instead of a dot (0.8.284, Nick) */
+const lkOn = () => { try { return HUDL && view !== "cockpit" && !isPhone() && sel >= 0 && !!vis[sel] && hudData(sel).list.length > 0; } catch (_) { return false; } };
+function drawHudLinks(){ HUDBOX = null; if (view === "cockpit") { hudPv(-1); return; } if (!HUDL || sel < 0 || !vis[sel] || isPhone()) { hudTab(0); hudPv(-1); return; } const D_ = hudData(sel), n_ = D_.list.length; hudTab(n_); if (!n_ || HUDCOL) { hudPv(-1); return; }
+  const c = cv.getBoundingClientRect(); if (RECEL && !RECEL.hidden) { const r = RECEL.getBoundingClientRect(); HUDBOX = [r.left - c.left, r.top - c.top, r.width, r.height]; }
+  if (HUDHOV >= 0 && LKHV && LKHV.isConnected && vis[HUDHOV]) { const q = LKHV.getBoundingClientRect(); ctx.save(); ctx.globalAlpha = .6; ctx.strokeStyle = css.accent || css.ink || "#ddd"; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(q.left - c.left + 2, q.top + q.height / 2 - c.top); ctx.lineTo(sx(X[HUDHOV]), sy(Y[HUDHOV])); ctx.stroke(); ctx.restore(); } }
 /* ---------- Recent (0.8.235, Nick: "my absolute favorite base… the recent space"): the notes changed most lately, newest first, in the upper right,
    in the HUD's own style (the same gentle arc, a hairline border round it). About ten show; the wheel scrolls on to thirty. A note's emoji (Display → Assign emojis,
    or the base column) leads its row, its age trails it. Click to open it as the primary note; the header tucks it away. Above the Links HUD when both are on */
@@ -5209,7 +5195,9 @@ function recBuild(){ if (RECEL) return; const st = e => e.stopPropagation();
   RECTAB = $("#main").createEl("button", { cls: "dtab rectab", attr: { type: "button" } }); RECTAB.hidden = true; RECTAB.addEventListener("pointerdown", st); RECTAB.onclick = e => { e.stopPropagation(); recSetOpen(!recIsOpen()); RECKEY = ""; recSync(); };
   RECEL = $("#main").createDiv({ cls: "ivm-recents" }); RECEL.hidden = true; for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) RECEL.addEventListener(ty, st);
   /* a click anywhere on Recents that isn't a note, the switch or the edge grip tucks it away, as a click on an editor's header does (0.8.258, Nick) */
-  RECEL.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest(".rcr, label, input, button, .rcgrip")) return; recSetOpen(false); RECKEY = ""; recSync(); }, true); }
+  /* with Links in the panel too (0.8.284), the click tucks the section it lands in: Links from its header down, Recents above that */
+  RECEL.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest(".rcr, label, input, button, .rcgrip")) return; e.stopPropagation();
+    const lh = RECEL.querySelector(".lkh"), hasRec = !!RECEL.querySelector(".rch:not(.lkh)"); if (lh && (!hasRec || e.clientY >= lh.getBoundingClientRect().top - 4)) hudCol(true); else recSetOpen(false); RECKEY = ""; recSync(); }, true); }
 /* the left-edge grip: drag to widen or narrow Recents (0.8.257, Nick); double-click for its own width again */
 function recGrip(){ const gr = RECEL.createDiv({ cls: "rcgrip" }); let d_ = null;
   gr.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); gr.setPointerCapture(e.pointerId); d_ = { x: e.clientX, w: RECEL.getBoundingClientRect().width }; RECEL.classList.add("resizing"); });
@@ -5222,25 +5210,28 @@ function recPv(){ if (RECHV < 0 || !RECHVEL || !(CMDK || HUDPV)) { if (!(HUDHOV 
 /* in the Starship it's its own: always starts tucked away, and opening it there doesn't change the map's (0.8.273, Nick) */
 const recIsOpen = () => view === "cockpit" ? RECCK : RECOPEN, recSetOpen = v => { if (view === "cockpit") RECCK = v; else { RECOPEN = v; save("iv-recopen", v); } };
 function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "cockpit" || edOn()); let R_ = 0; try { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); R_ = Math.max(0, Math.round(mr.right - c.right + sideW())); } catch (_) { /* not laid out yet */ }
-  RECTAB.hidden = !on || recIsOpen(); RECEL.hidden = !on || !recIsOpen(); RECTAB.setCssProps({ "--hr": R_ + "px" }); RECEL.setCssProps({ "--hr": R_ + "px" });
-  /* sharing the right edge with Links (0.8.275, Nick): Recents rises to the top and shows 7 (the rest scroll), and Links hangs just below it, one column on the edge */
-  let paired = false; try { paired = on && recIsOpen() && view !== "cockpit" && HUDL && !HUDCOL && sel >= 0 && vis[sel] && hudData(sel).list.length > 0; } catch (_) { paired = false; }
-  if (RECEL.classList.contains("paired") !== paired) { RECEL.classList.toggle("paired", paired); if (RECLAY) win.requestAnimationFrame(() => { if (RECLAY) RECLAY(); }); }
-  if (!paired && RECBOT) { RECBOT = 0; draw(); }
-  if (!on) return;
-  const L = recList(); if (!recIsOpen()) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); return; }
+  /* one panel, two sections (0.8.284, Nick): Recents on top, Links under it; either can tuck to its own tab and the other stays */
+  const recShow = on && recIsOpen(), lkShow = lkOn() && !HUDCOL;
+  RECTAB.hidden = !on || recIsOpen(); RECEL.hidden = !(recShow || lkShow); RECTAB.setCssProps({ "--hr": R_ + "px" }); RECEL.setCssProps({ "--hr": R_ + "px" });
+  RECEL.classList.toggle("paired", recShow && lkShow);
+  if (on && !recIsOpen()) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); }
+  if (!(recShow || lkShow)) { if (RECHV >= 0 && !RECEL.contains(RECHVEL)) { RECHV = -1; RECHVEL = null; } return; }
+  const L = recShow ? recList() : [], D_ = lkShow ? hudData(sel) : null;
   RECEL.setCssProps({ "--rcop": RECOP + "%" }); RECEL.classList.toggle("sized", RECW > 0); RECEL.classList.toggle("narrow", RECW > 0 && RECW < 250);   /* narrow: the Emojis switch keeps only its switch */ RECEL.setCssProps({ "--rcw": (RECW || 300) + "px" });
-  const key = L.join(",") + "|" + RECW + "|" + RECAGE + RECEMO + RECEFRONT + RECLEFT + "|" + (EMOI ? 1 : 0) + "|" + Math.floor(Date.now() / 60000); if (key === RECKEY) return; RECKEY = key; RECEL.empty();
-  const hd = RECEL.createDiv({ cls: "rch cardhd-tuck" }); hd.createSpan({ cls: "rct", text: `◷  RECENTS · ${L.length}` });
+  const key = L.join(",") + "|" + RECW + "|" + RECAGE + RECEMO + RECEFRONT + RECLEFT + "|" + (EMOI ? 1 : 0) + "|" + Math.floor(Date.now() / 60000) + "|" + recShow + lkShow + (D_ ? D_.i + ":" + D_.v : "") + HUDR + HUDTC + "|" + (recShow ? sel : ""); if (key === RECKEY) return; RECKEY = key; RECEL.empty(); LKHV = null; if (HUDHOV >= 0) HUDHOV = -1;
+  let hd = null, box = null;
+  const LH = 17.5;
+  if (recShow) {
+  hd = RECEL.createDiv({ cls: "rch cardhd-tuck" }); hd.createSpan({ cls: "rct", text: `◷  RECENTS · ${L.length}` });
   /* tucks away as the editors do (0.8.242, Nick: "we already have specs"): a click on its header (not on the switch) or on ›, and it waits as a tab on the edge */
   hd.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest("label, input, button")) return; e.stopPropagation(); recSetOpen(false); RECKEY = ""; recSync(); });
   /* the Emojis switch lives in Display now (0.8.270, Nick) */
   const x = hd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Recents away" } }); x.onclick = e => { e.stopPropagation(); recSetOpen(false); RECKEY = ""; recSync(); };
-  const box = RECEL.createDiv({ cls: "rcl" + (RECLEFT ? " rcleft" : "") }); recGrip();
+  box = RECEL.createDiv({ cls: "rcl rcrec" + (RECLEFT ? " rcleft" : "") });
   { let sr = 0; box.addEventListener("scroll", () => { if (!sr) sr = win.requestAnimationFrame(() => { sr = 0; if (RECLAY) RECLAY(); }); }, { passive: true }); }   /* scrolled rows re-take the curve */
   /* laid out as Links is (0.8.239, Nick): 11px names on 14.5px rows, right-aligned, the age where Links shows its score, the emoji (or dot) at the end,
      and the rows bowed along the same gentle arc, tilting a little toward the top and bottom */
-  const LH = 17.5, nR = L.length, RY = Math.max(420, nR * LH * .9),   /* the arc opens up as the list grows, so more notes never crowd it (0.8.247) */ mid = (Math.min(nR, 24) - 1) / 2;   /* gentler (0.8.241, Nick: "a little bit less curve, not as tight"): Links' own radius rule, a little wider still */
+  const nR = L.length, RY = Math.max(420, nR * LH * .9),   /* the arc opens up as the list grows, so more notes never crowd it (0.8.247) */ mid = (Math.min(nR, 24) - 1) / 2;   /* gentler (0.8.241, Nick: "a little bit less curve, not as tight"): Links' own radius rule, a little wider still */
   L.forEach((j, r_) => { const r = box.createEl("button", { cls: "rcr" + (j === sel ? " on" : ""), attr: { type: "button" } }), em = recEmoji(j);
     const u = Math.max(-1, Math.min(1, (r_ - mid) * LH / RY)); r.setCssProps({ "--rx": (-60 * (1 - Math.sqrt(1 - u * u))).toFixed(1) + "px", "--rr": (Math.asin(u) * .25).toFixed(4) + "rad" });
     const mark = () => { if (em) r.createSpan({ cls: "rce", text: em }); else { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1 }); } };
@@ -5248,10 +5239,29 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
     else { r.createSpan({ cls: "rca", text: ago(N[j].mt) }); r.createSpan({ cls: "rcn", text: N[j].title }); mark(); }
     r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); RECKEY = ""; };
     /* hold ⌘ over a row for its mini preview, as on Links (0.8.244, Nick); with "Automatically see mini-preview on hover" on, it shows on hover alone */
-    r.addEventListener("pointerenter", () => { RECHV = j; RECHVEL = r; recPv(); }); r.addEventListener("pointerleave", () => { if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } }); });
+    r.addEventListener("pointerenter", () => { RECHV = j; RECHVEL = r; recPv(); }); r.addEventListener("pointerleave", () => { if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } }); }); }
+  /* Links, the second section (0.8.284): each linked note once (← in, → out, ↔ both), up links first, then by relevance. A row is the arrow, the name in its level's color
+     (or a dot, Display → HUD links → Colored names) and its relevance score where Recents shows the age. Hover draws a line to its note; click goes there (⌘ support note, Shift a new orb) */
+  let lhd = null, lbox = null;
+  if (lkShow) { const n_ = D_.list.length, SL = (() => { try { return SPACELINK(); } catch (_) { return {}; } })(), ink = css.ink || "#ddd";
+    lhd = RECEL.createDiv({ cls: "rch lkh cardhd-tuck" + (recShow ? " lksub" : "") }); lhd.createSpan({ cls: "rct", text: `⇄  LINKS · ${n_}` });
+    lhd.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest("label, input, button")) return; e.stopPropagation(); hudCol(true); RECKEY = ""; recSync(); });
+    const x2 = lhd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Links away" } }); x2.onclick = e => { e.stopPropagation(); hudCol(true); RECKEY = ""; recSync(); };
+    lbox = RECEL.createDiv({ cls: "rcl lkl rcleft" });
+    { let sr = 0; lbox.addEventListener("scroll", () => { if (!sr) sr = win.requestAnimationFrame(() => { sr = 0; if (RECLAY) RECLAY(); }); }, { passive: true }); }
+    for (const j of D_.list) { if (!N[j]) continue; const r = lbox.createEl("button", { cls: "rcr lkr", attr: { type: "button" } });
+      const col = D_.upS.has(j) ? (SL.upp || css.upp || ink) : (N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1) || ink;
+      if (!HUDTC) { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": col }); }
+      r.createSpan({ cls: "lka", text: D_.inS.has(j) && D_.outS.has(j) ? "↔" : D_.inS.has(j) ? "←" : "→" });
+      const nm = r.createSpan({ cls: "rcn" + (HUDTC ? " lkc" : ""), text: N[j].title }); if (HUDTC) nm.setCssProps({ "--lc": col });
+      if (HUDR) r.createSpan({ cls: "rca lks", text: String(D_.sc.get(j)) });
+      r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); };
+      r.addEventListener("pointerenter", () => { HUDHOV = j; LKHV = r; RECHV = j; RECHVEL = r; recPv(); draw(); });
+      r.addEventListener("pointerleave", () => { if (HUDHOV === j) { HUDHOV = -1; LKHV = null; } if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } draw(); }); } }
+  recGrip(); const top0 = hd || lhd, mid = (Math.min(L.length || (D_ ? D_.list.length : 1), 24) - 1) / 2, RY = Math.max(420, (L.length || 1) * LH * .9);
   /* the background bends with the rows (0.8.240, Nick: "can you curve the Recents background"): both edges follow the arc, drawn as one shape with its hairline border */
   RECLAY = () => { if (!RECEL || RECEL.hidden) return; const w = RECEL.clientWidth, h = RECEL.clientHeight; if (!w || !h) return;
-    const bxr = box.getBoundingClientRect(), pr = RECEL.getBoundingClientRect(), y0 = bxr.top - pr.top + 6, hc = y0 + mid * LH, sh = y => { const u = Math.max(-1, Math.min(1, (y - hc) / RY)); return 60 * (1 - Math.sqrt(1 - u * u)); };
+    const bxr = (box || lbox).getBoundingClientRect(), pr = RECEL.getBoundingClientRect(), y0 = bxr.top - pr.top + 6, hc = y0 + mid * LH, sh = y => { const u = Math.max(-1, Math.min(1, (y - hc) / RY)); return 60 * (1 - Math.sqrt(1 - u * u)); };
     /* the HUD shape as Nick drew it (0.8.247): narrow on the left, opening out to the right. The left edge follows the rows' own arc and stands shorter;
        the top rises and the bottom falls toward the right, out to the full-height right edge; small brackets mark the four corners */
     const sMax = Math.max(sh(0), sh(h)), m = 4, inset = Math.min(14, h * .04), T = m + inset, B = h - m - inset, yy = []; for (let y = T; y <= B; y += 6) yy.push(y); if (yy[yy.length - 1] !== B) yy.push(B);
@@ -5259,19 +5269,19 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
        and the right side runs taller than the left */
     const s3 = y => { const u = Math.max(-1, Math.min(1, (y - h / 2) / (Math.max(h, 520) * .62)));   /* the bend is set for a full panel, so a short list (5 notes) curves gently instead of sharply (0.8.268) */ return 90 * (1 - Math.sqrt(1 - u * u)); }, s3Max = Math.max(s3(0), s3(h));
     /* the rows ride the same bend as the panel's edges (0.8.252): each row shifts by the band's own curve and tilts with it, so nothing floats in empty corners */
-    const rowsAll = [...box.querySelectorAll(".rcr")]; for (const rr of rowsAll) { rr.setCssProps({ "--rx": "0px", "--rr": "0rad" }); }
+    const rowsAll = [...RECEL.querySelectorAll(".rcr")], inV = (q, rr) => { const b_ = rr.parentElement.getBoundingClientRect(); return q.bottom > b_.top + 2 && q.top < b_.bottom - 2; };   /* both sections' rows (0.8.284) */ for (const rr of rowsAll) { rr.setCssProps({ "--rx": "0px", "--rr": "0rad" }); }
     for (const rr of rowsAll) { const q = rr.getBoundingClientRect(); if (!q.height) continue; const cy_ = q.top + q.height / 2 - pr.top, dy = 4, sl = (s3(cy_ + dy) - s3(cy_ - dy)) / (2 * dy) * .6;
       const lim = 7 / Math.max(40, q.width), ta = Math.max(-lim, Math.min(lim, Math.atan(sl)));   /* a wide row tilts less, so its far end never drifts into the next row (0.8.260) */
       rr.setCssProps({ "--rx": (-s3(cy_) * .6).toFixed(1) + "px", "--rr": ta.toFixed(4) + "rad" }); }
-    let base = 1e9; for (const rr of rowsAll) { const q = rr.getBoundingClientRect(); if (!q.height || q.bottom < bxr.top || q.top > bxr.bottom) continue; const cy_ = q.top + q.height / 2 - pr.top; base = Math.min(base, q.left - pr.left - 12 - (s3Max - s3(cy_)) * .6); }   /* the left edge clears every name */
+    let base = 1e9; for (const rr of rowsAll) { const q = rr.getBoundingClientRect(); if (!q.height || !inV(q, rr)) continue; const cy_ = q.top + q.height / 2 - pr.top; base = Math.min(base, q.left - pr.left - 12 - (s3Max - s3(cy_)) * .6); }   /* the left edge clears every name */
     if (base > 1e8) base = m;
     const xl = y => base + (s3Max - s3(y)) * .6, xrr = y => w - m - s3(y) * .6 + 2,   /* the left edge bends exactly as the rows shift (0.8.261, Nick): the same gap to the emojis top, middle and bottom */ f = v => v.toFixed(1);
     /* top and bottom edges run parallel to the first and last rows (0.8.253, Nick: "the top and bottom curves don't match the top-most and bottom-most Recent note"):
        the top edge sits just above the title banner, at the first row's tilt; the bottom edge just under the last row, at its tilt. No corner brackets (Nick) */
-    const rrs = rowsAll.filter(rr => { const q = rr.getBoundingClientRect(); return q.height && q.bottom > bxr.top + 2 && q.top < bxr.bottom - 2; })   /* only the rows in view (a scrolled list) set the edges */, ang = rr => parseFloat(win.getComputedStyle(rr).getPropertyValue("--rr")) || 0;
-    const aT = rrs.length ? ang(rrs[0]) : 0, aB = rrs.length ? ang(rrs[rrs.length - 1]) : 0, hr = hd.getBoundingClientRect(), last = rrs.length ? rrs[rrs.length - 1].getBoundingClientRect() : null;
-    void hr; hd.setCssProps({ "--rh": aT.toFixed(4) + "rad" });   /* tilt the banner first: it turns about its right end, so that end's top stays at offsetTop */
-    const hx = hd.offsetLeft + hd.offsetWidth, hy = hd.offsetTop - 6, lx = last ? last.right - pr.left : w, ly = last ? (aB > 0 ? last.bottom - LH / 2 : last.top + LH / 2) - pr.top + 19 : h - m;   /* the row turns about its right end: that end's middle sits half a row from the box's lower (or upper) side */
+    const rrs = rowsAll.filter(rr => { const q = rr.getBoundingClientRect(); return q.height && inV(q, rr); })   /* only the rows in view (a scrolled list) set the edges */, ang = rr => parseFloat(win.getComputedStyle(rr).getPropertyValue("--rr")) || 0;
+    const aT = rrs.length ? ang(rrs[0]) : 0, aB = rrs.length ? ang(rrs[rrs.length - 1]) : 0, hr = top0.getBoundingClientRect(), last = rrs.length ? rrs[rrs.length - 1].getBoundingClientRect() : null;
+    void hr; top0.setCssProps({ "--rh": aT.toFixed(4) + "rad" });   /* tilt the banner first: it turns about its right end, so that end's top stays at offsetTop */
+    const hx = top0.offsetLeft + top0.offsetWidth, hy = top0.offsetTop - 6, lx = last ? last.right - pr.left : w, ly = last ? (aB > 0 ? last.bottom - LH / 2 : last.top + LH / 2) - pr.top + 19 : h - m;   /* the row turns about its right end: that end's middle sits half a row from the box's lower (or upper) side */
     const lineY = (ax, ay, a, x) => ay - Math.tan(a) * (ax - x);   /* a line through (ax, ay) at angle a */
     const solve = (ax, ay, a, xf) => { let y = ay; for (let k_ = 0; k_ < 4; k_++) y = lineY(ax, ay, a, xf(y)); return y; };
     const yTR = solve(hx, hy, aT, xrr), yTL = solve(hx, hy, aT, xl), yBR = solve(lx, ly, aB, xrr), yBL = solve(lx, ly, aB, xl);
@@ -5279,20 +5289,17 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
     d += ` L${f(xrr(yBR))} ${f(yBR)} L${f(xl(yBL))} ${f(yBL)}`; for (let y = yBL; y >= yTL; y -= 6) d += ` L${f(xl(y))} ${f(y)}`; d += " Z";
     const xr = y => xrr(y); void B; void yy; void inset; void xr;
     /* the subtle divider under the title (0.8.254, Nick), at the title's tilt, from edge to edge */
-    const dy_ = hd.offsetTop + hd.offsetHeight + 3, dR = solve(hx, dy_, aT, xrr), dL = solve(hx, dy_, aT, xl), dv = `M${f(xl(dL) + 1)} ${f(dL)} L${f(xrr(dR) - 1)} ${f(dR)}`;
+    const dy_ = top0.offsetTop + top0.offsetHeight + 3, dR = solve(hx, dy_, aT, xrr), dL = solve(hx, dy_, aT, xl), dv = `M${f(xl(dL) + 1)} ${f(dL)} L${f(xrr(dR) - 1)} ${f(dR)}`;
     let sv = RECEL.querySelector(":scope > svg.rcbg"); if (!sv) { sv = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); sv.setAttribute("class", "rcbg"); sv.setAttribute("aria-hidden", "true"); RECEL.prepend(sv); }
     sv.setAttribute("width", String(w)); sv.setAttribute("height", String(h)); sv.setAttribute("viewBox", `0 0 ${w} ${h}`); sv.empty(); const pa = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pa.setAttribute("d", d); sv.appendChild(pa);
     const pv = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pv.setAttribute("d", dv); pv.setAttribute("class", "rcdiv"); sv.appendChild(pv);
-    { const pb = RECEL.classList.contains("paired") ? Math.round(RECEL.getBoundingClientRect().bottom - cv.getBoundingClientRect().top) : 0; if (Math.abs(pb - RECBOT) > 1) { RECBOT = pb; draw(); } }
-    hd.setCssProps({ "--rx": "0px", "--rpl": (xl(yTL) + 10).toFixed(1) + "px", "--rpr": Math.max(0, w - xrr(yTR) - 4).toFixed(1) + "px", "--rh": aT.toFixed(4) + "rad" });   /* the header spans the top edge, corner to corner (0.8.265, Nick): the title from just inside the left corner, › just inside the right */ }; win.requestAnimationFrame(RECLAY); }
+    /* Links under Recents (0.8.284): its header and a divider above it take the tilt of the rows around them and span the band edge to edge, as the top header does */
+    if (lhd && lhd !== top0) { const fr = lbox ? lbox.querySelector(".rcr") : null, aL = fr ? ang(fr) : 0, lyc = lhd.offsetTop + lhd.offsetHeight / 2, lx_ = lhd.offsetLeft + lhd.offsetWidth;
+      lhd.setCssProps({ "--rx": "0px", "--rpl": (xl(lyc) + 10).toFixed(1) + "px", "--rpr": Math.max(0, w - xrr(lyc) - 4).toFixed(1) + "px", "--rh": aL.toFixed(4) + "rad" });
+      const d2 = lhd.offsetTop - 3, sR = solve(lx_, d2, aL, xrr), sL = solve(lx_, d2, aL, xl), pd = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pd.setAttribute("d", `M${f(xl(sL) + 1)} ${f(sL)} L${f(xrr(sR) - 1)} ${f(sR)}`); pd.setAttribute("class", "rcdiv"); sv.appendChild(pd); }
+    top0.setCssProps({ "--rx": "0px", "--rpl": (xl(yTL) + 10).toFixed(1) + "px", "--rpr": Math.max(0, w - xrr(yTR) - 4).toFixed(1) + "px", "--rh": aT.toFixed(4) + "rad" });   /* the header spans the top edge, corner to corner (0.8.265, Nick): the title from just inside the left corner, › just inside the right */ }; win.requestAnimationFrame(RECLAY); }
 if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
-const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
-cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
-cv.addEventListener("pointerdown", e => { if (!HUDL || e.button !== 0) return; const j = hudAt(e.offsetX, e.offsetY); if (j === -1) return; e.stopImmediatePropagation(); e.preventDefault(); HUDHOV = -1;
-  if (j === -5) { hudCol(true); return; } if (j >= 0 && shiftLink(j, e)) return; if (j >= 0 && openKind(e)) { openAs(j, openKind(e)); return; }
-  if (j === -6) { const n_ = HUDC.list.length, cap = HUDH.filter(q => q[4] >= 0).length; HUDOFF = HUDOFF + cap >= n_ ? 0 : HUDOFF + cap; draw(); return; } navTo(j); toEditor(j); }, { capture: true });
-cv.addEventListener("wheel", e => { const b = HUDBOX; if (!HUDL || HUDCOL || !b || e.offsetX < b[0] || e.offsetX > b[0] + b[2] || e.offsetY < b[1] || e.offsetY > b[1] + b[3]) return; e.preventDefault(); e.stopImmediatePropagation(); HUDOFF += e.deltaY / 18; draw(); }, { capture: true, passive: false });
-cv.addEventListener("pointerleave", () => { if (HUDHOV >= 0) { HUDHOV = -1; hudPv(-1); draw(); } });
+/* Links' rows are buttons in the Recents panel now (0.8.284): the map's own pointer and wheel handlers for them are gone */
 // ---------- Contrails (0.8.56, Nick): a breadcrumb trail you can see, subtle ----------
 // Each jump from one note to the next draws itself along a gentle arc (a small rocket can fly it: Display → Contrails → Rocket), leaving a vapor trail: a bright thin core inside a soft
 // cloud that widens, breaks into puffs and fades a step with each jump after it. The last 10 jumps stay. Display → Contrails.
@@ -6342,6 +6349,7 @@ cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.data
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 dbg.__lfx = (add = true) => linkFxTry(add);
 dbg.__k = () => k;
+dbg.__hud = () => [HUDHOV, !!LKHV, !!(LKHV && LKHV.isConnected), HUDHOV >= 0 && !!vis[HUDHOV], HUDHOV >= 0 ? [sx(X[HUDHOV]), sy(Y[HUDHOV])] : null];
 dbg.__ck = () => [CK.yaw, CK.pitch];
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
 function drawLdrop(){ if (LDROP < 0 || !VV(LDROP)) return; const x = sx(X[LDROP]), y = sy(Y[LDROP]), r = rad(LDROP) + 10; ctx.save(); ctx.strokeStyle = css.accent; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
@@ -7745,11 +7753,14 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); }; }
   // HUD links (0.8.143): the picked note's links down the right, as in the Cockpit
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = HUDL; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "HUD links" });
-    const l2 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = HUDR; l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Relevance scores" }); l2.hidden = !HUDL;
+    const l2 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = HUDR; l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Show relevance scores" }); l2.hidden = !HUDL;
     c2.onchange = () => { HUDR = c2.checked; save("iv-hudr", HUDR); draw(); };
+    /* names in their level's color instead of a dot before them (0.8.284, Nick) */
+    const l4 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c4 = l4.createEl("input", { type: "checkbox" }); c4.checked = HUDTC; l4.createEl("i", { cls: "sw" }); l4.createSpan({ text: "Colored names" }); l4.hidden = !HUDL;
+    c4.onchange = () => { HUDTC = c4.checked; save("iv-hudtc", HUDTC); draw(); };
     const l3 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c3 = l3.createEl("input", { type: "checkbox" }); c3.checked = HUDPV; l3.createEl("i", { cls: "sw" }); l3.createSpan({ text: "Automatically see mini-preview on hover" }); l3.hidden = !HUDL;
     c3.onchange = () => { HUDPV = c3.checked; save("iv-hudpv", HUDPV); if (!HUDPV) hudPv(-1); };
-    cb.onchange = () => { HUDL = cb.checked; save("iv-hudl", HUDL); l2.hidden = l3.hidden = !HUDL; if (!HUDL) hudPv(-1); draw(); }; }
+    cb.onchange = () => { HUDL = cb.checked; save("iv-hudl", HUDL); l2.hidden = l3.hidden = l4.hidden = !HUDL; if (!HUDL) hudPv(-1); draw(); }; }
   /* Recents (0.8.237, Nick): the notes changed most lately, behind a tab on the right edge */
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = RECON; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Recents" });
     const r2 = DI.p.createDiv({ cls: "eorow ctrrk tchoice" }); r2.createSpan({ cls: "eol", text: "Show" }); const sl = r2.createEl("input", { type: "range", attr: { min: "5", max: "50", step: "1", "aria-label": "How many recent notes to show" } }); sl.value = String(RECN); const sv = r2.createSpan({ cls: "eov", text: String(RECN) }); r2.hidden = !RECON;
