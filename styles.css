@@ -1873,7 +1873,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm.ivm #disppop.emomode > :not(.emopage),.ivm.ivm .dlist.emomode > :not(.emopage){display:none}   /* Assign emojis takes the whole menu: the regrouped rows (0.8.308) had louder display rules and stayed showing (0.8.321) */
 /* the Starship's Orbit choices (0.8.322): Lateral, Dynamic; the other maps' choices hide there */
 .ivm #driftseg .dship{display:none}
-.ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftseg .dship{display:inline-block}
+.ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftseg{display:none}   /* one Orbit there (Dynamic): just the ▶, and G */
 .ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftseg .dflat,.ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftseg .dearth,.ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftbar .dwob{display:none}
 .ivm .ivm-sfsw{opacity:.8;transition:opacity .15s}
 .ivm .ivm-sfsw:hover{opacity:1}

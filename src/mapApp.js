@@ -2892,6 +2892,7 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
     else if (k === "b" || k === "Backspace") ckBack();
     else if (k === "Escape") { CK.auto = false; CK.v = 0; if (CK.wd) ckWanderStop(); }
     else if (CKG && (k === "1" || k === "2")) ckGameAnswer(k === "1");
+    else if (k === "g") { drifting ? driftStop() : driftStart(); }   /* G: Orbit on or off (0.8.326, Nick: "Would love if it could be a hotkey") */
     else if (k === "p") { if (typeof setPlaying === "function") setPlaying(!playing); else ckWander(!CK.wd); }
     else used = false;
     if (used) { e.preventDefault(); e.stopImmediatePropagation(); } }, { capture: true });
@@ -7165,7 +7166,7 @@ const wobLab = doc.createElement("label"); wobLab.className = "pmaps dwob"; wobL
 { const cb = doc.createElement("input"); cb.type = "checkbox"; cb.id = "dwob"; cb.checked = WOB; const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = "Wobble like the Earth"; wobLab.append(cb, sw, t);
   cb.onchange = () => { WOB = cb.checked; save("iv-wob", WOB); }; $("#driftbar").appendChild(wobLab); }
 /* the Starship's own Orbit (0.8.322, Nick): round the note you're at, Lateral (a level circle) or Dynamic (left or right, now and then climbing or diving at about 30°) */
-let CKORB = pref("iv-ckorb", "lat") === "dyn" ? "dyn" : "lat";
+let CKORB = "dyn";   /* Dynamic only (0.8.326, Nick: "we don't need the lateral orbit") */
 { const seg_ = root.querySelector("#driftseg"); if (seg_) for (const [d, t, tip] of [["lat", "Lateral", "A level circle round the note"], ["dyn", "Dynamic", "Mostly left or right, now and then climbing or diving at about 30°"]]) { const b = doc.createElement("button"); b.dataset.d = d; b.className = "dship"; b.textContent = t; b.setAttribute("aria-label", tip); seg_.appendChild(b); } }
 const syncDrift = () => { root.querySelectorAll("#driftseg button").forEach(b => b.setAttribute("aria-pressed", String(b.classList.contains("dship") ? b.dataset.d === CKORB : b.dataset.d === dSp()))); wobLab.classList.toggle("dim", !earthy()); };
 root.querySelectorAll("#driftseg button").forEach(b => b.onclick = () => { const d = b.dataset.d; if (b.classList.contains("dship")) { CKORB = d; save("iv-ckorb", d); syncDrift(); return; } if (globeSet()) { DSG = d; save("iv-drift3", d); } else { DSF = d; save("iv-drift", d); } syncDrift(); });
@@ -7705,7 +7706,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKG; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "True or false (a game: right answers jump you there)" }); qHelp(l_, "A quiz about the notes around you. Answer right and the ship jumps to the note in question.");
       c_.onchange = () => { CKG = c_.checked; save("iv-ckgame", CKG); if (CKG && CK.wd) ckWanderStop(); CK.gs = 0; ckGameNew(); }; }
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
-      for (const [k_, v_] of [["R W  ↑ ↓", "forward, back"], ["T", "impulse: a slow, steady cruise"], ["X V  ← →", "pan left, right"], ["S F", "orbit left, right round the note"], ["E D", "orbit over, under the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
+      for (const [k_, v_] of [["R W  ↑ ↓", "forward, back"], ["T", "impulse: a slow, steady cruise"], ["X V  ← →", "pan left, right"], ["S F", "orbit left, right round the note"], ["G", "Orbit on or off: circle the note, climbing and diving now and then"], ["E D", "orbit over, under the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
         const r_ = box.createDiv({ cls: "ckkey" }); r_.createEl("kbd", { text: k_ }); r_.createSpan({ text: v_ }); } }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "cockpit"; }; }
   // Compass: Relevance
