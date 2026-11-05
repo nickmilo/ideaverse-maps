@@ -3540,6 +3540,10 @@ function layoutPosters(){
   for (let t = Math.ceil(v0 / tk) * tk; t <= v1 + 1e-9; t += tk) ticks.push({ x: xOf(ac.kind === "year" || ac.kind === "date" ? t : t), t: ac.kind === "year" || ac.kind === "date" ? String(Math.round(t)) : String(+t.toFixed(2)) });
   PSC().lanesOut = lanesOut; PSC().ticks = ticks; PSC().WD = WD; PSC().H = y; PSC().img = o.img; PSC().hasNo = ids.some(i => isNaN(V[i]));
   expBox = { x0: (PSC().hasNo ? NOV - 40 : -40) - 150, y0: -60, x1: WD + 40, y1: y + 20 }; postersOptsUI(); }
+/* where a pinned axis may draw (0.8.345, Nick): below the orb tabs and the counts at the top, right of the tucked primary note tab on the left */
+function axisPads(){ let top = 22, left = 0; try { const cb = cv.getBoundingClientRect(); if (orbBar && !orbBar.hidden && orbBar.childElementCount) { const ob = orbBar.getBoundingClientRect(); if (ob.height) top = Math.max(top, Math.round(ob.bottom - cb.top + 18)); }
+    const st = root.querySelector(".mapstats"); if (st && st.offsetParent) { const q = st.getBoundingClientRect(); if (q.height) top = Math.max(top, Math.round(q.bottom - cb.top + 14)); }
+    const et = root.querySelector(".edtab-left"); if (et && !et.hidden && et.offsetParent) { const q = et.getBoundingClientRect(); if (q.width) left = Math.max(left, Math.round(q.right - cb.left + 4)); } } catch (_) { /* not built yet */ } return { top, left }; }
 // ---------- Base Builder · Timeline: each note a thin bar from its start to its end (a lifespan, a reign, a run) ----------
 // One note to a row, earliest start at the bottom, so the bars climb from the lower left (the ancients) to the upper right
 // (people alive now). The year scale stretches where many lives fall and tightens where few do, so a crowd of moderns gets room next to a few ancients.
@@ -3676,10 +3680,10 @@ EXP.posters = {
         if (PSC().mbox.length > 1 && w > 46 && 26 * k > 9) { const fs_ = Math.max(9, Math.min(13, 26 * k * .45)); ctx.font = `600 ${fs_}px ${css.mono}`; ctx.fillStyle = css.ink; let t = String(b.name).toUpperCase(); while (t.length > 3 && ctx.measureText(t + "  " + b.n).width > w - 12) t = t.slice(0, -2) + "…";
           ctx.fillText(t, x + 7, y + 5 * k + 26 * k * .62); const tw = ctx.measureText(t + "  ").width; ctx.font = `400 ${fs_ * .9}px ${css.mono}`; ctx.fillStyle = css.muted; ctx.fillText(b.n.toLocaleString(), x + 7 + tw, y + 5 * k + 26 * k * .62); } }
       ctx.globalAlpha = 1; return; }
-    if (PSC().scatter) { ctx.font = `400 10.5px ${css.mono}`; ctx.textAlign = "right";
-      for (const t of PSC().yticks) { const y = sy(t.y); if (y < -20 || y > H + 20) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(sx(0), y); ctx.lineTo(sx(PSC().WD), y); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillStyle = css.muted; ctx.fillText(t.t, Math.max(sx(0) - 8, 40), y); }
+    if (PSC().scatter) { ctx.font = `400 10.5px ${css.mono}`; ctx.textAlign = "right"; const ap = axisPads();
+      for (const t of PSC().yticks) { const y = sy(t.y); if (y < -20 || y > H + 20) continue; if (y < ap.top) { ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(sx(0), y); ctx.lineTo(sx(PSC().WD), y); ctx.stroke(); continue; } ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(sx(0), y); ctx.lineTo(sx(PSC().WD), y); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillStyle = css.muted; ctx.fillText(t.t, Math.max(sx(0) - 8, ap.left + 40), y); }
       ctx.textAlign = "left"; ctx.fillStyle = css.muted; ctx.globalAlpha = gd;
-      ctx.save(); ctx.translate(Math.max(sx(0) - 52, 14), sy(PSC().H / 2)); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillText(String(PSC().axes.y).toUpperCase() + " →", 0, 0); ctx.restore();
+      ctx.save(); ctx.translate(Math.max(sx(0) - 52, ap.left + 14), Math.max(sy(PSC().H / 2), ap.top + 60)); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillText(String(PSC().axes.y).toUpperCase() + " →", 0, 0); ctx.restore();
       ctx.textAlign = "center"; ctx.fillText(String(PSC().axes.x).toUpperCase() + " →", sx(PSC().WD / 2), sy(PSC().H) + 30);
       if (PSC().miss) { ctx.textAlign = "left"; ctx.fillText("MISSING " + String(PSC().axes.y).toUpperCase(), sx(0), sy(PSC().miss) - 30); }
       const d = PSC().diag; if (d) { ctx.save(); ctx.beginPath(); ctx.rect(sx(0), sy(0), PSC().WD * k, PSC().H * k); ctx.clip(); ctx.strokeStyle = css.accent; ctx.globalAlpha = .55 * gd; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(sx(d.a[0]), sy(d.a[1])); ctx.lineTo(sx(d.b[0]), sy(d.b[1])); ctx.stroke(); ctx.restore();
@@ -3693,8 +3697,10 @@ EXP.posters = {
       ctx.globalAlpha = gd; ctx.font = `600 11px ${css.mono}`; ctx.fillStyle = css.ink; const lx = Math.max(12, sx(expBox.x0 + 10)), ly = Math.max(y0 + 14, Math.min(y1 - 22, 70));
       ctx.lineWidth = 4; ctx.strokeStyle = css.bg; const t = String(L_.name).toUpperCase(); ctx.strokeText(t, lx, y0 + 16); ctx.fillText(t, lx, y0 + 16); ctx.font = `400 10.5px ${css.mono}`; ctx.fillStyle = css.muted; ctx.strokeText(L_.n.toLocaleString(), lx, y0 + 30); ctx.fillText(L_.n.toLocaleString(), lx, y0 + 30); ctx.lineWidth = 1; }
     ctx.textAlign = "center"; ctx.font = `400 15px ${css.display}`;
-    for (const t of PSC().ticks) { const x = sx(t.x); if (x < -40 || x > W + 40) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(x, Math.max(sy(0), 40)); ctx.lineTo(x, sy(PSC().H)); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillStyle = css.ink; ctx.fillText(t.t, x, Math.max(sy(-28), 22)); }
-    if (PSC().hasNo) { ctx.fillStyle = css.muted; ctx.font = `500 10.5px ${css.mono}`; ctx.fillText("NO VALUE", sx(-90), Math.max(sy(-28), 22)); }
+    /* the years stick to the top as you scroll, but below the orb tabs and the counts, not under them (0.8.345, Nick: "the years… and the Orb Tabs overlap") */
+    const top_ = axisPads().top;
+    for (const t of PSC().ticks) { const x = sx(t.x); if (x < -40 || x > W + 40) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(x, Math.max(sy(0), top_ + 18)); ctx.lineTo(x, sy(PSC().H)); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillStyle = css.ink; ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.strokeText(t.t, x, Math.max(sy(-28), top_)); ctx.fillText(t.t, x, Math.max(sy(-28), top_)); ctx.lineWidth = 1; }
+    if (PSC().hasNo) { ctx.fillStyle = css.muted; ctx.font = `500 10.5px ${css.mono}`; ctx.fillText("NO VALUE", sx(-90), Math.max(sy(-28), top_)); }
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.globalAlpha = 1; },
   notes(lit, dim){
     const ord = []; for (let i=0;i<n;i++) if (RW[i] && VV(i)) ord.push(i); ord.sort((a, b) => RY[b] - RY[a]);   // lower cards first, so each pile reads top-down
