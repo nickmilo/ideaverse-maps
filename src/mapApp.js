@@ -7704,10 +7704,10 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
         b.dataset.w = v; b.onclick = e => { e.stopPropagation(); CKWM = v; save("iv-ckwm", v); ckwmSync(); if (CK.wd) { ckWander(false); ckWander(true); } }; }
       { const s0 = ckwmSync; ckwmSync = () => { s0(); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.w === CKWM))); }; }
       const pb = sr.createEl("button", { cls: "ckplay", text: "▶", attr: { type: "button", "aria-label": "Start Wander Mode (P)" } }); pb.onclick = e => { e.stopPropagation(); setPlaying(!playing); };
-      FUI.ckplay = () => { pb.setText(playing && view === "cockpit" ? "■" : "▶"); }; }
+      FUI.ckplay = () => { pb.setText(playing && view === "cockpit" ? "■" : "▶"); };
+      /* Animations ›, right after ▶ (0.8.332, Nick: "Open animation should not need to be on its own line") */
+      const al = sr.createEl("button", { cls: "ckanim", text: "Animations ›", attr: { type: "button" } }); al.onclick = e => { e.stopPropagation(); closePops(); const t_ = $("#anitab"); if (t_ && !t_.hidden) t_.click(); }; }
     /* Wander's pace, here too (0.8.164, Nick: the Cockpit had no seconds slider): how long the ship stays with each note */
-    /* Pace lives in the Animations dock; here, a way there (0.8.331, Nick: "Instead of showing pace in the dropdown, have a link that will say 'Open Animation'") */
-    { const ol = fa.createEl("button", { cls: "drow dlink ckanim", text: "Open Animations ›", attr: { type: "button" } }); ol.onclick = e => { e.stopPropagation(); closePops(); const t_ = $("#anitab"); if (t_ && !t_.hidden) t_.click(); }; }
     /* the layers in two small groups, each under a mini header (0.8.302, Nick: "HUD Artifacts" and "Cosmotic Elements", as in the cosmos); a "?" beside a switch says what it does */
     { const QH = { rings: "Rings with tick marks round the big hubs near you.", read: "A small readout beside the note you're at: its level, score, links and years.",
         rel: ["How close a linked note is to the cockpit note, 100 for the closest; the lists down the sides are in this order, with up links always first.",
@@ -7726,11 +7726,12 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       grp("HUD artifacts", ["rings", "read", "posts", "dial", "mini", "card", "mirror", "frame"]);   /* Relevance scores follows Display → HUD links now (0.8.309) */
       grp("Cosmotic elements", ["names", "gas", "gasp", "orb", "lines", "twinkle", "turn", "haze", "emo"]); }
     /* the game, near the bottom (0.8.302, Nick: "too prioritized right now") */
-    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKG; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "True or false (a game: right answers jump you there)" }); qHelp(l_, "A quiz about the notes around you. Answer right and the ship jumps to the note in question.");
-      c_.onchange = () => { CKG = c_.checked; save("iv-ckgame", CKG); if (CKG && CK.wd) ckWanderStop(); CK.gs = 0; ckGameNew(); }; }
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
       for (const [k_, v_] of [["R W  ↑ ↓", "forward, back"], ["T", "impulse: a slow, steady cruise"], ["X V  ← →", "pan left, right"], ["S F", "orbit left, right round the note"], ["G", "Orbit on or off: circle the note, climbing and diving now and then"], ["E D", "orbit over, under the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
         const r_ = box.createDiv({ cls: "ckkey" }); r_.createEl("kbd", { text: k_ }); r_.createSpan({ text: v_ }); } }
+    /* the game after Controls (0.8.332, Nick: "The true/false mini toggle below the controls") */
+    { const l_ = fa.createEl("label", { cls: "mini lcemo ckgame" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKG; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "True or false (a game: right answers jump you there)" }); qHelp(l_, "A quiz about the notes around you. Answer right and the ship jumps to the note in question.");
+      c_.onchange = () => { CKG = c_.checked; save("iv-ckgame", CKG); if (CKG && CK.wd) ckWanderStop(); CK.gs = 0; ckGameNew(); }; }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "cockpit"; }; }
   // Compass: Relevance
   { const fa = mo.createDiv({ cls: "mosec emoany cmpany" }); fa.hidden = true; const r = fa.createEl("label", { cls: "mini lcemo" }); const cb = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Relevance: pull related notes toward the centre" });
