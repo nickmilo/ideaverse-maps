@@ -3384,6 +3384,8 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
     { const cb_ = box.querySelector('#pmode button[data-pm="constellation"]'); if (cb_) { cb_.hidden = view !== "builder"; const has = peopleDetect().length > 0; cb_.disabled = !has; cb_.title = has ? "" : "No property here lists people (director, cast, author…)"; } }
     box.classList.toggle("pcon", !!con); box.classList.toggle("ptl", tl);
     { const tb_ = box.querySelector('#pmode button[data-pm="timeline"]'); if (tb_) { tb_.hidden = view !== "builder"; const has = o.across.some(a => a.id.endsWith("@end")); tb_.disabled = !has; tb_.title = has ? "" : "No property here holds a span of years (a lifespan like 1879 – 1955)"; } }
+    /* Scatter needs a second number besides left to right; without one it was a dead button (0.8.318, Nick: "I can't seem to select it"): dimmed like Timeline and Constellation */
+    { const sb_ = box.querySelector('#pmode button[data-pm="scatter"]'); if (sb_) { const cu_ = PSC().cur || {}, has = o.across.some(a => a.id !== cu_.acrossId && a.id !== "@created" && !a.id.endsWith("@end")); sb_.disabled = !has && !PSC().height; sb_.title = sb_.disabled ? "Scatter needs a second number property (a rank, a rating, a year)" : ""; } }
     { const bc = box.querySelector(".bcon"); if (bc) { bc.hidden = !con; if (con) builderConUI(bc); } }
     const ar = box.querySelector('.prow[data-k="across"] > span'), ah = box.querySelector('.phint[data-k="across"]');
     if (ar) ar.setText(md === "mosaic" ? "Narrow by" : "Left to right"); if (ah) ah.setText(md === "timeline" ? "Years shown: keeps every life that overlaps them." : md === "mosaic" ? "A date or number. Use its slider to keep part of the set." : "A date or number. Places each card left to right.");
@@ -6420,7 +6422,7 @@ cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.data
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 dbg.__lfx = (add = true) => linkFxTry(add);
-dbg.__k = () => k; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
+dbg.__k = () => k; dbg.__pd = () => { const o = postersDetect(); return { across: o.across.map(a => a.id), cur: PSC().cur }; }; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
 dbg.__hud = () => [HUDHOV, !!LKHV, !!(LKHV && LKHV.isConnected), HUDHOV >= 0 && !!vis[HUDHOV], HUDHOV >= 0 ? [sx(X[HUDHOV]), sy(Y[HUDHOV])] : null];
 dbg.__ck = () => [CK.yaw, CK.pitch];
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
