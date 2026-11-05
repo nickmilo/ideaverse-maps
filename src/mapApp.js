@@ -2799,7 +2799,10 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     const SL = CK.SL || {}, kc = j => SL[CK.kind.get(j) || "prop"] || "#a9b4c8";
     /* links as Starfield draws them: gentle curves in their link colours (above, below, up, related, other) */
     g.lineWidth = 1.5; for (const it of CK.items) { if (it.none) continue; const pi = pr(it.x, it.y, it.z); if (!pi || !pc) continue; const mx = (pc[0] + pi[0]) / 2, my = (pc[1] + pi[1]) / 2, dx = pi[0] - pc[0], dy = pi[1] - pc[1];
-      g.globalAlpha = ckShows(it) ? (it.i === (CK.items[CK.lock] || {}).i ? .95 : .7) : .08; g.strokeStyle = kc(it.i); g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(mx - dy * .14, my + dx * .14, pi[0], pi[1]); g.stroke(); }
+      const sh_ = ckShows(it), lk_ = it.i === (CK.items[CK.lock] || {}).i, cx_ = mx - dy * .14, cy_ = my + dx * .14;
+      /* a thin dark casing under each line, so its color reads true over a bright nebula (0.8.308, Nick: a blue link looked green over the orange sky) */
+      if (sh_) { g.globalAlpha = .55; g.strokeStyle = "rgba(4,5,12,.9)"; g.lineWidth = 3.5; g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(cx_, cy_, pi[0], pi[1]); g.stroke(); g.lineWidth = 1.5; }
+      g.globalAlpha = sh_ ? (lk_ ? 1 : .9) : .08; g.strokeStyle = kc(it.i); g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(cx_, cy_, pi[0], pi[1]); g.stroke(); }
     CK.cPos = pc; if (pc) { g.font = `700 14px ${font}`; CK.noteBox = [pc[0] + 30, pc[1] - 10, g.measureText(N[ck].title).width + 12, 20]; } else CK.noteBox = null;
     if (pc) { /* its ring split by kind of link, the counts as arcs; then its name in yellow */ const cnt = ["up", "down", "upp", "rel"].map(k_ => [k_, [...CK.kind.values()].filter(v => v === k_).length]).filter(q => q[1]), tot = cnt.reduce((a, q) => a + q[1], 0);
       g.globalAlpha = 1; g.lineWidth = 4; let a0 = -Math.PI / 2; if (tot) for (const [k_, v] of cnt) { const da = v / tot * 6.2832; g.strokeStyle = SL[k_] || "#ccc"; g.beginPath(); g.arc(pc[0], pc[1], 28, a0 + .05, a0 + da - .05); g.stroke(); a0 += da; }
@@ -3952,6 +3955,10 @@ function graphSim(ids, key){
   // a spiral to start from (a ball in 3D), the highest-scoring notes in the middle
   lk.forEach((j, q) => { if (!z) { const r = 10 * Math.sqrt(.5 + q), a = q * Math.PI * (3 - Math.sqrt(5)); x[j] = r * Math.cos(a); y[j] = r * Math.sin(a); return; }
     const r = 14 * Math.cbrt(.5 + q), u = 1 - 2 * ((q * .618034) % 1), a = q * Math.PI * (3 - Math.sqrt(5)), w = Math.sqrt(1 - u * u); x[j] = r * w * Math.cos(a); y[j] = r * u; z[j] = r * w * Math.sin(a); });
+  /* flat graph: a new set of notes (Focus in or out) starts from where its notes already are, so the forces bloom them out from there instead of a tiny spiral the camera then
+     snaps to (0.8.308, Nick: Obsidian's Focus "gets really tiny before it expands"); a note with no place yet keeps its spiral spot */
+  if (!z && GPH.x && GPH.x.length === n && GPH.prev2d) { let had = 0; for (const j of lk) { const i = ids[j], px = GPH.x[i], py = GPH.y[i]; if (px || py) { x[j] = px; y[j] = py; had++; } } if (had < 2) lk.forEach((j, q) => { const r = 10 * Math.sqrt(.5 + q), a = q * Math.PI * (3 - Math.sqrt(5)); x[j] = r * Math.cos(a); y[j] = r * Math.sin(a); }); }
+  GPH.prev2d = !z;
   const F = graphForce(m, Int32Array.from(ea), Int32Array.from(eb), x, y, Int32Array.from(lk), z);
   const lone = []; for (let j = 0; j < m; j++) if (!deg[j]) lone.push(j); lone.sort((a, b) => N[ids[a]].path < N[ids[b]].path ? -1 : 1);
   const place = () => { const rs = lk.map(j => Math.hypot(x[j], y[j], z ? z[j] : 0)).sort((a, b) => a - b); const R = (rs.length ? rs[Math.floor(rs.length * .97)] : 0) + 90;
@@ -6513,8 +6520,8 @@ function navTo(j, fromTrail){
 // Focus zoom (0.8.10, Nick: keep both, Normal the default): Normal frames every focused note; Close-Up (Starfield) frames the note with its hub.
 // A small square button on the map (in Focus, in Starfield) and the Z key switch between them.
 let FZC = pref("iv-fzclose", false) === true;
-const FZ_MAPS = new Set(["stars", "emergence", "spacetime", "gravity", "graph", "sense", "mosaic", "chord", "lincal", "spiral", "lifeline", "tree", "treemap", "shelf", "quincunx"]);
-const fzOn = () => FZ_MAPS.has(view) && !S3D_ON() && !sphOn() && !domeOn() && !globeOn() && !geo3On() && !csphOn();
+const FZ_MAPS = new Set(["stars", "emergence", "spacetime", "gravity", "graph", "sense", "mosaic", "chord", "lincal", "spiral", "lifeline", "tree", "treemap", "shelf", "quincunx", "ideaverse", "skyline", "posters"]);   /* + the Ideaverse and the other flat maps (0.8.308, Nick: "Ideaverse is one of the few map views that doesn't have the Z zoom") */
+const fzOn = () => FZ_MAPS.has(view) && !S3D_ON() && !sphOn() && !domeOn() && !globeOn() && (!geo3On() || IDV()) && !csphOn();   /* the Ideaverse turns, but its notes are projected each frame, so Close-Up frames them as on a flat map */
 function S3D_ON(){ return view === "stars" && S3D; }
 // Close-Up anywhere but Starfield: the note centred, zoomed so most of its linked notes (the nearest three quarters) sit just inside the view
 function closeTarget(xs, ys, i){ const f = fitTarget(), t = closeTarget0(xs, ys, i), kk = Math.max(f.k * 1.5, Math.min(f.k * 12, t.k)), vw = W - sideW();
@@ -6524,7 +6531,7 @@ function closeTarget0(xs, ys, i){ if (view === "stars") return starFocusTarget(x
   for (const j of new Set([...out[i], ...inn[i]])) if (j !== i && vis[j]) ds.push(Math.hypot(xs[j] - xs[i], ys[j] - ys[i]));
   ds.sort((a, b) => a - b); let d = ds.length ? ds[Math.min(ds.length - 1, Math.floor(ds.length * .75))] : 0; if (d < 20) d = 60;
   const kk = Math.max(.08, Math.min(8, R/d)); return { k: kk, tx: vw/2 - xs[i]*kk, ty: H/2 - ys[i]*kk }; }
-function setFZ(c){ FZC = c; save("iv-fzclose", c); syncFZ(); if (focus >= 0) { setFocus(focus, true); return; }
+function setFZ(c){ FZC = c; save("iv-fzclose", c); syncFZ(); if (GRV()) GPH.touched = true;   /* the graphs' "view follows" would undo the zoom (0.8.308) */ if (focus >= 0) { setFocus(focus, true); return; }
   if (!fzOn()) return; if (c && sel >= 0 && vis[sel] && VV(sel)) animateTo(closeTarget(X, Y, sel)); else if (!c) animateTo(fitTarget()); }
 function syncFZ(){ const b = root.querySelector("#fzbtn"); if (!b) return; const h = !fzOn(); if (b.hidden !== h) { b.hidden = h; if (!h) draw(); } b.setAttribute("aria-pressed", String(FZC)); b.setAttribute("aria-description", FZC ? "Zoom: Close-Up (Z for Normal)" : "Zoom: Normal (Z for Close-Up on the note you're on)"); }
 function starFocusTarget(xs, ys, i){ const vw = W - sideW(), cx = vw/2, cy = H/2, R = .44*Math.min(vw, H); let d = 0;
