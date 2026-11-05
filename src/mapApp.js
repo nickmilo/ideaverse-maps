@@ -8314,6 +8314,9 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
         // Compass, Arena and Kandinsky wait under Experimental → Unfinished for now (Nick, 0.8.67)
         { let at = MP.querySelector("#goskyline"); for (const id of ["gocompass", "goarena", "gokandinsky", "gocockpit"]) { const el = MP.querySelector("#" + id); if (el && at) { at.after(el); at = el; } } }
         { const uf = MP.querySelector("#goskyline"), ud = uf && uf.closest("details"), es = ex.querySelector(":scope > summary"); if (ud && ud !== ex && es) es.after(ud); }   /* Unfinished first under Experimental (Nick, 0.8.80) */
+        /* Misc (0.8.357, Nick): Tree, Skyline and Kandinsky get their own group, right after Unfinished, which keeps Compass and Arena */
+        { const uf = MP.querySelector("#gocompass"), ud = uf && uf.closest("details"); if (ud) { const md = doc.createElement("details"); md.className = ud.className; const su_ = doc.createElement("summary"); su_.textContent = "Misc"; md.appendChild(su_);
+            for (const id of ["gotree", "goskyline", "gokandinsky"]) { const el = MP.querySelector("#" + id); if (el) md.appendChild(el); } ud.after(md); } }
         const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
     // the quick keys in list order: 1–9, 0, then - = [ ] \
     const QK = [..."1234567890-=[]\\"], QPIN = {};   /* the quick keys simply follow the list now, nothing pinned (0.8.193, Nick) */
