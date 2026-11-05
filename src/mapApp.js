@@ -2632,7 +2632,7 @@ const CK = { scHov: -1, scDots: [], hovS: -1, hv: new Map(), inL: [], outL: [], 
 let CKAUTO = pref("iv-ckauto", true) !== false, CKFRAME = pref("iv-ckframe", false) === true, CKINV = pref("iv-ckinv", false) === true;   /* CKINV: drag the other way (0.8.153, Nick) */
 // World (0.8.90, Nick's "big kahuna"): "links" builds a scene from one note's links; "sf" flies through Starfield itself,
 // every note at its place in 3D Starfield, the galaxies as glowing disks and clouds in their own colours, the links as panels where those notes really are.
-let CKW = pref("iv-ckw", "links") === "sf" ? "sf" : "links";
+let CKW = "sf";   /* the Starship always flies Starfield; "One note's links" is retired (0.8.302, Nick) */
 /* Starfield, one place with two vantage points (0.8.218, an experiment, Nick: "see what it would look like to move between Starfield > Chart and Starfield > Starship"):
    from Starfield's Chart you board the Starship among the same galaxies, and Chart brings you back to the star you were at. Starship on its own (the maps menu)
    is left exactly as it is: its world is borrowed for the trip (not saved) and handed back. 3D Starfield steps aside for the trial (SFMERGE = false brings it back) */
@@ -2899,7 +2899,8 @@ function ckShows(it){ return !CK.only || (CK.only === "in" ? it.inn : it.out); }
 function ckBack(){ if (!trail.length) return; const p = trail.pop(); if (p != null && p >= 0) select(p, true); }
 function ckLeftEd(){ try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) { const r = edRect("left"); return r.x + r.w + 8; } } catch (_) { /* no editors */ } return 0; }
 // Previews: Off | One | Fewer | Natural | Max (0.8.135, as Compass's): One is the hovered or locked note; the others also preview the most relevant links in view
-let CKPV = ["off", "one", "fewer", "natural", "max"].includes(pref("iv-ckpv", "")) ? pref("iv-ckpv", "") : (pref("iv-ckx", {}) || {}).pv === false ? "off" : "one";
+/* the Starship's mini-previews follow Display → Note mini-previews (0.8.302, Nick: "the display menu should be the global way to control many previews") */
+const ckPV = () => { try { return PVLV; } catch (_) { return "natural"; } };
 // a preview becomes a live editor where it is (0.8.136, Nick: "can these mini-previews be editable?"): click to edit, Esc or × to finish; Shift-click opens it as the support note
 function ckPvMake(p, title){ const e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ }
   e.dataset.hint = (Platform.isMacOS ? "click to edit · ⌘ new orb · ⌘⌥ support note" : "click to edit · Ctrl new orb · Ctrl+Alt support note");   /* our own small hint on hover, not the system tooltip (0.8.145) */
@@ -2918,7 +2919,7 @@ async function ckEdit(p, x, y, hostEl){ if (!host.editCard) return; ckEditClose(
 function ckEditClose(){ const E_ = CK.edit; if (!E_) return; CK.edit = null; try { E_.ed.close(); } catch (_) { /* gone */ } E_.el.remove();
   CK.pvOver = null;   /* previews are rebuilt, so they show what was written */
   if (CK.pvEl) { CK.pvEl.remove(); CK.pvEl = null; CK.pvP = null; } if (CK.pvM) { for (const e of CK.pvM.values()) e.remove(); CK.pvM.clear(); } }
-function ckPvMany(W, VH, prim){ const cap = { fewer: 5, natural: 10, max: 18 }[CKPV] || 0, [pw, ph] = ({ fewer: [210, 128], natural: [190, 112], max: [172, 100] })[CKPV] || [190, 112];
+function ckPvMany(W, VH, prim){ const cap = { fewer: 5, natural: 10, max: 18 }[ckPV()] || 0, [pw, ph] = ({ fewer: [210, 128], natural: [190, 112], max: [172, 100] })[ckPV()] || [190, 112];
   CK.pvM ||= new Map(); const want = new Set();
   if (cap && !(CK.auto || CK.wd || CK.gj)) { const hit = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1];
     const taken = [...(prim ? [prim] : []), ...CK.side.map(q => [q[0] - 4, q[1], q[2] + 30, q[3]]), [0, VH - 130, W, 130], [W - 170, 0, 170, 60], ...(CK.noteBox ? [CK.noteBox] : [])];
@@ -2932,7 +2933,7 @@ function ckPvMany(W, VH, prim){ const cap = { fewer: 5, natural: 10, max: 18 }[C
       e.hidden = false; e.setCssProps({ "--pvx": Math.round(box[0]) + "px", "--pvy": Math.round(box[1]) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); } }
   for (const [p, e] of CK.pvM) if (!want.has(p)) { e.remove(); CK.pvM.delete(p); } }
 function ckPreview(W, VH){ if (!CK.pvOver) CK.pvLead = null; if (CK.pvOver && CK.pvEl && !CK.pvEl.hidden && CK.pvP === CK.pvOver) return;   /* the pointer is on the preview: it holds still, so you can click it */
-  const busy = (CKPV === "off" && !CMDK) || !host.preview || CK.auto || CK.wd || CK.gj;   /* holding ⌘ previews even with Previews off */
+  const busy = (ckPV() === "off" && !CMDK) || !host.preview || CK.auto || CK.wd || CK.gj;   /* holding ⌘ previews even with Previews off */
   /* whatever you're hovering previews first (0.8.134, Nick): a side name, a scope dot or a star; with nothing under the pointer, the locked note's preview stays */
   let hj = -1, ax = 0, ay = 0, side = 0;
   if (!busy && CK.hovS >= 0) { const e = CK.side.find(q => q[4] === CK.hovS); if (e) { hj = CK.hovS; const left = e[0] < W / 2; ax = left ? e[0] + e[2] : e[0]; ay = e[1] + e[3] / 2; side = left ? 1 : -1; } }
@@ -2976,7 +2977,7 @@ function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0 
   CK.lock = q; CK.auto = false; }
 function ckHit(x, y){ let b = -1, bz = 1e9; CK.items.forEach((it, q) => { if (it.zc <= 1 || !ckShows(it)) return; if (x >= it.sx - it.sw / 2 && x <= it.sx + it.sw / 2 && y >= it.sy - it.sh / 2 && y <= it.sy + it.sh / 2 && it.zc < bz) { b = q; bz = it.zc; } }); return b; }
 win.setTimeout(() => { if (!dead) ckView(); }, 0);
-function ckView(){ ckEl(); if (view !== "cockpit" && SFSHIP) { CKW = SFSHIP.ckw; SFSHIP = null; } if (view !== "cockpit") ckEditClose(); if (view !== "cockpit" && CK.wd) ckWander(false); if (CKX.emo && !EMOI) void loadEmo(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
+function ckView(){ ckEl(); if (view !== "cockpit" && SFSHIP) { CKW = "sf"; SFSHIP = null; } if (view !== "cockpit") ckEditClose(); if (view !== "cockpit" && CK.wd) ckWander(false); if (CKX.emo && !EMOI) void loadEmo(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
   if (want) { CK.c = -2; ckSync(); CK.last = win.performance.now(); RAF(ckTick); } }
 // Wander Mode in the Cockpit (0.8.103, Nick: "bounce around to pointing at different notes, flying around, then jumping to the next note"):
 //   Links: turn toward a linked note, fly there on autopilot, linger, then the next link (a trail that backtracks at dead ends)
@@ -5752,7 +5753,7 @@ function sfShip(on){ const [fl, fr] = freeLR(), mx = (fl + fr) / 2, my = (isPhon
     sfCam({ k, cx: sx0, cy: sy0, wx: X[i], wy: Y[i] }, { k: Math.min(40, k * 8), cx: mx, cy: my, wx: X[i], wy: Y[i] }, 500, p => p * p * (3 - 2 * p), [side * Math.min(160, (fr - fl) * .12), -60], board);
     win.setTimeout(() => veilTo(1, 330), 160); }   /* the dark starts with the zoom and lands with it */
   else { if (!SFSHIP) return; const c = CK.c, back = SFSHIP.cam; veilTo(1, 160);
-    win.setTimeout(() => { CKW = SFSHIP ? SFSHIP.ckw : CKW; SFSHIP = null; SFJUMP = true; setView("stars"); sfSwSync();
+    win.setTimeout(() => { CKW = "sf"; SFSHIP = null; SFJUMP = true; setView("stars"); sfSwSync();
       const land = (t_) => { if (dead) return; if (morphing && t_ < 30) { win.setTimeout(() => land(t_ + 1), 50); return; }
         if (!(c >= 0 && vis[c])) { veilTo(0, 400); return; } select(c); const k1 = back ? back.k : k, k0 = Math.min(40, k1 * 8);
         k = k0; tx = mx - X[c] * k0; ty = my - Y[c] * k0; render(); veilTo(0, 300);
@@ -6403,6 +6404,7 @@ cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.data
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 dbg.__lfx = (add = true) => linkFxTry(add);
 dbg.__k = () => k;
+dbg.__ckw = () => CK.wd ? [CK.wd.phase, CK.c, !!CK.settle] : null;
 dbg.__hud = () => [HUDHOV, !!LKHV, !!(LKHV && LKHV.isConnected), HUDHOV >= 0 && !!vis[HUDHOV], HUDHOV >= 0 ? [sx(X[HUDHOV]), sy(Y[HUDHOV])] : null];
 dbg.__ck = () => [CK.yaw, CK.pitch];
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
@@ -7574,20 +7576,21 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = KNAMES; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Show note names" });
       c_.onchange = () => { KNAMES = c_.checked; save("iv-knames", KNAMES); draw(); }; }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "kandinsky"; }; }
+  /* a "?" after a menu switch: hover (or tap) it for a line or two on what the switch does (0.8.302, Nick). The card is the map's own, never a system tooltip */
+let QHC = null;
+function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh", text: "?" }); const show = () => { if (!QHC) QHC = $("#main").createDiv({ cls: "ivm-qhcard" }); QHC.empty(); for (const p_ of String(text).split("\n\n")) QHC.createEl("p", { text: p_ });
+    const r = q.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); QHC.hidden = false; const w = QHC.offsetWidth, h = QHC.offsetHeight; let x = r.right - m.left + 8, y = r.top - m.top - 6; if (x + w > m.width - 8) x = r.left - m.left - w - 8; if (y + h > m.height - 8) y = m.height - h - 8;
+    QHC.setCssProps({ "--qx": Math.max(8, x) + "px", "--qy": Math.max(8, y) + "px" }); };
+  q.addEventListener("pointerenter", show); q.addEventListener("pointerleave", () => { if (QHC) QHC.hidden = true; });
+  q.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); if (QHC && !QHC.hidden) QHC.hidden = true; else show(); }); }
   // Cockpit: the canopy's frame (Nick: the structure bars from the mockup)
   { const fa = mo.createDiv({ cls: "mosec emoany ckany" }); fa.hidden = true;
-    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKAUTO; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Lock on the most relevant note when you arrive" });
+    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKAUTO; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Lock on the most relevant note when you arrive" }); qHelp(l_, "When you arrive at a note, the ship turns toward its most relevant link and locks on.");
       c_.onchange = () => { CKAUTO = c_.checked; save("iv-ckauto", CKAUTO); if (!CKAUTO) { CK.lock = -1; CK.auto = false; } }; }
-    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKINV; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Drag the other way (grab the sky)" });
+    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKINV; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Drag the other way (grab the sky)" }); qHelp(l_, "Dragging moves the sky instead of turning the ship, as if you grabbed it.");
       c_.onchange = () => { CKINV = c_.checked; save("iv-ckinv", CKINV); }; }
-    { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "World" }); const seg = sr.createDiv({ cls: "seg" });
-      for (const [v, t_] of [["links", "One note's links"], ["sf", "Starfield"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKW === v) } });
-        b.onclick = e => { e.stopPropagation(); if (CKW === v) return; CKW = v; save("iv-ckw", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); CK.sfIn = false; CK.c = -2; ckSync(); CK.warp = 1; FUI.emoany(); }; } }
     if (Platform.isMobile && !Platform.isIosApp) { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKTILT;   /* not on iPhone or iPad: the Obsidian app there doesn't pass the phone's motion to plugins (0.8.142, Nick tried) */ l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Look around by moving the phone" });
       c_.onchange = async () => { c_.checked = await ckTiltSet(c_.checked); }; }
-    { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "Previews" }); const seg = sr.createDiv({ cls: "seg" });
-      for (const [v, t_] of [["off", "Off"], ["one", "One"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKPV === v) } });
-        b.onclick = e => { e.stopPropagation(); CKPV = v; save("iv-ckpv", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); }; } }
     { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "Wander" }); const seg = sr.createDiv({ cls: "seg" });
       for (const [v, t_] of [["links", "Links"], ["jumps", "Jumps"], ["drift", "Drift"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKWM === v) } });
         b.onclick = e => { e.stopPropagation(); CKWM = v; save("iv-ckwm", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (CK.wd) { ckWander(false); ckWander(true); } }; }
@@ -7599,21 +7602,26 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       for (const s_ of [4, 6, 10, 15, 20]) { const b = seg.createEl("button", { text: s_ + " s", attr: { type: "button", "data-s": String(s_) } });
         b.onclick = e => { e.stopPropagation(); playSec = s_; save("iv-psec", playSec); try { syncPlay(); } catch (_) { /* dock not ready */ } sync_(); }; }
       sync_(); const f2_ = FUI.emoany; FUI.emoany = () => { if (f2_) f2_(); sync_(); }; }
-    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKG; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "True or false (a game: right answers jump you there)" });
-      c_.onchange = () => { CKG = c_.checked; save("iv-ckgame", CKG); if (CKG && CK.wd) ckWanderStop(); CK.gs = 0; ckGameNew(); }; }
-    // Starfield's layers, one mini switch each, two to a row (shown when the world is Starfield)
-    { const box = fa.createDiv({ cls: "ckxsf" }), grid = box.createDiv({ cls: "ckxgrid" });
-      for (const [k_, label] of CKX_LABELS) { const l_ = grid.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = !!CKX[k_]; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: label });
-        c_.onchange = () => { CKX = { ...CKX, [k_]: c_.checked }; save("iv-ckx", CKX); if (k_ === "turn") CKSF.ver = -1; if (k_ === "emo" && c_.checked && !EMOI) void loadEmo(); }; }
-      { const det = box.createEl("details", { cls: "ckrelx" }); det.createEl("summary", { text: "What's the relevance score?" }); det.addEventListener("click", e => e.stopPropagation());
-        for (const p_ of ["How close a linked note is to the cockpit note, 100 for the closest; the lists down the sides are in this order, with up links always first.",
+    /* the layers in two small groups, each under a mini header (0.8.302, Nick: "HUD Artifacts" and "Cosmetic Elements"); a "?" beside a switch says what it does */
+    { const QH = { rings: "Rings with tick marks round the big hubs near you.", read: "A small readout beside the note you're at: its level, score, links and years.",
+        rel: ["How close a linked note is to the cockpit note, 100 for the closest; the lists down the sides are in this order, with up links always first.",
           "1. Each pair of notes gets a weight: every link between them added up, either direction (up or related 2, a link in the text 1, another property 0.6, navigation 0.5; collections don't count), ×1.25 if they link both ways.",
           "2. A random walk starts at the cockpit note. Each step it either jumps home (20%) or moves to a neighbour, more often along heavier links. After 24 rounds, how often it sits on a note is that note's raw relevance.",
           "3. Big hubs are toned down a little, so they don't win just by being big: ÷ (1 + the note's total link weight)^0.3.",
-          "4. What you declared counts most: a note it links up to ×3, a related note ×1.6."]) det.createEl("p", { text: p_ }); }
-      const f1 = FUI.emoany; FUI.emoany = () => { if (f1) f1(); box.hidden = CKW !== "sf"; }; }
-    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKFRAME; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Cockpit frame" });
-      c_.onchange = () => { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); }; }
+          "4. What you declared counts most: a note it links up to ×3, a related note ×1.6."].join("\n\n"),
+        posts: "Signposts toward the biggest hubs this note links to, with how far they are.", dial: "A dial showing when this note's links were made, month by month.", mini: "A small map of the whole sky in the corner, with you on it.",
+        card: "A card along the bottom with the note you're at: its level, score and what to do next.", mirror: "A rear-view mirror in place of the note card: what's behind you.", frame: "The canopy's struts, as if you're sitting in the cockpit.",
+        names: "Galaxy names, out in the sky.", gas: "Each folder's galaxy glows in its own color.", gasp: "A stronger, wider folder glow.", orb: "A slow dashed orbit turning round each big hub.", lines: "Faint lines between the big hubs (Level 4 and up).",
+        twinkle: "Now and then a star twinkles.", turn: "The galaxies slowly turn.", haze: "A soft haze of starlight behind everything.", emo: "Each note's emoji in place of its dot." };
+      const grp = (title, keys) => { fa.createDiv({ cls: "ckmh", text: title }); const grid = fa.createDiv({ cls: "ckxgrid" });
+        for (const k_ of keys) { const lab = k_ === "frame" ? "Cockpit frame" : (CKX_LABELS.find(q => q[0] === k_) || [k_, k_])[1], l_ = grid.createEl("label", { cls: "mini lcemo" }), c_ = l_.createEl("input", { type: "checkbox" });
+          c_.checked = k_ === "frame" ? CKFRAME : !!CKX[k_]; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: lab }); qHelp(l_, QH[k_]);
+          c_.onchange = () => { if (k_ === "frame") { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); return; } CKX = { ...CKX, [k_]: c_.checked }; save("iv-ckx", CKX); if (k_ === "turn") CKSF.ver = -1; if (k_ === "emo" && c_.checked && !EMOI) void loadEmo(); }; } };
+      grp("HUD artifacts", ["rings", "read", "rel", "posts", "dial", "mini", "card", "mirror", "frame"]);
+      grp("Cosmetic elements", ["names", "gas", "gasp", "orb", "lines", "twinkle", "turn", "haze", "emo"]); }
+    /* the game, near the bottom (0.8.302, Nick: "too prioritized right now") */
+    { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKG; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "True or false (a game: right answers jump you there)" }); qHelp(l_, "A quiz about the notes around you. Answer right and the ship jumps to the note in question.");
+      c_.onchange = () => { CKG = c_.checked; save("iv-ckgame", CKG); if (CKG && CK.wd) ckWanderStop(); CK.gs = 0; ckGameNew(); }; }
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
       for (const [k_, v_] of [["R W  ↑ ↓", "forward, back"], ["T", "impulse: a slow, steady cruise"], ["X V  ← →", "pan left, right"], ["S F", "orbit left, right round the note"], ["E D", "orbit over, under the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
         const r_ = box.createDiv({ cls: "ckkey" }); r_.createEl("kbd", { text: k_ }); r_.createSpan({ text: v_ }); } }

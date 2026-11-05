@@ -1844,3 +1844,10 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm.ivm main:has(> .ivm-orbs:not([hidden])) > .focusbar.mapfb{top:50px}
 .ivm.ivm main:has(> .ivm-sfsw:not([hidden])) > .focusbar.mapfb{top:84px}
 .ivm.ivm main:has(> .ivm-orbs.named:not([hidden])) > .focusbar.mapfb{top:112px}
+/* menus: a mini header over a group of switches, and a "?" with a small card saying what a switch does (0.8.302, Nick) */
+.ivm .ckany .ckmh{font:600 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:12px 0 5px;padding-top:8px;border-top:1px solid var(--line, rgba(127,127,127,.25))}
+.ivm .qh{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;margin-left:6px;border:1px solid var(--muted);border-radius:50%;font:600 8.5px var(--body);color:var(--muted);opacity:.55;cursor:help;flex:none;line-height:1}
+.ivm .qh:hover{opacity:1;color:var(--ink);border-color:var(--ink)}
+.ivm .ivm-qhcard{position:absolute;left:var(--qx,0);top:var(--qy,0);z-index:60;max-width:280px;padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.35);font:500 11.5px/1.45 var(--body);color:var(--ink);pointer-events:none}
+.ivm .ivm-qhcard[hidden]{display:none}
+.ivm .ivm-qhcard p{margin:0 0 6px}.ivm .ivm-qhcard p:last-child{margin:0}
