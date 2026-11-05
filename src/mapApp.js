@@ -473,7 +473,7 @@ function buildGrid(){ grid = new Map(); for (let i=0;i<n;i++) { if (!vis[i]) con
 let mode = "time"; { const m = pref("iv-x", "time"); if (m === "ace" || m === "time" || (AXES[m] && axisHas(m))) mode = m; }
 computeVis(); layoutACE(); layoutTime(); layoutProp();
 // ---------- Gravity view: emergence as rings (Level 5 at the center), Time or ACE goes around ----------
-let view = pref("iv-view", "emergence"); if (!VIEWS_ON.includes(view)) view = "emergence";
+let view = pref("iv-view", "emergence"); if (view === "posters" || view === "people") view = "builder"; if (!VIEWS_ON.includes(view)) view = "emergence";   /* Posters and People are gone from the menu; Base Builder does their work (0.8.319, Nick) */
 let modeKeep = null;   // Space-Time is always by time: the Emergence axis you had comes back when you leave it
 if (view === "spacetime" && mode !== "time") { modeKeep = mode; mode = "time"; }
 const GC = {x: WW/2, y: WH/2}, GR = 880;
@@ -1133,7 +1133,7 @@ function morph(animate, cam){
   RAF(step);
 }
 let camBusy = 0;
-function setView(v){ if (v === "cockpit" && view !== "cockpit") RECCK = true;   /* Recents arrives open in the Starship now that it shares the HUD (0.8.292, Nick; tucked on arrival since 0.8.273) */ win.setTimeout(() => { ckView(); if (typeof sfSwSync === "function") sfSwSync(); try { RECKEY = ""; recSync(); } catch (_) { /* not built yet */ } if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
+function setView(v){ if (v === "posters" || v === "people") v = "builder"; if (v === "cockpit" && view !== "cockpit") RECCK = true;   /* Recents arrives open in the Starship now that it shares the HUD (0.8.292, Nick; tucked on arrival since 0.8.273) */ win.setTimeout(() => { ckView(); if (typeof sfSwSync === "function") sfSwSync(); try { RECKEY = ""; recSync(); } catch (_) { /* not built yet */ } if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
@@ -7453,7 +7453,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     gpp.onclick = () => { closePops(); driftStop(); setView("people"); };
     // Posters and People are for targeted sets (a base of films, a collection of books): Experimental → Specialized
     { const exp_ = pop.querySelector(":scope > details"), sp = doc.createElement("details"); sp.className = "mexp mexp2"; sp.id = "mspec"; const su = doc.createElement("summary"); su.textContent = "Specialized"; sp.appendChild(su);
-      sp.appendChild(gp); sp.appendChild(gpp); if (exp_) exp_.appendChild(sp); else pop.appendChild(sp); } }
+      sp.appendChild(gp); sp.appendChild(gpp); sp.hidden = true; root.appendChild(sp); void exp_; } }   /* Posters and People removed from the menu (0.8.319, Nick: "You can delete the posters and people map views"); kept off-screen for old saved views, which land in Base Builder */
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "pplctl" } }); pc.hidden = true;
     pc.createDiv({ cls: "phint", text: "People from these properties:" }); pc.createDiv({ cls: "plchips pplchips" });
     const row = pc.createEl("label", { cls: "prow" }); row.createSpan({ text: "Show" }); const r = row.createEl("input", { type: "range" }); r.min = "5"; r.max = "150"; r.step = "1"; r.value = String(PPL.max);
