@@ -5774,7 +5774,7 @@ function sfShip(on){ const [fl, fr] = freeLR(), mx = (fl + fr) / 2, my = (isPhon
   else { if (!SFSHIP) return; const c = CK.c, back = SFSHIP.cam; veilTo(1, 160);
     win.setTimeout(() => { CKW = "sf"; SFSHIP = null; SFJUMP = true; setView("stars"); sfSwSync();
       const land = (t_) => { if (dead) return; if (morphing && t_ < 30) { win.setTimeout(() => land(t_ + 1), 50); return; }
-        if (!(c >= 0 && vis[c])) { veilTo(0, 400); return; } select(c); const k1 = back ? back.k : k, k0 = Math.min(40, k1 * 8);
+        if (!(c >= 0 && vis[c])) { veilTo(0, 400); return; } select(c); if (!back) { veilTo(0, 300); return; }   /* arrived straight in the Starship: the chart keeps its own fit */ const k1 = back ? back.k : k, k0 = Math.min(40, k1 * 8);
         k = k0; tx = mx - X[c] * k0; ty = my - Y[c] * k0; render(); veilTo(0, 300);
         sfCam({ k: k0, cx: mx, cy: my, wx: X[c], wy: Y[c] }, { k: k1, cx: mx, cy: my, wx: X[c], wy: Y[c] }, 520, p => 1 - Math.pow(1 - p, 3), [0, 0], null); };
       land(0); }, 170); }   /* at once, in the same beat as the switch, so no frame of the fitted chart shows */
@@ -5783,6 +5783,11 @@ const sfSw = (() => { const w = $("#main").createDiv({ cls: "ivm-sfsw seg" }); w
   for (const [m, t] of [["chart", "Chart"], ["ship", "Starship"]]) { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); sfShip(m === "ship"); }; }
   w.createSpan({ cls: "sfk", text: "C", attr: { "aria-hidden": "true" } });   /* the key that toggles them */
   for (const ty of ["pointerdown", "wheel", "click"]) w.addEventListener(ty, ev => ev.stopPropagation()); win.setTimeout(() => sfSwSync(), 0); return w; })();
+/* Starfield leads with the Starship (0.8.320, Nick: "Starfield on its own is so powerful that it should be the lead"); Star Chart is the 2D chart as its own map, and C still swaps */
+function sfLaunch(){ if (view === "cockpit" && SFSHIP) return; if (view === "stars") { sfShip(true); return; }
+  if (view === "cockpit") { setView("stars"); win.setTimeout(() => { if (!dead) sfShip(true); }, 400); return; }
+  closePops(); veilTo(1, 150); win.setTimeout(() => { if (dead) return; SFSHIP = { ckw: CKW, cam: null }; CKW = "sf"; CK.sfIn = false; setView("cockpit"); win.setTimeout(() => { veilTo(0, 300); sfSwSync(); }, 80); }, 160); }
+function sfChart(){ if (view === "cockpit" && SFSHIP) { sfShip(false); return; } if (view !== "stars") setView("stars"); }
 function sfSwSync(){ const on = SFMERGE && !dead && (view === "stars" || (view === "cockpit" && !!SFSHIP)); sfSw.hidden = !on; if (!on) return; sfSw.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.m === "ship") === (view === "cockpit")))); }
 onKey(e => { if (!SFMERGE || e.metaKey || e.ctrlKey || e.altKey || e.key.toLowerCase() !== "c") return; const a = doc.activeElement; if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable)) return;
   if (view === "cockpit" && SFSHIP) { e.preventDefault(); sfShip(false); } else if (view === "stars") { e.preventDefault(); sfShip(true); } });   /* C toggles Chart ⇄ Starship (0.8.222, Nick); no other map uses C */
@@ -7542,7 +7547,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       sel_.onchange = () => { PSC()[key] = sel_.value; if (key === "height" && sel_.value) PSC().lastHeight = sel_.value; save(PK(key), sel_.value); morph(true, () => fitTarget()); legend(); };
       const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
-  const VN = () => view === "cockpit" && SFSHIP ? "Starfield · Starship" : ({ cockpit: "Starship", kandinsky: "Kandinsky", arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
+  const VN = () => view === "cockpit" && SFSHIP ? "Starfield" : view === "stars" ? "Star Chart" : ({ cockpit: "Starship", kandinsky: "Kandinsky", arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
     chord: CSPH === "out" || CSPH === "in" ? "Tesla / Corona" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
     shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars", "sense"]);
@@ -8115,7 +8120,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     const TOP4 = [...MAIN.filter(b => b.dataset.v !== "sense").map(b => [b.dataset.v, [...b.childNodes].filter(nd => !(nd instanceof Element && nd.classList.contains("ivm-sr"))).map(nd => nd.textContent).join("").replace(/\s*▾\s*$/, "").trim()]), ["lincal", "Calendar"]];
     for (const [tv, tl_] of TOP4) { const b = { dataset: { v: tv } }; const c = $("#vmorepop").createEl("button", { cls: "chip", text: tl_, attr: { type: "button" } });   // the tab's own name, not its hidden label (0.8.66) if (tabV(view) === b.dataset.v) c.classList.add("on");
       c.classList.add("vfoldb"); c.dataset.v = b.dataset.v; micon(c, MICON[b.dataset.v]); vfold.before(c);
-      c.onclick = e => { e.stopPropagation(); closePops(); driftStop(); if (tabV(view) !== b.dataset.v) setView(b.dataset.v); syncTB(); }; } };
+      c.onclick = e => { e.stopPropagation(); closePops(); driftStop(); if (b.dataset.v === "stars") { sfLaunch(); syncTB(); return; } if (tabV(view) !== b.dataset.v) setView(b.dataset.v); syncTB(); }; } };
   // refit only when the toolbar's width or the map changes: refitting on every redraw let a borderline width flip back and forth
   let fitRaf = 0, fitKey = "", fitT2 = 0, fitRe = false; const fitSoon = () => { const k_ = root.querySelector("header").clientWidth + "|" + view + "|" + (sel >= 0 ? 1 : 0);  if (k_ === fitKey || fitRaf) return; fitKey = k_; fitRaf = RAF(() => { fitRaf = 0; const was = [...FOLD_T].join(); fitTabs(); if ([...FOLD_T].join() !== was) syncTB();
     // a fit made mid-change (a panel opening, a font loading) can drop the map names for good: check once more when things settle
@@ -8145,8 +8150,10 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
         // Nick's order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Tesla, Corona, Chord, Base Builder (the quick keys follow it)
         { const gs = doc.createElement("button"); gs.className = "chip"; gs.id = "gosense"; gs.textContent = "Sensemakers"; gs.setAttribute("aria-label", "Your notes placed by what they are and how they're written");
           gs.onclick = () => { closePops(); driftStop(); setView("sense"); }; micon(gs, MICON.gosense); MP.appendChild(gs);
+          const gsc = doc.createElement("button"); gsc.className = "chip"; gsc.id = "gostarchart"; gsc.textContent = "Star Chart"; gsc.setAttribute("aria-label", "Starfield as a 2D chart: galaxies of notes you zoom and pan");
+          gsc.onclick = () => { closePops(); driftStop(); sfChart(); }; micon(gsc, "map"); MP.appendChild(gsc);   /* the chart as its own map (0.8.320) */
           const lc_ = MP.querySelector("#golincal"); if (lc_) { const park = root.createDiv(); park.hidden = true; park.appendChild(lc_); } }   /* Calendar is one of the top four now (0.8.311) */
-        for (const id of ["gosense", "gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
+        for (const id of ["gosense", "gostarchart", "gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
         // Compass, Arena and Kandinsky wait under Experimental → Unfinished for now (Nick, 0.8.67)
         { let at = MP.querySelector("#goskyline"); for (const id of ["gocompass", "goarena", "gokandinsky", "gocockpit"]) { const el = MP.querySelector("#" + id); if (el && at) { at.after(el); at = el; } } }
         { const uf = MP.querySelector("#goskyline"), ud = uf && uf.closest("details"), es = ex.querySelector(":scope > summary"); if (ud && ud !== ex && es) es.after(ud); }   /* Unfinished first under Experimental (Nick, 0.8.80) */
@@ -8161,7 +8168,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       const cur = () => [...MP.children].filter(c_ => c_ === div || (c_.classList.contains("chip") && c_.id)).map(c_ => c_ === div ? SEP : c_.id);
       const endDiv = exd_ && exd_.previousElementSibling && exd_.previousElementSibling.classList.contains("vfold") && exd_.previousElementSibling !== div ? exd_.previousElementSibling : null, END = endDiv || exd_ || null;   /* the divider above Experimental stays put */
       const apply = ord => { const anchor = END; for (const id of ord) { const el = id === SEP ? div : MP.querySelector(":scope > #" + id); if (el) MP.insertBefore(el, anchor); } };
-      const DEF = cur(); { let o = pref("iv-maporder", null); if (Array.isArray(o) && o.length && !o.includes("gosense")) o = ["gosense", ...o]; if (Array.isArray(o) && o.length) { const have = new Set(DEF); apply([...o.filter(x => have.has(x)), ...DEF.filter(x => !o.includes(x))]); } }
+      const DEF = cur(); { let o = pref("iv-maporder", null); if (Array.isArray(o) && o.length && !o.includes("gosense")) o = ["gosense", ...o]; if (Array.isArray(o) && o.length && !o.includes("gostarchart")) { const at_ = o.indexOf("gosense"); o = [...o.slice(0, at_ + 1), "gostarchart", ...o.slice(at_ + 1)]; } if (Array.isArray(o) && o.length) { const have = new Set(DEF); apply([...o.filter(x => have.has(x)), ...DEF.filter(x => !o.includes(x))]); } }
       const keys = () => { if (MP.hidden) return; MP.querySelectorAll(".mkey").forEach(x => x.remove()); for (const [k_, ch] of KEYED()) ch.createSpan({ cls: "mkey", text: k_, attr: { "aria-hidden": "true" } }); };
       /* Experimental's groups: each keeps its own order */
       const GS = [...MP.querySelectorAll("details")].filter(d => d.querySelector(":scope > .chip[id]")), gkey = d => ((d.querySelector(":scope > summary") || {}).textContent || "").trim();
@@ -8185,7 +8192,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       rst.onclick = e => { e.stopPropagation(); rst.hidden = true; cf.hidden = false; };
       no.onclick = e => { e.stopPropagation(); cf.hidden = true; rst.hidden = false; };
       yes.onclick = e => { e.stopPropagation(); apply(DEF); save("iv-maporder", undefined); for (const d of GS) gapply(d, DEFX.get(d)); save("iv-maporderx", undefined); cf.hidden = true; rst.hidden = true; keys(); }; }
-    const chipFor = () => { const id = { sense: "gosense", gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", spiral: "gospiral", lifeline: "golifeline",
+    const chipFor = () => { if (view === "cockpit" && SFSHIP) return MP.querySelector('.vfoldb[data-v="stars"]'); const id = { stars: "gostarchart", sense: "gosense", gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", spiral: "gospiral", lifeline: "golifeline",
         tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" || CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
       return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };
     // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
