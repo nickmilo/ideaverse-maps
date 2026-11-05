@@ -1905,3 +1905,5 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 /* Display: a little air round the sliders (Show, HUD opacity), so the switches under them don't touch (0.8.336, Nick: "these ones are too tight") */
 .ivm.ivm.ivm #disppop > :has(input[type=range]):not(:has(.seg)):not(.thsec){padding-top:3px;padding-bottom:6px}
 .ivm.ivm #disppop .ctrrk.tcsub{margin-top:2px}
+.ivm .ivm-sfsw.sfright{left:auto;right:var(--sfr);top:var(--sft);transform:translateY(-50%)}   /* top right, on the orbs' row (0.8.344) */
+.ivm.ivm.ivm[data-view="builder"] header.tb2 #mapopts{max-width:min(400px,calc(100vw - 48px))}   /* Base Builder's menu, narrower again (0.8.344, Nick: "another 30% or so") */
