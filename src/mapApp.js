@@ -5473,7 +5473,7 @@ function addTrailGrip(el){
   const stop = () => { if (!on) return; on = false; g.classList.remove("on"); save("iv-tpad", trailPad); };
   g.addEventListener("pointerup", stop); g.addEventListener("pointercancel", stop);
   g.addEventListener("dblclick", () => { setTrailPad(0); save("iv-tpad", 0); }); }
-/* the trail tucks away like the top bar (0.8.305, Nick): a chevron left of "Trail" tucks it, a small tab at the bottom left brings it back; your zoom and place stay */
+/* the trail tucks away like the top bar (0.8.305, Nick): a chevron left of "Trail" tucks it, and a small tab in that same spot brings it back; your zoom and place stay */
 let TRCOL = pref("iv-trcol", false) === true, TRTAB = null;
 function trailCol(c){ const t0 = cv.getBoundingClientRect().top, l0 = cv.getBoundingClientRect().left, tx0 = tx, ty0 = ty; TRCOL = c; save("iv-trcol", c); renderTrail();
   win.setTimeout(() => { resize(); const r = cv.getBoundingClientRect(); tx = tx0 + (l0 - r.left); ty = ty0 + (t0 - r.top); draw(); }, 30); }
@@ -5481,6 +5481,7 @@ function renderTrail(){
   const el = $("#trail");
   if (!TRTAB) { TRTAB = $("#main").createEl("button", { cls: "trtab", attr: { type: "button", "aria-description": "Show the trail" } }); setIcon(TRTAB, "chevron-up"); TRTAB.hidden = true; TRTAB.onclick = e => { e.stopPropagation(); trailCol(false); }; }
   if (!trail.length && sel < 0) { el.hidden = true; TRTAB.hidden = true; return; }
+  root.classList.toggle("trhid", !!TRCOL);
   if (TRCOL) { el.hidden = true; TRTAB.hidden = false; return; } TRTAB.hidden = true;
   const items = [...trail]; if (sel >= 0) items.push(sel);
   el.hidden = false;
