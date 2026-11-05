@@ -1137,11 +1137,11 @@ let camBusy = 0;
 function setView(v){ if (v === "posters" || v === "people") v = "builder"; if (v === "cockpit" && view !== "cockpit") RECCK = true;   /* Recents arrives open in the Starship now that it shares the HUD (0.8.292, Nick; tucked on arrival since 0.8.273) */ win.setTimeout(() => { ckView(); if (typeof sfSwSync === "function") sfSwSync(); try { RECKEY = ""; recSync(); } catch (_) { /* not built yet */ } if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
-  if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
+  if (senseT != null && !((v === "cockpit" && view === "stars") || (v === "stars" && view === "cockpit"))) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }   /* Ship ⇄ Chart keeps the Timelapse going (0.8.348) */
   if (v === "spacetime" && mode !== "time") { modeKeep = mode; mode = "time"; }
   else if (view === "spacetime" && v !== "spacetime" && modeKeep) { mode = modeKeep; modeKeep = null; }
   root.querySelectorAll("#xseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.x === mode)));
-  ungrow(); view = v; save("iv-view", v); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
+  ungrow(); view = v; save("iv-view", v); if (senseT == null) { SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; }   /* a Timelapse under way keeps its place (Ship ⇄ Chart, 0.8.348) */
   root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === tabOf())));
   root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : "";
   if (yrNarrow() || (HASTAGS && TMOFF.size)) { computeVis(); layoutACE(); layoutTime(); layoutProp(); updateCounts(); }
@@ -2637,7 +2637,7 @@ let CKW = "sf";   /* the Starship always flies Starfield; "One note's links" is 
 /* Starfield, one place with two vantage points (0.8.218, an experiment, Nick: "see what it would look like to move between Starfield > Chart and Starfield > Starship"):
    from Starfield's Chart you board the Starship among the same galaxies, and Chart brings you back to the star you were at. Starship on its own (the maps menu)
    is left exactly as it is: its world is borrowed for the trip (not saved) and handed back. 3D Starfield steps aside for the trial (SFMERGE = false brings it back) */
-const SFMERGE = true; let SFSHIP = null, SFJUMP = false;
+const SFMERGE = true; let SFSHIP = null, SFJUMP = false, SFNP = false;
 const CKSF = { ver: -1, P: null, sc: 1, B: [] };
 function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), turn = CKX.turn;
   if (CKSF.ver === starVer && CKSF.P && (!turn || now - (CKSF.tc || 0) < 30)) return CKSF; CKSF.tc = now;
@@ -2705,6 +2705,10 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
   CK.msg = CK.sug >= 0 ? `Closest relative not in its up or related: ${N[CK.sug].title}${CK.items.find(it => it.i === CK.sug && it.none) ? " (no link yet)" : ""}. Locked on. Space flies you there.` : "Every close relative is already up or related.";
 }
 // Starfield as seen from the ship: the galaxies' glow (disks tilted as in 3D Starfield, clouds round), every note as a star in its Starfield colour, names of nearby galaxies, the cockpit note's links as threads
+/* how much of a galaxy is born by the Timelapse's date (0.8.348): its glow follows, gently (a square root, so a young galaxy still shows) */
+const CKBF = { t: null, m: new Map() };
+function ckBornFrac(b){ if (senseT == null) return 1; if (CKBF.t !== senseT) { CKBF.t = senseT; CKBF.m.clear(); } let f = CKBF.m.get(b); if (f != null) return f;
+  const ms = b.members || []; let k_ = 0, t_ = 0; for (const i of ms) { if (!vis[i]) continue; t_++; if (TV[i] <= senseT) k_++; } f = t_ ? Math.sqrt(k_ / t_) : 1; CKBF.m.set(b, f); return f; }
 function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devicePixelRatio || 1, P = sf.P;
   g.save(); g.beginPath(); g.rect(0, 0, W, VH); g.clip(); g.globalCompositeOperation = "lighter";
   const pr = (x, y, z) => { const [xc, yc, zc] = ckCam(x, y, z); return zc > 12 ? [cx + F * xc / zc, cy + F * yc / zc, zc] : null; };
@@ -2712,7 +2716,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     const lay = b.kind === "gal" ? [[1.15, b.hue, .3], [.65, b.hue, .26], [.3, "#fff1d6", .6], [.1, "#ffffff", .85]] : b.kind === "neb" ? [[1, b.hue, .22], [.55, b.hue, .14]] : b.kind === "dwarf" ? [[1.1, b.hue, .26], [.25, "#fff1d6", .35]] : [[1.05, b.hue || "#ffb380", .28], [.4, "#fff1d6", .4]];
     const near = Math.min(1, Math.max(.15, dist / (B.r * 3)));   /* inside a galaxy its glow thins so the stars stay clear */
     /* Starfield's own settings carry over (0.8.92): Galaxy glow (Clear keeps only a faint tint, no white cores), and Star Chart's folder gas */
-    const GM = { clear: .4, soft: .75, normal: 1, bright: 1.4 }[sGlow] || .75;
+    const GM = ({ clear: .4, soft: .75, normal: 1, bright: 1.4 }[sGlow] || .75) * (senseT != null ? ckBornFrac(b) : 1);   /* on the Timelapse a galaxy glows as its notes are born */
     if (chxSF("gas") && (b.kind === "gal" || b.kind === "dwarf")) { const gc = NEBC[chartFolder(b)]; if (gc) { if (CKX.gasp) { lay.unshift([3.0, gc, .55]); lay.unshift([1.7, gc, .4]); } else { lay.unshift([2.6, gc, .34]); lay.unshift([1.5, gc, .22]); } } }   /* Folder gas, and Folder gas+ for more (0.8.125) */   /* stronger, wider folder gas (0.8.107), closer to the map */
     for (const [f_, col0, al0] of lay) { if (CLEAR() && (col0 === "#fff1d6" || col0 === "#ffffff")) continue; const col = col0, al = Math.min(1, al0 * GM); const R = B.r * f_; let a = null, bb = null;
       if (B.flat && p0) { const pu = pr(B.x + B.u[0] * R, B.y + B.u[1] * R, B.z + B.u[2] * R), pv = pr(B.x + B.v[0] * R, B.y + B.v[1] * R, B.z + B.v[2] * R); if (pu && pv) { a = [pu[0] - p0[0], pu[1] - p0[1]]; bb = [pv[0] - p0[0], pv[1] - p0[1]]; } }
@@ -2727,8 +2731,10 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   const hm = CK.mouse && !CK.drag && !CK.auto && Math.abs(CK.v) < 500 && win.performance.now() - CK.mouseT > 140 && CK.hovS < 0 && !CK.mouseOnPanel ? CK.mouse : null; let hb = 81, hi = -1, hp = null;
   /* emojis (0.8.102): a note with an emoji (Display → Assign emojis, or the base column) shows it in place of its star once it's near enough to read */
   const emoL = CKX.emo && EMOI ? [] : null;
-  for (let i = 0; i < n; i++) { if (!vis[i]) continue; const dx = P[3 * i] - X0, dy = P[3 * i + 1] - Y0, dz = P[3 * i + 2] - Z0, xc = cyw * dx - syw * dz, z1 = syw * dx + cyw * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1;
+  const TLp = senseT != null, tnow = performance.now(), flash = [];   /* the Timelapse in the Starship (0.8.348, Nick): only the notes made by the date show; each new one flares as it's born */
+  for (let i = 0; i < n; i++) { if (!vis[i] || (TLp && !born(i) && i !== ck)) continue; const dx = P[3 * i] - X0, dy = P[3 * i + 1] - Y0, dz = P[3 * i + 2] - Z0, xc = cyw * dx - syw * dz, z1 = syw * dx + cyw * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1;
     if (zc < 6) continue; const px = cx + F * xc / zc, py = cy + F * yc / zc; if (px < -20 || px > W + 20 || py < -20 || py > VH + 20) continue;
+    if (TLp && POP[i] && tnow - POP[i] < 1400 && tnow >= POP[i]) flash.push([i, px, py, (tnow - POP[i]) / 1400, zc]);
     if (hm) { const dd = (px - hm[0]) ** 2 + (py - hm[1]) ** 2; if (dd < hb) { hb = dd; hi = i; hp = [px, py]; } }
     const lv = N[i].level, r = Math.max(.5, Math.min(lv >= 4 ? 9 : 5, (lv >= 5 ? 26 : lv === 4 ? 18 : lv === 3 ? 12 : lv === 2 ? 7 : 5) * F / zc / 9));
     if (emoL && EMOI[i] && zc < 1500) { emoL.push([i, px, py, Math.max(11, Math.min(30, 9000 / zc)), zc, r]); continue; }
@@ -2747,6 +2753,9 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   for (const [key, a] of bins) { g.fillStyle = SPAL[key]; g.globalAlpha = .8; g.beginPath(); for (let q = 0; q < a.length; q += 3) { const r = a[q + 2]; if (r < 1.2) g.rect(a[q] - r, a[q + 1] - r, 2 * r, 2 * r); else { g.moveTo(a[q] + r, a[q + 1]); g.arc(a[q], a[q + 1], r, 0, 6.2832); } } g.fill(); }
   for (const [i, px, py, r] of bright) { const col = SPAL[SC[i]], s = r * 6; g.globalAlpha = .45; g.drawImage(sprite(col), px - s / 2, py - s / 2, s, s); g.globalAlpha = 1; g.fillStyle = i === ck ? "#ffffff" : col; g.beginPath(); g.arc(px, py, Math.max(1, r * .7), 0, 6.2832); g.fill(); }
   g.globalCompositeOperation = "source-over";
+  if (TLp) { for (const [i, px, py, p_, zc] of flash) { const col = ckCol(N[i].level), e = 1 - p_, R0 = Math.max(3, Math.min(14, 2600 / zc)); g.globalAlpha = .9 * e; g.strokeStyle = col; g.lineWidth = 1.5; g.beginPath(); g.arc(px, py, R0 + 26 * p_, 0, 6.2832); g.stroke();
+      g.globalAlpha = e; g.fillStyle = "#ffffff"; g.beginPath(); g.arc(px, py, Math.max(1.5, R0 * .5 * e), 0, 6.2832); g.fill(); }
+    /* the date, quiet, high in the sky */ const dl = senseDateLabel(senseStepStart != null ? senseStepStart : senseT); g.globalAlpha = .55; g.font = `600 30px ${font}`; g.textAlign = "center"; g.fillStyle = "#eef1ff"; g.fillText(dl, cx, Math.max(84, VH * .14)); g.textAlign = "left"; g.globalAlpha = 1; }
   if (emoL) { emoL.sort((a, b) => a[4] - b[4]); const far = emoL.splice(40); g.fillStyle = "#cfd8ee"; g.globalAlpha = .7; g.beginPath(); for (const q of far) g.rect(q[1] - 1, q[2] - 1, 2, 2); g.fill();   /* only the 40 nearest show their emoji */
     g.textAlign = "center"; g.textBaseline = "middle"; for (const [i, px, py, r] of emoL) { g.globalAlpha = 1; g.font = `${r}px ${font}`; g.fillText(EMOI[i], px, py); } g.textAlign = "left"; g.textBaseline = "alphabetic"; }
   CK.starHov = hi >= 0 && hi !== ck ? hi : -1;
@@ -2799,10 +2808,10 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   if (ck >= 0) { const pc = pr(P[3 * ck], P[3 * ck + 1], P[3 * ck + 2]); g.lineWidth = 1;
     const SL = CK.SL || {}, kc = j => SL[CK.kind.get(j) || "prop"] || "#a9b4c8";
     /* links as Starfield draws them: gentle curves in their link colours (above, below, up, related, other) */
-    g.lineWidth = 1.5; for (const it of CK.items) { if (it.none) continue; const pi = pr(it.x, it.y, it.z); if (!pi || !pc) continue; const mx = (pc[0] + pi[0]) / 2, my = (pc[1] + pi[1]) / 2, dx = pi[0] - pc[0], dy = pi[1] - pc[1];
+    g.lineWidth = 1.5; for (const it of CK.items) { if (it.none || (senseT != null && !born(it.i))) continue; const pi = pr(it.x, it.y, it.z); if (!pi || !pc) continue; const mx = (pc[0] + pi[0]) / 2, my = (pc[1] + pi[1]) / 2, dx = pi[0] - pc[0], dy = pi[1] - pc[1];
       const sh_ = ckShows(it), lk_ = it.i === (CK.items[CK.lock] || {}).i, cx_ = mx - dy * .14, cy_ = my + dx * .14;
       /* a thin dark casing under each line, so its color reads true over a bright nebula (0.8.308, Nick: a blue link looked green over the orange sky) */
-      if (sh_) { g.globalAlpha = .55; g.strokeStyle = "rgba(4,5,12,.9)"; g.lineWidth = 3.5; g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(cx_, cy_, pi[0], pi[1]); g.stroke(); g.lineWidth = 1.5; }
+      if (sh_) { g.globalAlpha = .3; g.strokeStyle = "rgba(4,5,12,.9)"; g.lineWidth = 2.6;   /* subtler (0.8.348, Nick: dark strokes crossing bright stars) */ g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(cx_, cy_, pi[0], pi[1]); g.stroke(); g.lineWidth = 1.5; }
       g.globalAlpha = sh_ ? (lk_ ? 1 : .9) : .08; g.strokeStyle = kc(it.i); g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(cx_, cy_, pi[0], pi[1]); g.stroke(); }
     /* Show the way home in the Starship (0.8.328, Nick): the fewest links from the note you're at back to Home (or the note you chose), drawn through the stars in the accent color, each stop named, the count under the end */
     if (BACON && CK.c >= 0) { try { const bp = baconPath(CK.c), b_ = baconPar(); if (bp && bp.length > 1) { const pts = bp.map(q => pr(P[3 * q], P[3 * q + 1], P[3 * q + 2])), cam = bp.map(q => ckCam(P[3 * q], P[3 * q + 1], P[3 * q + 2])), acc = css.accent || "#f5d76e";
@@ -2820,7 +2829,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     /* Collection links (coral) in the Starship too (0.8.343, Nick: the Link colors switches didn't reach Starfield): the note's collections, as coral lines with the same casing */
     if (COLLON && pc && CK.c >= 0) { try { const cc_ = collCoral(); g.save(); g.globalCompositeOperation = "source-over"; g.lineWidth = 1.5; for (const j of collOf(CK.c, true)) { if (j === CK.c || !vis[j]) continue; const pj = pr(P[3 * j], P[3 * j + 1], P[3 * j + 2]); if (!pj) continue;
         const mx = (pc[0] + pj[0]) / 2, my = (pc[1] + pj[1]) / 2, dx = pj[0] - pc[0], dy = pj[1] - pc[1], qx = mx - dy * .14, qy = my + dx * .14;
-        g.globalAlpha = .55; g.strokeStyle = "rgba(4,5,12,.9)"; g.lineWidth = 3.5; g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(qx, qy, pj[0], pj[1]); g.stroke();
+        g.globalAlpha = .3; g.strokeStyle = "rgba(4,5,12,.9)"; g.lineWidth = 2.6; g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(qx, qy, pj[0], pj[1]); g.stroke();
         g.globalAlpha = .85; g.strokeStyle = cc_; g.lineWidth = 1.5; g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(qx, qy, pj[0], pj[1]); g.stroke(); } g.restore(); } catch (_) { /* collections not ready */ } }
     CK.cPos = pc; if (pc) { g.font = `700 14px ${font}`; CK.noteBox = [pc[0] + 30, pc[1] - 10, g.measureText(N[ck].title).width + 12, 20]; } else CK.noteBox = null;
     if (pc) { /* its ring split by kind of link, the counts as arcs; then its name in yellow */ const cnt = ["up", "down", "upp", "rel"].map(k_ => [k_, [...CK.kind.values()].filter(v => v === k_).length]).filter(q => q[1]), tot = cnt.reduce((a, q) => a + q[1], 0);
@@ -5848,7 +5857,7 @@ function sfCam(from, to, ms, ease, arc, done){ const id = ++SFTRIP, t0 = perform
     const wx = from.wx + (to.wx - from.wx) * e, wy = from.wy + (to.wy - from.wy) * e; k = kk; tx = cx - wx * kk; ty = cy - wy * kk; render();
     if (p < 1) RAF(step); else { if (camBusy === tok) camBusy = 0; if (done) done(); } };
   RAF(step); }
-function sfShip(on){ const [fl, fr] = freeLR(), mx = (fl + fr) / 2, my = (isPhone() ? H * .48 : H) / 2;
+function sfShip(on){ SFNP = true; win.clearTimeout(sfShip.t); sfShip.t = win.setTimeout(() => { SFNP = false; }, 1600); const [fl, fr] = freeLR(), mx = (fl + fr) / 2, my = (isPhone() ? H * .48 : H) / 2;
   if (on) { if (view !== "stars" || SFSHIP) return; closePops(); const i = sel >= 0 && vis[sel] ? sel : ckCentre(); SFSHIP = { ckw: CKW, cam: { k, tx, ty } };
     const board = () => { if (!SFSHIP) return; CKW = "sf"; CK.sfIn = false; setView("cockpit"); win.setTimeout(() => { veilTo(0, 280); sfSwSync(); }, 60); };   /* quick (0.8.225, Nick: "if it only takes half a second… that's all we need") */
     if (i < 0 || S3D) { veilTo(1, 200); win.setTimeout(board, 210); return; }
@@ -5876,7 +5885,7 @@ function sfChart(){ if (view === "cockpit" && SFSHIP) { sfShip(false); return; }
 function sfSwPlace(){ if (sfSw.hidden) return; try { const m = $("#main").getBoundingClientRect(), c = cv.getBoundingClientRect();
   /* top right of the map, on the orbs' row (0.8.344, Nick: "maybe the switch needs to be further right?"); beside the orbs only when the row is too narrow for both */
   let r = null; if (orbBar && !orbBar.hidden) for (const ch of orbBar.children) { const q = ch.getBoundingClientRect(); if (!q.width) continue; if (!r || q.right > r.right) r = { right: q.right, top: q.top, height: q.height }; }
-  let rr = Math.max(0, Math.round(m.right - c.right + (view === "cockpit" ? 0 : sideW()))) + 16; { const wn = root.querySelector(".wm-name"); if (wn && wn.offsetParent && view !== "cockpit") { const q = wn.getBoundingClientRect(); if (q.width) rr = Math.max(rr, Math.round(m.right - q.left) + 14); } }   /* clear of the plugin's name on the chart */ const sw = sfSw.offsetWidth || 200, top = r ? Math.round(r.top - m.top + r.height / 2) : 20;
+  let rr = Math.max(0, Math.round(m.right - c.right + (view === "cockpit" ? 0 : sideW()))) + 16; { const wn = root.querySelector(".wm-name"); if (wn && wn.offsetParent) { const q = wn.getBoundingClientRect(); if (q.width) rr = Math.max(rr, Math.round(m.right - q.left) + 14); } }   /* clear of the plugin's name on the chart */ const sw = sfSw.offsetWidth || 200, top = r ? Math.round(r.top - m.top + r.height / 2) : 20;
   sfSw.classList.remove("sfbeside", "sfright");
   if (!r || m.width - rr - sw > r.right - m.left + 24) { sfSw.classList.add("sfright"); sfSw.setCssProps({ "--sfr": rr + "px", "--sft": top + "px" }); }
   else { sfSw.classList.add("sfbeside"); sfSw.setCssProps({ "--sfl": Math.round(r.right - m.left + 14) + "px", "--sft": top + "px" }); } } catch (_) { /* not laid out yet */ } }
@@ -5986,7 +5995,7 @@ function select(i, fromTrail){
   if (view === "kandinsky" && KSTY === "comp" && !LIVEQ) win.setTimeout(() => { if (!dead && view === "kandinsky" && KSTY === "comp" && sel >= 0 && sel !== KC.c && !KC.ids.includes(sel) && (KFOCUS = sel, true)) morph(true, () => fitTarget()); }, 0);   // a note outside the painting becomes its centre
   if (!LIVEQ && (EDITM || (EDS && (!EDS.left.el.hidden || EDS.left.col && EDS.left.path)))) win.setTimeout(() => { void openMain(sel); }, 0);
   if (BQCTX && i >= 0 && i !== sel) win.setTimeout(() => { void applyBQ(); }, 120);   // a base view that follows the picked note: refilter for the new one
-  if (i >= 0 && sensePlaying) tlWander();   // clicking a note while the timeline plays stops it, so you can wander
+  if (i >= 0 && sensePlaying && view !== "cockpit" && !SFNP) tlWander();   /* the Starship, and Ship ⇄ Chart, keep the Timelapse playing (0.8.348) */   // clicking a note while the timeline plays stops it, so you can wander
   if (rec && i >= 0 && rec.notes[rec.notes.length - 1] !== N[i].path) { rec.notes.push(N[i].path); syncRec(); }   // recording a tour
   if (i >= 0 && sel >= 0 && sel !== i) ctrHop(sel, i);
   if (!fromTrail && i >= 0 && sel >= 0 && sel !== i) { trail.push(sel); if (trail.length > TRAIL_MAX) trail.shift(); }
