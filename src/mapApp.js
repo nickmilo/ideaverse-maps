@@ -2100,7 +2100,7 @@ EXP.lincal = {
       ctx.textAlign = "left"; ctx.fillStyle = css.accent; ctx.font = `600 ${Math.max(14, Math.min(30, C*k*.7))}px ${css.mono}`; ctx.fillText(String(y), sx(0), sy(top - 46));
       if (LCTH) { const D = lcYear(y); if (D.theme) { const yw = ctx.measureText(String(y)).width, fs = Math.max(13, Math.min(26, C*k*.58)); ctx.font = `italic ${css.dw} ${fs}px ${css.display}`; ctx.fillStyle = css.ink; ctx.fillText("🎻 " + D.theme, sx(0) + yw + 18, sy(top - 46)); } }   /* the year's theme, from its Preview note (0.8.170) */
       ctx.textBaseline = "alphabetic"; lcYearUnder(yi, y, top); } },
-  legend: "Linear Calendar: a year as twelve rows, one per month, each day a box, with the weeks lined up down the page. The notes you made that day fill its box: maps and hubs first, in their level colors. Its menu: Years (drag the two handles; both on one year shows that year, ‹ › moves a year at a time; with several, the wheel scrolls through them and ⌘ + wheel zooms) and its shape: Whole or Half months (Half: each month on two rows, the 1st to the 15th and the 16th on, for a narrow pane), Life in weeks (a row a year, a box a week; with a birth year, the 90 years from it, the weeks lived shaded) or Rolling 30 days (up close, ending today; scroll up to step back a week at a time; as weeks, two rows of 15, or one line).",
+  legend: "Calendar: a year as twelve rows, one per month, each day a box, with the weeks lined up down the page. The notes you made that day fill its box: maps and hubs first, in their level colors. Its menu: Years (drag the two handles; both on one year shows that year, ‹ › moves a year at a time; with several, the wheel scrolls through them and ⌘ + wheel zooms) and its shape: Whole or Half months (Half: each month on two rows, the 1st to the 15th and the 16th on, for a narrow pane), Life in weeks (a row a year, a box a week; with a birth year, the 90 years from it, the weeks lived shaded) or Rolling 30 days (up close, ending today; scroll up to step back a week at a time; as weeks, two rows of 15, or one line).",
 };
 
 // Spiral: time as one line winding outward, a turn a year, starting at 12 o'clock and running clockwise, so the same date
@@ -6872,7 +6872,7 @@ if (host.onMove) host.onMove((a, b) => liveMove(a, b));
 
 // ---------- saved views: the whole state of the map (view, axis, filters, focus, note, camera) under a name ----------
 // Kept in this browser; "Export file" writes ideaverse-views.js, which the page also reads from its folder (file over app).
-const VIEW_NAME = {cockpit:"Starship", kandinsky:"Kandinsky", arena:"Arena", compass:"Compass", posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Linear Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
+const VIEW_NAME = {cockpit:"Starship", kandinsky:"Kandinsky", arena:"Arena", compass:"Compass", posters:"Posters", builder:"Base Builder", graph:"Obsidian", mosaic:"Mosaic", people:"People", ideaverse:"Ideaverse", planet:"Planet", quincunx:"Geometric", shelf:"Bookshelf", tree:"Tree", treemap:"Treemap", skyline:"Skyline", lincal:"Calendar", spiral:"Spiral", lifeline:"Lifeline", emergence:"Emergence", spacetime:"Space-Time", gravity:"Gravity", stars:"Starfield", sense:"Sensemakers", arc:"ARC", chord:"Chord"};
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
@@ -7539,7 +7539,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
   const VN = () => view === "cockpit" && SFSHIP ? "Starfield · Starship" : ({ cockpit: "Starship", kandinsky: "Kandinsky", arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
     chord: CSPH === "out" || CSPH === "in" ? "Tesla / Corona" : "Chord", quincunx: ({ square: "Square", hex: "Hexagon", mandala: "Mandala", octa: "Octahedron", shells: "Shells" })[GEO] || "Geometric",
-    shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Linear Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
+    shelf: "Bookshelf", posters: "Posters", builder: "Base Builder", graph: "Obsidian", ideaverse: "Ideaverse", mosaic: "Mosaic", people: "People", tree: "Tree", treemap: "Treemap", skyline: "Skyline", planet: "Planet · " + ({ flat: "Flat", table: "Tabletop", globe: "Globe" })[PMODE], lincal: "Calendar", spiral: "Spiral", lifeline: "Lifeline" })[view] || view;
   const CORE = new Set(["emergence", "spacetime", "ideaverse", "stars", "sense"]);
   // the current map's menu: its variants (Emergence, Starfield) and the options that belong to it alone
   const mo = $("#vsegms").createDiv({ cls: "mspop mapopts", attr: { id: "mapopts", role: "dialog", "aria-label": "This map" } }); mo.hidden = true;
@@ -7833,7 +7833,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       c2.onchange = () => { COLLON = c2.checked; save("iv-colllinks", COLLON); draw(); }; }   /* the picked note's collections as coral links (0.8.296, Nick) */
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); for (const o of Object.values(EDS)) if (o && o.el) { try { edLook(o.el); } catch (_) { /* not open */ } } if (host.linkColors) host.linkColors(); }; }   /* "Color all links" and the editors follow the switch (0.8.294) */
   // HUD links (0.8.143): the picked note's links down the right, as in the Cockpit
-  { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = HUDL; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "HUD links" });
+  { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = HUDL; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Links HUD" });
     const l2 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = HUDR; l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Show relevance scores" }); l2.hidden = !HUDL;
     c2.onchange = () => { HUDR = c2.checked; save("iv-hudr", HUDR); draw(); };
     /* names in their level's color instead of a dot before them (0.8.284, Nick) */
@@ -7846,7 +7846,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     c3.onchange = () => { HUDPV = c3.checked; save("iv-hudpv", HUDPV); if (!HUDPV) hudPv(-1); };
     cb.onchange = () => { HUDL = cb.checked; save("iv-hudl", HUDL); l2.hidden = l3.hidden = l4.hidden = l5.hidden = !HUDL; if (!HUDL) hudPv(-1); draw(); }; }
   /* Recents (0.8.237, Nick): the notes changed most lately, behind a tab on the right edge */
-  { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = RECON; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Recents" });
+  { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = RECON; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Recents HUD" });
     const r2 = DI.p.createDiv({ cls: "eorow ctrrk tchoice" }); r2.createSpan({ cls: "eol", text: "Show" }); const sl = r2.createEl("input", { type: "range", attr: { min: "5", max: "50", step: "1", "aria-label": "How many recent notes to show" } }); sl.value = String(RECN); const sv = r2.createSpan({ cls: "eov", text: String(RECN) }); r2.hidden = !RECON;
     sl.oninput = () => { RECN = +sl.value; sv.setText(String(RECN)); RECKEY = ""; recSync(); }; sl.onchange = () => save("iv-recn", RECN); sl.onclick = e => e.stopPropagation();
     const r6 = DI.p.createDiv({ cls: "eorow ctrrk tchoice" }); r6.createSpan({ cls: "eol", text: "Opacity" }); const so = r6.createEl("input", { type: "range", attr: { min: "0", max: "100", step: "1", "aria-description": "Recents panel opacity" } }); so.value = String(RECOP); const ov = r6.createSpan({ cls: "eov", text: RECOP + "%" }); r6.hidden = !RECON;
@@ -7960,13 +7960,13 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       const op = find("Opacity"); if (op) { const l_ = op.querySelector(".eol"); if (l_) l_.setText("HUD opacity"); }
       const help = { "Show all links": "Every link on the map, drawn faintly.", "Starfield link colors": "The map's link colors in Starfield's palette, with links below in red.", "Collection links (coral)": "The picked note's collections drawn as coral lines.",
         "Color all links by Idea Emergence": "Every link in your notes colored by how its note relates: up gold, related purple, above blue, below green, other properties coral.",
-        "HUD links": "The picked note's links in a panel on the right.", "Show relevance scores": RELHELP || "How close each linked note is, 100 for the closest.", "Colored names": "Each link's name in its line's color.", "Group property links": "Links that come only from properties go under a header per property.",
-        "Automatically see mini-preview on hover": "Hovering a row shows its note's preview without holding ⌘.", "Recents": "The notes you changed most lately, in a panel on the right.", "Emojis": "Each note's emoji before its name.", "Show time since modified": "How long ago each note changed.",
+        "Links HUD": "The picked note's links in a panel on the right.", "Show relevance scores": RELHELP || "How close each linked note is, 100 for the closest.", "Colored names": "Each link's name in its line's color.", "Group property links": "Links that come only from properties go under a header per property.",
+        "Automatically see mini-preview on hover": "Hovering a row shows its note's preview without holding ⌘.", "Recents HUD": "The notes you changed most lately, in a panel on the right.", "Emojis": "Each note's emoji before its name.", "Show time since modified": "How long ago each note changed.",
         "See-through tabs": "The tucked Recents and Links tabs follow the HUD's opacity, down to just an outline.", "Show orb tab names": "Each orb tab's note name under it.", "Contrails": "Your jumps from note to note, as fading vapor trails.",
         "Show the way home": "From the note you're on, the fewest links back to Home (or a note you choose).", "Show area and projects selector": "A panel to pick areas and projects; each one picked lights up its notes." };
       const order = [find("Show all links"), H("Link colors"), find("Starfield link colors"), find("Collection links"), find("Color all links by Idea Emergence"),
-        H("HUD"), find("Recents"), find("Show30") || kids.find(c => c.querySelector && c.querySelector('input[type="range"][min="5"]')), find("Emojis"), find("Show time since modified"), find("HUD links"), find("Show relevance scores"), find("Colored names"), find("Group property links"), find("Automatically see mini-preview"), op, tcl,
-        H("Editors"), find("Editor theme"), find("Editor mode"), find("Editor opacity"), find("Editor text size"), find("Note mini-previews"), find("Show orb tab names"),
+        H("HUD"), find("Recents HUD"), find("Show30") || kids.find(c => c.querySelector && c.querySelector('input[type="range"][min="5"]')), find("Emojis"), find("Show time since modified"), find("Links HUD"), find("Show relevance scores"), find("Colored names"), find("Group property links"), find("Automatically see mini-preview"), op, tcl,
+        H("Editors"), find("Editor theme"), find("Editor mode"), find("Editor opacity"), find("Editor text size"), H("Interface"), find("Note mini-previews"), find("Show orb tab names"),
         H("Wayfinding"), find("Contrails"), kids.find(c => c.querySelector && c.querySelector(".seg") && /Ship/.test(c.innerText || "")), find("Show the way home"), kids.find(c => c.classList.contains("bacto")), kids.find(c => c.classList.contains("bcfind")), find("Show area and projects selector")].filter(Boolean);
       const anchor = kids.find(c => c.classList.contains("thsec")) || null; for (const el of order) P.insertBefore(el, anchor);
       for (const el of order) { if (el.tagName !== "LABEL" || el.querySelector(".qh")) continue; const t = (el.innerText || el.textContent || "").trim(), k_ = Object.keys(help).find(h => t.startsWith(h)); if (k_) qHelp(el, help[k_]); }
@@ -8078,7 +8078,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
   // a narrow map: the main tabs that don't fit fold into More (from the right: Sensemakers, then Starfield, then Ideaverse), which becomes More maps, with them at the top
   // a small Lucide icon before each map's name in the maps menu
   const MICON = { gocockpit: "gauge", gokandinsky: "target", goarena: "circle-dashed", gocompass: "navigation", emergence: "layers", ideaverse: "orbit", stars: "sparkles", sense: "compass", gogravity: "circle-dot", gograph: "gem", gochord: "aperture", gocso: "sun", gocsi: "zap",
-    gotreemap: "layout-dashboard", gomosaic: "layout-grid", goshelf: "library", gobuilder: "table-2", golincal: "calendar-range", goposters: "image", gopeople: "users",
+    gotreemap: "layout-dashboard", gomosaic: "layout-grid", goshelf: "library", gobuilder: "table-2", golincal: "calendar-range", lincal: "calendar-range", gosense: "compass", goposters: "image", gopeople: "users",
     gogeosquare: "square", gogeohex: "hexagon", gogeomandala: "flower", gogeoocta: "diamond", gogeoshells: "globe", gospiral: "rotate-cw", golifeline: "activity",
     goplflat: "map", gopltable: "table", goplglobe: "earth", gotree: "tree-deciduous", goskyline: "building-2" };
   const micon = (el, name) => { if (!name || el.querySelector(":scope > .mic")) return; const s_ = doc.createElement("span"); s_.className = "mic"; s_.setAttribute("aria-hidden", "true"); setIcon(s_, name); el.prepend(s_); };
@@ -8103,7 +8103,9 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     if (over()) { root.dataset.tbwrap = "1"; root.dataset.findmini = ""; fold();
       if (tr) for (let q = MOV.length - 1; q >= 0 && over(); q--) tr.insertBefore(MOV[q], tr.firstChild); }
     $("#vmorepop").querySelectorAll(":scope > .vfoldb").forEach(x => x.remove()); vfold.hidden = false;
-    for (const b of MAIN) { const c = $("#vmorepop").createEl("button", { cls: "chip", text: [...b.childNodes].filter(nd => !(nd instanceof Element && nd.classList.contains("ivm-sr"))).map(nd => nd.textContent).join("").replace(/\s*▾\s*$/, "").trim(), attr: { type: "button" } });   // the tab's own name, not its hidden label (0.8.66) if (tabV(view) === b.dataset.v) c.classList.add("on");
+    /* the top four (0.8.311, Nick): Emergence, Ideaverse, Starfield and Calendar ("the coveted 4 spot"); Sensemakers moves down to head the list below */
+    const TOP4 = [...MAIN.filter(b => b.dataset.v !== "sense").map(b => [b.dataset.v, [...b.childNodes].filter(nd => !(nd instanceof Element && nd.classList.contains("ivm-sr"))).map(nd => nd.textContent).join("").replace(/\s*▾\s*$/, "").trim()]), ["lincal", "Calendar"]];
+    for (const [tv, tl_] of TOP4) { const b = { dataset: { v: tv } }; const c = $("#vmorepop").createEl("button", { cls: "chip", text: tl_, attr: { type: "button" } });   // the tab's own name, not its hidden label (0.8.66) if (tabV(view) === b.dataset.v) c.classList.add("on");
       c.classList.add("vfoldb"); c.dataset.v = b.dataset.v; micon(c, MICON[b.dataset.v]); vfold.before(c);
       c.onclick = e => { e.stopPropagation(); closePops(); driftStop(); if (tabV(view) !== b.dataset.v) setView(b.dataset.v); syncTB(); }; } };
   // refit only when the toolbar's width or the map changes: refitting on every redraw let a borderline width flip back and forth
@@ -8133,7 +8135,10 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     const t0 = MP.querySelector(":scope > .pt"); if (t0) t0.after(Object.assign(doc.createElement("div"), { className: "vfold vfold0" }));
     { const ex = MP.querySelector(":scope > details"); if (ex) { const exd = Object.assign(doc.createElement("div"), { className: "vfold" }); ex.before(exd);
         // Nick's order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Tesla, Corona, Chord, Base Builder (the quick keys follow it)
-        for (const id of ["gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
+        { const gs = doc.createElement("button"); gs.className = "chip"; gs.id = "gosense"; gs.textContent = "Sensemakers"; gs.setAttribute("aria-label", "Your notes placed by what they are and how they're written");
+          gs.onclick = () => { closePops(); driftStop(); setView("sense"); }; micon(gs, MICON.gosense); MP.appendChild(gs);
+          const lc_ = MP.querySelector("#golincal"); if (lc_) { const park = root.createDiv(); park.hidden = true; park.appendChild(lc_); } }   /* Calendar is one of the top four now (0.8.311) */
+        for (const id of ["gosense", "gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
         // Compass, Arena and Kandinsky wait under Experimental → Unfinished for now (Nick, 0.8.67)
         { let at = MP.querySelector("#goskyline"); for (const id of ["gocompass", "goarena", "gokandinsky", "gocockpit"]) { const el = MP.querySelector("#" + id); if (el && at) { at.after(el); at = el; } } }
         { const uf = MP.querySelector("#goskyline"), ud = uf && uf.closest("details"), es = ex.querySelector(":scope > summary"); if (ud && ud !== ex && es) es.after(ud); }   /* Unfinished first under Experimental (Nick, 0.8.80) */
@@ -8148,7 +8153,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       const cur = () => [...MP.children].filter(c_ => c_ === div || (c_.classList.contains("chip") && c_.id)).map(c_ => c_ === div ? SEP : c_.id);
       const endDiv = exd_ && exd_.previousElementSibling && exd_.previousElementSibling.classList.contains("vfold") && exd_.previousElementSibling !== div ? exd_.previousElementSibling : null, END = endDiv || exd_ || null;   /* the divider above Experimental stays put */
       const apply = ord => { const anchor = END; for (const id of ord) { const el = id === SEP ? div : MP.querySelector(":scope > #" + id); if (el) MP.insertBefore(el, anchor); } };
-      const DEF = cur(); { const o = pref("iv-maporder", null); if (Array.isArray(o) && o.length) { const have = new Set(DEF); apply([...o.filter(x => have.has(x)), ...DEF.filter(x => !o.includes(x))]); } }
+      const DEF = cur(); { let o = pref("iv-maporder", null); if (Array.isArray(o) && o.length && !o.includes("gosense")) o = ["gosense", ...o]; if (Array.isArray(o) && o.length) { const have = new Set(DEF); apply([...o.filter(x => have.has(x)), ...DEF.filter(x => !o.includes(x))]); } }
       const keys = () => { if (MP.hidden) return; MP.querySelectorAll(".mkey").forEach(x => x.remove()); for (const [k_, ch] of KEYED()) ch.createSpan({ cls: "mkey", text: k_, attr: { "aria-hidden": "true" } }); };
       /* Experimental's groups: each keeps its own order */
       const GS = [...MP.querySelectorAll("details")].filter(d => d.querySelector(":scope > .chip[id]")), gkey = d => ((d.querySelector(":scope > summary") || {}).textContent || "").trim();
@@ -8172,7 +8177,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       rst.onclick = e => { e.stopPropagation(); rst.hidden = true; cf.hidden = false; };
       no.onclick = e => { e.stopPropagation(); cf.hidden = true; rst.hidden = false; };
       yes.onclick = e => { e.stopPropagation(); apply(DEF); save("iv-maporder", undefined); for (const d of GS) gapply(d, DEFX.get(d)); save("iv-maporderx", undefined); cf.hidden = true; rst.hidden = true; keys(); }; }
-    const chipFor = () => { const id = { gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", lincal: "golincal", spiral: "gospiral", lifeline: "golifeline",
+    const chipFor = () => { const id = { sense: "gosense", gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", spiral: "gospiral", lifeline: "golifeline",
         tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" || CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
       return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };
     // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
