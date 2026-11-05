@@ -1705,7 +1705,7 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm .ivm-recents{position:absolute;top:50px;padding:14px 6px 22px 0;right:calc(var(--hr,0px) + 14px);z-index:6;width:max-content;max-width:340px;max-height:calc(100% - 120px);display:flex;flex-direction:column;overflow:visible;filter:drop-shadow(0 8px 18px rgba(0,0,0,.25))}
 /* the curved background: an SVG shape behind the rows (0.8.240) */
 .ivm .ivm-recents > svg.rcbg{position:absolute;inset:0;pointer-events:none}
-.ivm .ivm-recents > svg.rcbg path{fill:color-mix(in srgb,var(--bg) 90%,transparent);stroke:var(--line);stroke-width:1}
+.ivm .ivm-recents > svg.rcbg path{fill:color-mix(in srgb,var(--bg) var(--rcop,90%),transparent);stroke:var(--line);stroke-width:1}
 .ivm .ivm-recents > :not(svg){position:relative}
 .ivm .ivm-recents .rch{transform:translateX(var(--rx,0px)) rotate(var(--rh,0rad));transform-origin:right center;border-bottom:0;padding-left:var(--rpl,12px);padding-right:var(--rpr,12px)}
 .ivm .ivm-recents[hidden]{display:none}
