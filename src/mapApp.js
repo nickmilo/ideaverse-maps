@@ -45,9 +45,11 @@ const REL = new Set(); for (const [a,b,t] of E) if (t === 4) { REL.add(a*n + b);
 const EKIND = new Map(); for (const [a,b,t] of E) { const key = a*n + b, o = EKIND.get(key); if (o == null || (t === 1 || t === 4 || t === 5) && !(o === 1 || o === 4)) EKIND.set(key, t); }
 // Link colors: the up property yellow, related purple, other properties slate; links in the body go above (up) or below (down) by level
 function edgeColor(a, b, upward){ const k = EKIND.get(a*n + b);
+  if (k == null && COLLON && a === sel && collSet(a).has(b)) return collCoral();   /* one of the picked note's collections (0.8.296) */
   // k is the kind as the active note (a) wrote it: 1 up, 4 related, 5 any other property
   if (k === 1) return css.upp; if (k === 4) return css.rel; if (k === 5) return css.prop;
   return upward ? css.up : css.down; }
+function collCoral(){ const light = root.dataset.theme === "paper" || root.dataset.theme === "softpaper" || (root.dataset.theme === "obsidian" && !doc.body.classList.contains("theme-dark")); return light ? "#d0582f" : "#ff9e7d"; }
 // is j "above" hl? a higher level is; between notes of one level, a flat map goes by which sits higher on screen,
 // but a map you turn (Tesla, Corona, the Ideaverse, Starfield 3D, the Planetarium, the PKM globe, 3D Geometric) goes by a fixed order (more links, then file order), so a link keeps its color as the map turns
 function upOf(hl, j){ if (N[j].level !== N[hl].level) return N[j].level > N[hl].level;
@@ -103,6 +105,12 @@ const emoAny = () => Object.keys(EMON).some(k_ => EMON[k_] === true);
 // and only a note with none falls back to the base column (Settings → Emoji labels)
 let EMOF = (() => { const o = pref("iv-emofold", null); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; })();
 let EMOI = null;   // note index → its emoji
+/* collection links on the map (0.8.296, Nick: "what if Collection property links showed up as Coral on the graph?"): a picked note's collections (Concepts, Things…) draw as coral links,
+   as the editors color them; Display → Collection links. They're drawn only, never counted: scores, levels and layouts don't change */
+let COLLON = pref("iv-colllinks", true) !== false;
+const CIDX = new Map(); N.forEach((d, i) => { if (d.archive) return; const k_ = String(d.title).toLowerCase(); if (!CIDX.has(k_)) CIDX.set(k_, i); });
+const collOf = i => { if (!COLLON || i < 0) return []; const r_ = []; for (const c of N[i].collections || []) { const j = CIDX.get(String(c).replace(/^\[\[|\]\]$/g, "").split("/").pop().toLowerCase()); if (j != null && j !== i && !r_.includes(j)) r_.push(j); } return r_; };
+let COLLS = { i: -2, s: new Set() }; const collSet = i => { if (COLLS.i !== i || COLLS.on !== COLLON) COLLS = { i, on: COLLON, s: new Set(collOf(i)) }; return COLLS.s; };
 let VISV = 0, RECCK = true;   // bumps whenever what shows changes (Recent caches by it)
 const emoBuild = () => { const has = Object.keys(EMOF).length > 0; if (!has && !EMO) { EMOI = null; return; }
   EMOI = N.map(d => { if (has) { let q = d.path; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (EMOF[q]) return EMOF[q]; } } return EMO ? EMO.get(d.path) : undefined; }); };
@@ -4613,13 +4621,13 @@ function render(){
   let lit = null;
   if (hl >= 0) {
     lit = new Set([hl]);
-    const nb = new Set([...out[hl], ...inn[hl]].filter(j => VV(j) || (sphOn() && vis[j] && shownAt(j))));   // Corona: links to the far side of the globe still draw
+    const nb = new Set([...out[hl], ...inn[hl], ...(hl === sel ? collSet(hl) : [])].filter(j => VV(j) || (sphOn() && vis[j] && shownAt(j))));   /* collections too, while picked (0.8.296) */   // Corona: links to the far side of the globe still draw
     const many = Math.min(1, Math.max(.22, Math.sqrt(80 / Math.max(1, nb.size))));   // a hub's hundreds of links each draw fainter, so they don't fuse into solid beams
     // Starfield: a hub's links to the small stars of one galaxy travel as one bundle, ending where those stars sit
     const bundle = view === "stars" && nb.size > 60 ? new Map() : null;
     for (const j of nb) {
       lit.add(j);
-      if (bundle && N[j].level < 5 && BOD[j] >= 0) { const g = bundle.get(BOD[j]) || bundle.set(BOD[j], []).get(BOD[j]); g.push(j); continue; }
+      if (bundle && N[j].level < 5 && BOD[j] >= 0 && !(hl === sel && collSet(hl).has(j))) { const g = bundle.get(BOD[j]) || bundle.set(BOD[j], []).get(BOD[j]); g.push(j); continue; }
       if ((view === "arena" && ARSTY !== "ring") || view === "kandinsky") continue;   // the board wires its own links; Kandinsky's tiles say it without lines (its traces light up instead)
       const upward = upOf(hl, j);
       ctx.strokeStyle = edgeColor(hl, j, upward); ctx.globalAlpha = (sel >= 0 ? .75 : .5)*many; ctx.lineWidth = sel >= 0 ? 1.4 : 1;
@@ -7771,6 +7779,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
         b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
     { const l_ = g.createEl("label", { cls: "mini lcemo ctrrk top" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = ORBN; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Show orb tab names" }); c_.onchange = () => { ORBN = c_.checked; save("iv-orbn", ORBN); syncOrbs(); }; } }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
+    { const l2 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = COLLON; l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Collection links (coral)" });
+      c2.onchange = () => { COLLON = c2.checked; save("iv-colllinks", COLLON); draw(); }; }   /* the picked note's collections as coral links (0.8.296, Nick) */
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); legend(); if (sel >= 0) select(sel, true); draw(); for (const o of Object.values(EDS)) if (o && o.el) { try { edLook(o.el); } catch (_) { /* not open */ } } if (host.linkColors) host.linkColors(); }; }   /* "Color all links" and the editors follow the switch (0.8.294) */
   // HUD links (0.8.143): the picked note's links down the right, as in the Cockpit
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = HUDL; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "HUD links" });
