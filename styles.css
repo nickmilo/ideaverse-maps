@@ -1869,3 +1869,4 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm.ivm #vlist.vlist2 details.vgrp > summary .t{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .ivm.ivm #vlist.vlist2 details.vgrp > summary:hover .t{color:var(--ink)}
 .ivm.ivm #vlist.vlist2 details.vgrp > summary::marker,.ivm.ivm #vlist.vlist2 details.vgrp > summary::-webkit-details-marker{color:var(--muted);font-size:9px}
+.ivm.ivm .dlist .ctrrk.tcsub{padding-left:52px}   /* under HUD opacity, a step further in (0.8.315) */

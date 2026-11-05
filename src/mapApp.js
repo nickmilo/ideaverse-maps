@@ -7960,7 +7960,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
   /* Display, grouped (0.8.309, Nick: "consider how to reorder that menu, like we recently did for Starfield's"): mini headers over Link colors, HUD, Editors and Wayfinding,
      the same mini switches, a "?" on each. Built where each switch lives, then moved into place once the menu is whole */
   win.setTimeout(() => { try { const P = DI.p, kids = [...P.children], find = t => kids.find(c => (c.innerText || c.textContent || "").trim().startsWith(t)), H = t => { const d = doc.createElement("div"); d.className = "dmh"; d.textContent = t; return d; };
-      const tcl = doc.createElement("label"); tcl.className = "mini lcemo ctrrk"; { const c_ = tcl.createEl("input", { type: "checkbox" }); c_.checked = TABCLR; tcl.createEl("i", { cls: "sw" }); tcl.createSpan({ text: "See-through tabs" });
+      const tcl = doc.createElement("label"); tcl.className = "mini lcemo ctrrk tcsub"; { const c_ = tcl.createEl("input", { type: "checkbox" }); c_.checked = TABCLR; tcl.createEl("i", { cls: "sw" }); tcl.createSpan({ text: "See-through tabs" });
         c_.onchange = () => { TABCLR = c_.checked; save("iv-tabclr", TABCLR); root.classList.toggle("tabclr", TABCLR); }; }
       const op = find("Opacity"); if (op) { const l_ = op.querySelector(".eol"); if (l_) l_.setText("HUD opacity"); }
       const help = { "Show all links": "Every link on the map, drawn faintly.", "Starfield link colors": "The map's link colors in Starfield's palette, with links below in red.", "Collection links (coral)": "The picked note's collections drawn as coral lines.",
