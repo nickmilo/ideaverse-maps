@@ -3,7 +3,8 @@
    (click to swap back); a pinned sidekick note below it (a MOC, usually). Each support and the sidekick has a links drawer that slides out over its
    right side. Deck Mini is the primary note alone with its drawer, made to pop out into its own window for meetings.
    Each Deck tab keeps its own notes in its own saved state, so a Mini and the full Deck (and the main map) never fight over settings. */
-import { ItemView, MarkdownRenderer, TFile, setIcon } from "obsidian";
+import { ItemView, MarkdownRenderer, Notice, TFile, normalizePath, setIcon } from "obsidian";
+import { FolderPicker, NotePicker } from "./view.js";
 
 export const DECK_TYPE = "ideaverse-deck";
 
@@ -82,7 +83,7 @@ export class DeckView extends ItemView {
   ensureGraph() { if (this.G || this.gLoading) return; this.gLoading = true;
     void this.plugin.getGraph().then(g => { const idx = new Map(), ek = new Map(); for (const nd of g.nodes) idx.set(nd.path, nd); const byId = new Map(g.nodes.map(nd => [nd.id, nd]));
       for (const [a, b, k] of g.edges) { const A = byId.get(a), B = byId.get(b); if (A && B) ek.set(A.path + "\u0000" + B.path, k); }
-      const rk = new Map(); [...g.nodes].filter(nd => !nd.archived).sort((a, b) => (b.score || 0) - (a.score || 0)).forEach((nd, q) => rk.set(nd.path, q + 1)); this.G = { idx, ek, rk }; this.gLoading = false; this.render(); }).catch(() => { this.gLoading = false; }); }
+      const rk = new Map(); [...g.nodes].filter(nd => !nd.archived).sort((a, b) => (b.score || 0) - (a.score || 0)).forEach((nd, q) => rk.set(nd.path, q + 1)); this.G = { idx, ek, rk, w: (() => { const W = (g.settings && g.settings.weights) || {}, sv = this.plugin.store.get("iv-score"); const w0 = { in: W.body_in ?? 1, out: W.body_out ?? .6, up: W.up_in ?? .3, both: W.both ?? .8, coll: W.coll_in ?? 0 }; return sv && sv.w ? Object.assign(w0, sv.w) : w0; })() };   /* the weights the map scores with, your Scoring changes included */ this.gLoading = false; this.render(); }).catch(() => { this.gLoading = false; }); }
   kindOf(from, to, o, i) { const G = this.G; if (!G) return ""; const k = G.ek.get(from + "\u0000" + to), kb = G.ek.get(to + "\u0000" + from);
     if (k === 1) return "upp"; if (k === 4 || kb === 4) return "rel"; if (k === 5 || k === 3) return "prop"; if (kb === 1) return "down";
     const A = G.idx.get(from), B = G.idx.get(to); if (!A || !B) return ""; if (B.level !== A.level) return B.level > A.level ? "up" : "down"; return (B.score || 0) >= (A.score || 0) ? "up" : "down"; }
@@ -101,23 +102,64 @@ export class DeckView extends ItemView {
   opt(k) { const v = this.plugin.store.get("iv-deck-" + k); return v == null ? true : v === true; }
   optD(k, d) { const v = this.plugin.store.get("iv-deck-" + k); return v == null ? d : v === true; }
   /* the strip under a note's header, as in the map's editors: level · in · out · rank (0.9.3, Nick) */
-  /* the note strip, as in the map's editors (0.9.7, Nick: "as full-featured as the normal" one): L# · up · related │ in · out │ #rank · folder; each pill opens its list */
-  strip(host, path, slot) { this.ensureGraph(); const nd = this.G && this.G.idx.get(path), rl = this.app.metadataCache.resolvedLinks || {}, st = this.plugin.settings;
-    const names = v => (Array.isArray(v) ? v : String(v || "").split(",")).map(x => String(x).trim().toLowerCase()).filter(Boolean), UP = names(st.upProps || "up"), RE = names(st.relatedProps || "related");
-    const f = this.file(path), fm = (f && this.app.metadataCache.getFileCache(f) || {}).frontmatter || {}, fmL = keys => { const out = []; for (const [k, v] of Object.entries(fm)) if (keys.includes(k.toLowerCase())) for (const x of Array.isArray(v) ? v : [v]) { const m = /\[\[([^\]|#]+)/.exec(String(x || "")); const t = m && this.app.metadataCache.getFirstLinkpathDest(m[1], path); if (t) out.push(t.path); } return [...new Set(out)]; };
-    const L = { up: fmL(UP), related: fmL(RE), out: Object.keys(rl[path] || {}).filter(t => t !== path && t.endsWith(".md")), in: Object.entries(rl).filter(([k, m]) => k !== path && m && m[path]).map(([k]) => k) };
-    const b = host.createDiv({ cls: "ivd-strip" }), dr = host.createDiv({ cls: "ivd-sdrop" }), key = "strip:" + (slot || path), open = this.stripOpen && this.stripOpen[key];
+  /* the note strip, the map's strip pill for pill (0.9.7; 0.9.10 from the kit's spec, Nick: "refer to documentation to get this right"):
+     L# · up · related │ in · out │ #rank · folder. Up and related always show (dimmed when empty); every pill opens its list in place, each row with its level
+     (click = primary, ⌘ = a support slot); up and related end in a + that links a note straight into the property; the rank opens the four numbers,
+     why the level, the score table and Emergence → above / below; the folder shows its full path on hover and, clicked, moves the note */
+  strip(host, path, slot) { this.ensureGraph(); const G = this.G, nd = G && G.idx.get(path), rl = this.app.metadataCache.resolvedLinks || {}, st = this.plugin.settings;
+    const names = v => (Array.isArray(v) ? v : String(v || "").split(",")).map(x => String(x).trim()).filter(Boolean), UP = names(st.upProps || "up"), RE = names(st.relatedProps || "related");
+    const f = this.file(path), fm = (f && this.app.metadataCache.getFileCache(f) || {}).frontmatter || {}, low = a => a.map(x => x.toLowerCase());
+    const fmL = keys => { const out = [], K = low(keys); for (const [k, v] of Object.entries(fm)) if (K.includes(k.toLowerCase())) for (const x of Array.isArray(v) ? v : [v]) { const m = /\[\[([^\]|#]+)/.exec(String(x || "")); const t = m && this.app.metadataCache.getFirstLinkpathDest(m[1], path); if (t) out.push(t.path); } return [...new Set(out)]; };
+    const lvOf = p => { const n_ = G && G.idx.get(p); return n_ ? n_.level : 0; }, scOf = p => { const n_ = G && G.idx.get(p); return n_ ? n_.score || 0 : 0; };
+    const outL = Object.keys(rl[path] || {}).filter(t => t !== path && t.endsWith(".md")), inL = Object.entries(rl).filter(([k, m]) => k !== path && m && m[path]).map(([k]) => k);
+    const L = { up: fmL(UP), related: fmL(RE), out: outL, in: inL }, nb = [...new Set([...outL, ...inL])], me = nd ? nd.level : 0, ms = nd ? nd.score || 0 : 0;
+    L.above = nb.filter(p => lvOf(p) > me || (lvOf(p) === me && scOf(p) > ms)); L.below = nb.filter(p => !L.above.includes(p));
+    const key = "strip:" + (slot || path), S_ = (this.stripOpen ||= {}), so = S_[key] || {}, open = so.o || "", sub = so.s || "";
+    const set_ = (o, s_) => { S_[key] = { o, s: s_ }; this.render(); };
+    const b = host.createDiv({ cls: "ivd-strip" }), dr = host.createDiv({ cls: "ivd-sdrop" });
     if (nd) { const lv = b.createSpan({ cls: "ivd-lv", text: "L" + nd.level }); lv.dataset.l = String(nd.level); }
-    const chip = (k, label, cls) => { const c = b.createEl("button", { cls: "ivd-chip " + cls + (open === k ? " on" : ""), text: label, attr: { type: "button" } });
-      c.onclick = e => { e.stopPropagation(); (this.stripOpen ||= {})[key] = open === k ? "" : k; this.render(); }; };
+    const chip = (k, label, cls) => { const c = b.createEl("button", { cls: "ivd-chip " + cls + (open === k ? " on" : ""), text: label, attr: { type: "button", "aria-expanded": String(open === k) } });
+      c.onclick = e => { e.stopPropagation(); set_(open === k ? "" : k, ""); }; };
     const bar = () => b.createSpan({ cls: "ivd-sbar" });
     chip("up", L.up.length ? `${L.up.length} up` : "up", "ivd-sup" + (L.up.length ? "" : " ivd-sz")); chip("related", L.related.length ? `${L.related.length} related` : "related", "ivd-srel" + (L.related.length ? "" : " ivd-sz"));
     bar(); chip("in", `${L.in.length} in`, ""); chip("out", `${L.out.length} out`, ""); bar();
-    const r = this.G && this.G.rk.get(path); if (r) b.createSpan({ cls: "ivd-rk", text: "#" + r.toLocaleString() });
-    { const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : ""; const fo = b.createSpan({ cls: "ivd-fold" }); setIcon(fo.createSpan({ cls: "ivd-fold-i" }), "folder"); fo.createSpan({ text: dir ? dir.split("/").pop() : "Vault root" }); }
-    if (!open || !L[open]) { dr.hidden = true; return; }
-    dr.createDiv({ cls: "ivd-h", text: `${open.toUpperCase()} · ${L[open].length}` }); const ls = dr.createDiv({ cls: "ivd-sdl" });
-    for (const p of L[open].sort((a, c) => this.title(a).localeCompare(this.title(c)))) this.row(ls, p, "", "var(--ivd-link)"); }
+    const rk = G && G.rk.get(path); if (nd) chip("score", rk ? `#${rk.toLocaleString()}` : (nd.score || 0).toFixed(1), "ivd-sscore");
+    { const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "", fo = b.createSpan({ cls: "ivd-fold is-click" }); setIcon(fo.createSpan({ cls: "ivd-fold-i" }), "folder"); fo.createSpan({ text: dir ? dir.split("/").pop() : "Vault root" });
+      let tp = null; fo.addEventListener("pointerenter", () => { if (tp) tp.remove(); const r = fo.getBoundingClientRect(), cr = host.getBoundingClientRect(); tp = host.createDiv({ cls: "ivd-tip", text: dir || "The top of the vault" }); tp.style.left = Math.round(r.left - cr.left) + "px"; tp.style.top = Math.round(r.bottom - cr.top + 5) + "px"; });
+      fo.addEventListener("pointerleave", () => { if (tp) { tp.remove(); tp = null; } });
+      fo.onclick = e => { e.stopPropagation(); if (tp) { tp.remove(); tp = null; } void this.moveNote(path); }; }
+    const rowL = (box, p) => { const r = this.row(box, p, "", "var(--ivd-link)", lvOf(p) ? "L" + lvOf(p) : ""); r.addClass("ivd-srow"); return r; };
+    if (open === "score" && nd) { const f2 = x => (Math.round(x * 100) / 100).toFixed(2), LN = x => Math.log1p(x), w = (G.w || {});
+      dr.createDiv({ cls: "ivd-h", text: `#${(rk || 0).toLocaleString()} IN ${nd.archive ? "THE ARCHIVE" : "THE IDEAVERSE"} · SCORE ${f2(nd.score || 0)}` });
+      const g = dr.createDiv({ cls: "ivd-nums" }); for (const [v, t_] of [[nd.body_in || 0, "linked from"], [nd.body_out || 0, "links to"], [nd.up_in || 0, "link up to it"], [(nd.score || 0).toFixed(1), "link score"]]) { const c_ = g.createDiv(); c_.createEl("b", { text: String(v) }); c_.createSpan({ text: t_ }); }
+      dr.createDiv({ cls: "ivd-why", text: `Level ${nd.level}: ${this.levelWhy(path, nd)}` });
+      if (nd.s) { const [a, b_, u, c] = nd.s, rows = [["Links in", a, w.in, (w.in || 0) * LN(a)], ["Links out", b_, w.out, (w.out || 0) * LN(b_)], ["Links both in and out", a && b_ ? `${a} in · ${b_} out` : "—", w.both, (w.both || 0) * Math.sqrt(LN(a) * LN(b_))]];
+        if (!nd.archive) rows.push(["Notes that link up to this note", u, w.up, (w.up || 0) * LN(u)], ["Notes in its collection", c, w.coll, (w.coll || 0) * LN(c)]);
+        const t = dr.createDiv({ cls: "ivd-tab" }); for (const h of ["", "count", "weight", "adds"]) t.createSpan({ cls: "ivd-th", text: h });
+        for (const [l, ct, wt, ad] of rows) { const z = !ad ? " z" : ""; t.createSpan({ cls: "ivd-tl" + z, text: l }); t.createSpan({ cls: "ivd-tn" + z, text: String(ct) }); t.createSpan({ cls: "ivd-tn" + z, text: "×" + (+(wt || 0)).toFixed(2) }); t.createSpan({ cls: "ivd-tn" + z, text: f2(ad) }); }
+        t.createSpan({ cls: "ivd-tl ivd-tt", text: "Score" }); t.createSpan(); t.createSpan(); t.createSpan({ cls: "ivd-tn ivd-tt", text: f2(nd.score || 0) }); }
+      if (L.above.length || L.below.length) { const em = dr.createDiv({ cls: "ivd-em" }); em.createSpan({ cls: "ivd-h", text: "EMERGENCE" });
+        for (const [k, lab] of [["above", "above"], ["below", "below"]]) { if (!L[k].length) continue; const c = em.createEl("button", { cls: "ivd-chip ivd-" + k + (sub === k ? " on" : ""), text: `${L[k].length} ${lab}`, attr: { type: "button" } }); c.onclick = e => { e.stopPropagation(); set_("score", sub === k ? "" : k); }; }
+        if (sub && L[sub].length) { const ls = dr.createDiv({ cls: "ivd-sdl ivd-sd-" + sub }); for (const p of L[sub].sort((x, y) => lvOf(y) - lvOf(x) || scOf(y) - scOf(x))) rowL(ls, p); } }
+      return; }
+    const list = open && L[open] ? L[open] : null, prop_ = open === "up" || open === "related";
+    if (!list || (!list.length && !prop_)) { dr.hidden = true; return; }
+    dr.createDiv({ cls: "ivd-h" + (open === "up" ? " ivd-h-up" : open === "related" ? " ivd-h-rel" : ""), text: list.length ? `${open.toUpperCase()} · ${list.length}` : open.toUpperCase() });
+    const ls = dr.createDiv({ cls: "ivd-sdl" }); for (const p of list.sort((a, c) => this.title(a).localeCompare(this.title(c)))) rowL(ls, p);
+    if (prop_) { const ad = dr.createEl("button", { cls: "ivd-sadd", attr: { type: "button", "aria-label": open === "up" ? "Link up to another note" : "Add a related note" } }); setIcon(ad, "plus");
+      ad.onclick = async e => { e.stopPropagation(); const have = new Set(list), items = []; for (const [p, n_] of (G ? G.idx : new Map())) if (p !== path && !have.has(p) && !n_.archive) items.push({ path: p, title: n_.title || this.title(p), s: n_.score || 0 });
+        items.sort((a, c) => c.s - a.s); const t = this.title(path), p_ = await new Promise(res => new NotePicker(this.app, items, res, open === "up" ? `${t}: link up to…` : `${t}: related to…`).open()); if (!p_) return;
+        const r = await this.addProp(path, p_, open === "up" ? UP[0] || "up" : RE[0] || "related"), t_ = this.title(p_);
+        new Notice(r === "dup" ? `${t} already has ${t_} in ${open}.` : r ? `${t} → ${open}: ${t_}` : "Couldn't add the link."); window.setTimeout(() => this.render(), 300); }; } }
+  levelWhy(path, nd) { for (const l of this.app.workspace.getLeavesOfType("ideaverse-maps")) { const m = l.view && l.view.map; if (m && m.levelRule) { const r = m.levelRule(path); if (r) return r; } }
+    const w = nd.why || ""; return w ? w.charAt(0).toUpperCase() + w.slice(1) + "." : ""; }
+  async addProp(path, linkPath, key) { const t = this.file(path), l = this.file(linkPath); if (!t || !l) return false; const link = `[[${this.app.metadataCache.fileToLinktext(l, t.path, true)}]]`, base = s_ => String(s_).replace(/^\[\[|\]\]$/g, "").split("|")[0].trim(); let dup = false;
+    await this.app.fileManager.processFrontMatter(t, fm => { const k = Object.keys(fm).find(x => x.toLowerCase() === key.toLowerCase()) || key, cur = fm[k] == null || fm[k] === "" ? [] : Array.isArray(fm[k]) ? fm[k] : [fm[k]];
+      if (cur.some(x => base(x) === base(link))) { dup = true; return; } fm[k] = [...cur, link]; }); return dup ? "dup" : true; }
+  async moveNote(path) { const f = this.file(path); if (!f) return false; const dir = await new Promise(res => new FolderPicker(this.app, res, `Move "${f.basename}" to…`, true).open()); if (!dir) return false;
+    const d = dir === "/" ? "" : normalizePath(dir); if (d && !this.app.vault.getAbstractFileByPath(d)) await this.app.vault.createFolder(d);
+    const to = normalizePath(d ? `${d}/${f.name}` : f.name); if (to === f.path) return false; if (this.app.vault.getAbstractFileByPath(to)) { new Notice(`There's already a ${f.name} in ${d || "the vault root"}.`); return false; }
+    await this.app.fileManager.renameFile(f, to); return true; }
   optN() { const v = +this.plugin.store.get("iv-deck-recn"); return v >= 5 && v <= 50 ? v : 30; }
   setOpt(k, v) { this.plugin.store.set("iv-deck-" + k, v); for (const l of this.app.workspace.getLeavesOfType(DECK_TYPE)) if (l.view instanceof DeckView) l.view.render(); }
   recents(n) { return this.app.vault.getMarkdownFiles().sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, n); }

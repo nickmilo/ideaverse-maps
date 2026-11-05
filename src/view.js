@@ -5,7 +5,7 @@ import { Component, FuzzySuggestModal, ItemView, MarkdownRenderer, MarkdownView,
 const SAVED_NAME = "Maps of the Ideaverse - saved views.json";
 
 // Arena (0.8.41): pick a note for an empty slot, from the notes on the map
-class NotePicker extends FuzzySuggestModal {
+export class NotePicker extends FuzzySuggestModal {
   constructor(app, items, done, ph) { super(app); this.items = items; this.done = done; this.picked = false;
     this.setPlaceholder(ph || "Put a note in this slot"); this.setInstructions([{ command: "↵", purpose: "choose" }, { command: "esc", purpose: "cancel" }]); }
   getItems() { return this.items; }
@@ -13,7 +13,7 @@ class NotePicker extends FuzzySuggestModal {
   onChooseItem(it) { this.picked = true; this.done(it.path); }
   onClose() { super.onClose(); window.setTimeout(() => { if (!this.picked) this.done(null); }, 0); }
 }
-class FolderPicker extends FuzzySuggestModal {
+export class FolderPicker extends FuzzySuggestModal {
   constructor(app, done, ph, noNote) {
     super(app); this.done = done; this.picked = false; this.noNote = !!noNote;
     this.setPlaceholder(ph || "Where should saved views and tours live? Pick a folder or type a new one");
