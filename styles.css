@@ -1908,3 +1908,6 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .ivm-sfsw.sfright{left:auto;right:var(--sfr);top:var(--sft);transform:translateY(-50%)}   /* top right, on the orbs' row (0.8.344) */
 .ivm.ivm.ivm[data-view="builder"] header.tb2 #mapopts{max-width:min(400px,calc(100vw - 48px))}   /* Base Builder's menu, narrower again (0.8.344, Nick: "another 30% or so") */
 .ivm[data-view="cockpit"] .wm-name{z-index:3;color:#c9d2ff}   /* the name shows in the Starship too, above its own canvas (0.8.348, Nick) */
+/* Starship Orbit: Idea (the note you're at) or Ideaverse (the whole sky) (0.8.349) */
+.ivm #driftbar .ckosc{display:none}
+.ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftbar .ckosc{display:inline-flex;margin-left:6px}
