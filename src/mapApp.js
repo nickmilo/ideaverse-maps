@@ -103,7 +103,7 @@ const emoAny = () => Object.keys(EMON).some(k_ => EMON[k_] === true);
 // and only a note with none falls back to the base column (Settings → Emoji labels)
 let EMOF = (() => { const o = pref("iv-emofold", null); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; })();
 let EMOI = null;   // note index → its emoji
-let VISV = 0, RECCK = false;   // bumps whenever what shows changes (Recent caches by it)
+let VISV = 0, RECCK = true;   // bumps whenever what shows changes (Recent caches by it)
 const emoBuild = () => { const has = Object.keys(EMOF).length > 0; if (!has && !EMO) { EMOI = null; return; }
   EMOI = N.map(d => { if (has) { let q = d.path; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (EMOF[q]) return EMOF[q]; } } return EMO ? EMO.get(d.path) : undefined; }); };
 emoBuild();
@@ -1125,7 +1125,7 @@ function morph(animate, cam){
   RAF(step);
 }
 let camBusy = 0;
-function setView(v){ if (v === "cockpit" && view !== "cockpit") RECCK = false; win.setTimeout(() => { ckView(); if (typeof sfSwSync === "function") sfSwSync(); try { RECKEY = ""; recSync(); } catch (_) { /* not built yet */ } if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
+function setView(v){ if (v === "cockpit" && view !== "cockpit") RECCK = true;   /* Recents arrives open in the Starship now that it shares the HUD (0.8.292, Nick; tucked on arrival since 0.8.273) */ win.setTimeout(() => { ckView(); if (typeof sfSwSync === "function") sfSwSync(); try { RECKEY = ""; recSync(); } catch (_) { /* not built yet */ } if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }
