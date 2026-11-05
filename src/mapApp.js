@@ -2995,7 +2995,7 @@ function ckLockNote(j){ let q = CK.items.findIndex(it => it.i === j); if (q < 0 
   CK.lock = q; CK.auto = false; }
 function ckHit(x, y){ let b = -1, bz = 1e9; CK.items.forEach((it, q) => { if (it.zc <= 1 || !ckShows(it)) return; if (x >= it.sx - it.sw / 2 && x <= it.sx + it.sw / 2 && y >= it.sy - it.sh / 2 && y <= it.sy + it.sh / 2 && it.zc < bz) { b = q; bz = it.zc; } }); return b; }
 win.setTimeout(() => { if (!dead) ckView(); }, 0);
-function ckView(){ ckEl(); if (view !== "cockpit" && SFSHIP) { CKW = "sf"; SFSHIP = null; } if (view !== "cockpit") ckEditClose(); if (view !== "cockpit" && CK.wd) ckWander(false); if (CKX.emo && !EMOI) void loadEmo(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
+function ckView(){ ckEl(); if (view !== "cockpit" && SFSHIP) { CKW = "sf"; SFSHIP = null; } if (view === "cockpit" && !SFSHIP && CKW === "sf") SFSHIP = { ckw: CKW, cam: null };   /* the Starship reached any other way (a reload, Back, a saved view) is Starfield's too, with its Starship | Chart switch (0.8.342) */ if (view !== "cockpit") ckEditClose(); if (view !== "cockpit" && CK.wd) ckWander(false); if (CKX.emo && !EMOI) void loadEmo(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
   if (want) { CK.c = -2; ckSync(); CK.last = win.performance.now(); RAF(ckTick); } }
 // Wander Mode in the Cockpit (0.8.103, Nick: "bounce around to pointing at different notes, flying around, then jumping to the next note"):
 //   Links: turn toward a linked note, fly there on autopilot, linger, then the next link (a trail that backtracks at dead ends)
