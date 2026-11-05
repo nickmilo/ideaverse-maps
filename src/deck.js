@@ -183,7 +183,7 @@ export class DeckView extends ItemView {
       const pop = top.createDiv({ cls: "ivd-pop" }); pop.hidden = true;
       for (const [k, t] of [["rel", "Show relevance scores"], ["age", "Show time since modified"], ["col", "Color links by Idea Emergence"], ["strip-p", "Level strip on the primary note"], ["strip-s", "Level strip on the support notes"], ["strip-side", "Level strip on the sidekick"]]) {
         if (S.mini && k.startsWith("strip-") && k !== "strip-p") continue;
-        const l = pop.createEl("label", { cls: "ivd-sw" }), cb = l.createEl("input", { type: "checkbox" }); cb.checked = this.optD(k, !k.startsWith("strip-") || k === "strip-p"); l.createEl("i"); l.createSpan({ text: t }); cb.onchange = () => this.setOpt(k, cb.checked); }
+        const l = pop.createEl("label", { cls: "ivd-sw" }), cb = l.createEl("input", { type: "checkbox" }); cb.checked = this.optD(k, k !== "strip-side"); l.createEl("i"); l.createSpan({ text: t }); cb.onchange = () => this.setOpt(k, cb.checked); }
       { const l = pop.createDiv({ cls: "ivd-sw ivd-rng" }); l.createSpan({ text: "Recents" }); const r = l.createEl("input", { type: "range" }); r.min = "5"; r.max = "50"; r.step = "1"; r.value = String(this.optN()); const v = l.createEl("b", { text: String(this.optN()) });
         r.oninput = () => v.setText(r.value); r.onchange = () => this.setOpt("recn", +r.value); }
       if (!S.mini) { const r_ = pop.createEl("button", { cls: "ivd-reset", text: "Reset column widths", attr: { type: "button" } }); r_.onclick = () => { S.leftW = 340; S.hudW = 230; S.rightW = 380; this.save(); this.render(); }; }
@@ -219,7 +219,7 @@ export class DeckView extends ItemView {
     { const Hi = H.createDiv({ cls: "ivd-hudin" }); this.hudEl = Hi; this.hud(Hi, P, false); }   /* content inside, so a refresh keeps the grip on H */
     /* right: two support slots; the focused one is taller */
     for (const i of [0, 1]) { const p_ = S.sup[i], c = this.card(R, "ivd-sup" + (S.focus === i ? " ivd-focus" : ""), "SUPPORT", p_, "s" + i,
-        { strip: this.optD("strip-s", false), nav: this.navBtns("s" + i), btns: p_ ? [this.drawerBtn("s" + i), ["x", "Close", () => { this.setSlot("s" + i, null); this.save(); this.render(); }]] : [], drawer: true, drop: p => this.openSupport(p, i) });
+        { strip: this.optD("strip-s", true), nav: this.navBtns("s" + i), btns: p_ ? [this.drawerBtn("s" + i), ["x", "Close", () => { this.setSlot("s" + i, null); this.save(); this.render(); }]] : [], drawer: true, drop: p => this.openSupport(p, i) });
       if (p_) keep("s" + i); c.addEventListener("pointerdown", () => { if (S.focus !== i) { S.focus = i; this.save(); R.querySelectorAll(".ivd-sup").forEach((el, j) => el.toggleClass("ivd-focus", j === i)); window.setTimeout(() => this.onResize(), 260); } }, true); }
     /* every column can be made wider or narrower within limits (0.9.2 the sidekick; 0.9.3 all of them, Nick): a grip on the left column's right edge, and on the left edges of the HUD and the supports */
     const grip = (host, k, side, sign) => { const g = host.createDiv({ cls: "ivd-grip ivd-grip-" + side, attr: { "aria-label": "Drag to resize" } });
