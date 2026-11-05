@@ -3003,7 +3003,7 @@ function ckView(){ ckEl(); if (view !== "cockpit" && SFSHIP) { CKW = "sf"; SFSHI
 //   Drift: cruise slowly, the lock passing from link to link as you look at each, then fly to the last one
 // Started with ▶ under Animations → Wander Mode (or P, or the Cockpit's ⚙); any key, drag or scroll takes the stick back.
 let CKWM = ["links", "jumps", "drift"].includes(pref("iv-ckwm", "links")) ? pref("iv-ckwm", "links") : "links";
-function ckWander(on){ if (on) { CK.wd = { phase: "linger", t0: win.performance.now() - 1e5, seen: new Set([CK.c]), stack: [], cyc: 0 }; CK.wmsg = `Wander · ${({ links: "Links", jumps: "Random", drift: "Link & Wonder" })[CKWM]}`; }
+function ckWander(on){ if (on) { CK.wd = { phase: "linger", t0: win.performance.now() - 1e5, seen: new Set([CK.c]), stack: [], cyc: 0 }; CK.wmsg = `Wander · ${({ links: "Links", jumps: "Random", drift: "Wonder" })[CKWM]}`; }
   else { CK.wd = null; CK.wmsg = ""; CK.auto = false; CK.hyper = 0; } }
 function ckWanderPick(){ const W_ = CK.wd, c = CK.c; if (c < 0) return -1;
   if (CKWM === "jumps") { for (let k_ = 0; k_ < 60; k_++) { const j = Math.floor(Math.random() * n); if (vis[j] && j !== c && N[j].level >= 2 && !W_.seen.has(j)) return j; } return -1; }
@@ -6749,7 +6749,7 @@ syncPlay();
    in place of Random, Trails and Maps, which don't apply there; the seconds slider is the same Pace */
 let ckwmSync = () => {};
 { const ps = $("#playseg"), cs = doc.createElement("div"); cs.className = "seg ckwseg"; cs.setAttribute("role", "group"); cs.setAttribute("aria-label", "Starship Wander mode"); ps.after(cs);
-  for (const [v, t_, tip] of [["links", "Links", "Fly from note to linked note"], ["jumps", "Random", "Hyperspace jumps across the whole sky"], ["drift", "Link & Wonder", "A slow cruise, looking from note to note"]]   /* Nick's names (0.8.339) */) {
+  for (const [v, t_, tip] of [["links", "Links", "Fly from note to linked note"], ["jumps", "Random", "Hyperspace jumps across the whole sky"], ["drift", "Wonder", "A slow cruise, looking from note to note"]]   /* Nick's names (0.8.339) */) {
     const b = doc.createElement("button"); b.dataset.w = v; b.textContent = t_; b.setAttribute("aria-label", tip); cs.appendChild(b);
     b.onclick = () => { CKWM = v; save("iv-ckwm", v); ckwmSync(); if (CK.wd) { ckWander(false); ckWander(true); } }; }
   const s0 = ckwmSync; ckwmSync = () => { s0(); cs.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.w === CKWM))); }; ckwmSync(); }
@@ -6760,7 +6760,7 @@ let ckwmSync = () => {};
   const body = dock.createDiv({ cls: "anibody" });
   const SECS = [["time", "Timelapse", $("#timebar"), $("#tlplay")], ["wander", "Wander Mode", $("#playbar"), $("#pplay")], ["orbit", "Orbit", $("#driftbar"), $("#dplay")]];
   /* a "?" on Wander Mode and Orbit that explains their choices, for the map you're on (0.8.338, Nick) */
-  const AHELP = { wander: () => view === "cockpit" ? "Links: fly from the note you're at to one of its links, linger, then on to the next.\n\nRandom: hyperspace jumps across the whole sky, to notes far from here.\n\nLink & Wonder: a slow cruise, looking from note to note without landing.\n\nThe seconds set how long the ship stays with each note. With Orbit on too, the ship circles each note while it lingers."
+  const AHELP = { wander: () => view === "cockpit" ? "Links: fly from the note you're at to one of its links, linger, then on to the next.\n\nRandom: hyperspace jumps across the whole sky, to notes far from here.\n\nWonder: a slow cruise, looking from note to note without landing.\n\nThe seconds set how long the ship stays with each note. With Orbit on too, the ship circles each note while it lingers."
       : "Random: jump to any note on the map.\n\nTrails: walk from a note to one it links to, and on.\n\nMaps: stay on the same note; each step shows it on another map.\n\nThe seconds set how long each step lasts.",
     orbit: () => view === "cockpit" ? "The ship circles the note you're at, mostly left or right, now and then climbing or diving about 30°, and never quite level.\n\nCalm, Slow and Lively set the speed. G starts and stops it."
       : "The map drifts on its own: flat maps glide and breathe; globes and 3D maps turn.\n\nCalm, Slow and Lively (or Earth, Mercury and LYT Speed on a globe) set the speed. O starts and stops it." };
