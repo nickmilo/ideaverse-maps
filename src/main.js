@@ -2,7 +2,6 @@ import { Plugin, TFile, normalizePath } from "obsidian";
 import { MapView, VIEW_TYPE } from "./view.js";
 import { registerBases } from "./bases.js";
 import { registerEmbeds } from "./embed.js";
-import { registerDevLayout } from "./devlayout.js";
 import { registerLinkColors } from "./linkcolor.js";
 import { MapsSettingTab, detectDefaults } from "./settings.js";
 import { DEFAULTS, EXTRACT_VERSION, scanVault } from "./scan.js";
@@ -31,7 +30,8 @@ export default class IdeaverseMapsPlugin extends Plugin {
     this.addSettingTab(new MapsSettingTab(this.app, this));
     registerBases(this);   // the map as a view inside any base (Obsidian 1.10+)
     registerLinkColors(this);   // every link in every note colored by Idea Emergence, when Display asks (0.8.234)
-    registerDevLayout(this);   // ⌘⌥⌃K: move any map anywhere in the maps menu (0.8.205)
+    /* the dev layout (⌘⌥⌃K) is retired (0.8.351, Nick): its saved menu layout is cleared, so the maps menu is the default for everyone: Emergence, Ideaverse, Starfield, Calendar */
+    for (const k of ["iv-devlayout", "iv-devon"]) if (this.store.get(k) != null) this.store.set(k, undefined);
     registerEmbeds(this);   // a map inside a note: a ```moti code block, or ![[name.moti]] (0.8.171)
 
     // offer a rescan when notes change (watched only once the vault has loaded, so startup doesn't count)

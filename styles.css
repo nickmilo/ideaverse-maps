@@ -1609,10 +1609,6 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card .carddrop .sdh.sdh-up::before,.ivm-card .carddrop .sdh.sdh-rel::before{content:"";display:inline-block;width:14px;height:0;border-top:2px solid var(--upp, var(--color-yellow));vertical-align:middle;margin:0 8px 2px 0}
 .ivm-card .carddrop .sdh.sdh-rel::before{border-top-color:var(--rel, var(--color-purple))}
 /* Dev layout (0.8.205): a pink light on the maps button while it's on, and the drop line */
-.ivm.motidev-on #vmore{position:relative}
-.ivm.motidev-on #vmore::after{content:"";position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:#e8538a;box-shadow:0 0 6px #e8538a}
-.ivm #vmorepop .motidev-line{position:absolute;right:6px;height:2px;background:#e8538a;border-radius:1px;pointer-events:none;z-index:5}
-.ivm #vmorepop.motidev details,.ivm #vmorepop.motidev .vfold:not(.vfold0){cursor:grab}
 /* up and related are always in the strip; empty, they're dimmed (0.8.207) */
 .ivm-card .cardstrip .schip.sz{opacity:.45;border-style:dashed}
 .ivm-card .cardstrip .schip.sz:hover,.ivm-card .cardstrip .schip.sz.on{opacity:1}

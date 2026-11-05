@@ -2709,6 +2709,8 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
 const CKBF = { t: null, m: new Map() };
 function ckBornFrac(b){ if (senseT == null) return 1; if (CKBF.t !== senseT) { CKBF.t = senseT; CKBF.m.clear(); } let f = CKBF.m.get(b); if (f != null) return f;
   const ms = b.members || []; let k_ = 0, t_ = 0; for (const i of ms) { if (!vis[i]) continue; t_++; if (TV[i] <= senseT) k_++; } f = t_ ? Math.sqrt(k_ / t_) : 1; CKBF.m.set(b, f); return f; }
+/* distance in light-years on a declared scale (0.8.351, Nick): the whole Ideaverse is 100 ly across (the sky spans about 40,000 of the Starship's units) */
+const ckLy = d => { const ly = d / 400; return (ly < 10 ? ly.toFixed(1) : String(Math.round(ly))) + " ly"; };
 function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devicePixelRatio || 1, P = sf.P;
   g.save(); g.beginPath(); g.rect(0, 0, W, VH); g.clip(); g.globalCompositeOperation = "lighter";
   const pr = (x, y, z) => { const [xc, yc, zc] = ckCam(x, y, z); return zc > 12 ? [cx + F * xc / zc, cy + F * yc / zc, zc] : null; };
@@ -3275,7 +3277,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
   if (lk) { const col = "#ffcf5a"; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1.6;
     if (lk.zc > 8 && lk.sx > 0 && lk.sx < W && lk.sy > 0 && lk.sy < VH) { const w2 = lk.sw / 2 + 6, h2 = lk.sh / 2 + 6, cl = Math.max(6, Math.min(16, lk.sw * .12));
       for (const [sx_, sy_] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.beginPath(); g.moveTo(lk.sx + sx_ * w2, lk.sy + sy_ * h2 - sy_ * cl); g.lineTo(lk.sx + sx_ * w2, lk.sy + sy_ * h2); g.lineTo(lk.sx + sx_ * w2 - sx_ * cl, lk.sy + sy_ * h2); g.stroke(); }
-      const [xc, yc, zc] = ckCam(lk.x, lk.y, lk.z), dist = Math.hypot(xc, yc, zc); g.font = `600 10px ${font}`; g.textBaseline = "top"; g.fillText(`${CK.auto ? "AUTOPILOT · " : ""}${dist > 999 ? (dist / 1000).toFixed(1) + "k" : Math.round(dist)}`, lk.sx - w2, lk.sy + h2 + 4); }
+      const [xc, yc, zc] = ckCam(lk.x, lk.y, lk.z), dist = Math.hypot(xc, yc, zc); g.font = `600 10px ${font}`; g.textBaseline = "top"; g.fillText(`${CK.auto ? "AUTOPILOT · " : ""}${ckLy(dist)}`, lk.sx - w2, lk.sy + h2 + 4); }
     else { const [xc, yc] = ckCam(lk.x, lk.y, lk.z), a = Math.atan2(yc, xc), ex = cx + Math.cos(a) * Math.min(cx - 30, (VH / 2) - 30) * 1.0, ey = cy + Math.sin(a) * ((VH / 2) - 30);
       g.save(); g.translate(ex, ey); g.rotate(a); g.beginPath(); g.moveTo(12, 0); g.lineTo(-6, -7); g.lineTo(-6, 7); g.closePath(); g.fill(); g.restore(); } }
   /* attitude ring: L1–L5 round the centre, the note's level lit */
@@ -7777,7 +7779,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       grp("Cosmotic elements", ["names", "gas", "gasp", "orb", "lines", "twinkle", "turn", "haze", "emo"]); }
     /* the game, near the bottom (0.8.302, Nick: "too prioritized right now") */
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
-      for (const [k_, v_] of [["R W  ↑ ↓", "forward, back"], ["T", "impulse: a slow, steady cruise"], ["X V  ← →", "pan left, right"], ["S F", "orbit left, right round the note"], ["G", "Orbit on or off: circle the note, climbing and diving now and then"], ["E D", "orbit over, under the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
+      for (const [k_, v_] of [["R W  ↑ ↓", "forward, back"], ["T", "impulse: a slow, steady cruise"], ["X V  ← →", "pan left, right"], ["S F", "orbit left, right round the note"], ["G", "Orbit on or off: circle the note, climbing and diving now and then"], ["ly", "distances in light-years: the whole Ideaverse is 100 ly across"], ["E D", "orbit over, under the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
         const r_ = box.createDiv({ cls: "ckkey" }); r_.createEl("kbd", { text: k_ }); r_.createSpan({ text: v_ }); } }
     /* the game after Controls (0.8.332, Nick: "The true/false mini toggle below the controls") */
     { const l_ = fa.createEl("label", { cls: "mini lcemo ckgame" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKG; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "True or false (a game: right answers jump you there)" }); qHelp(l_, "A quiz about the notes around you. Answer right and the ship jumps to the note in question.");
