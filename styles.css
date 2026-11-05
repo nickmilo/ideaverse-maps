@@ -1813,3 +1813,11 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"] *,.ivm-card.ivm-
    Recents alone near the top, as it was; Links alone lower, centered in the space below the top fifth; both together centered */
 .ivm .ivm-recents.rconly{top:50px;bottom:auto;margin:0;max-height:calc(100% - 120px)}
 .ivm .ivm-recents.lkonly{top:22%;bottom:0;margin:auto 0;max-height:calc(78% - 40px)}
+/* the HUD's outline fades with its opacity (0.8.287, Nick); only the dividers under the Recents and Links headers stay at any opacity */
+.ivm .ivm-recents > svg.rcbg path:not(.rcdiv){stroke:color-mix(in srgb,var(--line) var(--rcop,90%),transparent)}
+/* two panels on one arc (0.8.287, Nick): Recents at --rct, Links in its own slot at --lkt; each scrolls inside its own height */
+.ivm .ivm-recents,.ivm .ivm-recents.paired{top:var(--rct,50px);bottom:auto;margin:0;height:auto;max-height:calc(100% - var(--rct,50px) - 40px)}
+.ivm .ivm-recents.ivm-lkhud{top:var(--lkt,260px);max-height:calc(100% - var(--lkt,260px) - 24px)}
+.ivm .ivm-recents .rcl{margin-top:6px}
+/* a row scrolled to the top or bottom edge of a list fades out instead of being cut (0.8.287) */
+.ivm .ivm-recents .rcl{-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 10px,#000 calc(100% - 6px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 10px,#000 calc(100% - 6px),transparent 100%)}
