@@ -1907,3 +1907,4 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 /* Starship Orbit: Idea (the note you're at) or Ideaverse (the whole sky) (0.8.349) */
 .ivm #driftbar .ckosc{display:none}
 .ivm.ivm.ivm.ivm.ivm[data-view="cockpit"] #driftbar .ckosc{display:inline-flex;margin-left:6px}
+.ivm.ivm.ivm .ivm-recents .lkg{color:var(--lgc,#a9b4c8)}   /* group headers take their rows' color (0.8.354) */
