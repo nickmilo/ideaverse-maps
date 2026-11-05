@@ -1752,3 +1752,8 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm .ivm-recents .rct{min-width:0;overflow:hidden;text-overflow:clip}
 .ivm .ivm-recents.narrow .rcemo span{display:none}
 .ivm .ivm-recents.narrow .rcemo{gap:0}
+/* the right edge's tabs, top to bottom (0.8.267, Nick): Recents, the support note, Links, so none sits on another */
+.ivm .dtab.rectab{top:16%}
+.ivm .edtab-right{top:39%}
+.ivm .dtab.hudtab{top:66%}
+.ivm .dtab.rectab,.ivm .edtab-right,.ivm .dtab.hudtab{max-height:22%}
