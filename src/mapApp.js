@@ -7891,6 +7891,9 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     const sw_ = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "A panel to pick areas and projects; each one picked lights up its notes" } }); const cb = sw_.createEl("input", { type: "checkbox" }); sw_.createEl("i", { cls: "sw" }); sw_.createSpan({ text: "Show area and projects selector" });
     sw_.hidden = !EFF.length; cb.checked = !pnl.hidden; cb.onchange = () => { if (cb.checked === pnl.hidden) eb.click(); };   // Display stays open as the panel comes and goes
     new MutationObserver(() => { cb.checked = !pnl.hidden; }).observe(pnl, { attributes: true, attributeFilter: ["hidden"] }); }
+  /* a side panel opening or closing (Efforts, scores, calls) moves the map's right edge: the Recents and Links tabs follow it at once, not on the next map change (0.8.312, Nick: "the Recents and Links tabs get stuck") */
+  { const reHR = () => win.setTimeout(() => { if (dead) return; recSync(); if (HUDTAB && !HUDTAB.hidden) { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); HUDTAB.setCssProps({ "--hr": Math.max(0, Math.round(mr.right - c.right + (view === "cockpit" ? 0 : sideW()))) + "px" }); } draw(); }, 0);
+    for (const id of ["#effpanel", "#scorepanel", "#callpanel"]) { const p_ = $(id); if (p_) new MutationObserver(reHR).observe(p_, { attributes: true, attributeFilter: ["hidden"] }); } }
   const thSec = DI.p.createDiv({ cls: "fsec thsec" }); thSec.createDiv({ cls: "pt", text: "Theme" });
   // Assign emojis: a folder tree like Filter → Folders; pick an emoji for a folder and every note in it gets it (the deepest folder wins)
   { const EG = ["📅","🗓️","🗺️","🧭","💡","✨","🧠","🌱","🌳","🔥","⭐","🌍","📚","📖","✍️","📝","🎬","🍿","🎵","🎙️","🎨","📷","🎮","🏛️","👤","👥","💼","💰","🎯","🚀","🛠️","⚙️","🧪","🔭","🎓","📦","🗂️","🏠","❤️","🏃","🧘","🍎","☕","🌊","⛰️","🌙","☀️","🌀"];
