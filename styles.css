@@ -1809,3 +1809,7 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"] *,.ivm-card.ivm-
 .ivm .ivm-recents .rcn.lkc{color:var(--lc)}
 /* the HUD sits in the middle of the map's height (0.8.285, Nick: "vertically center the combined HUD"); it grows up and down from there */
 .ivm .ivm-recents,.ivm .ivm-recents.paired{top:0;bottom:0;margin:auto 0;height:fit-content;max-height:calc(100% - 64px)}
+/* where the HUD sits (0.8.286, Nick: "the user has a UX sense of reliability that the links are always going to be a little bit lower on the right-hand side"):
+   Recents alone near the top, as it was; Links alone lower, centered in the space below the top fifth; both together centered */
+.ivm .ivm-recents.rconly{top:50px;bottom:auto;margin:0;max-height:calc(100% - 120px)}
+.ivm .ivm-recents.lkonly{top:22%;bottom:0;margin:auto 0;max-height:calc(78% - 40px)}

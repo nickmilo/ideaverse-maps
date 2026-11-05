@@ -5213,7 +5213,7 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
   /* one panel, two sections (0.8.284, Nick): Recents on top, Links under it; either can tuck to its own tab and the other stays */
   const recShow = on && recIsOpen(), lkShow = lkOn() && !HUDCOL;
   RECTAB.hidden = !on || recIsOpen(); RECEL.hidden = !(recShow || lkShow); RECTAB.setCssProps({ "--hr": R_ + "px" }); RECEL.setCssProps({ "--hr": R_ + "px" });
-  RECEL.classList.toggle("paired", recShow && lkShow);
+  RECEL.classList.toggle("paired", recShow && lkShow); RECEL.classList.toggle("rconly", recShow && !lkShow); RECEL.classList.toggle("lkonly", lkShow && !recShow);   /* where it sits depends on what shows (0.8.286, Nick) */
   if (on && !recIsOpen()) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); }
   if (!(recShow || lkShow)) { if (RECHV >= 0 && !RECEL.contains(RECHVEL)) { RECHV = -1; RECHVEL = null; } return; }
   const L = recShow ? recList() : [], D_ = lkShow ? hudData(sel) : null;
