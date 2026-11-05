@@ -1101,7 +1101,10 @@ function placePlaybar(){ const pb = $("#playbar"), tb = $("#timebar");   // Sens
   const db = $("#driftbar"); db.hidden = false;   // Orbit runs on every map (Earth, a fixed tilt, shows only on 3D maps)
   db.style.top = !docked && !isPhone() && pb.style.top ? (pb.offsetTop + pb.offsetHeight + 8) + "px" : ""; syncTB(); }
 on(win, "resize", () => { placePlaybar(); placeAnitab(); });
-function syncTimebar(){ const on = true; win.setTimeout(placePlaybar, 0);
+/* Starfield (Star Chart and the Starship) keeps its own Timelapse effect, Swirl in to start (0.8.361, Nick); the other maps keep theirs */
+function SFV(){ return view === "stars" || view === "cockpit"; }
+function sfxSync(){ const ok = ["comet", "rain", "swirl", "swirlin"]; if (SFV()) { const v = pref("iv-sfx-sf", "swirlin"); senseFx = ok.includes(v) ? v : "swirlin"; } else { const v = pref("iv-sfx", "comet"); senseFx = ok.includes(v) ? v : "comet"; } }
+function syncTimebar(){ sfxSync(); const on = true; win.setTimeout(placePlaybar, 0);
   root.querySelectorAll("#tlstep button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === senseStep)));
   root.querySelectorAll("#tlfx button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === senseFx)));
   root.querySelectorAll("#tlspeed button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === senseSpeed))); $("#timebar").hidden = !on; if (!on) { senseStop(); if (senseT != null) { senseT = null; senseTrail = []; } }
@@ -7244,7 +7247,7 @@ $("#tlplay").onclick = sensePlay;
 root.querySelectorAll("#tlstep button").forEach(b => b.onclick = () => { if (senseStep === b.dataset.s) return;
   const t = senseT, was = sensePlaying; senseStop(); senseStep = b.dataset.s; save("iv-sstep", senseStep); SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; syncTimebar();
   if (t != null) { const j = SSTEPS.findIndex(x => x > t); senseSet(j < 0 ? SSTEPS.length - 1 : Math.max(0, j - 1), true); if (was) sensePlay(); } else $("#tlrange").value = SSTEPS.length - 1; });
-root.querySelectorAll("#tlfx button").forEach(b => b.onclick = () => { senseFx = b.dataset.f; save("iv-sfx", senseFx); syncTimebar(); });
+root.querySelectorAll("#tlfx button").forEach(b => b.onclick = () => { senseFx = b.dataset.f; save(SFV() ? "iv-sfx-sf" : "iv-sfx", senseFx); syncTimebar(); });
 root.querySelectorAll("#tlspeed button").forEach(b => b.onclick = () => { senseSpeed = b.dataset.p; save("iv-sspeed", senseSpeed); syncTimebar(); });
 // Sensemaking: which years it shows
 { const a = $("#sy0"), b = $("#sy1"); a.min = b.min = SLMIN; a.max = b.max = NOW_Y; $("#sylo").textContent = SLMIN; $("#syhi").textContent = NOW_Y; a.value = SY0; b.value = SY1;
