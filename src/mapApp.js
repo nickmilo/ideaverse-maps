@@ -5433,6 +5433,7 @@ const PVN_ = () => PVL[PVLV];
 const CARDMAPS = new Set(["stars", "emergence", "spacetime", "compass", "arena"]);
 const edOn = () => EDITM && !!host.editCard && !isPhone();   // every map since 0.8.68 (Nick); maps you turn keep their camera (edCam)
 const edCam = () => !(S3D_ON() || sphOn() || domeOn() || geo3On() || csphOn() || (typeof globeOn === "function" && globeOn()));
+let CARDMODE = ["light", "dark"].includes(pref("iv-cardmode", "")) ? pref("iv-cardmode", "") : "auto";
 let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84, CARDFS = Math.max(70, Math.min(120, +pref("iv-cardfs", 100) || 100));   /* CARDFS: the editors' text size, % of Obsidian's (0.8.229, Nick) */   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
 // Editor theme → Map: Obsidian works out its colors once, on the page body (--background-primary: var(--color-base-00)…), so a dark or light
 // class alone changes nothing; each editor re-declares those body colors itself, so they resolve with its own dark or light base colors
@@ -5459,10 +5460,12 @@ const EDV = (bg, panel, ink, muted, line, acc, accS) => { const faint = `color-m
 /* Editor theme → Starfield (0.8.232, Nick): the Starfield look in the editors whatever the map wears; its palette, as on .ivm[data-theme="starfield"] */
 const SFPAL = { "--bg": "#06070f", "--panel": "#0e0c1d", "--ink": "#e4e2f5", "--muted": "#a59fc4", "--line": "#231f3d", "--accent": "#ff8fc0", "--accent-soft": "rgba(255,143,192,.14)", "--upp": "#ffcf5a", "--rel": "#c9a2ff", "--up": "#6fd3ff", "--down": "#5fe0a8", "--prop": "#a9b4c8" };
 function edLook(el){ const SFE = CARDTH === "starfield", th = SFE ? "starfield" : root.dataset.theme, dark = th === "lyt" || th === "dark" || th === "starfield" || (th === "obsidian" && doc.body.classList.contains("theme-dark")), m = SFE || (CARDTH === "map" && th !== "obsidian");
-  el.classList.toggle("theme-dark", m && dark); el.classList.toggle("theme-light", m && !dark);
-  const bv = bodyVars(); el.setCssProps(Object.fromEntries(Object.keys(bv).map(nm => [nm, m ? bv[nm] : ""])));
+  /* Editor mode (0.8.271, Nick): with the Obsidian theme, Light or Dark forces that side of your Obsidian theme in the editors, whatever Obsidian itself is set to */
+  const fm = !m && CARDMODE !== "auto", fd = CARDMODE === "dark";
+  el.classList.toggle("theme-dark", (m && dark) || (fm && fd)); el.classList.toggle("theme-light", (m && !dark) || (fm && !fd));
+  const bv = bodyVars(); el.setCssProps(Object.fromEntries(Object.keys(bv).map(nm => [nm, m || fm ? bv[nm] : ""])));
   const cs = win.getComputedStyle(root), g = nm => SFE ? SFPAL[nm] || "" : cs.getPropertyValue(nm).trim(), V = EDV(g("--bg"), g("--panel"), g("--ink"), g("--muted"), g("--line"), g("--accent"), g("--accent-soft"));
-  el.setCssProps(Object.fromEntries(Object.keys(V).map(nm => [nm, m ? V[nm] : ""])));
+  el.setCssProps(Object.fromEntries(Object.keys(V).map(nm => [nm, m ? V[nm] : fm && bv[nm] ? bv[nm] : ""])));   /* a forced mode keeps Obsidian's own variables, re-read on the card */
   { const bs = parseFloat(win.getComputedStyle(doc.body).getPropertyValue("--font-text-size")) || 16; el.setCssProps({ "--font-text-size": CARDFS === 100 ? "" : (bs * CARDFS / 100).toFixed(1) + "px" }); }
   el.setCssProps({ "--cardop": CARDOP + "%", "--upp": g("--upp"), "--rel": g("--rel"), "--up": g("--up"), "--down": g("--down"), "--prop": g("--prop") });
   /* the Starfield theme's editor (0.8.224, from Nick's Nebula mockup): pink for the chrome (no link line uses it), headings in nebula colors, H6 as small capitals,
@@ -5471,7 +5474,7 @@ function edLook(el){ const SFE = CARDTH === "starfield", th = SFE ? "starfield" 
   const H = { "--h1-color": "#fff4ec", "--inline-title-color": "#fff4ec", "--h2-color": "#ff8fc0", "--h3-color": "#c9b8ff", "--h4-color": "#ffd9ea", "--h5-color": "#c9b8ff", "--h6-color": "#8fc3ff",
     "--blockquote-border-color": "#ff8fc0", "--blockquote-color": "#ffd9ea", "--tag-color": "#ffa8cf", "--tag-background": "rgba(255,122,182,.14)", "--tag-color-hover": "#ffc4de", "--tag-background-hover": "rgba(255,122,182,.22)",
     "--link-color": "#f0e6ff", "--link-color-hover": "#ffffff", "--link-unresolved-color": "#a59fc4", "--text-selection": "rgba(255,143,192,.28)", "--interactive-accent": "#ff8fc0", "--interactive-accent-hover": "#ffa8cf", "--checkbox-color": "#ff8fc0", "--caret-color": "#ff8fc0" };
-  if (sf) el.setCssProps(H); else if (m) { const V2 = V; el.setCssProps(Object.fromEntries(Object.keys(H).map(nm => [nm, V2[nm] || ""]))); } else el.setCssProps(Object.fromEntries(Object.keys(H).map(nm => [nm, ""])));
+  if (sf) el.setCssProps(H); else if (m) { const V2 = V; el.setCssProps(Object.fromEntries(Object.keys(H).map(nm => [nm, V2[nm] || ""]))); } else el.setCssProps(Object.fromEntries(Object.keys(H).map(nm => [nm, fm && bv[nm] ? bv[nm] : ""])));
   win.setTimeout(() => { try { for (const o of Object.values(EDS)) if (o && o.el === el) edTint(o); } catch (_) { /* editors not made yet */ } }, 0); }
 /* a link's color in the editor says how the note it points to relates to this one (0.8.224, Nick: "what if every single link is colored based on whether it's an up, related, above, or below link?"):
    up property gold, related purple, above blue, below green, any other property slate. Starfield theme for now (the rule lives on .sf-th) */
@@ -5775,7 +5778,7 @@ function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap 
       if (cmp) { e.dataset.hint = (Platform.isMacOS ? "click to edit · ⌘ new orb · ⌘⌥ support note" : "click to edit · Ctrl new orb · Ctrl+Alt support note");   /* Compass's previews are editable too (0.8.175, Nick), as the Cockpit's */
         e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return; if (openAs(i, openKind(ev))) return;   /* the same keys as everywhere (0.8.189): ⌘ a new orb, ⌘⌥ the support note */
           const r = e.getBoundingClientRect(), pr = pvLayer.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top, pvLayer); }); } }
-    { const lk = `${root.dataset.theme}|${CARDTH}|${CARDOP}|${pw}`; if (e.dataset.lk !== lk) { e.dataset.lk = lk; edLook(e); e.setCssProps({ "--pvw": pw + "px", "--pvh": ph + "px" }); } }   /* the look only when it changes, not every frame (0.8.178, Nick: Compass slow on the desktop) */
+    { const lk = `${root.dataset.theme}|${CARDTH}|${CARDMODE}|${CARDOP}|${pw}`; if (e.dataset.lk !== lk) { e.dataset.lk = lk; edLook(e); e.setCssProps({ "--pvw": pw + "px", "--pvh": ph + "px" }); } }   /* the look only when it changes, not every frame (0.8.178, Nick: Compass slow on the desktop) */
     { const L = Math.round(ox + g.px) + "px", T = Math.round(oy + g.py) + "px"; if (e.style.left !== L) e.style.left = L; if (e.style.top !== T) e.style.top = T; } }
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
 cv.addEventListener("pointerdown", () => { if (CK.edit && CK.edit.host === pvLayer) ckEditClose(); });   /* a click on the map finishes a Compass edit */
@@ -7705,6 +7708,12 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const tr = g.createDiv({ cls: "drow eorow tchoice" }); tr.createSpan({ cls: "eol", text: "Editor theme" }); const seg = tr.createDiv({ cls: "seg" });
     for (const [v, t] of [["obsidian", "Obsidian"], ["map", "MOTI"], ["starfield", "Starfield"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDTH === v) } });
       b.onclick = e => { e.stopPropagation(); CARDTH = v; save("iv-cardth", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; }
+    /* Editor mode: Auto follows Obsidian; Light or Dark forces it (for the Obsidian editor theme; MOTI and Starfield set their own) */
+    const mr = g.createDiv({ cls: "drow eorow tchoice" }); mr.createSpan({ cls: "eol", text: "Editor mode" }); const ms_ = mr.createDiv({ cls: "seg" });
+    const syncM = () => { mr.hidden = CARDTH !== "obsidian"; };
+    for (const [v, t] of [["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]]) { const b = ms_.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDMODE === v) } });
+      b.onclick = e => { e.stopPropagation(); CARDMODE = v; save("iv-cardmode", v); ms_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; }
+    syncM(); seg.addEventListener("click", () => win.setTimeout(syncM, 0));
     const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
     sl.oninput = () => { CARDOP = +sl.value; ov.setText(CARDOP + "%"); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
     /* Editor text size (0.8.229, Nick: "a little large… a slider to make it smaller"): 70–120% of Obsidian's text size; double-click it for 100% */
