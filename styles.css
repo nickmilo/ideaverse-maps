@@ -1853,3 +1853,10 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .ivm-qhcard p{margin:0 0 6px}.ivm .ivm-qhcard p:last-child{margin:0}
 /* the Recents and Links tabs, tucked away, follow the HUD's Opacity: at 0% only their thin outline and name stay, so the sky shows through (0.8.304, Nick) */
 .ivm .dtab.rectab,.ivm .dtab.hudtab{background:color-mix(in srgb,var(--bg) var(--rcop,94%),transparent);box-shadow:none}
+/* the trail's tuck chevron, and the tab that brings it back (0.8.305, Nick), in the top bar's style */
+.ivm .trail .trcol{appearance:none;background:none;border:0;box-shadow:none;height:auto;padding:2px;margin:0 2px 0 -8px;color:var(--muted);cursor:pointer;flex:none;display:inline-flex;align-items:center}
+.ivm .trail .trcol:hover{color:var(--accent)}
+.ivm .trail .trcol svg,.ivm .trtab svg{width:15px;height:15px;display:block}
+.ivm .trtab{position:absolute;left:50%;transform:translateX(-50%);bottom:11px;z-index:5;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;padding:0;color:var(--muted);background:color-mix(in srgb,var(--bg) 94%,transparent);border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.ivm .trtab:hover{color:var(--accent);border-color:var(--accent)}
+.ivm .trtab[hidden]{display:none}

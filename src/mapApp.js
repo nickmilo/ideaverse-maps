@@ -5473,12 +5473,18 @@ function addTrailGrip(el){
   const stop = () => { if (!on) return; on = false; g.classList.remove("on"); save("iv-tpad", trailPad); };
   g.addEventListener("pointerup", stop); g.addEventListener("pointercancel", stop);
   g.addEventListener("dblclick", () => { setTrailPad(0); save("iv-tpad", 0); }); }
+/* the trail tucks away like the top bar (0.8.305, Nick): a chevron left of "Trail" tucks it, a small tab at the bottom left brings it back; your zoom and place stay */
+let TRCOL = pref("iv-trcol", false) === true, TRTAB = null;
+function trailCol(c){ const t0 = cv.getBoundingClientRect().top, l0 = cv.getBoundingClientRect().left, tx0 = tx, ty0 = ty; TRCOL = c; save("iv-trcol", c); renderTrail();
+  win.setTimeout(() => { resize(); const r = cv.getBoundingClientRect(); tx = tx0 + (l0 - r.left); ty = ty0 + (t0 - r.top); draw(); }, 30); }
 function renderTrail(){
   const el = $("#trail");
-  if (!trail.length && sel < 0) { el.hidden = true; return; }
+  if (!TRTAB) { TRTAB = $("#main").createEl("button", { cls: "trtab", attr: { type: "button", "aria-description": "Show the trail" } }); setIcon(TRTAB, "chevron-up"); TRTAB.hidden = true; TRTAB.onclick = e => { e.stopPropagation(); trailCol(false); }; }
+  if (!trail.length && sel < 0) { el.hidden = true; TRTAB.hidden = true; return; }
+  if (TRCOL) { el.hidden = true; TRTAB.hidden = false; return; } TRTAB.hidden = true;
   const items = [...trail]; if (sel >= 0) items.push(sel);
   el.hidden = false;
-  html(el).v = `<span class="tl">Trail</span>` + items.map((j, idx) => [j, idx]).reverse().map(([j, idx], pos) => {   // newest on the left, older ones to the right
+  html(el).v = `<button class="trcol" type="button" aria-description="Tuck the trail away"></button><span class="tl">Trail</span>` + items.map((j, idx) => [j, idx]).reverse().map(([j, idx], pos) => {   // newest on the left, older ones to the right
     const now = idx === items.length - 1 && sel >= 0, off = !baseOK(j);
     return (pos ? `<span class="ar">←</span>` : "") + `<button class="cr${now ? " now" : ""}${off ? " off" : ""}" data-ti="${idx}" title="${esc(N[j].title)}${off ? " (hidden by filters)" : ""}" ${off ? "disabled" : ""}>${lvDot(j)}<span>${esc(N[j].title)}</span></button>`;
   }).join("") + `<button class="chip clr" id="trclear">Clear</button>`;
@@ -5489,6 +5495,7 @@ function renderTrail(){
     b.onmouseleave = () => { hover = -1; draw(); };
   });
   $("#trclear").onclick = () => { trail = []; renderTrail(); };
+  { const tc = el.querySelector(".trcol"); if (tc) { setIcon(tc, "chevron-down"); tc.onclick = e => { e.stopPropagation(); trailCol(true); }; } }
   el.scrollLeft = 0;
   addTrailGrip(el);
 }
@@ -6404,7 +6411,6 @@ cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.data
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 dbg.__lfx = (add = true) => linkFxTry(add);
 dbg.__k = () => k;
-dbg.__ckw = () => CK.wd ? [CK.wd.phase, CK.c, !!CK.settle] : null;
 dbg.__hud = () => [HUDHOV, !!LKHV, !!(LKHV && LKHV.isConnected), HUDHOV >= 0 && !!vis[HUDHOV], HUDHOV >= 0 ? [sx(X[HUDHOV]), sy(Y[HUDHOV])] : null];
 dbg.__ck = () => [CK.yaw, CK.pitch];
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
