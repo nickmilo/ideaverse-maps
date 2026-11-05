@@ -1879,3 +1879,18 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .ivm-sfsw{opacity:.8;transition:opacity .15s}
 .ivm .ivm-sfsw:hover{opacity:1}
 .ivm .ivm-sfsw.sfbeside{left:var(--sfl);top:var(--sft);transform:translateY(-50%)}   /* beside the orb tabs, at 80% (0.8.323, Nick) */
+/* the Starship menu's Wander and Pace: the Display menu's small text choices (0.8.330, Nick: "too big… take a note from the display settings menu") */
+.ivm.ivm.ivm .ckseg{gap:10px;padding:1px 0 3px}
+.ivm.ivm.ivm .ckseg > .eol{font:500 12px var(--body);letter-spacing:0;text-transform:none;opacity:1;color:var(--ink);margin-right:0;min-width:0}
+.ivm.ivm.ivm .ckseg .seg{display:flex;flex-wrap:wrap;align-items:center;gap:2px 11px;background:none;border:0;box-shadow:none;padding:0;border-radius:0;height:auto}
+.ivm.ivm.ivm .ckseg .seg button{appearance:none;background:none;border:0;box-shadow:none;margin:0;padding:1px 0;height:auto;min-height:0;border-radius:0;font:500 10.5px var(--mono);letter-spacing:.02em;color:var(--muted);cursor:pointer;line-height:15px}
+.ivm.ivm.ivm .ckseg .seg button:hover{color:var(--ink);background:none}
+.ivm.ivm.ivm .ckseg .seg button[aria-pressed="true"]{background:none;color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+/* the Animations dock in the Starship: its own Wander modes (0.8.330) */
+.ivm .playbar .ckwseg{display:none}
+.ivm.ivm.ivm[data-view="cockpit"] .playbar .ckwseg{display:inline-flex}
+.ivm.ivm.ivm[data-view="cockpit"] .playbar #playseg,.ivm.ivm.ivm[data-view="cockpit"] .playbar .pmaps{display:none}
+.ivm.ivm.ivm.ivm .ckseg{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center}
+.ivm.ivm.ivm.ivm .ckseg > .eol{min-width:52px}
+.ivm.ivm.ivm.ivm .ckseg .ckplay{margin-left:2px}
+.ivm.ivm.ivm.ivm[data-view="cockpit"] .playbar label.pmaps:has(#pmaps),.ivm.ivm.ivm.ivm[data-view="cockpit"] .playbar label.pmaps:has(#ptrail){display:none}

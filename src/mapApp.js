@@ -6734,6 +6734,14 @@ $("#pmaps").checked = playMaps; $("#pmaps").onchange = () => { playMaps = $("#pm
 onKey(e => { if (e.key === "Escape" && playing) setPlaying(false); });
 root.querySelectorAll("#playseg button").forEach(b => b.addEventListener("click", () => { if (tourRun) { tourRun = null; syncTour(); } }));   // picking Random/Thread leaves the tour
 syncPlay();
+/* the Starship's own Wander choices in the Animations dock (0.8.330, Nick: "Starfield has its specific wander mode settings showing here as well"): Links, Jumps, Drift
+   in place of Random, Trails and Maps, which don't apply there; the seconds slider is the same Pace */
+let ckwmSync = () => {};
+{ const ps = $("#playseg"), cs = doc.createElement("div"); cs.className = "seg ckwseg"; cs.setAttribute("role", "group"); cs.setAttribute("aria-label", "Starship Wander mode"); ps.after(cs);
+  for (const [v, t_, tip] of [["links", "Links", "Fly from note to linked note"], ["jumps", "Jumps", "Hyperspace jumps across the whole sky"], ["drift", "Drift", "A slow cruise, looking from note to note"]]) {
+    const b = doc.createElement("button"); b.dataset.w = v; b.textContent = t_; b.setAttribute("aria-label", tip); cs.appendChild(b);
+    b.onclick = () => { CKWM = v; save("iv-ckwm", v); ckwmSync(); if (CK.wd) { ckWander(false); ckWander(true); } }; }
+  const s0 = ckwmSync; ckwmSync = () => { s0(); cs.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.w === CKWM))); }; ckwmSync(); }
 // Animations: Timelapse (the years), Wander Mode (autoplay) and Orbit (drift) share one dock at the bottom left.
 // All three show together, each under its name (so a running one never hides behind another); Orbit only on 3D maps.
 { const dock = cv.parentElement.createDiv({ cls: "animdock", attr: { id: "animdock", role: "group", "aria-label": "Animations" } });
@@ -7691,13 +7699,14 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       c_.onchange = () => { CKINV = c_.checked; save("iv-ckinv", CKINV); }; }
     if (Platform.isMobile && !Platform.isIosApp) { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKTILT;   /* not on iPhone or iPad: the Obsidian app there doesn't pass the phone's motion to plugins (0.8.142, Nick tried) */ l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Look around by moving the phone" });
       c_.onchange = async () => { c_.checked = await ckTiltSet(c_.checked); }; }
-    { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "Wander" }); const seg = sr.createDiv({ cls: "seg" });
+    { const sr = fa.createDiv({ cls: "eorow arnrow ckseg" }); sr.createSpan({ cls: "eol", text: "Wander" }); const seg = sr.createDiv({ cls: "seg" });
       for (const [v, t_] of [["links", "Links"], ["jumps", "Jumps"], ["drift", "Drift"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(CKWM === v) } });
-        b.onclick = e => { e.stopPropagation(); CKWM = v; save("iv-ckwm", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); if (CK.wd) { ckWander(false); ckWander(true); } }; }
+        b.dataset.w = v; b.onclick = e => { e.stopPropagation(); CKWM = v; save("iv-ckwm", v); ckwmSync(); if (CK.wd) { ckWander(false); ckWander(true); } }; }
+      { const s0 = ckwmSync; ckwmSync = () => { s0(); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.w === CKWM))); }; }
       const pb = sr.createEl("button", { cls: "ckplay", text: "▶", attr: { type: "button", "aria-label": "Start Wander Mode (P)" } }); pb.onclick = e => { e.stopPropagation(); setPlaying(!playing); };
       FUI.ckplay = () => { pb.setText(playing && view === "cockpit" ? "■" : "▶"); }; }
     /* Wander's pace, here too (0.8.164, Nick: the Cockpit had no seconds slider): how long the ship stays with each note */
-    { const sr = fa.createDiv({ cls: "eorow arnrow" }); sr.createSpan({ cls: "eol", text: "Pace" }); const seg = sr.createDiv({ cls: "seg" });
+    { const sr = fa.createDiv({ cls: "eorow arnrow ckseg" }); sr.createSpan({ cls: "eol", text: "Pace" }); const seg = sr.createDiv({ cls: "seg" });
       const sync_ = () => seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(+x.dataset.s === playSec)));
       for (const s_ of [4, 6, 10, 15, 20]) { const b = seg.createEl("button", { text: s_ + " s", attr: { type: "button", "data-s": String(s_) } });
         b.onclick = e => { e.stopPropagation(); playSec = s_; save("iv-psec", playSec); try { syncPlay(); } catch (_) { /* dock not ready */ } sync_(); }; }
