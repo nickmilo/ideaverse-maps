@@ -5198,7 +5198,7 @@ function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && HUDC.vv === VISV) r
   return (HUDC = { i, rj: RADJ, vv: VISV, v: (HUDC.v || 0) + 1, list: all, inS, outS, upS, sc: new Map(all.map(j => [j, mx > 0 ? Math.round(100 * rv(j) / mx) : 0])) }); }
 /* Links lives in the Recents panel now (0.8.284, Nick: "do opt 2, but each needs to work independently"): one background, one curve, two sections; each tucks to its own
    edge tab. The map only draws the dashed line from a hovered row to its note, and keeps HUDBOX (the panel, in map pixels) for maps that leave it room */
-let LKHV = null, HUDTC = pref("iv-hudtc", true) !== false, HUDGRP = pref("iv-hudgrp", true) !== false, LKFOLD = (() => { const o = pref("iv-lkfold", null); return o && typeof o === "object" ? o : {}; })();   /* HUDGRP: property links grouped under their property (0.8.297, Nick: option H2); LKFOLD: which groups are folded */
+let LKHV = null, HUDTC = pref("iv-hudtc", true) !== false, HUDGRP = true,   /* always grouped now; the switch is gone (0.8.316, Nick: "make that the default") */ LKFOLD = (() => { const o = pref("iv-lkfold", null); return o && typeof o === "object" ? o : {}; })();   /* HUDGRP: property links grouped under their property (0.8.297, Nick: option H2); LKFOLD: which groups are folded */
 /* which property each of note i's property-only links sits in (0.8.297): written links (text, up, related, either way) stay ungrouped; the rest go under "→ KEY" (this note's
    property) or "← KEY" (the other note's property pointing here). Cached per note */
 const WRIT = k => k != null && k !== 5;   /* a link someone wrote: in the text (0), up (1), nav (2), archive (3), related (4); 5 is another property */
@@ -5312,7 +5312,8 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
     /* this note's own collections, as the first coral group (0.8.299, Nick: Sources belongs in Groundhog Day's Links); a collection that's also a written link stays there */
     { const cI = D_.ck ? D_.i : sel, ck_ = (host.collectionKeys ? host.collectionKeys()[0] : "") || "collections", ex = cI >= 0 ? collOf(cI, true).filter(j => !D_.list.includes(j) && vis[j]) : [];
       if (ex.length) { const g0 = "→ " + ck_, rest = [...groups]; groups.clear(); groups.set(g0, ex); for (const [k_, v_] of rest) groups.set(k_, v_); } }
-    const rowsFor = [[null, order], ...[...groups].map(([g_, js]) => [g_, js])];
+    /* this note's own property links (→) above other notes' properties pointing back (←), each side in its usual order (0.8.316, Nick: groupPeople above by) */
+    const rowsFor = [[null, order], ...[...groups].filter(([g_]) => g_[0] === "→"), ...[...groups].filter(([g_]) => g_[0] !== "→")];
     for (const [g_, js] of rowsFor) { if (g_) { const fo = LKFOLD[g_] === true, gh = lbox.createEl("button", { cls: "lkg", attr: { type: "button" } }); gh.createSpan({ text: `${g_.slice(2).toUpperCase()} · ${js.length}  ${fo ? "▸" : "▾"}` });   /* the name first, its fold arrow after; each row carries its own → or ← (0.8.307, Nick) */
         gh.onclick = e => { e.stopPropagation(); if (LKFOLD[g_]) delete LKFOLD[g_]; else LKFOLD[g_] = true; save("iv-lkfold", LKFOLD); RECKEY = ""; recSync(); }; if (fo) continue; }   /* a property's group folds, remembered (0.8.297) */
     for (const j of js) { if (!N[j]) continue; const dimJ = D_.ck && CK.only ? !(CK.only === "in" ? D_.inS.has(j) : D_.outS.has(j)) : false;   /* the Starship's F / R scopes dim the other side */
@@ -7843,7 +7844,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     c4.onchange = () => { HUDTC = c4.checked; save("iv-hudtc", HUDTC); draw(); };
     /* property links in their own groups under the written ones (0.8.297, Nick: option H2, a mini switch for now) */
     const l5 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c5 = l5.createEl("input", { type: "checkbox" }); c5.checked = HUDGRP; l5.createEl("i", { cls: "sw" }); l5.createSpan({ text: "Group property links" }); l5.hidden = !HUDL;
-    c5.onchange = () => { HUDGRP = c5.checked; save("iv-hudgrp", HUDGRP); RECKEY = ""; draw(); };
+    c5.onchange = () => { HUDGRP = c5.checked; save("iv-hudgrp", HUDGRP); RECKEY = ""; draw(); }; l5.remove();
     const l3 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c3 = l3.createEl("input", { type: "checkbox" }); c3.checked = HUDPV; l3.createEl("i", { cls: "sw" }); l3.createSpan({ text: "Automatically see mini-preview on hover" }); l3.hidden = !HUDL;
     c3.onchange = () => { HUDPV = c3.checked; save("iv-hudpv", HUDPV); if (!HUDPV) hudPv(-1); };
     cb.onchange = () => { HUDL = cb.checked; save("iv-hudl", HUDL); l2.hidden = l3.hidden = l4.hidden = l5.hidden = !HUDL; if (!HUDL) hudPv(-1); draw(); }; }
