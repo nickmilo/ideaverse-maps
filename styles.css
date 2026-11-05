@@ -2126,3 +2126,4 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivd .ivd-hd .ivd-ttl{font-size:12.5px;font-weight:600;color:var(--text-normal);flex:1 1 auto}
 .ivd .ivd-hd .ivd-ttl+.ivd-sp{flex:0}
 .ivd .ivd-hd .ivd-lab{flex:none}
+.ivd .ivd-hud .ivd-grip-l::after,.ivd .ivd-main-drawer .ivd-grip-l::after{display:none}   /* no visible grab bar; the seam still drags (0.9.13, Nick) */
