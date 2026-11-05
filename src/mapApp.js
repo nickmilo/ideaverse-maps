@@ -3036,11 +3036,11 @@ function ckOrbit(dt){ if (!drifting || view !== "cockpit" || CK.wd || CK.keys.si
   CK.auto = false; CK.settle = null; CK.v *= Math.pow(.05, dt);
   const v = [CK.P[0] - T[0], CK.P[1] - T[1], CK.P[2] - T[2]], r = Math.hypot(v[0], v[1], v[2]) || 1, el = Math.asin(Math.max(-1, Math.min(1, v[1] / r))), now = win.performance.now() / 1000;
   if (CKORB === "dyn") { if (now > CKO.next) { CKO.next = now + 9 + Math.random() * 8; const q = Math.random();
-      CKO.phiT = q < .45 ? 0 : (q < .725 ? 1 : -1) * Math.PI / 6; if (Math.random() < .3) CKO.dirT = -CKO.dirT; }
+      CKO.phiT = (Math.random() < .5 ? 1 : -1) * (q < .45 ? (1 + Math.random() * 5) * Math.PI / 180 : Math.PI / 6);   /* never dead level: at least a degree of climb or dive (0.8.327, Nick) */ if (Math.random() < .3) CKO.dirT = -CKO.dirT; }
     if (Math.abs(el) > .6 && Math.sign(CKO.phiT) * Math.sign(el) * CKO.dir > 0) CKO.phiT = -CKO.phiT;   /* heading further from level: tilt the other way */
     CKO.phi += (CKO.phiT - CKO.phi) * Math.min(1, dt * .5); CKO.dir += (CKO.dirT - CKO.dir) * Math.min(1, dt * .6); }
   else { CKO.phi += (0 - CKO.phi) * Math.min(1, dt * .8); CKO.dir += (1 - CKO.dir) * Math.min(1, dt * .8); CKO.phiT = 0; CKO.dirT = 1; }
-  const sp = .16, th = sp * CKO.dir * dt, side = [Math.cos(CK.yaw), 0, -Math.sin(CK.yaw)], cf = Math.cos(CKO.phi), sf_ = Math.sin(CKO.phi), a = [side[0] * sf_, cf, side[2] * sf_], an = Math.hypot(a[0], a[1], a[2]); a[0] /= an; a[1] /= an; a[2] /= an;
+  const D1 = Math.PI / 180, phU = Math.abs(CKO.phi) < D1 ? (CKO.phi < 0 ? -D1 : D1) : CKO.phi; const sp = ({ calm: .08, slow: .16, lively: .34 })[DSF] || .16, th = sp * CKO.dir * dt,   /* the speeds the other maps use (0.8.327, Nick) */ side = [Math.cos(CK.yaw), 0, -Math.sin(CK.yaw)], cf = Math.cos(phU), sf_ = Math.sin(phU), a = [side[0] * sf_, cf, side[2] * sf_], an = Math.hypot(a[0], a[1], a[2]); a[0] /= an; a[1] /= an; a[2] /= an;
   const c_ = Math.cos(th), s_ = Math.sin(th), ad = a[0] * v[0] + a[1] * v[1] + a[2] * v[2], cr = [a[1] * v[2] - a[2] * v[1], a[2] * v[0] - a[0] * v[2], a[0] * v[1] - a[1] * v[0]];
   for (let q = 0; q < 3; q++) CK.P[q] = T[q] + v[q] * c_ + cr[q] * s_ + a[q] * ad * (1 - c_);
   const [ty_, tp_] = ckLook(CK.P, T); ckUpright(); CK.yaw += Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)) * Math.min(1, dt * 6); CK.pitch += (tp_ - CK.pitch) * Math.min(1, dt * 6); CK.roll *= Math.pow(.2, dt); }
@@ -3048,10 +3048,17 @@ function ckOrbit(dt){ if (!drifting || view !== "cockpit" || CK.wd || CK.keys.si
    essentially rolls or orbits into frame"): the ship circles the note it's at, same distance and height, until the picked note sits just beside it, not behind it */
 let CKSW = null;
 function ckSwingTo(j){ if (CKW !== "sf" || CK.c < 0 || j === CK.c) return; const P = ckSF().P, T = [P[3 * CK.c], P[3 * CK.c + 1], P[3 * CK.c + 2]], L = [P[3 * j], P[3 * j + 1], P[3 * j + 2]];
-  const [xc, yc, zc] = ckCam(L[0], L[1], L[2]); if (zc > 0 && Math.abs(Math.atan2(xc, zc)) < .45 && Math.abs(Math.atan2(yc, zc)) < .32) return;   /* already in frame */
-  const wrap = a => Math.atan2(Math.sin(a), Math.cos(a)), ac = Math.atan2(CK.P[0] - T[0], CK.P[2] - T[2]), opp = Math.atan2(T[0] - L[0], T[2] - L[2]);
-  const c1 = opp + .5, c2 = opp - .5, tgt = Math.abs(wrap(c1 - ac)) < Math.abs(wrap(c2 - ac)) ? c1 : c2, da = wrap(tgt - ac);
-  CKSW = { T, da, done: 0, t0: win.performance.now(), dur: 900 + Math.abs(da) * 420 }; CK.v = 0; CK.auto = false; CK.settle = null; }
+  /* where to rest (0.8.327, Nick: "it orbited in such a manner to squish them together… so much wasted space"): try the whole circle and keep the spot where the pick lands
+     about a third of the way out from the centre note, near its height, in front, for the least swing */
+  const W_ = Math.max(1, cv.clientWidth || W), VH_ = Math.max(1, cv.clientHeight || H), F_ = Math.min(W_, VH_) * .95, want = .3 * W_ / F_, vmax = .2 * VH_ / F_;
+  const wrap = a => Math.atan2(Math.sin(a), Math.cos(a)), dx0 = CK.P[0] - T[0], dz0 = CK.P[2] - T[2], rh = Math.hypot(dx0, dz0) || 1, dy0 = CK.P[1] - T[1], ac = Math.atan2(dx0, dz0);
+  const sv = [CK.P.slice(), CK.yaw, CK.pitch]; let best = null;
+  try { for (let q = 0; q < 72; q++) { const da = wrap(q * Math.PI / 36), az = ac + da; CK.P = [T[0] + rh * Math.sin(az), T[1] + dy0, T[2] + rh * Math.cos(az)]; [CK.yaw, CK.pitch] = ckLook(CK.P, T);
+      const [xc, yc, zc] = ckCam(L[0], L[1], L[2]); if (zc <= 1) continue; const rx = Math.abs(xc / zc), ry = Math.abs(yc / zc);
+      const sc = (rx - want) * (rx - want) * 4 + Math.max(0, ry - vmax) * Math.max(0, ry - vmax) * 10 + Math.abs(da) * .04; if (!best || sc < best.sc) best = { sc, da }; } }
+  finally { [CK.P, CK.yaw, CK.pitch] = sv; }
+  if (!best || Math.abs(best.da) < .02) return;
+  CKSW = { T, da: best.da, done: 0, t0: win.performance.now(), dur: 900 + Math.abs(best.da) * 420 }; CK.v = 0; CK.auto = false; CK.settle = null; }
 function ckSwingTick(){ if (!CKSW) return; if (view !== "cockpit" || CK.keys.size || CK.drag) { CKSW = null; return; }
   const p = Math.min(1, (win.performance.now() - CKSW.t0) / CKSW.dur), e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2, step = CKSW.da * e - CKSW.done; CKSW.done += step;
   const T = CKSW.T, dx = CK.P[0] - T[0], dz = CK.P[2] - T[2], c_ = Math.cos(step), s_ = Math.sin(step);   /* the azimuth grows by step (x = sin, z = cos) */
