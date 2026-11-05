@@ -1747,3 +1747,8 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm .ivm-recents.resizing{user-select:none}
 .ivm .ivm-recents .rct{white-space:nowrap}
 .ivm .ivm-recents{cursor:pointer}.ivm .ivm-recents .rcr,.ivm .ivm-recents label{cursor:pointer}.ivm .ivm-recents .rcl{cursor:pointer}
+/* the header fits a narrow Recents (0.8.262): it shrinks before it pushes right */
+.ivm .ivm-recents .rch{box-sizing:border-box;width:100%;gap:6px;min-width:0}
+.ivm .ivm-recents .rct{min-width:0;overflow:hidden;text-overflow:clip}
+.ivm .ivm-recents.narrow .rcemo span{display:none}
+.ivm .ivm-recents.narrow .rcemo{gap:0}

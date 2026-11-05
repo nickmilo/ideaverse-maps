@@ -5212,7 +5212,7 @@ function recBuild(){ if (RECEL) return; const st = e => e.stopPropagation();
 /* the left-edge grip: drag to widen or narrow Recents (0.8.257, Nick); double-click for its own width again */
 function recGrip(){ const gr = RECEL.createDiv({ cls: "rcgrip" }); let d_ = null;
   gr.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); gr.setPointerCapture(e.pointerId); d_ = { x: e.clientX, w: RECEL.getBoundingClientRect().width }; RECEL.classList.add("resizing"); });
-  gr.addEventListener("pointermove", e => { if (!d_) return; RECW = Math.round(Math.max(180, Math.min(640, d_.w + (d_.x - e.clientX)))); RECEL.setCssProps({ "--rcw": RECW + "px" }); RECEL.classList.add("sized"); if (!RECLT) RECLT = win.requestAnimationFrame(() => { RECLT = 0; if (RECLAY) RECLAY(); }); });   /* the shape and the rows follow the edge as you drag, not after */
+  gr.addEventListener("pointermove", e => { if (!d_) return; RECW = Math.round(Math.max(180, Math.min(640, d_.w + (d_.x - e.clientX)))); RECEL.setCssProps({ "--rcw": RECW + "px" }); RECEL.classList.add("sized"); RECEL.classList.toggle("narrow", RECW < 250); if (!RECLT) RECLT = win.requestAnimationFrame(() => { RECLT = 0; if (RECLAY) RECLAY(); }); });   /* the shape and the rows follow the edge as you drag, not after */
   const up = () => { if (!d_) return; d_ = null; RECEL.classList.remove("resizing"); save("iv-recw", RECW); RECKEY = ""; recSync(); };
   gr.addEventListener("pointerup", up); gr.addEventListener("pointercancel", up);
   gr.addEventListener("dblclick", e => { e.stopPropagation(); RECW = 0; save("iv-recw", 0); RECEL.classList.remove("sized"); RECKEY = ""; recSync(); }); }
@@ -5221,7 +5221,7 @@ function recPv(){ if (RECHV < 0 || !RECHVEL || !(CMDK || HUDPV)) { if (!(HUDHOV 
 function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPhone() && edOn(); let R_ = 0; try { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); R_ = Math.max(0, Math.round(mr.right - c.right + sideW())); } catch (_) { /* not laid out yet */ }
   RECTAB.hidden = !on || RECOPEN; RECEL.hidden = !on || !RECOPEN; RECTAB.setCssProps({ "--hr": R_ + "px" }); RECEL.setCssProps({ "--hr": R_ + "px" }); if (!on) return;
   const L = recList(); if (!RECOPEN) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); return; }
-  RECEL.classList.toggle("sized", RECW > 0); RECEL.setCssProps({ "--rcw": (RECW || 300) + "px" });
+  RECEL.classList.toggle("sized", RECW > 0); RECEL.classList.toggle("narrow", RECW > 0 && RECW < 250);   /* narrow: the Emojis switch keeps only its switch */ RECEL.setCssProps({ "--rcw": (RECW || 300) + "px" });
   const key = L.join(",") + "|" + RECW + "|" + RECEMO + RECEFRONT + RECLEFT + "|" + (EMOI ? 1 : 0) + "|" + Math.floor(Date.now() / 60000); if (key === RECKEY) return; RECKEY = key; RECEL.empty();
   const hd = RECEL.createDiv({ cls: "rch cardhd-tuck" }); hd.createSpan({ cls: "rct", text: `◷  RECENTS · ${L.length}` });
   /* tucks away as the editors do (0.8.242, Nick: "we already have specs"): a click on its header (not on the switch) or on ›, and it waits as a tab on the edge */
@@ -5275,7 +5275,7 @@ function recSync(){ recBuild(); const on = RECON && view !== "cockpit" && !isPho
     let sv = RECEL.querySelector(":scope > svg.rcbg"); if (!sv) { sv = doc.createElementNS("http://www.w3.org/2000/svg", "svg"); sv.setAttribute("class", "rcbg"); sv.setAttribute("aria-hidden", "true"); RECEL.prepend(sv); }
     sv.setAttribute("width", String(w)); sv.setAttribute("height", String(h)); sv.setAttribute("viewBox", `0 0 ${w} ${h}`); sv.empty(); const pa = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pa.setAttribute("d", d); sv.appendChild(pa);
     const pv = doc.createElementNS("http://www.w3.org/2000/svg", "path"); pv.setAttribute("d", dv); pv.setAttribute("class", "rcdiv"); sv.appendChild(pv);
-    hd.setCssProps({ "--rx": "0px", "--rpl": (Math.max(16, xl(yTL) + 14)).toFixed(1) + "px", "--rpr": "16px", "--rh": aT.toFixed(4) + "rad" });   /* the title banner tilts with the top edge (0.8.250, Nick) */ }; win.requestAnimationFrame(RECLAY); }
+    hd.setCssProps({ "--rx": "0px", "--rpl": (Math.max(10, xl(yTL) + 8)).toFixed(1) + "px", "--rpr": "12px", "--rh": aT.toFixed(4) + "rad" });   /* the title banner tilts with the top edge (0.8.250, Nick) */ }; win.requestAnimationFrame(RECLAY); }
 if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
 const hudAt = (x, y) => { for (const [hx, hy, hw, hh, j] of HUDH) if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) return j; return -1; };
 cv.addEventListener("pointermove", e => { if (!HUDL) return; const j = hudAt(e.offsetX, e.offsetY); if (j !== HUDHOV) { HUDHOV = j; cv.classList.toggle("hot", j >= 0); draw(); } });
