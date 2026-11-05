@@ -9,6 +9,7 @@ function targets(app, path) { const f = app.vault.getAbstractFileByPath(path), c
   for (const l of [...(c.links || []), ...(c.embeds || []), ...(c.frontmatterLinks || [])]) { const base = String(l.link || "").split("#")[0], t = app.metadataCache.getFirstLinkpathDest(base, path); if (!(t instanceof TFile)) continue;
     for (const key of [l.displayText, l.link, base, t.basename]) if (key) { const k = String(key).trim().toLowerCase(); if (!M.has(k)) M.set(k, t.path); } }
   return M; }
+const LINK = "a.internal-link, .cm-hmd-internal-link, .internal-link";
 const SEL = "a.internal-link, .cm-hmd-internal-link, .multi-select-pill-content, .internal-link";
 
 export function registerLinkColors(plugin) {
@@ -23,7 +24,7 @@ export function registerLinkColors(plugin) {
       /* a link inside an embedded note belongs to that note: colored by how its note relates to the embedded one, not to this one (0.8.279) */
       let from = path, MM = M; { const em = e.closest(".markdown-embed-content, .markdown-embed .markdown-preview-view"), host_ = em && em.closest(".internal-embed[src]");
         if (host_) { const t = app.metadataCache.getFirstLinkpathDest(String(host_.getAttribute("src") || "").split("#")[0], path); if (t instanceof TFile) { from = t.path; MM = targets(app, from); } } }
-      const p = MM.get(key) || MM.get(key.split("|")[0].split("#")[0].trim()) || MM.get(key.split("|").pop().trim()), kd = p ? m.linkKind(from, p) : "";
+      const p = MM.get(key) || MM.get(key.split("|")[0].split("#")[0].trim()) || MM.get(key.split("|").pop().trim()), kd = (p ? m.linkKind(from, p) : "") || (m.hasNote && m.hasNote(from) && e.matches(LINK) ? "none" : "");   /* a placeholder (0.8.280) */
       if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } };
   const run = () => { const yes = on(); document.body.classList.toggle("ivm-linkcolors", yes); if (!yes) return; const m = mapApi(); if (!m) return;
     app.workspace.iterateAllLeaves(l => { const v = l.view; if (v && v.getViewType && v.getViewType() === "markdown" && v.file) mark(v.containerEl, v.file.path, m); }); };

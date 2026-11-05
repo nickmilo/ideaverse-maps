@@ -1676,7 +1676,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card.sf-th [data-ivk="rel"],.ivm-card.sf-th [data-ivk="rel"] *{color:var(--rel)}
 .ivm-card.sf-th [data-ivk="up"],.ivm-card.sf-th [data-ivk="up"] *{color:var(--up)}
 .ivm-card.sf-th [data-ivk="down"],.ivm-card.sf-th [data-ivk="down"] *{color:var(--down)}
-.ivm-card.sf-th [data-ivk="prop"],.ivm-card.sf-th [data-ivk="prop"] *{color:var(--prop)}
+.ivm-card.sf-th [data-ivk="prop"],.ivm-card.sf-th [data-ivk="prop"] *{color:var(--ivc-prop)}
 /* above and below in the editor strip's score list: blue and green, as the note panel shows them (0.8.234, Nick) */
 .ivm-card .carddrop .schip.sab{border-color:color-mix(in srgb,var(--up, var(--color-blue)) 55%,var(--background-modifier-border))}
 .ivm-card .carddrop .schip.sbe{border-color:color-mix(in srgb,var(--down, var(--color-green)) 55%,var(--background-modifier-border))}
@@ -1686,8 +1686,8 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card .carddrop .sdsub.sd-down{box-shadow:inset 2px 0 0 var(--down, var(--color-green))}
 .ivm-card .carddrop .sdsub.sd-up,.ivm-card .carddrop .sdsub.sd-down{padding-left:8px}   /* a little air between the colored line and the names (0.8.243, Nick) */
 /* every link in every note colored by Idea Emergence (0.8.234): up property gold, related purple, above blue, below green, other properties slate */
-body.ivm-linkcolors.theme-dark{--ivk-upp:#ffcf5a;--ivk-rel:#c9a2ff;--ivk-up:#6fd3ff;--ivk-down:#5fe0a8;--ivk-prop:#a9b4c8}
-body.ivm-linkcolors.theme-light{--ivk-upp:#a8770a;--ivk-rel:#7c3aed;--ivk-up:#1f78b4;--ivk-down:#178a5c;--ivk-prop:#5b6b82}
+body.ivm-linkcolors.theme-dark{--ivk-upp:#ffcf5a;--ivk-rel:#c9a2ff;--ivk-up:#6fd3ff;--ivk-down:#5fe0a8;--ivk-prop:#ff9e7d;--ivk-none:#eceef5;--ivk-noneb:rgba(236,238,245,.45)}
+body.ivm-linkcolors.theme-light{--ivk-upp:#a8770a;--ivk-rel:#7c3aed;--ivk-up:#1f78b4;--ivk-down:#178a5c;--ivk-prop:#d0582f;--ivk-none:#262833;--ivk-noneb:rgba(38,40,51,.4)}
 body.ivm-linkcolors [data-ivk]{text-decoration-color:currentColor}
 body.ivm-linkcolors [data-ivk="upp"],body.ivm-linkcolors [data-ivk="upp"] *{color:var(--ivk-upp)}
 body.ivm-linkcolors [data-ivk="rel"],body.ivm-linkcolors [data-ivk="rel"] *{color:var(--ivk-rel)}
@@ -1698,7 +1698,7 @@ body.ivm-linkcolors [data-ivk="prop"],body.ivm-linkcolors [data-ivk="prop"] *{co
 .ivm-card:not(.sf-th) [data-ivk="rel"],.ivm-card:not(.sf-th) [data-ivk="rel"] *{color:var(--rel)}
 .ivm-card:not(.sf-th) [data-ivk="up"],.ivm-card:not(.sf-th) [data-ivk="up"] *{color:var(--up)}
 .ivm-card:not(.sf-th) [data-ivk="down"],.ivm-card:not(.sf-th) [data-ivk="down"] *{color:var(--down)}
-.ivm-card:not(.sf-th) [data-ivk="prop"],.ivm-card:not(.sf-th) [data-ivk="prop"] *{color:var(--prop)}
+.ivm-card:not(.sf-th) [data-ivk="prop"],.ivm-card:not(.sf-th) [data-ivk="prop"] *{color:var(--ivc-prop)}
 /* Recents (0.8.237): a tab on the map's right edge, above the Links tab, and the small panel it opens */
 .ivm .dtab.rectab{top:30%;right:var(--hr,0px)}
 .ivm .dtab.rectab[hidden]{display:none}
@@ -1776,12 +1776,12 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="prop"],body.ivm-linkcol
 .ivm-card.ivm-card:not(.sf-th) [data-ivk="rel"]{--link-color:var(--rel);--link-color-hover:var(--rel)}
 .ivm-card.ivm-card:not(.sf-th) [data-ivk="up"]{--link-color:var(--up);--link-color-hover:var(--up)}
 .ivm-card.ivm-card:not(.sf-th) [data-ivk="down"]{--link-color:var(--down);--link-color-hover:var(--down)}
-.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"]{--link-color:var(--prop);--link-color-hover:var(--prop)}
+.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"]{--link-color:var(--ivc-prop);--link-color-hover:var(--ivc-prop)}
 .ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="upp"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="upp"] *{color:var(--upp)}
 .ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="rel"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="rel"] *{color:var(--rel)}
 .ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="up"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="up"] *{color:var(--up)}
 .ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="down"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="down"] *{color:var(--down)}
-.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"] *{color:var(--prop)}
+.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"] *{color:var(--ivc-prop)}
 /* Recents beside Links (0.8.275): it rises to the top, 7 rows show and the rest scroll; Links hangs below it */
 .ivm .ivm-recents.paired{top:12px}
 .ivm .ivm-recents.paired .rcl{max-height:calc(17.5px * 7 + 17px);overflow-y:auto;scrollbar-width:none}
@@ -1790,3 +1790,13 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="prop"],body.ivm-linkcol
 /* Recents rows grow a touch on hover (0.8.278, Nick) */
 .ivm .ivm-recents .rcr{transition:transform .12s ease}
 .ivm .ivm-recents .rcr:hover{transform:translateX(var(--rx,0px)) rotate(var(--rr,0rad)) scale(1.03)}
+
+/* other properties and collections are coral; a placeholder link (no note yet, itself, or a note the map doesn't hold) is a dashed outline, no fill,
+   its text just barely below white (0.8.280, Nick) */
+.theme-dark .ivm-card,.ivm-card.theme-dark{--ivc-prop:#ff9e7d;--ivc-none:#eceef5;--ivc-noneb:rgba(236,238,245,.45)}
+.theme-light .ivm-card,.ivm-card.theme-light{--ivc-prop:#d0582f;--ivc-none:#262833;--ivc-noneb:rgba(38,40,51,.4)}
+.ivm-card.sf-th{--ivc-prop:#ff9e7d;--ivc-none:#eceef5;--ivc-noneb:rgba(236,238,245,.45)}
+body.ivm-linkcolors [data-ivk="none"]{--link-color:var(--ivk-none);--link-color-hover:var(--ivk-none);--link-unresolved-color:var(--ivk-none);--link-unresolved-opacity:1;--ivn:var(--ivk-none);--ivnb:var(--ivk-noneb)}
+.ivm-card.ivm-card [data-ivk="none"]{--link-color:var(--ivc-none);--link-color-hover:var(--ivc-none);--link-unresolved-color:var(--ivc-none);--link-unresolved-opacity:1;--ivn:var(--ivc-none);--ivnb:var(--ivc-noneb)}
+body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"],.ivm-card.ivm-card.ivm-card [data-ivk="none"]{color:var(--ivn);opacity:1;text-decoration:none;border:1px dashed var(--ivnb);border-radius:4px;padding:0 4px}
+body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"] *,.ivm-card.ivm-card.ivm-card [data-ivk="none"] *{color:var(--ivn);text-decoration:none}

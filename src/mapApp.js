@@ -5487,6 +5487,8 @@ function edLook(el){ const SFE = CARDTH === "starfield", th = SFE ? "starfield" 
   win.setTimeout(() => { try { for (const o of Object.values(EDS)) if (o && o.el === el) edTint(o); } catch (_) { /* editors not made yet */ } }, 0); }
 /* a link's color in the editor says how the note it points to relates to this one (0.8.224, Nick: "what if every single link is colored based on whether it's an up, related, above, or below link?"):
    up property gold, related purple, above blue, below green, any other property slate. Starfield theme for now (the rule lives on .sf-th) */
+/* a link to a note that isn't there yet (or to itself, or one the map doesn't hold) is a placeholder: "none", a dashed outline, no fill (0.8.280, Nick) */
+const ISLINK = "a.internal-link, .cm-hmd-internal-link, .internal-link";
 function edTint(o){ if (!o || !o.el || o.el.hidden) return;
   if (!o.path || !host.linkTargets) return; const sf = o.el.classList.contains("sf-th"), i = PIDX.get(o.path);
   const els = o.el.querySelectorAll("a.internal-link, .cm-hmd-internal-link, .multi-select-pill-content, .internal-link");
@@ -5496,7 +5498,7 @@ function edTint(o){ if (!o || !o.el || o.el.hidden) return;
   const CK_ = new Set(host.collectionKeys ? host.collectionKeys() : ["collections"]);
   for (const e of els) { const key = String(e.getAttribute("data-href") || e.textContent || "").trim().toLowerCase(); if (!key) continue;
     { const mp = e.closest(".metadata-property"); if (mp && CK_.has(String(mp.getAttribute("data-property-key") || "").toLowerCase())) { if (e.dataset.ivk !== "prop") e.dataset.ivk = "prop"; continue; } }   /* a collection is a property link: slate (0.8.277) */
-    const p = M.get(key) || M.get(key.split("|")[0].split("#")[0].trim()) || M.get(key.split("|").pop().trim()); const kd = p ? kindOf(p) : ""; if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } }   /* the link colors always come along (the up/related pills) */
+    const p = M.get(key) || M.get(key.split("|")[0].split("#")[0].trim()) || M.get(key.split("|").pop().trim()); const kd = (p ? kindOf(p) : "") || (e.matches(ISLINK) ? "none" : ""); if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } }   /* the link colors always come along (the up/related pills) */
 const clampN = (v, a, b) => Math.round(Math.max(a, Math.min(b, v)));
 // the side editors' widths can be dragged at their inner edge (0.8.31); otherwise a share of the map
 const EDW = (() => { const o = pref("iv-edw", null); return o && typeof o === "object" ? o : {}; })();
@@ -8164,6 +8166,7 @@ return {
   /** a note opened elsewhere while the map is in front: show it as the primary note (0.8.218). False when the map can't (not in the map, or filtered out) */
   hasNote(path){ return PIDX.has(path); },
   /** how the note at toPath relates to the one at fromPath, for link colors everywhere (0.8.234): upp, rel, up, down, prop, or "" */
+  hasNote(path){ return !dead && PIDX.has(path); },
   linkKind(fromPath, toPath){ const i = PIDX.get(fromPath), j = PIDX.get(toPath); if (i == null || j == null || i === j || dead) return ""; const kk = EKIND.get(i*n + j); if (kk === undefined && !out[i].includes(j)) return ""; return kk === 1 ? "upp" : kk === 4 ? "rel" : kk === 5 || kk === 3 ? "prop" : upOf(i, j) ? "up" : "down"; },
   openPrimary(path){ const i = PIDX.get(path); if (i == null || dead || !edOn() || !vis[i]) return false; if (EDS.left.col) EDS.left.collapse(false); select(i); navTo(i); draw(); return true; },
   editIn(path, which){ const i = PIDX.get(path); if (i == null || dead) return false;
