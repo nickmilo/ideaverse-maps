@@ -6525,7 +6525,9 @@ const fzOn = () => FZ_MAPS.has(view) && !S3D_ON() && !sphOn() && !domeOn() && !g
 function S3D_ON(){ return view === "stars" && S3D; }
 // Close-Up anywhere but Starfield: the note centred, zoomed so most of its linked notes (the nearest three quarters) sit just inside the view
 function closeTarget(xs, ys, i){ const f = fitTarget(), t = closeTarget0(xs, ys, i), kk = Math.max(f.k * 1.5, Math.min(f.k * 12, t.k)), vw = W - sideW();
-  return { k: kk, tx: vw/2 - xs[i]*kk, ty: H/2 - ys[i]*kk }; }
+  /* the Ideaverse with the primary note open: the note sits a little right of center, toward the free space (0.8.313, Nick: "just shifts slightly to the right, not too much") */
+  let cx = vw/2; if (IDV() && EDS && !EDS.left.el.hidden && !EDS.left.col) { const r_ = edRect("left"); cx += Math.max(0, r_.x + r_.w) * .3; }
+  return { k: kk, tx: cx - xs[i]*kk, ty: H/2 - ys[i]*kk }; }
 function closeTarget0(xs, ys, i){ if (view === "stars") return starFocusTarget(xs, ys, i);
   const vw = W - sideW(), R = .42*Math.min(vw, H), ds = [];
   for (const j of new Set([...out[i], ...inn[i]])) if (j !== i && vis[j]) ds.push(Math.hypot(xs[j] - xs[i], ys[j] - ys[i]));

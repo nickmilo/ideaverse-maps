@@ -1865,3 +1865,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm.trhid main .legtab{bottom:40px}
 /* Display: mini headers over its groups (0.8.309) */
 .ivm .dlist .dmh{font:600 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:12px 0 4px;padding-top:8px;border-top:1px solid var(--line, rgba(127,127,127,.25))}
+/* Saved views: group headers in the Filter menu's header style (FOLDERS, COLLECTIONS): small gray mono capitals (0.8.313, Nick) */
+.ivm.ivm #vlist.vlist2 details.vgrp > summary .t{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.ivm.ivm #vlist.vlist2 details.vgrp > summary:hover .t{color:var(--ink)}
+.ivm.ivm #vlist.vlist2 details.vgrp > summary::marker,.ivm.ivm #vlist.vlist2 details.vgrp > summary::-webkit-details-marker{color:var(--muted);font-size:9px}
