@@ -5305,14 +5305,14 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
     { const cI = D_.ck ? D_.i : sel, ck_ = (host.collectionKeys ? host.collectionKeys()[0] : "") || "collections", ex = cI >= 0 ? collOf(cI, true).filter(j => !D_.list.includes(j) && vis[j]) : [];
       if (ex.length) { const g0 = "→ " + ck_, rest = [...groups]; groups.clear(); groups.set(g0, ex); for (const [k_, v_] of rest) groups.set(k_, v_); } }
     const rowsFor = [[null, order], ...[...groups].map(([g_, js]) => [g_, js])];
-    for (const [g_, js] of rowsFor) { if (g_) { const fo = LKFOLD[g_] === true, gh = lbox.createEl("button", { cls: "lkg", attr: { type: "button" } }); gh.createSpan({ text: `${fo ? "▸" : "▾"}  ${g_.toUpperCase()} · ${js.length}` });
+    for (const [g_, js] of rowsFor) { if (g_) { const fo = LKFOLD[g_] === true, gh = lbox.createEl("button", { cls: "lkg", attr: { type: "button" } }); gh.createSpan({ text: `${g_.slice(2).toUpperCase()} · ${js.length}  ${fo ? "▸" : "▾"}` });   /* the name first, its fold arrow after; each row carries its own → or ← (0.8.307, Nick) */
         gh.onclick = e => { e.stopPropagation(); if (LKFOLD[g_]) delete LKFOLD[g_]; else LKFOLD[g_] = true; save("iv-lkfold", LKFOLD); RECKEY = ""; recSync(); }; if (fo) continue; }   /* a property's group folds, remembered (0.8.297) */
     for (const j of js) { if (!N[j]) continue; const dimJ = D_.ck && CK.only ? !(CK.only === "in" ? D_.inS.has(j) : D_.outS.has(j)) : false;   /* the Starship's F / R scopes dim the other side */
       const r = lbox.createEl("button", { cls: "rcr lkr" + (D_.ck && j === D_.lock ? " on" : "") + (dimJ ? " dim" : ""), attr: { type: "button" } });
       /* each name in the color of its line, map or Starship: up gold, related purple, above blue, below green (0.8.301, Nick: Forgetting curve was blue here, green on the map) */
       const col = (D_.ck ? (SL[CK.kind.get(j) || "prop"] || (CK.SL || {})[CK.kind.get(j) || "prop"]) : (() => { try { return edgeColor(sel, j, upOf(sel, j)); } catch (_) { return ""; } })()) || ink;
       if (!HUDTC) { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": col }); }
-      if (g_) r.addClass("lkin"); else r.createSpan({ cls: "lka", text: D_.inS.has(j) && D_.outS.has(j) ? "↔" : D_.inS.has(j) ? "←" : "→" });
+      r.createSpan({ cls: "lka", text: g_ ? g_[0] : D_.inS.has(j) && D_.outS.has(j) ? "↔" : D_.inS.has(j) ? "←" : "→" });
       const nm = r.createSpan({ cls: "rcn" + (HUDTC || g_ ? " lkc" : ""), text: N[j].title }); if (g_) nm.setCssProps({ "--lc": collCoral() }); else if (HUDTC) nm.setCssProps({ "--lc": col });
       if (HUDR && D_.sc.has(j)) r.createSpan({ cls: "rca lks", text: String(D_.sc.get(j)) });
       /* in the Starship a click locks onto that note's panel, a second click flies there, as its own list did */
