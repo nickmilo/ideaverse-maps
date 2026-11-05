@@ -109,7 +109,7 @@ let EMOI = null;   // note index → its emoji
    as the editors color them; Display → Collection links. They're drawn only, never counted: scores, levels and layouts don't change */
 let COLLON = pref("iv-colllinks", true) !== false;
 const CIDX = new Map(); N.forEach((d, i) => { if (d.archive) return; const k_ = String(d.title).toLowerCase(); if (!CIDX.has(k_)) CIDX.set(k_, i); });
-const collOf = i => { if (!COLLON || i < 0) return []; const r_ = []; for (const c of N[i].collections || []) { const j = CIDX.get(String(c).replace(/^\[\[|\]\]$/g, "").split("/").pop().toLowerCase()); if (j != null && j !== i && !r_.includes(j)) r_.push(j); } return r_; };
+const collOf = (i, any) => { if (!(COLLON || any) || i < 0) return []; const r_ = []; for (const c of N[i].collections || []) { const j = CIDX.get(String(c).replace(/^\[\[|\]\]$/g, "").split("/").pop().toLowerCase()); if (j != null && j !== i && !r_.includes(j)) r_.push(j); } return r_; };
 let COLLS = { i: -2, s: new Set() }; const collSet = i => { if (COLLS.i !== i || COLLS.on !== COLLON) COLLS = { i, on: COLLON, s: new Set(collOf(i)) }; return COLLS.s; };
 let VISV = 0, RECCK = true;   // bumps whenever what shows changes (Recent caches by it)
 const emoBuild = () => { const has = Object.keys(EMOF).length > 0; if (!has && !EMO) { EMOI = null; return; }
@@ -5295,6 +5295,9 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
     { let sr = 0; lbox.addEventListener("scroll", () => { if (!sr) sr = win.requestAnimationFrame(() => { sr = 0; if (RECLAY) RECLAY(); }); }, { passive: true }); }
     const G_ = HUDGRP ? lkGroups(D_.ck ? D_.i : sel, D_.list) : new Map(), order = [...D_.list.filter(j => !G_.has(j))], groups = new Map();
     for (const j of D_.list) if (G_.has(j)) { const g_ = G_.get(j); if (!groups.has(g_)) groups.set(g_, []); groups.get(g_).push(j); }
+    /* this note's own collections, as the first coral group (0.8.299, Nick: Sources belongs in Groundhog Day's Links); a collection that's also a written link stays there */
+    { const cI = D_.ck ? D_.i : sel, ck_ = (host.collectionKeys ? host.collectionKeys()[0] : "") || "collections", ex = cI >= 0 ? collOf(cI, true).filter(j => !D_.list.includes(j) && vis[j]) : [];
+      if (ex.length) { const g0 = "→ " + ck_, rest = [...groups]; groups.clear(); groups.set(g0, ex); for (const [k_, v_] of rest) groups.set(k_, v_); } }
     const rowsFor = [[null, order], ...[...groups].map(([g_, js]) => [g_, js])];
     for (const [g_, js] of rowsFor) { if (g_) { const fo = LKFOLD[g_] === true, gh = lbox.createEl("button", { cls: "lkg", attr: { type: "button" } }); gh.createSpan({ text: `${fo ? "▸" : "▾"}  ${g_.toUpperCase()} · ${js.length}` });
         gh.onclick = e => { e.stopPropagation(); if (LKFOLD[g_]) delete LKFOLD[g_]; else LKFOLD[g_] = true; save("iv-lkfold", LKFOLD); RECKEY = ""; recSync(); }; if (fo) continue; }   /* a property's group folds, remembered (0.8.297) */
