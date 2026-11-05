@@ -52,7 +52,12 @@ jobs:
           v="${{ steps.v.outputs.version }}"
           if [ "${{ github.event_name }}" = "push" ]; then
             if [ -f "docs/releases/$v.md" ]; then notes=$(cat "docs/releases/$v.md"); else notes=$(git log -1 --pretty=%B | sed '/^Co-Authored-By/d;/^Claude-Session/d'); fi
-            gh release create "$v" --target "$GITHUB_SHA" --title "$v" --notes "$notes" main.js manifest.json styles.css
+            # a draft first, files attached, then published: Obsidian never sees a release with main.js but no styles.css
+            # (0.8.360: an update caught mid-upload installed without styles.css and the map showed unstyled)
+            gh release create "$v" --draft --target "$GITHUB_SHA" --title "$v" --notes "$notes" main.js manifest.json styles.css
+            gh release edit "$v" --draft=false --latest
           else
-            gh release upload "$v" main.js manifest.json styles.css --clobber
+            # published by hand, or by the step above: attach only what's missing (never --clobber, which deletes a file before re-adding it)
+            have=$(gh release view "$v" --json assets -q '.assets[].name')
+            for f in main.js manifest.json styles.css; do echo "$have" | grep -qx "$f" || gh release upload "$v" "$f"; done
           fi
