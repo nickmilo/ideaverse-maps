@@ -24,7 +24,7 @@ export function registerLinkColors(plugin) {
       /* a link inside an embedded note belongs to that note: colored by how its note relates to the embedded one, not to this one (0.8.279) */
       let from = path, MM = M; { const em = e.closest(".markdown-embed-content, .markdown-embed .markdown-preview-view"), host_ = em && em.closest(".internal-embed[src]");
         if (host_) { const t = app.metadataCache.getFirstLinkpathDest(String(host_.getAttribute("src") || "").split("#")[0], path); if (t instanceof TFile) { from = t.path; MM = targets(app, from); } } }
-      const p = MM.get(key) || MM.get(key.split("|")[0].split("#")[0].trim()) || MM.get(key.split("|").pop().trim()), kd = (p ? m.linkKind(from, p) : "") || (m.hasNote && m.hasNote(from) && e.matches(LINK) ? "none" : "");   /* a placeholder (0.8.280) */
+      const p = MM.get(key) || MM.get(key.split("|")[0].split("#")[0].trim()) || MM.get(key.split("|").pop().trim()), kd = p ? m.linkKind(from, p) : (m.hasNote && m.hasNote(from) && e.matches(LINK) ? "none" : "");   /* only an unresolved link is a placeholder (0.8.347) */   /* a placeholder (0.8.280) */
       if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } };
   /* the backlinks pane (0.8.282, Nick): each note's title colored by how it relates to the note the pane is for. A backlink is a link the other way,
      so its kind is read from that note's side and turned round: a note whose up is this one sits below it (green), and so on */

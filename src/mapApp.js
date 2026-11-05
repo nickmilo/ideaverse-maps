@@ -5664,7 +5664,7 @@ function edTint(o){ if (!o || !o.el || o.el.hidden) return;
   const CK_ = new Set(host.collectionKeys ? host.collectionKeys() : ["collections"]);
   for (const e of els) { const key = String(e.getAttribute("data-href") || e.textContent || "").trim().toLowerCase(); if (!key) continue;
     { const mp = e.closest(".metadata-property"); if (mp && CK_.has(String(mp.getAttribute("data-property-key") || "").toLowerCase())) { if (e.dataset.ivk !== "prop") e.dataset.ivk = "prop"; continue; } }   /* a collection is a property link: slate (0.8.277) */
-    const p = M.get(key) || M.get(key.split("|")[0].split("#")[0].trim()) || M.get(key.split("|").pop().trim()); const kd = (p ? kindOf(p) : "") || (e.matches(ISLINK) ? "none" : ""); if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } }   /* the link colors always come along (the up/related pills) */
+    const p = M.get(key) || M.get(key.split("|")[0].split("#")[0].trim()) || M.get(key.split("|").pop().trim()); const kd = p ? kindOf(p) : (e.matches(ISLINK) ? "none" : "");   /* only a link with no note behind it is a placeholder; a note that exists (itself, or one off the map) keeps the plain link look (0.8.347, Nick) */ if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } }   /* the link colors always come along (the up/related pills) */
 const clampN = (v, a, b) => Math.round(Math.max(a, Math.min(b, v)));
 // the side editors' widths can be dragged at their inner edge (0.8.31); otherwise a share of the map
 const EDW = (() => { const o = pref("iv-edw", null); return o && typeof o === "object" ? o : {}; })();
