@@ -219,6 +219,7 @@ function computeVis(){ VISV++; const fs = new Set(folders);
   if (YRV.has(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
   if (winSpan() && YRV.has(curV()) && !YRALL) { const w0 = winStart(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0)) vis[i] = 0; }
   if (BYMT) capDays();
+  try { tlFilter(); } catch (_) { /* Base Builder not set up yet */ }
   if (focus >= 0) vis[focus] = 1;
   if (BQCTX && BQS && sel >= 0) vis[sel] = 1;   // a base view that follows the picked note keeps that note on the map
   // a filter, a collection or a base that leaves few notes: draw them bigger, so a small set never looks empty
@@ -3341,7 +3342,7 @@ EXP.cockpit = {
 // Size: a number (your rank). Each note is a card, and when the note has an image property (a poster, a cover),
 // the card shows it once you zoom in. The map reads the properties itself, so it works on any dataset.
 // Posters and Base Builder share this engine, each with its own settings (iv-p… and iv-b…)
-const mkPST = c => ({ across: pref(`iv-${c}across`, null), lanes: pref(`iv-${c}lanes`, null), size: pref(`iv-${c}size`, null), height: pref(`iv-${c}height`, null), mosaic: !!pref(`iv-${c}mosaic`, false), con: c === "b" && pref("iv-bcon", false) === true, tl: c === "b" && pref("iv-btl", false) === true, conSel: c === "b" ? pref("iv-bconsel", null) : null, conMax: c === "b" ? +pref("iv-bconmax", 40) || 40 : 40, mbox: [], mosaicOn: false, rng: pref(`iv-${c}rng`, null) || {}, lhide: pref(`iv-${c}lhide`, null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" });
+const mkPST = c => ({ across: pref(`iv-${c}across`, null), lanes: pref(`iv-${c}lanes`, null), size: pref(`iv-${c}size`, null), height: pref(`iv-${c}height`, null), mosaic: !!pref(`iv-${c}mosaic`, false), con: c === "b" && pref("iv-bcon", false) === true, tl: c === "b" && pref("iv-btl", false) === true, tlp: c === "b" ? pref("iv-btlp", "") || "" : "", conSel: c === "b" ? pref("iv-bconsel", null) : null, conMax: c === "b" ? +pref("iv-bconmax", 40) || 40 : 40, mbox: [], mosaicOn: false, rng: pref(`iv-${c}rng`, null) || {}, lhide: pref(`iv-${c}lhide`, null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" });
 const PSTP = mkPST("p"), PSTB = mkPST("b"), PSC = () => view === "builder" ? PSTB : PSTP, PK = key => "iv-" + (PSC() === PSTB ? "b" : "p") + key;
 let BASEINFO = null;   // from a base: its sort property and each note's group
 // (a note whose properties Obsidian hasn't read yet, right after it starts, is asked again next time instead of remembered as empty)
@@ -3366,6 +3367,17 @@ const YPART = "(?:c\\.?|ca\\.?|circa|~)?\\s*(\\d{1,4})\\s*(BCE|BC|CE|AD)?", YSPA
 // a span of years, like a lifespan ("1949 -", "1879 – 1955", "c. 563 BCE – 483 BCE"): [start, end] (end null while ongoing)
 function yspan(v){ if (typeof v !== "string") return null; const m = YSPAN.exec(v); if (!m) return null; const y = (d, e) => d == null ? null : (/^BC/i.test(e || "") ? -+d : +d); const a = y(m[1], m[2]), b = y(m[3], m[4] || (m[2] && /^BC/i.test(m[2]) && m[3] ? m[2] : "")); return a == null || (b != null && b < a) ? null : [a, b]; }
 const DATEK = new Set(["created","createdat","created_at","created on","date created","datecreated","creation date","creation_date","date"]);
+/* Base Builder · Timeline by any date-ish property (0.8.325, Nick: "Give me the choice to select one of the properties that is date-oriented, like year or lifespan, and only notes
+   that have that property are automatically filtered"): a span of years (1929 - 2018) is a bar; a lone year or date is a one-year bar */
+const tlVal = v => { const f = Array.isArray(v) ? v[0] : v; if (f == null || f === "" || (typeof f === "string" && f.includes("[["))) return null;   /* a link (prev, next) is a note, not a date */ const sp = yspan(f); if (sp) return sp; const x = asNum(f); if (x != null && Number.isInteger(x) && x >= 1000 && x <= 2200) return [x, x];
+  if (typeof f === "string") { const d = parseDay(f); if (d) { const y = +d.slice(0, 4); if (y) return [y, y]; } } return null; };
+let TLC = null, tlUI = () => {};
+function tlCands(){ if (TLC && TLC.n === n) return TLC.list; const st = new Map(), step = Math.max(1, Math.floor(n / 6000));
+  for (let i = 0; i < n; i += step) { if (ARCH[i]) continue; const fm = fmOf(i); if (!fm) continue; for (const k_ of Object.keys(fm)) { if (k_ === "position" || DATEK.has(k_.toLowerCase()) || /^(modified|updated|updatedat|last.?modified)$/i.test(k_)) continue;
+      const v = fm[k_]; if (v == null || v === "" || (Array.isArray(v) && !v.length)) continue; let o = st.get(k_); if (!o) st.set(k_, o = { n: 0, ok: 0, span: 0 }); o.n++; const t = tlVal(v); if (t) { o.ok++; if (t[0] !== t[1] || (typeof (Array.isArray(v) ? v[0] : v) === "string" && yspan(Array.isArray(v) ? v[0] : v))) o.span++; } } }
+  const list = [...st].filter(([, o]) => o.ok * step >= 3 && o.ok >= o.n * .6).map(([key, o]) => ({ key, n: o.ok * step, span: o.span >= o.ok * .5 })).sort((a, b) => (b.span - a.span) || b.n - a.n);
+  TLC = { n, list }; return list; }
+function tlFilter(){ if (curV() !== "builder" || !PSTB.tl || PSTB.con || !PSTB.tlp) return; for (let i = 0; i < n; i++) { if (!vis[i]) continue; const fm = fmOf(i); if (!fm || !tlVal(fm[PSTB.tlp])) vis[i] = 0; } }
 function postersDetect(){
   const ids = []; for (let i=0;i<n;i++) if (vis[i]) ids.push(i);
   const key = ids.length + ":" + (ids[0] ?? -1) + ":" + (ids[ids.length - 1] ?? -1) + ":" + (BASEINFO ? BASEINFO.v : 0); if (PSC().key === key && PSC().opts) return PSC().opts; PSC().key = key;
@@ -3393,7 +3405,9 @@ function postersDetect(){
     if (o.span >= o.n * .6) { across.push({ id: k_, name: k_ + " (start)", kind: "year" }, { id: k_ + "@end", name: k_ + " (end)", kind: "year" }); continue; }
     if (o.img >= o.n * .5) { if (!img) img = k_; continue; }
     const d = o.vals.size; if ((o.cat + o.link) >= o.n * .6 && d >= 2 && d <= Math.max(60, sampled * .5)) lanes.push({ id: k_, name: k_, vals: o.vals, people: o.link > o.cat }); }
-  const want = BASEINFO && BASEINFO.sort; const rk0 = a => a.id === want ? 0 : a.kind === "year" ? 1 : a.id === "@created" ? 4 : a.kind === "date" ? 2 : 3;
+  if (view === "builder" && PSTB.tl && PSTB.tlp) { const k_ = PSTB.tlp; if (!across.some(a => a.id === k_)) across.push({ id: k_, name: k_ + " (start)", kind: "year" }); if (!across.some(a => a.id === k_ + "@end")) across.push({ id: k_ + "@end", name: k_ + " (end)", kind: "year" }); }
+  across.push({ id: "@score", name: "Link score", kind: "num" });   /* always a second number, so Scatter always works (0.8.325, Nick) */
+  const want = BASEINFO && BASEINFO.sort; const rk0 = a => a.id === "@score" ? 6 : a.id === want ? 0 : a.kind === "year" ? 1 : a.id === "@created" ? 4 : a.kind === "date" ? 2 : 3;
   // Base Builder: the base's own columns come first, in the order the base shows them
   const cols = view === "builder" && BASEINFO && Array.isArray(BASEINFO.cols) ? BASEINFO.cols : null, ci = id => cols ? cols.indexOf(id) : -1;
   const rk = a => a.id === want ? 0 : ci(a.id) >= 0 ? 1 + ci(a.id) / 1000 : 2 + rk0(a); across.sort((a, b) => rk(a) - rk(b));
@@ -3412,8 +3426,8 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
   { const sc_ = !!(cu && cu.heightId); box.querySelectorAll('[data-k="lanes"]').forEach(el => el.hidden = sc_); box.querySelectorAll('[data-k="height"]').forEach(el => el.hidden = !sc_);
     const con = view === "builder" && PSTB.con && PSTB.conProps && PSTB.conProps.ids.length, tl = view === "builder" && !con && !!PSTB.spans, md = con ? "constellation" : tl ? "timeline" : cu && cu.mosaic ? "mosaic" : sc_ ? "scatter" : "rows"; box.querySelectorAll("#pmode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pm === md)));
     { const cb_ = box.querySelector('#pmode button[data-pm="constellation"]'); if (cb_) { cb_.hidden = view !== "builder"; const has = peopleDetect().length > 0; cb_.disabled = !has; cb_.title = has ? "" : "No property here lists people (director, cast, author…)"; } }
-    box.classList.toggle("pcon", !!con); box.classList.toggle("ptl", tl);
-    { const tb_ = box.querySelector('#pmode button[data-pm="timeline"]'); if (tb_) { tb_.hidden = view !== "builder"; const has = o.across.some(a => a.id.endsWith("@end")); tb_.disabled = !has; tb_.title = has ? "" : "No property here holds a span of years (a lifespan like 1879 – 1955)"; } }
+    box.classList.toggle("pcon", !!con); box.classList.toggle("ptl", tl); tlUI();
+    { const tb_ = box.querySelector('#pmode button[data-pm="timeline"]'); if (tb_) { tb_.hidden = view !== "builder"; const has = o.across.some(a => a.id.endsWith("@end")) || tlCands().length > 0; tb_.disabled = !has; tb_.title = has ? "" : "No property here holds a span of years (a lifespan like 1879 – 1955)"; } }
     /* Scatter needs a second number besides left to right; without one it was a dead button (0.8.318, Nick: "I can't seem to select it"): dimmed like Timeline and Constellation */
     { const sb_ = box.querySelector('#pmode button[data-pm="scatter"]'); if (sb_) { const cu_ = PSC().cur || {}, has = o.across.some(a => a.id !== cu_.acrossId && a.id !== "@created" && !a.id.endsWith("@end")); sb_.disabled = !has && !PSC().height; sb_.title = sb_.disabled ? "Scatter needs a second number property (a rank, a rating, a year)" : ""; } }
     { const bc = box.querySelector(".bcon"); if (bc) { bc.hidden = !con; if (con) builderConUI(bc); } }
@@ -3440,7 +3454,7 @@ function layoutPosters(){
   const tlOn = view === "builder" && PSTB.tl && o.across.some(a => a.id.endsWith("@end")), hgt = !tlOn && !PSC().mosaic && PSC().height ? o.across.find(a => a.id === PSC().height && a.id !== acrossId) : null, heightId = hgt ? hgt.id : "";
   const sizeId = PSC().size != null && o.size.some(s_ => s_.id === PSC().size) ? PSC().size : o.defSize && o.defSize !== acrossId ? o.defSize : (o.size.find(s_ => /^(rank|rating|stars|score|my.?rating|runtime|pages|length)$/i.test(s_.id) && s_.id !== heightId && s_.id !== acrossId) || o.size[0]).id;
   PSC().cur = { acrossId, laneId, sizeId, heightId, kind: ac.kind, mosaic: PSC().mosaic };
-  const valBy = (id, kind, i) => { if (id === "@created") return isNaN(TV[i]) ? null : yOf(TV[i]) + yFrac(TV[i]);
+  const valBy = (id, kind, i) => { if (id === "@created") return isNaN(TV[i]) ? null : yOf(TV[i]) + yFrac(TV[i]); if (id === "@score") return N[i].score;
     const end = id.endsWith("@end"), key = end ? id.slice(0, -4) : id, v = fmOf(i) && fmOf(i)[key]; if (v == null) return null;
     if (kind !== "date") { const sp = yspan(Array.isArray(v) ? v[0] : v); if (sp) { const y = end ? sp[1] : sp[0]; return y == null ? null : y + .5; } }   // a span of years: its start, or its end
     if (kind === "date") { const d = parseDay(Array.isArray(v) ? v[0] : v); if (!d) return null; const t = Date.parse(d); return yOf(t) + yFrac(t); } const x = asNum(Array.isArray(v) ? v[0] : v); return x == null ? null : x + (kind === "year" ? .5 : 0); };
@@ -3497,8 +3511,8 @@ function layoutPosters(){
 // (people alive now). The year scale stretches where many lives fall and tightens where few do, so a crowd of moderns gets room next to a few ancients.
 // An open end (still alive, still running) fades out toward today. The color is the note's row category (Color by).
 function layoutSpans(ids0, o, lab, order){
-  const sp = o.across.find(a => a.id.endsWith("@end")), key = sp.id.slice(0, -4), NOWY = new Date().getUTCFullYear();
-  const all_ = []; for (const i of ids0) { const v = fmOf(i) && fmOf(i)[key], s_ = yspan(Array.isArray(v) ? v[0] : v); if (s_) all_.push([i, s_[0], s_[1]]); }
+  const sp = (PSTB.tlp && o.across.find(a => a.id === PSTB.tlp + "@end")) || o.across.find(a => a.id.endsWith("@end")), key = sp.id.slice(0, -4), NOWY = new Date().getUTCFullYear();
+  const all_ = []; for (const i of ids0) { const v = fmOf(i) && fmOf(i)[key], s_ = tlVal(v); if (s_) all_.push([i, s_[0], s_[1] === s_[0] && !yspan(Array.isArray(v) ? v[0] : v) ? s_[0] + 1 : s_[1]]); }
   // the years slider: its histogram counts the lives under way in each stretch of years; it keeps every life that overlaps the years kept
   // (the slider starts at the 5th-percentile start, so a few ancients don't squash it; its left end at its minimum keeps everyone earlier too)
   const sid = key + "@span", endOf = r => r[2] ?? (r[1] > NOWY - 110 ? NOWY : r[1] + 80), st0 = all_.map(r => r[1]).sort((a, b) => a - b);
@@ -3654,7 +3668,7 @@ EXP.posters = {
       ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .22 : .65) : 1;
       const P_ = PSC();
       if (P_.spans) { const col = builderHue(i), open = P_.spans.open.has(i), h_ = Math.max(1.5, h);   // Timeline: a bar, fading out where its end is still open
-        if (open) { const g = ctx.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, col); g.addColorStop(.6, col); g.addColorStop(1, col + "00"); ctx.fillStyle = g; } else ctx.fillStyle = col;
+        if (open) { const g = ctx.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, col); g.addColorStop(.6, col); g.addColorStop(1, /^rgb\(/.test(col) ? col.replace(/^rgb\((.*)\)$/, "rgba($1, 0)") : col + "00"); ctx.fillStyle = g; } else ctx.fillStyle = col;   /* an rgb() color fades too (0.8.325) */
         ctx.fillRect(x, y + (h - h_) / 2, w, h_); if (i === sel) { ctx.strokeStyle = css.accent; ctx.lineWidth = 2; ctx.strokeRect(x - 2, y - 2, w + 4, h + 4); }
         if (h >= 4.5 || i === sel) { ctx.fillStyle = css.ink; ctx.font = `500 ${Math.max(9, Math.min(12, h * 1.6))}px ${css.body}`; ctx.textBaseline = "middle"; ctx.fillText(N[i].title, x + w + 5, y + h / 2); ctx.textBaseline = "alphabetic"; }
         continue; }
@@ -7568,13 +7582,21 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     for (const [m, t, tip] of [["rows", "Rows", "One row per value of a category (genre, status, director)"], ["scatter", "Scatter", "Two numbers: one left to right, one bottom to top (your rating against the crowd's)"], ["mosaic", "Mosaic", "Every card as a tile, no gaps: a block per category, each tile sized by Card size"], ["constellation", "Constellation", "The people the notes name (director, cast, author…) as stars, joined by the notes they share"], ["timeline", "Timeline", "Each note a thin bar from its start to its end (a lifespan): the earliest at the bottom left, the latest at the top right"]]) {
       const b = pseg.createEl("button", { text: t, attr: { type: "button", "data-pm": m, "aria-label": tip } });
       b.onclick = e => { e.stopPropagation(); let h = "";
-        if (view === "builder") { const on = m === "constellation", tl = m === "timeline"; if (on !== PSTB.con) { PSTB.con = on; save("iv-bcon", on); } if (tl !== PSTB.tl) { PSTB.tl = tl; save("iv-btl", tl); }
-          if (on) { PPL.pick = -1; morph(true, () => fitTarget()); legend(); return; } if (tl) { morph(true, () => fitTarget()); legend(); return; } } PSC().mosaic = m === "mosaic"; save(PK("mosaic"), PSC().mosaic);
+        if (view === "builder") { const on = m === "constellation", tl = m === "timeline", wasTl = PSTB.tl && !!PSTB.tlp; if (on !== PSTB.con) { PSTB.con = on; save("iv-bcon", on); } if (tl !== PSTB.tl) { PSTB.tl = tl; save("iv-btl", tl); }
+          if (tl && (!PSTB.tlp || !tlCands().some(c_ => c_.key === PSTB.tlp))) { const c0 = tlCands()[0]; PSTB.tlp = c0 ? c0.key : ""; save("iv-btlp", PSTB.tlp); }
+          if (on) { PPL.pick = -1; relayout(true, false, () => fitTarget()); legend(); return; } if (tl) { relayout(true, false, () => fitTarget()); legend(); return; } if (wasTl) { win.setTimeout(() => { if (!dead) relayout(true, false, () => fitTarget()); }, 0); } }   /* leaving Timeline brings back the notes it set aside */ PSC().mosaic = m === "mosaic"; save(PK("mosaic"), PSC().mosaic);
         if (m === "mosaic") { morph(true, () => fitTarget()); legend(); return; }
         if (m === "scatter") { const o = postersDetect(), cu = PSC().cur || {}, c = o.across.filter(a => a.id !== cu.acrossId && a.id !== "@created");
           const pick = c.find(a => a.id === PSC().lastHeight) || c.find(a => /^(rank|rating|stars|score|my.?rating)$/i.test(a.id)) || c[0]; if (!pick) return; h = pick.id; }
         PSC().height = h; save(PK("height"), h); morph(true, () => fitTarget()); legend(); }; }
-    { const bc_ = pc.querySelector(".bcon"); if (bc_) pm.after(bc_); }   // Constellation's options sit under the layout switch
+    { const bc_ = pc.querySelector(".bcon"); if (bc_) pm.after(bc_); }
+    /* Timeline of: any property with years or dates; only the notes that have it stay on the map (0.8.325) */
+    { const bt = pc.createDiv({ cls: "prow btlp" }); bt.hidden = true; bt.createSpan({ text: "Timeline of" }); const sl = bt.createEl("select", { cls: "dropdown", attr: { "aria-label": "The property the timeline runs on" } });
+      const hint = pc.createDiv({ cls: "phint btlh" }); hint.hidden = true; hint.setText("Only notes with it stay on the map. A span (1929 - 2018) is a bar; a year or a date is a short one.");
+      sl.onchange = () => { PSTB.tlp = sl.value; save("iv-btlp", sl.value); relayout(true, false, () => fitTarget()); legend(); };
+      pm.after(bt); bt.after(hint);
+      tlUI = () => { const on_ = view === "builder" && PSTB.tl && !PSTB.con; bt.hidden = hint.hidden = !on_; if (!on_) return; const cs = tlCands(); sl.empty();
+        for (const c_ of cs) sl.createEl("option", { value: c_.key, text: `${c_.key} · ${c_.n.toLocaleString()}${c_.span ? " · spans" : ""}` }); sl.value = PSTB.tlp || (cs[0] ? cs[0].key : ""); }; }   // Constellation's options sit under the layout switch
     const HINT = { across: "A date or number. Places each card left to right.", height: "A second number. Places each card bottom to top.", lanes: "A category. Each value gets its own row.", size: "A number. The bigger it is, the bigger the card." };
     for (const [id, lab_, pk, key] of [["pacross", "Left to right", "iv-pacross", "across"], ["pheight", "Bottom to top", "iv-pheight", "height"], ["planes", "Rows by", "iv-planes", "lanes"], ["psize", "Card size", "iv-psize", "size"]]) {
       const row = pc.createEl("label", { cls: "prow", attr: { "data-k": key } }); row.createSpan({ text: lab_ }); const sel_ = row.createEl("select", { attr: { id } });
