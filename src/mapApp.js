@@ -2653,10 +2653,10 @@ function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), tu
   if (turn && CKW === "sf") for (const it of CK.items) { it.x = P[3 * it.i]; it.y = P[3 * it.i + 1]; it.z = P[3 * it.i + 2]; }   /* the panels ride along with their stars */
   return CKSF; }
 // the Starfield world's layers, each a mini switch in the Cockpit's ⚙ (0.8.96, Nick: "add as mini-toggles for me to play with")
-const CKX_DEF = { pv: true, mirror: false, card: true, gasp: false, rel: true, haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
+const CKX_DEF = { pv: true, mirror: false, rear: false, card: false, gasp: false, rel: true, haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
-const CKX_LABELS = [["mirror", "Rear-view mirror"], ["card", "Note card"], ["names", "Galaxy names"], ["gas", "Folder gas"], ["gasp", "Folder gas+"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["rel", "Relevance scores"], ["haze", "Star haze"]];
+const CKX_LABELS = [["mirror", "Rear-view mirror"], ["rear", "Rear scope"], ["card", "Note card"], ["names", "Galaxy names"], ["gas", "Folder gas"], ["gasp", "Folder gas+"], ["rings", "Hub rings"], ["orb", "Turning orbits"], ["read", "Readout"], ["lines", "Lines between hubs"], ["mini", "Overview map"], ["twinkle", "Twinkle"], ["posts", "Signposts"], ["dial", "Time dial"], ["turn", "Turning galaxies"], ["emo", "Emojis"], ["rel", "Relevance scores"], ["haze", "Star haze"]];
 const ckLook = (P, T) => { const dx = T[0] - P[0], dy = T[1] - P[1], dz = T[2] - P[2]; return [Math.atan2(dx, dz), Math.atan2(dy, Math.hypot(dx, dz))]; };
 const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2754,6 +2754,11 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     g.filter = "none"; g.restore(); }
   for (const [key, a] of bins) { g.fillStyle = SPAL[key]; g.globalAlpha = .8; g.beginPath(); for (let q = 0; q < a.length; q += 3) { const r = a[q + 2]; if (r < 1.2) g.rect(a[q] - r, a[q + 1] - r, 2 * r, 2 * r); else { g.moveTo(a[q] + r, a[q + 1]); g.arc(a[q], a[q + 1], r, 0, 6.2832); } } g.fill(); }
   for (const [i, px, py, r] of bright) { const col = SPAL[SC[i]], s = r * 6; g.globalAlpha = .45; g.drawImage(sprite(col), px - s / 2, py - s / 2, s, s); g.globalAlpha = 1; g.fillStyle = i === ck ? "#ffffff" : col; g.beginPath(); g.arc(px, py, Math.max(1, r * .7), 0, 6.2832); g.fill(); }
+  /* Show all links in the Starship (0.8.355, Nick: it didn't reach Starfield): every link between stars in front of the ship, drawn faintly, the nearest first, up to 6,000 */
+  if (showAll) { const sp_ = new Map(); for (let i = 0; i < n; i++) { if (!vis[i] || (TLp && !born(i))) continue; const p_ = pr(P[3 * i], P[3 * i + 1], P[3 * i + 2]); if (p_ && p_[0] > -200 && p_[0] < W + 200 && p_[1] > -200 && p_[1] < VH + 200) sp_.set(i, p_); }
+    const es = []; for (const [i, a] of sp_) for (const j of out[i]) { if (j === i) continue; const b = sp_.get(j); if (b) es.push([a, b, Math.min(a[2], b[2])]); }
+    es.sort((x, y) => x[2] - y[2]); g.save(); g.globalCompositeOperation = "lighter"; g.strokeStyle = "rgba(170,185,220,1)"; g.lineWidth = .8; g.globalAlpha = .07; g.beginPath();
+    for (const [a, b] of es.slice(0, 6000)) { g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } g.stroke(); g.restore(); }
   g.globalCompositeOperation = "source-over";
   if (TLp) { /* each new star arrives the way Timelapse's effect says (0.8.353, Nick): Comets streak in, Rain falls, Swirl out spirals from the note you're at, Swirl in spirals in from afar; then a flare */
     const ctr = CK.cPos || [cx, cy], ease = t => 1 - Math.pow(1 - t, 3);
@@ -2963,7 +2968,7 @@ async function ckEdit(p, x, y, hostEl){ if (!host.editCard) return; ckEditClose(
 function ckEditClose(){ const E_ = CK.edit; if (!E_) return; CK.edit = null; try { E_.ed.close(); } catch (_) { /* gone */ } E_.el.remove();
   CK.pvOver = null;   /* previews are rebuilt, so they show what was written */
   if (CK.pvEl) { CK.pvEl.remove(); CK.pvEl = null; CK.pvP = null; } if (CK.pvM) { for (const e of CK.pvM.values()) e.remove(); CK.pvM.clear(); } }
-function ckPvMany(W, VH, prim){ const cap = { fewer: 5, natural: 10, max: 18 }[ckPV()] || 0, [pw, ph] = ({ fewer: [210, 128], natural: [190, 112], max: [172, 100] })[ckPV()] || [190, 112];
+function ckPvMany(W, VH, prim){ const cap = { one: 1, fewer: 5, natural: 10, max: 18 }[ckPV()] || 0, [pw, ph] = ({ one: [210, 128], fewer: [210, 128], natural: [190, 112], max: [172, 100] })[ckPV()] || [190, 112];
   CK.pvM ||= new Map(); const want = new Set();
   if (cap && !(CK.auto || CK.wd || CK.gj)) { const hit = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1];
     const taken = [...(prim ? [prim] : []), ...CK.side.map(q => [q[0] - 4, q[1], q[2] + 30, q[3]]), [0, VH - 130, W, 130], [W - 170, 0, 170, 60], ...(CK.noteBox ? [CK.noteBox] : [])];
@@ -3355,7 +3360,7 @@ function ckConsole(g, W, H, VH, cons, font){ const c = CK.c, fl = !CKFRAME; if (
   if (c < 0) return; const d = N[c], L = stripLists(c), R = Math.min(cons * .36, 54), sy_ = VH + cons * .44;
   CK.scDots = []; CK.scHovAt = null;
   { const L0 = ckLeftEd(), span = W - L0, m_ = W < 700 ? R + 12 : Math.max(R + 18, span * .16, CKW === "sf" && CKX.mini ? 140 + 24 + R : 0);   /* clear of the overview map in the corner */   /* both scopes and the card centred on the free space (0.8.127) */
-    ckScope3(g, L0 + m_, sy_, R, true, font); ckScope3(g, W - m_, sy_, R, false, font); }
+    ckScope3(g, L0 + m_, sy_, R, true, font); if (CKX.rear) ckScope3(g, W - m_, sy_, R, false, font); }   /* the rear scope is a switch, off to start (0.8.355, Nick) */
   /* a scope dot under the pointer names itself (0.8.112, Nick): click to lock, again to fly */
   if (CK.scHovAt && CK.scHov >= 0) { const dN = N[CK.scHov], [hx, hy] = CK.scHovAt; let tt = dN.title; g.font = `600 11px ${font}`; while (tt.length > 4 && g.measureText(tt).width > 230) tt = tt.slice(0, -2); if (tt !== dN.title) tt += "…";
     const tw = g.measureText(tt).width + 24, bx = Math.max(6, Math.min(W - tw - 6, hx - tw / 2)), by = hy - 34; g.globalAlpha = 1; g.fillStyle = "rgba(4,6,14,.92)"; g.beginPath(); g.roundRect(bx, by, tw, 22, 11); g.fill();
@@ -5629,8 +5634,8 @@ function renderTrail(){
 let EDITM = !host.embed,   /* Edit mode is how the map works now (0.8.214, Nick): always on, the switch is gone; an embed keeps its editors closed */ HUBPV = pref("iv-hubpv", false) === true;
 // how many mini previews: Starfield's biggest hubs and Compass's closest notes. 0.8.48 (Nick): Fewer, Natural or Max, never a free number,
 // and one governor for both maps: a preview only shows where it covers no other preview, the note you're on, the orbs, the editors or the edges
-const PVL = { off: 0, fewer: 3, natural: 6, max: 12 }, PVL_C = { off: 0, fewer: 5, natural: 10, max: 18 };   // Compass shows more: previews are its point (Nick, 0.8.57)
-let PVLV = (() => { const v = pref("iv-pvl", null); if (v && v in PVL) return v; const o = pref("iv-pvn", null); if (o == null) return "natural"; return o <= 0 ? "off" : o <= 3 ? "fewer" : o <= 7 ? "natural" : "max"; })();
+const PVL = { off: 0, one: 1, fewer: 3, natural: 6, max: 12 }, PVL_C = { off: 0, one: 1, fewer: 5, natural: 10, max: 18 };   /* One (0.8.355, Nick): a single preview, the biggest hub in view */   // Compass shows more: previews are its point (Nick, 0.8.57)
+let PVLV = (() => { const v = pref("iv-pvl", null); if (v && v in PVL) return v; const o = pref("iv-pvn", null); if (o == null) return "off";   /* new users start with no mini-previews (0.8.355, Nick) */ return o <= 0 ? "off" : o <= 3 ? "fewer" : o <= 7 ? "natural" : "max"; })();
 const PVN_ = () => PVL[PVLV];
 const CARDMAPS = new Set(["stars", "emergence", "spacetime", "compass", "arena"]);
 const edOn = () => EDITM && !!host.editCard && !isPhone();   // every map since 0.8.68 (Nick); maps you turn keep their camera (edCam)
@@ -5974,13 +5979,13 @@ function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap 
   const top_ = orbBar.hidden ? 8 : orbBar.getBoundingClientRect().bottom - c.top + (ORBN ? 70 : 8);   // below the orbs (and their names)
   const hit = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1], taken = [], pad = 6;
   // Compass's previews are smaller the more it shows, so more fit (0.8.57); Starfield keeps the full size
-  const [pw, ph] = cmp ? ({ fewer: [210, 128], natural: [190, 112], max: [172, 100] })[PVLV] || [190, 112] : [210, 128];
+  const [pw, ph] = cmp ? ({ one: [210, 128], fewer: [210, 128], natural: [190, 112], max: [172, 100] })[PVLV] || [190, 112] : [210, 128];
   // what a preview must never cover: the centre (Compass), the note you're on and its name, the overview map and the zoom buttons
   if (cmp) taken.push([sx(0) - 110, sy(0) - 26, 220, 52]);
   if (sel >= 0 && VV(sel)) taken.push([sx(X[sel]) - 130, sy(Y[sel]) - 34, 260, 68]);
   taken.push([R_ - 230, H - 190, 230, 190]);
   const cands = cmp ? CMP.pv.filter(i => VV(i) && i !== CMP.c)
-    : BODIES.filter(b => b.kind === "gal" && b.core != null && vis[b.core] && b.core !== sel && b.r * k >= ({ fewer: 75, natural: 55, max: 38 })[PVLV]).sort((a, b) => b.r - a.r).map(b => b.core);
+    : BODIES.filter(b => b.kind === "gal" && b.core != null && vis[b.core] && b.core !== sel && b.r * k >= ({ one: 75, fewer: 75, natural: 55, max: 38 })[PVLV]).sort((a, b) => b.r - a.r).map(b => b.core);
   ctx.font = `500 12px ${css.body}`;
   const gals = [];
   for (const i of cands) { if (gals.length >= cap) break; const x = sx(X[i]), y = sy(Y[i]);
@@ -7772,7 +7777,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       bm.onclick = e => { e.stopPropagation(); closePops(); const t_ = $("#anitab"); if (t_ && !t_.hidden) t_.click(); };
       FUI.ckplay = () => { bw.setAttribute("aria-pressed", String(!!(playing && view === "cockpit"))); bo.setAttribute("aria-pressed", String(!!drifting)); }; FUI.ckplay(); }
     /* the layers in two small groups, each under a mini header (0.8.302, Nick: "HUD Artifacts" and "Cosmotic Elements", as in the cosmos); a "?" beside a switch says what it does */
-    { const QH = { rings: "Rings with tick marks round the big hubs near you.", read: "A small readout beside the note you're at: its level, score, links and years.",
+    { const QH = { rear: "The round scope at the bottom right: the linked notes behind you.", rings: "Rings with tick marks round the big hubs near you.", read: "A small readout beside the note you're at: its level, score, links and years.",
         rel: ["How close a linked note is to the cockpit note, 100 for the closest; the lists down the sides are in this order, with up links always first.",
           "1. Each pair of notes gets a weight: every link between them added up, either direction (up or related 2, a link in the text 1, another property 0.6, navigation 0.5; collections don't count), ×1.25 if they link both ways.",
           "2. A random walk starts at the cockpit note. Each step it either jumps home (20%) or moves to a neighbour, more often along heavier links. After 24 rounds, how often it sits on a note is that note's raw relevance.",
@@ -7786,7 +7791,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
         for (const k_ of keys) { const lab = k_ === "frame" ? "Cockpit frame" : (CKX_LABELS.find(q => q[0] === k_) || [k_, k_])[1], l_ = grid.createEl("label", { cls: "mini lcemo" }), c_ = l_.createEl("input", { type: "checkbox" });
           c_.checked = k_ === "frame" ? CKFRAME : !!CKX[k_]; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: lab }); qHelp(l_, QH[k_]);
           c_.onchange = () => { if (k_ === "frame") { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); return; } CKX = { ...CKX, [k_]: c_.checked }; save("iv-ckx", CKX); if (k_ === "turn") CKSF.ver = -1; if (k_ === "emo" && c_.checked && !EMOI) void loadEmo(); }; } };
-      grp("HUD artifacts", ["rings", "read", "posts", "dial", "mini", "card", "mirror", "frame"]);   /* Relevance scores follows Display → HUD links now (0.8.309) */
+      grp("HUD artifacts", ["rings", "read", "posts", "dial", "mini", "card", "rear", "mirror", "frame"]);   /* Relevance scores follows Display → HUD links now (0.8.309) */
       grp("Cosmotic elements", ["names", "gas", "gasp", "orb", "lines", "twinkle", "turn", "haze", "emo"]); }
     /* the game, near the bottom (0.8.302, Nick: "too prioritized right now") */
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
@@ -7980,7 +7985,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     const fsSet = v => { CARDFS = v; fs.value = String(v); fv.setText(v + "%"); for (const o of Object.values(EDS)) { edLook(o.el); if (o.ed) o.ed.resize(); } };
     fs.oninput = () => fsSet(+fs.value); fs.onchange = () => save("iv-cardfs", CARDFS); fs.onclick = e => e.stopPropagation(); fs.ondblclick = e => { e.stopPropagation(); fsSet(100); save("iv-cardfs", 100); };
     { const r_ = g.createDiv({ cls: "drow eorow tchoice", attr: { "aria-description": "Small read-only glimpses of notes: in Starfield its biggest hubs, in Compass the closest notes" } }); r_.createSpan({ cls: "eol", text: "Note mini-previews" }); const seg = r_.createDiv({ cls: "seg" });
-      for (const [v, t_] of [["off", "Off"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(PVLV === v) } });
+      for (const [v, t_] of [["off", "Off"], ["one", "One"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(PVLV === v) } });
         b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
     { const l_ = g.createEl("label", { cls: "mini lcemo ctrrk top" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = ORBN; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Show orb tab names" }); c_.onchange = () => { ORBN = c_.checked; save("iv-orbn", ORBN); syncOrbs(); }; } }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
