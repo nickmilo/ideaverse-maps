@@ -1787,3 +1787,6 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="prop"],body.ivm-linkcol
 .ivm .ivm-recents.paired .rcl{max-height:calc(17.5px * 7 + 17px);overflow-y:auto;scrollbar-width:none}
 .ivm .ivm-recents.paired .rcl::-webkit-scrollbar{display:none}
 .ivm .ivm-recents .rcl .rcr{flex:none}
+/* Recents rows grow a touch on hover (0.8.278, Nick) */
+.ivm .ivm-recents .rcr{transition:transform .12s ease}
+.ivm .ivm-recents .rcr:hover{transform:translateX(var(--rx,0px)) rotate(var(--rr,0rad)) scale(1.03)}
