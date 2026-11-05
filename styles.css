@@ -1827,3 +1827,7 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"] *,.ivm-card.ivm-
 /* Recents above Links shows --rcrows notes (7 to 14), set by the hidden grip along its bottom edge (0.8.290, Nick) */
 .ivm .ivm-recents.paired .rcl.rcrec{max-height:calc(17.5px * var(--rcrows,10) + 17px)}
 .ivm .ivm-recents .rcvgrip{position:absolute;left:18%;right:18%;bottom:6px;height:12px;cursor:ns-resize;z-index:2}
+/* Starfield editor: the small-caps property names stay small (0.8.293, Nick: "too large"). Obsidian sizes the name's input by --metadata-label-font-size (0.875em of the
+   text), which grew with the editor's text size and could outrank the 10.5px rule, so the variable itself is pinned */
+.ivm-card.sf-th{--metadata-label-font-size:10px}
+.ivm-card.ivm-card.sf-th .metadata-property-key,.ivm-card.ivm-card.sf-th .metadata-property-key-input,.ivm-card.ivm-card.sf-th input.metadata-property-key-input{font-size:10px;letter-spacing:.08em}
