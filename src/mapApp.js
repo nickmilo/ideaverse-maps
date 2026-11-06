@@ -75,12 +75,17 @@ let BYMT = host.store.get("iv-mtime") === true;
 // with Organize by most recently modified on, a window back from right now: the last day, week, month or year (or all); Emergence and Space-Time stretch it across the timeline
 /* the window's stops (0.8.194, Nick: a slider for "what's been going on with me for the past quarter"): 1 day … 1 year, year to date, all */
 const WSTOPS = [["day", "1 day"], ["week", "1 week"], ["w2", "2 weeks"], ["w3", "3 weeks"], ["month", "1 month"], ["w5", "5 weeks"], ["w6", "6 weeks"], ["w7", "7 weeks"], ["w8", "8 weeks"], ["m3", "3 months"], ["m4", "4 months"], ["m7", "7 months"], ["year", "1 year"], ["ytd", "Year to date"], ["all", "All"]];
-const MTW = { day: DAY, week: 7*DAY, w2: 14*DAY, w3: 21*DAY, month: 30.44*DAY, w5: 35*DAY, w6: 42*DAY, w7: 49*DAY, w8: 56*DAY, m3: 3*30.44*DAY, m4: 4*30.44*DAY, m7: 7*30.44*DAY, year: YEAR, ytd: 1 };   /* ytd: worked out from Jan 1 */ let MTWIN = host.store.get("iv-mtwin") || "all"; if (!MTW[MTWIN]) MTWIN = "all";
+const MTW = { day: DAY, week: 7*DAY, w2: 14*DAY, w3: 21*DAY, month: 30.44*DAY, w5: 35*DAY, w6: 42*DAY, w7: 49*DAY, w8: 56*DAY, m3: 3*30.44*DAY, m4: 4*30.44*DAY, m7: 7*30.44*DAY, year: YEAR, ytd: 1, fix: 1 };   /* fix: a fixed span of dates (0.9.15) */   /* ytd: worked out from Jan 1 */ let MTWIN = host.store.get("iv-mtwin") || "all"; if (!MTW[MTWIN]) MTWIN = "all";
 /* the same window by the Date property too (0.8.191, Nick: "I wish I had that same ability for By Date Created"): its own choice, so each switch keeps its own */
 let CTWIN = host.store.get("iv-ctwin") || "all"; if (!MTW[CTWIN]) CTWIN = "all";
-const WINV = () => BYMT ? MTWIN : CTWIN, wLabel = w => w === "ytd" ? "Year to date" : "Last " + (WSTOPS.find(q => q[0] === w) || [0, w])[1];
+/* fixed dates (0.9.15, Nick: "a view for my London trip that will never change over time"): from one day to another, both included, never moving with today */
+let FIXD = (() => { const o = host.store.get("iv-fixd"); return o && /^\d{4}-\d{2}-\d{2}$/.test(o.a || "") && /^\d{4}-\d{2}-\d{2}$/.test(o.b || "") ? { a: o.a, b: o.b } : null; })(); if ((CTWIN === "fix" || MTWIN === "fix") && !FIXD) { CTWIN = CTWIN === "fix" ? "all" : CTWIN; MTWIN = MTWIN === "fix" ? "all" : MTWIN; }
+const fixMs = (ymd, local) => { const [y, m, d] = ymd.split("-").map(Number); return local ? new Date(y, m - 1, d).getTime() : Date.UTC(y, m - 1, d); };
+const fixLabel = () => { if (!FIXD) return ""; const f = ymd => { const [y, m, d] = ymd.split("-").map(Number); return { y, t: new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" }) }; }, a = f(FIXD.a), b = f(FIXD.b);
+  return FIXD.a === FIXD.b ? `${a.t}, ${a.y}` : a.y === b.y ? `${a.t} – ${b.t}, ${b.y}` : `${a.t}, ${a.y} – ${b.t}, ${b.y}`; };
+const WINV = () => BYMT ? MTWIN : CTWIN, wLabel = w => w === "fix" ? fixLabel() : w === "ytd" ? "Year to date" : "Last " + (WSTOPS.find(q => q[0] === w) || [0, w])[1];
 let NOWMS = Date.now(); const todayU = () => { const d = new Date(NOWMS); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); };
-const winEnd = () => BYMT ? NOWMS : todayU() + DAY, winSpan = () => { const w = WINV(); if (!MTW[w]) return 0; if (w === "ytd") { const y = new Date(NOWMS).getFullYear(); return winEnd() - (BYMT ? new Date(y, 0, 1).getTime() : Date.UTC(y, 0, 1)); } return MTW[w]; }, winStart = () => winEnd() - (BYMT ? winSpan() : Math.round(winSpan() / DAY) * DAY);   /* by the Date property a window is whole days, ending tonight */
+const winEnd = () => WINV() === "fix" && FIXD ? fixMs(FIXD.b, BYMT) + DAY : BYMT ? NOWMS : todayU() + DAY, winSpan = () => { const w = WINV(); if (!MTW[w]) return 0; if (w === "fix") return FIXD ? Math.max(DAY, winEnd() - fixMs(FIXD.a, BYMT)) : 0; if (w === "ytd") { const y = new Date(NOWMS).getFullYear(); return winEnd() - (BYMT ? new Date(y, 0, 1).getTime() : Date.UTC(y, 0, 1)); } return MTW[w]; }, winStart = () => winEnd() - (BYMT ? winSpan() : Math.round(winSpan() / DAY) * DAY);   /* by the Date property a window is whole days, ending tonight */
 const fillTV = () => N.forEach((d,i) => TV[i] = BYMT ? (d.mt || NaN) : /^\d{4}-\d{2}-\d{2}$/.test(d.date||"") ? Date.parse(d.date) : NaN); fillTV();
 const ARCH = Uint8Array.from(N, d => d.archive ? 1 : 0), hasArch = ARCH.some(v => v);
 // the years always come from the Date property, even when the map opened with Organize by most recently modified on (0.7.58: opened that way,
@@ -7080,7 +7085,7 @@ function snapView(name){
     geo: view === "quincunx" ? GEO : null,
     s3d: view === "stars" ? {on: S3D, chart: STCH, chx: { ...CHL }, yaw: +yaw3.toFixed(3), pitch: +pitch3.toFixed(3)} : null,   // Starfield: 2D or 3D, and the 3D angle
     // every filter (0.7.54): the years' edge strips, dating by modified time and its window, MOCs, properties and bases; and Linear Calendar's years and halves
-    yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, ctwin: CTWIN, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
+    yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, ctwin: CTWIN, fixd: FIXD ? { ...FIXD } : null, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
     lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF, shape: LCSHAPE, born: LCBORN || undefined, names: LCNAMES, d30: LCSHAPE === "days" ? LC30 : undefined} : null,
     emo: { ...EMON },   // Show emojis, map by map (0.7.58, Nick)
     // Base Builder and Posters (0.7.58): the layout (Rows, Scatter, Mosaic, Constellation, Timeline) and what each axis, row and size reads (Nick's movies Mosaic came back as Rows)
@@ -7112,7 +7117,7 @@ function applySaved(v){
   colls = (v.colls || []).filter(c => COLLNAME[c]); collMode = v.collMode === "all" ? "all" : "any"; save("iv-coll", colls); save("iv-collmode", collMode);
   // every filter comes from the view (views saved before 0.7.54 had none of these: no MOCs, properties or bases, dated by the Date property)
   if (typeof v.yrAll === "boolean") { YRALL = v.yrAll; save("iv-yrall", YRALL); }
-  { const bm = v.bymt === true; if (bm !== BYMT) { BYMT = bm; fillTV(); } save("iv-mtime", BYMT); MTWIN = MTW[v.mtwin] || v.mtwin === "all" ? v.mtwin || "all" : "all"; save("iv-mtwin", MTWIN); CTWIN = MTW[v.ctwin] ? v.ctwin : "all"; save("iv-ctwin", CTWIN); NOWMS = Date.now(); }
+  { const bm = v.bymt === true; if (bm !== BYMT) { BYMT = bm; fillTV(); } save("iv-mtime", BYMT); FIXD = v.fixd && v.fixd.a && v.fixd.b ? { a: v.fixd.a, b: v.fixd.b } : null; save("iv-fixd", FIXD || undefined); if (!FIXD) { if (v.mtwin === "fix") v.mtwin = "all"; if (v.ctwin === "fix") v.ctwin = "all"; } MTWIN = MTW[v.mtwin] || v.mtwin === "all" ? v.mtwin || "all" : "all"; save("iv-mtwin", MTWIN); CTWIN = MTW[v.ctwin] ? v.ctwin : "all"; save("iv-ctwin", CTWIN); NOWMS = Date.now(); }
   MOCSEL = Array.isArray(v.mocs) ? v.mocs.filter(p_ => PIDX.has(p_)) : []; MDEG = v.mocDeg === 2 ? 2 : 1; save("iv-mocs", MOCSEL); save("iv-mocdeg", MDEG); computeMS();
   PSEL = v.props && typeof v.props === "object" && !Array.isArray(v.props) ? JSON.parse(JSON.stringify(v.props)) : {}; save("iv-props", PSEL); computePS();
   { const nb = Array.isArray(v.bq) ? v.bq : []; if (JSON.stringify(nb) !== JSON.stringify(BQ)) { BQ = nb; save("iv-bq", BQ); void applyBQ(); } }
@@ -7652,8 +7657,21 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     wsl.oninput = () => wset(false); wsl.onchange = () => wset(true);
     { const ends = wr.createDiv({ cls: "mtends" }); ends.createSpan({ text: "All" }); ends.createSpan({ text: "1 day" }); }
     box.after(wr);   /* right under the years, so the two read as one choice: a span of years, or how recent */
+    /* Dates: a fixed span, from one day to another (0.9.15, Nick: "control over specific dates in time"); "Keep these dates" turns a Recent window into fixed dates */
+    const fr = yc.createDiv({ cls: "mtwin fixrow" }); fr.createSpan({ cls: "mtl", text: "Dates" });
+    const da = fr.createEl("input", { type: "date", cls: "fixd", attr: { "aria-label": "From" } }); fr.createSpan({ cls: "fixdash", text: "–" }); const db = fr.createEl("input", { type: "date", cls: "fixd", attr: { "aria-label": "To" } });
+    const keep = fr.createEl("button", { cls: "fixkeep", text: "Keep these dates", attr: { type: "button" } }), clr = fr.createEl("button", { cls: "fixclr", text: "Clear", attr: { type: "button" } });
+    for (const el of [da, db, keep, clr]) el.addEventListener("click", e => e.stopPropagation());
+    const ymd = t => { const d = new Date(t); return BYMT ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : new Date(t).toISOString().slice(0, 10); };
+    const fixSet = (a_, b_) => { if (!a_ || !b_) return; if (a_ > b_) [a_, b_] = [b_, a_]; FIXD = { a: a_, b: b_ }; save("iv-fixd", FIXD); if (BYMT) { MTWIN = "fix"; save("iv-mtwin", "fix"); } else { CTWIN = "fix"; save("iv-ctwin", "fix"); } NOWMS = Date.now(); syncMT(); relayout(true, false, () => fitTarget()); if (typeof syncTB === "function") syncTB(); };
+    da.onchange = () => fixSet(da.value, db.value || da.value); db.onchange = () => fixSet(da.value || db.value, db.value);
+    keep.onclick = () => { const sp = winSpan(); if (!sp) return; fixSet(ymd(winStart()), ymd(winEnd() - 1)); };
+    clr.onclick = () => { if (BYMT) { MTWIN = "all"; save("iv-mtwin", "all"); } else { CTWIN = "all"; save("iv-ctwin", "all"); } NOWMS = Date.now(); syncMT(); relayout(true, false, () => fitTarget()); if (typeof syncTB === "function") syncTB(); };
+    const syncFix = () => { const on = WINV() === "fix" && !!FIXD, rel = !on && winSpan() > 0; if (document.activeElement !== da) da.value = on ? FIXD.a : rel ? ymd(winStart()) : ""; if (document.activeElement !== db) db.value = on ? FIXD.b : rel ? ymd(winEnd() - 1) : "";
+      fr.classList.toggle("on", on); keep.hidden = !rel; clr.hidden = !on; };
+    wr.after(fr);
 
-    const syncMT = () => { const k_ = WSTOPS.findIndex(q => q[0] === WINV()); wsl.value = String(WSTOPS.length - 1 - (k_ < 0 ? WSTOPS.length - 1 : k_)); wv.setText(WINV() === "all" ? "All" : wLabel(WINV())); wr.hidden = false; box.hidden = BYMT; box.classList.toggle("yrdim", winSpan() > 0); syncYr(); };   /* the years stay in view, faded while a recent window is picked; touch them and the window lets go */   /* Last … is there either way now; the years slider steps aside while a window is picked */
+    const syncMT = () => { const k_ = WSTOPS.findIndex(q => q[0] === WINV()); wsl.value = String(WSTOPS.length - 1 - (k_ < 0 ? WSTOPS.length - 1 : k_)); wv.setText(WINV() === "all" ? "All" : wLabel(WINV())); wr.hidden = false; box.hidden = BYMT; box.classList.toggle("yrdim", winSpan() > 0); wr.classList.toggle("yrdim", WINV() === "fix"); syncFix(); syncYr(); };   /* the years stay in view, faded while a recent window is picked; touch them and the window lets go */   /* Last … is there either way now; the years slider steps aside while a window is picked */
     win.setTimeout(syncMT, 0); FUI.years = () => { cb.checked = YRALL; cm.checked = BYMT; syncMT(); };
     cm.onchange = () => { BYMT = cm.checked; save("iv-mtime", BYMT); NOWMS = Date.now(); fillTV(); syncMT(); if (LCUIOK) syncLC(); if (typeof syncTB === "function") syncTB(); relayout(true, false, () => fitTarget()); legend(); };
     let t_ = 0; const upd = commit => { if (winSpan()) { if (BYMT) { MTWIN = "all"; save("iv-mtwin", "all"); } else { CTWIN = "all"; save("iv-ctwin", "all"); } syncMT(); } let p = +a.value, q = +b.value; if (p > q) [p, q] = [q, p]; YR0 = p; YR1 = q; fromY = fullY = YR0; SY0 = YR0; SY1 = YR1; syncYr();
