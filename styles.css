@@ -2129,14 +2129,20 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivd .ivd-hud .ivd-grip-l::after,.ivd .ivd-main-drawer .ivd-grip-l::after{display:none}   /* no visible grab bar; the seam still drags (0.9.13, Nick) */
 .ivd .ivd-card.ivd-docked > .ivd-body{margin-right:var(--ivd-mdw,220px)}
 .ivd .ivd-card.ivd-docked > .ivd-main-drawer{box-shadow:none}
-/* Dates: a fixed span (0.9.15) */
-.ivm .mtwin.fixrow{flex-wrap:wrap;gap:6px 8px}
-.ivm .mtwin.fixrow .mtl{min-width:52px}
-.ivm .fixrow input.fixd{height:26px;padding:0 6px;font:500 12px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;color-scheme:dark}
+/* Dates: a fixed span, on the Recent row (0.9.15; 0.9.16 one row, no sideways scroll) */
+.ivm .mtwin.mtslide{flex-wrap:nowrap;align-items:flex-start;gap:10px}
+.ivm .mtwin.mtslide > .mtl{padding-top:5px;flex:none}
+.ivm .mtwin.mtslide .mtsl{flex:1 1 120px;min-width:90px;display:flex;flex-direction:column;gap:3px}
+.ivm .mtwin.mtslide .mtsl input[type=range]{width:100%;min-width:0}
+.ivm .mtwin.mtslide .mtsl .mtends{flex-basis:auto;padding:0;margin:0}
+.ivm .mtwin.mtslide > .mtv{display:none}   /* the years' label already says it */
+.ivm .fixrow{flex:none;display:flex;align-items:center;gap:5px}
+.ivm .fixrow input.fixd{width:118px;height:24px;padding:0 4px;font:500 11.5px var(--mono);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;color-scheme:dark}
 .theme-light .ivm .fixrow input.fixd,.ivm[data-theme="paper"] .fixrow input.fixd,.ivm[data-theme="softpaper"] .fixrow input.fixd{color-scheme:light}
-.ivm .fixrow.on input.fixd{border-color:var(--accent);color:var(--accent)}
+.ivm .mtwin.fixon .fixrow input.fixd{border-color:var(--accent);color:var(--accent)}
+.ivm .mtwin.fixon .mtsl{opacity:.45}
 .ivm .fixrow .fixdash{color:var(--muted)}
-.ivm .fixrow .fixkeep,.ivm .fixrow .fixclr{appearance:none;height:24px;padding:0 9px;border:1px solid var(--line);border-radius:12px;background:none;box-shadow:none;font:500 11px var(--mono);color:var(--muted);cursor:pointer}
+.ivm .fixrow .fixkeep,.ivm .fixrow .fixclr{appearance:none;width:24px;height:24px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:6px;background:none;box-shadow:none;color:var(--muted);cursor:pointer}
+.ivm .fixrow .fixkeep svg,.ivm .fixrow .fixclr svg{width:13px;height:13px}
 .ivm .fixrow .fixkeep:hover,.ivm .fixrow .fixclr:hover{color:var(--ink);border-color:var(--accent)}
 .ivm .fixrow .fixkeep[hidden],.ivm .fixrow .fixclr[hidden]{display:none}
-.ivm .mtwin.yrdim{opacity:.45}
