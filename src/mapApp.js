@@ -222,7 +222,7 @@ function computeVis(){ VISV++; const fs = new Set(folders);
   // tags switched off (Treemap, Bookshelf and Chord by tags) leave the map
   if (tagHide.on()) for (let i=0;i<n;i++) if (vis[i] && tagHide.hid(i)) vis[i] = 0;
   if (YRV.has(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
-  if (winSpan() && YRV.has(curV()) && !YRALL) { const w0 = winStart(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0)) vis[i] = 0; }
+  if (winSpan() && YRV.has(curV()) && !YRALL) { const w0 = winStart(), w1 = winEnd(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0 && TV[i] < w1)) vis[i] = 0; }   /* both ends: fixed dates end before today (0.9.17, Nick) */
   if (BYMT) capDays();
   try { tlFilter(); } catch (_) { /* Base Builder not set up yet */ }
   if (focus >= 0) vis[focus] = 1;
@@ -4952,8 +4952,8 @@ function gravityLabels(){
     if (px < -60 || px > W+60 || py < -20 || py > H+20) return; ctx.font = font; ctx.fillStyle = color; ctx.strokeText(txt, px, py); ctx.fillText(txt, px, py); };
   if (mode === "time") {
     at("No date", ND[1]/2, `500 11px ${css.mono}`, css.muted, 1.06);
-    if (ER) at(`Before ${fromY}`, (ER[0] + ER[1])/2, `500 11px ${css.mono}`, css.muted, 1.06);
-    if (AR) at(`After ${YR1}`, (AR[0] + AR[1])/2, `500 11px ${css.mono}`, css.muted, 1.06);
+    if (ER) at(winTL() ? "Earlier" : `Before ${fromY}`, (ER[0] + ER[1])/2, `500 11px ${css.mono}`, css.muted, 1.06);
+    if (AR) at(winTL() ? "Later" : `After ${YR1}`, (AR[0] + AR[1])/2, `500 11px ${css.mono}`, css.muted, 1.06);
     const fw = k * dayFull() * 365 * GR / WW * aS();   // rough on-screen arc length of a full year
     for (let yr = fromY; yr <= yrEnd(); yr++) { const comp = yr < fullY; if (comp && yr % 5 && yr !== fromY) continue;
       const mid = xTime(Date.UTC(yr, comp ? 0 : 6, comp ? 1 : 1));
@@ -5120,7 +5120,7 @@ function axisLabels(){
       const bx = sx(ER[0]) + 4, bt = winTL() ? "Earlier" : `Before ${fromY}`;
       if (strip(bt, bx)) compX = bx;
       else { ctx.font = small; ctx.lineWidth = 5; ctx.strokeStyle = css.bg; ctx.fillStyle = css.muted; ctx.strokeText(bt, bx, yTop + 16); ctx.fillText(bt, bx, yTop + 16); } }
-    if (AR && sx(AR[0]) < W - 30) strip(`After ${YR1}`, sx(AR[0]) + 4);
+    if (AR && sx(AR[0]) < W - 30) put(winTL() ? "Later" : `After ${YR1}`, sx(AR[0]) + 4, small, css.muted);   /* the right-hand strip mirrors "Earlier" (0.9.17) */
     if (BYMT && CAPHID.size) { ctx.font = small; for (const [k_, h_] of CAPHID) { const x = sx(xTime(k_ + DAY/2)); if (x < 0 || x > W) continue; const t_ = `+${h_.toLocaleString()} more`; const w_ = ctx.measureText(t_).width; if (k * dayFull() < w_ + 6) continue; ctx.fillStyle = css.muted; ctx.globalAlpha = .75; ctx.fillText(t_, x - w_/2, yTop + 16); ctx.globalAlpha = 1; } }
     if (winTL()) { const tks = winTicks(); let lx = lastX; for (const tk of tks) { const x = sx(xTime(tk.t)) + 3; if (x > W || x < -80) continue; const f_ = tk.major ? `${css.dw} 16px ${css.display}` : small; ctx.font = f_; const w_ = ctx.measureText(tk.label).width; if (x < lx + 10) continue; put(tk.label, x, f_, tk.major ? css.ink : css.muted); lx = x + w_; } } else {
     const fw = k * dayFull() * 365, cw = fw * COMP;   // on-screen widths of a full and a compressed year

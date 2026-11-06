@@ -1,6 +1,6 @@
 {
   "name": "ideaverse-maps",
-  "version": "0.9.16",
+  "version": "0.9.17",
   "description": "Visualize your notes across a suite of insanely cool interactive maps—Emergence, Ideaverse, Starfield, and many more.",
   "main": "main.js",
   "type": "module",
