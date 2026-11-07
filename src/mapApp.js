@@ -5651,7 +5651,21 @@ const PVL = { off: 0, one: 1, fewer: 3, natural: 6, max: 12 }, PVL_C = { off: 0,
 let PVLV = (() => { const v = pref("iv-pvl", null); if (v && v in PVL) return v; const o = pref("iv-pvn", null); if (o == null) return "off";   /* new users start with no mini-previews (0.8.355, Nick) */ return o <= 0 ? "off" : o <= 3 ? "fewer" : o <= 7 ? "natural" : "max"; })();
 const PVN_ = () => PVL[PVLV];
 const CARDMAPS = new Set(["stars", "emergence", "spacetime", "compass", "arena"]);
-const edOn = () => EDITM && !!host.editCard && !isPhone();   // every map since 0.8.68 (Nick); maps you turn keep their camera (edCam)
+const edOn = () => EDITM && !!host.editCard && !isPhone();
+/* Holodeck (0.9.19, Nick: "transforms the space… still keeps us in map view"): the notes come forward and the map stays behind, quiet, still updating, not clickable.
+   The orb tabs become a column of tabs on the far left, and a tab you click opens just to the right of the primary note */
+let HOLO = pref("iv-holo", false) === true;
+const holoOn = () => HOLO && edOn() && view !== "cockpit" && !!EDS && !!EDS.left && !EDS.left.el.hidden;
+const HOLOTW = 168;   /* the tab column's width, its gap included */
+let holoVeil = null;
+function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on);
+  if (!holoVeil) { holoVeil = $("#main").createDiv({ cls: "ivm-holoveil" }); for (const ty of ["pointerdown", "pointermove", "wheel", "click", "dblclick", "contextmenu"]) holoVeil.addEventListener(ty, e => { e.stopPropagation(); if (ty === "wheel" || ty === "contextmenu") e.preventDefault(); }, { passive: false }); }
+  holoVeil.hidden = !on;
+  try { if (orbBar) syncOrbs(); } catch (_) { /* the orbs aren't built yet */ }
+  if (EDS && EDS.left) { const hb = EDS.left.el.querySelector(".cardholo"); if (hb) { hb.setAttribute("aria-pressed", String(HOLO)); hb.setAttribute("aria-description", HOLO ? "Turn off Holodeck" : "Turn on Holodeck"); } } }
+function holoSet(v){ HOLO = v; save("iv-holo", v); orbKey = ""; holoSync(); edFree(); syncOrbs(); draw(); }
+/* where the HUD starts on the right, so the support note stops short of it */
+function holoRight(vw){ let r = vw - 10; try { const c = cv.getBoundingClientRect(); for (const P of [RECEL, LKEL]) if (P && !P.hidden) { const q = P.getBoundingClientRect(); if (q.width) r = Math.min(r, q.left - c.left - 10); } } catch (_) { /* not laid out yet */ } return Math.max(HOLOTW + 400, r); }   // every map since 0.8.68 (Nick); maps you turn keep their camera (edCam)
 const edCam = () => !(S3D_ON() || sphOn() || domeOn() || geo3On() || csphOn() || (typeof globeOn === "function" && globeOn()));
 let CARDMODE = ["light", "dark"].includes(pref("iv-cardmode", "")) ? pref("iv-cardmode", "") : "auto";
 let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84, CARDFS = Math.max(70, Math.min(120, +pref("iv-cardfs", 100) || 100));   /* CARDFS: the editors' text size, % of Obsidian's (0.8.229, Nick) */   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
@@ -5716,6 +5730,10 @@ const clampN = (v, a, b) => Math.round(Math.max(a, Math.min(b, v)));
 const EDW = (() => { const o = pref("iv-edw", null); return o && typeof o === "object" ? o : {}; })();
 const edW = (kind, def, lo, hi, vw) => clampN(EDW[kind] > 0 ? EDW[kind] : clampN(vw*def, lo, hi), 260, Math.max(260, vw*.7));
 function edRect(kind){ const vw = W - sideW();
+  if (holoOn()) { const x0 = TABS.length ? HOLOTW : 8, R = holoRight(vw), av = R - x0, two = !EDS.right.el.hidden || kind === "right";
+    const lw = two ? Math.round(Math.max(340, Math.min(760, (av - 12) * .54))) : Math.round(Math.min(av, 820));
+    if (kind === "left") return { x: x0, y: 8, w: lw, h: H - 16 };
+    const rx = x0 + lw + 12; return { x: rx, y: 8, w: Math.max(260, R - rx), h: H - 16 }; }
   if (kind === "left") { const w = edW("left", .34, 340, 560, vw); return { x: 8, y: 8, w, h: H - 16 }; }
   const w = edW("right", .3, 320, 520, vw); return { x: vw - w - 8, y: 8, w, h: H - 16 }; }
 // the editors remember whether you folded the properties (0.8.166, Nick: "i collapsed but then in the next note it was open again")
@@ -5744,6 +5762,8 @@ function makeEd(kind){
   if (pb) { setIcon(pb, "pin"); hd.insertBefore(pb, cb || ob); pb.onclick = () => tabPin(); }
   /* Focus, right after the pin (0.8.272, Nick): the same as the toolbar's Focus on active note; lit while this note is focused */
   const fb_ = kind === "left" ? hd.createEl("button", { cls: "cardbtn cardfoc", attr: { type: "button", "aria-description": "Focus on this note" } }) : null;
+  const hb_ = kind === "left" ? hd.createEl("button", { cls: "cardbtn cardholo", attr: { type: "button", "aria-description": "Turn on Holodeck", "aria-pressed": String(HOLO) } }) : null;
+  if (hb_) { setIcon(hb_, "panels-top-left"); hd.insertBefore(hb_, cb || ob); hb_.onclick = e => { e.stopPropagation(); holoSet(!HOLO); }; }
   if (fb_) { setIcon(fb_, "locate-fixed"); hd.insertBefore(fb_, cb || ob); fb_.onclick = e => { e.stopPropagation(); const i = o.path != null ? PIDX.get(o.path) : null; if (i == null) return; focusArmed = false; setFocus(focus === i ? -1 : i); }; }
   const tab = side ? $("#main").createEl("button", { cls: "dtab edtab edtab-" + kind, attr: { "aria-label": "Show the editor", title: "Show the editor" } }) : null; if (tab) tab.hidden = true;
   const o = { kind, el, nav, strip, drop, open_: "", sub_: "", ed: null, path: null, key: "", pb, col: side && pref("iv-edcol-" + kind, false) === true,
@@ -5835,7 +5855,7 @@ function syncNav(){ let pin = false; try { pin = !!(TABS[TCUR] && TABS[TCUR].pin
   for (const o of [EDS.left]) if (o && o.nav) { o.nav[0].disabled = pin || HPOS <= 0; o.nav[1].disabled = pin || HPOS >= HIST.length - 1; } }
 function histGo(d_){ const q = HPOS + d_; if (q < 0 || q >= HIST.length) return; const i = PIDX.get(HIST[q]); if (i == null) return;
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map.`); return; } HPOS = q; HNAV = HIST[q]; select(i); syncNav(); }
-function edFree(){ EDLW = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 0; for (const o of Object.values(EDS)) { o.key = ""; o.place(); } }
+function edFree(){ holoSync(); EDLW = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 0; for (const o of Object.values(EDS)) { o.key = ""; o.place(); } }
 function panBack(){ if (PANAUTO && EDS.left.el.hidden) { PANAUTO = false; setCollapsed(false, true); } }   // the note panel returns when the primary note closes
 function closeEds(){ for (const o of Object.values(EDS)) o.close(); panBack(); }
 async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.left.close(); if (!edOn()) EDS.right.close(); if (PANAUTO) { PANAUTO = false; setCollapsed(false, true); } return; }
@@ -5847,7 +5867,7 @@ async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.left.close();
   syncNav();
   const p = m.open(i);
   if (view === "compass" || view === "arena") refitSoon();   // they frame themselves between the editors, once any move has finished   // Compass frames itself, clear of the editors
-  else if (!edCam()) { /* a globe or 3D map keeps its own camera */ }
+  else if (!edCam() || holoOn()) { /* a globe or 3D map keeps its own camera; the Holodeck's map is behind the notes */ }
   else if (performance.now() - FLYT > 700) { const L = EDS.left.col ? 0 : edRect("left").x + edRect("left").w, R = EDS.right.el.hidden ? W - sideW() : edRect("right").x; animateTo({ k, tx: (L + R)/2 - X[i]*k, ty: H/2 - Y[i]*k }); }   /* a fly-to that just ran already framed it in the free space */   // the note in the free middle
   await p; }
 // a link clicked inside a card: the map picks that note (the primary note follows); ⌘-click (or a modifier Obsidian reads as "new tab") opens it as the support note.
@@ -5951,6 +5971,7 @@ function newTabSync(){ const on = !dead && edOn() && !!TABS[TCUR] && !TABS[TCUR]
 function tabGo(j){ const t = TABS[j]; if (!t) return; if (!t.path) { if (TABS[TCUR] && TABS[TCUR].pin && j !== TCUR) return; TCUR = j; tabsSave(); select(-1); EDS.left.close(); syncOrbs(); return; }
   const i = PIDX.get(t.path); if (i == null) return;
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
+  if (holoOn() && j !== TCUR) { if (EDS.right.path === t.path && !EDS.right.el.hidden && !(TABS[TCUR] && TABS[TCUR].pin)) { EDS.right.close(); edFree(); } else { void EDS.right.open(i).then(() => { orbKey = ""; syncOrbs(); }); orbKey = ""; syncOrbs(); return; } }
   // pinned: the primary note keeps its note, and another orb's note opens as the support note (0.8.68, Nick). Unpin to switch tabs
   if (j !== TCUR && TABS[TCUR] && TABS[TCUR].pin) { void EDS.right.open(i); return; }
   TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }
@@ -5960,8 +5981,9 @@ function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j ===
 const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; win.setTimeout(() => { if (!dead) syncOrbs(); }, 0);   // saved tabs show from the start
 let orbKey = "", orbDragged = false;
 function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".cardfoc"); if (fb) fb.setAttribute("aria-pressed", String(focus >= 0 && EDS.left.path != null && PIDX.get(EDS.left.path) === focus)); } for (const o of [EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
-  const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); if (!on) { orbKey = ""; return; }
-  const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
+  const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); const HO = holoOn(); orbBar.classList.toggle("holo", HO); if (!on) { orbKey = ""; return; }
+  const bes = HO && !EDS.right.el.hidden ? EDS.right.path : null;
+  const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : "") + (HO ? "h" + bes : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
     TABS.forEach((t, j) => { const i = PIDX.get(t.path), nm = !t.path ? "New tab" : i != null ? N[i].title : t.path.replace(/^.*\//, "").replace(/\.md$/, ""), lv = i != null ? N[i].level : 1;
       const b = orbBar.createEl("button", { cls: "ivm-orb lv" + lv + (t.path ? "" : " blank") + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""),   /* shaped like the note's dot (0.8.202, Nick): Level 5 a square, Level 4 a diamond, the rest round */ attr: { type: "button", "data-name": nm, "data-i": String(j) } });   // no aria-label: Obsidian would add its own tooltip over ours (Nick, 0.8.33); the name is read from a hidden span
       b.createSpan({ cls: "orbsr", text: nm });
@@ -5969,17 +5991,18 @@ function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".card
       b.createSpan({ cls: "orbd" }); if (t.pin) setIcon(b.createSpan({ cls: "orbp" }), "pin");
       const x = b.createSpan({ cls: "orbx", text: "×", attr: { role: "button", "aria-description": "Close tab" } });
       x.onclick = e => { e.stopPropagation(); tabClose(j); }; b.onauxclick = e => { if (e.button === 1) { e.preventDefault(); tabClose(j); } };
-      if (ORBN) b.createSpan({ cls: "orbn", text: nm });
+      if (HO) { b.createSpan({ cls: "orbh", text: nm }); if (bes && t.path === bes && j !== TCUR) b.classList.add("beside"); } else if (ORBN) b.createSpan({ cls: "orbn", text: nm });
       b.onclick = e => { e.stopPropagation(); if (orbDragged) { orbDragged = false; return; } tabGo(j); };
       // drag an orb left or right to reorder the tabs (0.8.36; 0.8.39 follows the pointer, and the others make way as you pass them)
       b.addEventListener("pointerdown", e => { if (e.button !== 0 || (e.target instanceof Element && e.target.closest(".orbx"))) return; e.stopPropagation(); e.preventDefault();
         const x0 = e.clientX; let on = false, base = 0;
-        const shift = () => { const r = b.getBoundingClientRect(); return r.left + r.width / 2; };
-        const mv = ev => { const dx = ev.clientX - x0; if (!on && Math.abs(dx) < 4) return; if (!on) { on = true; b.classList.add("drag"); base = shift(); }
+        const VY = orbBar.classList.contains("holo"), cx_ = ev => VY ? ev.clientY : ev.clientX, mid = r => VY ? r.top + r.height / 2 : r.left + r.width / 2;   /* the Holodeck's column drags up and down */
+        const y0 = e.clientY, shift = () => mid(b.getBoundingClientRect());
+        const mv = ev => { const dx = VY ? ev.clientY - y0 : ev.clientX - x0; if (!on && Math.abs(dx) < 4) return; if (!on) { on = true; b.classList.add("drag"); base = shift(); }
           // past the middle of a neighbour: swap places in the row, so the gap follows the pointer
-          const nx = b.nextElementSibling, pv = b.previousElementSibling, px = ev.clientX;
-          if (nx && nx.classList.contains("ivm-orb")) { const r = nx.getBoundingClientRect(); if (px > r.left + r.width / 2) orbBar.insertBefore(nx, b); }
-          if (pv && pv.classList.contains("ivm-orb")) { const r = pv.getBoundingClientRect(); if (px < r.left + r.width / 2) orbBar.insertBefore(b, pv); }
+          const nx = b.nextElementSibling, pv = b.previousElementSibling, px = cx_(ev);
+          if (nx && nx.classList.contains("ivm-orb")) { const r = nx.getBoundingClientRect(); if (px > mid(r)) orbBar.insertBefore(nx, b); }
+          if (pv && pv.classList.contains("ivm-orb")) { const r = pv.getBoundingClientRect(); if (px < mid(r)) orbBar.insertBefore(b, pv); }
           b.setCssProps({ "--odx": "0px" }); const c = shift(); b.setCssProps({ "--odx": (px - c) + "px" }); };
         const upf = () => { win.removeEventListener("pointermove", mv, true); win.removeEventListener("pointerup", upf, true); win.removeEventListener("pointercancel", upf, true); if (!on) return;
           orbDragged = true; win.setTimeout(() => { orbDragged = false; }, 0); b.classList.remove("drag"); b.setCssProps({ "--odx": "0px" });
@@ -5988,7 +6011,12 @@ function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".card
           TABS = order.map(q => TABS[q]).filter(Boolean); TCUR = cur ? Math.max(0, TABS.indexOf(cur)) : -1; tabsSave(); orbKey = ""; syncOrbs(); };
         win.addEventListener("pointermove", mv, true); win.addEventListener("pointerup", upf, true); win.addEventListener("pointercancel", upf, true); }); }); }
   placeOrbs(); }
-function placeOrbs(){ win.setTimeout(() => { if (!dead && typeof sfSwPlace === "function") sfSwPlace(); }, 0); if (orbBar.hidden) return; const L = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 12, R = (!EDS.right.el.hidden ? edRect("right").x : W - sideW()) - 12;
+function placeOrbs(){ win.setTimeout(() => { if (!dead && typeof sfSwPlace === "function") sfSwPlace(); }, 0); if (orbBar.hidden) return;
+  if (orbBar.classList.contains("holo")) { try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); orbBar.style.left = Math.round(c.left - m.left) + "px"; orbBar.style.top = Math.round(c.top - m.top + 8) + "px"; orbBar.style.width = (HOLOTW - 14) + "px"; } catch (_) { /* not laid out yet */ }
+    /* a long name wraps to a second line; only one that still doesn't fit gets smaller (Nick, Nov 7) */
+    win.requestAnimationFrame(() => { for (const h of orbBar.querySelectorAll(".orbh")) { let f = 12.5; h.style.fontSize = ""; while (h.scrollHeight > h.clientHeight + 1 && f > 9) { f -= .5; h.style.fontSize = f + "px"; } } });
+    return; }
+  orbBar.style.top = ""; const L = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 12, R = (!EDS.right.el.hidden ? edRect("right").x : W - sideW()) - 12;
   orbBar.style.left = Math.round(L) + "px"; orbBar.style.width = Math.max(40, Math.round(R - L)) + "px"; }
 // Starfield: a small read-only preview of each galaxy's hub note, above it
 const pvLayer = doc.createElement("div"); pvLayer.className = "ivm-pvl"; root.after(pvLayer); const HPV = new Map();
