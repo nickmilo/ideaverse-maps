@@ -3,7 +3,7 @@
    (click to swap back); a pinned sidekick note below it (a MOC, usually). Each support and the sidekick has a links drawer that slides out over its
    right side. Deck Mini is the primary note alone with its drawer, made to pop out into its own window for meetings.
    Each Deck tab keeps its own notes in its own saved state, so a Mini and the full Deck (and the main map) never fight over settings. */
-import { ItemView, MarkdownRenderer, Notice, TFile, normalizePath, setIcon } from "obsidian";
+import { ItemView, MarkdownRenderer, Notice, Platform, TFile, normalizePath, setIcon } from "obsidian";
 import { FolderPicker, NotePicker } from "./view.js";
 
 export const DECK_TYPE = "ideaverse-deck";
@@ -15,7 +15,7 @@ export class DeckView extends ItemView {
     this.st = { mini: false, primary: null, prev: null, sup: [null, null], focus: 0, side: null, drawers: {}, drawerMain: true, drawerDock: true, hist: {}, leftW: 340, hudW: 230, rightW: 380 };
     this.eds = {}; }
   getViewType() { return DECK_TYPE; }
-  getDisplayText() { return this.st.mini ? "Deck Mini" : "Deck"; }
+  getDisplayText() { return "Deck Mini"; }
   getIcon() { return this.st.mini ? "panel-right" : "layout-dashboard"; }
   getState() { return Object.assign({}, super.getState(), JSON.parse(JSON.stringify(this.st))); }
   async setState(state, result) { if (state && typeof state === "object") for (const k of Object.keys(this.st)) if (k in state) this.st[k] = state[k]; this.st.mini = true;   /* every Deck is a Mini now (0.9.45) */
@@ -60,13 +60,15 @@ export class DeckView extends ItemView {
           await leaf.openFile(f, { state: { mode: "source", source: false }, active: false }); return true; },
         resize: () => { if (leaf && leaf.view && typeof leaf.view.onResize === "function") leaf.view.onResize(); },
         close: () => { if (leaf) { leaf.detach(); leaf = null; } cur = null; split.containerEl.remove(); } }; }
-    o.el.addClass("ivd-ed"); if (o.el.parentElement !== host) host.appendChild(o.el); return o; }
+    o.el.addClass("ivd-ed", "mod-visible"); for (const t_ of Array.from(o.el.querySelectorAll(".workspace-tabs"))) t_.addClass("mod-visible");   /* a phone hides any pane without mod-visible (0.9.46) */
+    if (o.el.parentElement !== host) host.appendChild(o.el); return o; }
   dropEditor(slot) { const o = this.eds[slot]; if (o) { o.close(); delete this.eds[slot]; } }
 
   file(p) { const f = p && this.app.vault.getAbstractFileByPath(p); return f instanceof TFile ? f : null; }
   title(p) { const f = this.file(p); return f ? f.basename : ""; }
 
-  openPrimary(path) { if (!path || path === this.st.primary) return; this.setSlot("p", path); this.save(); this.render(); }
+  openPrimary(path) { if (!path || path === this.st.primary) return; if (Platform.isPhone) this.st.drawerMain = false;   /* on a phone, picking a note closes the drawer so you're reading (0.9.46) */
+    this.setSlot("p", path); this.save(); this.render(); }
   /* each support slot and the sidekick keep their own back and forward (0.9.2, Nick) */
   getSlot(key) { const S = this.st; return key === "side" ? S.side : key === "p" ? S.primary : S.sup[+key.slice(1)]; }
   setSlot(key, path, viaHist) { const S = this.st, cur = this.getSlot(key); if (cur === path) return; if (key === "p" && cur) S.prev = cur;
@@ -247,7 +249,7 @@ export class DeckView extends ItemView {
     const want = new Set(); const keep = s => want.add(s);
     /* the full Deck is gone (0.9.45, Nick: "Holodeck is just a superior mode"); Deck Mini stays */
     { const pc = this.card(root, "ivd-primary", "", P, "p", { strip: this.optD("strip-p", true), nav: this.navBtns("p"), btns: [["panel-right", "Recents and links", b => { S.drawerMain = !S.drawerMain; this.save(); this.render(); void b; }]], empty: "Open a note (from any tab) and run “Deck: show the active note”" });
-      keep("p"); pc.toggleClass("ivd-docked", !!(S.drawerMain && S.drawerDock)); if (S.drawerMain) { const dr = pc.createDiv({ cls: "ivd-drawer ivd-main-drawer" }); pc.style.setProperty("--ivd-mdw", Math.max(140, Math.min(460, +S.drawerW || 220)) + "px"); dr.style.setProperty("--ivd-mdw", Math.max(140, Math.min(460, +S.drawerW || 220)) + "px");
+      keep("p"); pc.toggleClass("ivd-docked", !!(S.drawerMain && S.drawerDock && !Platform.isPhone)); pc.toggleClass("ivd-phone", Platform.isPhone); if (S.drawerMain) { const dr = pc.createDiv({ cls: "ivd-drawer ivd-main-drawer" }); pc.style.setProperty("--ivd-mdw", Platform.isPhone ? "86%" : Math.max(140, Math.min(460, +S.drawerW || 220)) + "px"); dr.style.setProperty("--ivd-mdw", Platform.isPhone ? "86%" : Math.max(140, Math.min(460, +S.drawerW || 220)) + "px");
         /* its left edge can be dragged wider or narrower (0.9.7, Nick); only a CSS width changes while dragging, so nothing re-renders */
         const g = dr.createDiv({ cls: "ivd-grip ivd-grip-l" }); g.addEventListener("pointerdown", e => { e.preventDefault(); g.setPointerCapture(e.pointerId); const x0 = e.clientX, w0 = dr.getBoundingClientRect().width;
           const mv = ev => { S.drawerW = Math.round(Math.max(140, Math.min(460, w0 - (ev.clientX - x0)))); dr.style.setProperty("--ivd-mdw", S.drawerW + "px"); pc.style.setProperty("--ivd-mdw", S.drawerW + "px"); };
@@ -260,9 +262,14 @@ export class DeckView extends ItemView {
 export function registerDeck(plugin) {
   plugin.registerView(DECK_TYPE, leaf => new DeckView(leaf, plugin));
   const active = () => { const f = plugin.app.workspace.getActiveFile(); return f && f.extension === "md" ? f.path : null; };
-  plugin.addCommand({ id: "pop-out-deck-mini", name: "Pop out Deck Mini", callback: async () => { const W = plugin.app.workspace, p = active();
+  /* on mobile there are no pop-out windows: Deck Mini opens as a tab, and has its own ribbon icon (0.9.46, Nick: "a quick way between recent notes… as opposed to all these panes you swipe left and right for") */
+  const openMini = async () => { const W = plugin.app.workspace, p = active();
+    if (Platform.isMobile) { const ex = W.getLeavesOfType(DECK_TYPE)[0]; if (ex) { await W.revealLeaf(ex); if (typeof ex.loadIfDeferred === "function") await ex.loadIfDeferred(); if (ex.view instanceof DeckView) { ex.view.st.drawerMain = true; ex.view.save(); ex.view.render(); } return; }   /* back to Deck Mini: the drawer opens, ready to jump */
+      const lf = W.getLeaf("tab"); await lf.setViewState({ type: DECK_TYPE, active: true, state: { mini: true, primary: p, drawerMain: true } }); await W.revealLeaf(lf); return; }
     const leaf = typeof W.openPopoutLeaf === "function" ? W.openPopoutLeaf({ size: { width: 560, height: 900 } }) : W.getLeaf("window");
-    await leaf.setViewState({ type: DECK_TYPE, active: true, state: { mini: true, primary: p, drawerMain: true } }); } });
+    await leaf.setViewState({ type: DECK_TYPE, active: true, state: { mini: true, primary: p, drawerMain: true } }); };
+  plugin.addCommand({ id: "pop-out-deck-mini", name: Platform.isMobile ? "Open Deck Mini" : "Pop out Deck Mini", callback: () => { void openMini(); } });
+  if (Platform.isMobile) plugin.addRibbonIcon("panel-right", "Open Deck Mini", () => { void openMini(); });
   plugin.addCommand({ id: "deck-show-active", name: "Deck Mini: show the active note as the primary", checkCallback: checking => { const p = active(); const ds = plugin.app.workspace.getLeavesOfType(DECK_TYPE).map(l => l.view).filter(v => v instanceof DeckView);
     if (!p || !ds.length) return false; if (!checking) for (const v of ds) v.openPrimary(p); return true; } });
 }
