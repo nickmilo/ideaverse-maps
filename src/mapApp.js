@@ -5666,17 +5666,17 @@ const HOLOTW = 168;   /* the tab column's width, its gap included */
 let holoVeil = null, holoOp = null, CARDOPSL = null;
 /* Editor opacity has two handles (0.9.21, Nick: "a quick peek behind the Holodeck"): Display's slider and one at the foot of the Holodeck's tab column, always in step.
    In the Holodeck the veil over the map thins as the notes get more see-through, so the peek shows the map */
-function cardOpSet(v, from){ CARDOP = Math.max(15, Math.min(100, Math.round(v))); for (const o of Object.values(EDS)) edLook(o.el); try { for (const e_ of HPV.values()) edLook(e_); } catch (_) { /* no previews yet */ }
-  root.setCssProps({ "--holov": Math.round(10 + (CARDOP - 15) / 85 * 70) + "%" });
+function cardOpSet(v, from){ CARDOP = Math.max(5, Math.min(100, Math.round(v))); for (const o of Object.values(EDS)) edLook(o.el); try { for (const e_ of HPV.values()) edLook(e_); } catch (_) { /* no previews yet */ }
+  root.setCssProps({ "--holov": Math.round(4 + (CARDOP - 5) / 95 * 76) + "%" });
   for (const S_ of [CARDOPSL, holoOp]) if (S_ && S_.sl !== from && S_.sl.isConnected) { S_.sl.value = String(CARDOP); S_.ov.setText(CARDOP + "%"); } }
 function holoOpBuild(){ if (holoOp) return; const w = $("#main").createDiv({ cls: "ivm-holoop" }); w.hidden = true; const ic = w.createSpan({ cls: "hoi" }); setIcon(ic, "eye");
-  const sl = w.createEl("input", { type: "range", attr: { min: "15", max: "100", step: "1", "aria-description": "Editor opacity: lower it to see the map behind" } }); sl.value = String(CARDOP); const ov = w.createSpan({ cls: "hov", text: CARDOP + "%" });
+  const sl = w.createEl("input", { type: "range", attr: { min: "5", max: "100", step: "1", "aria-description": "Editor opacity: lower it to see the map behind" } }); sl.value = String(CARDOP); const ov = w.createSpan({ cls: "hov", text: CARDOP + "%" });
   sl.oninput = () => { cardOpSet(+sl.value, sl); ov.setText(CARDOP + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP);
   for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) w.addEventListener(ty, e => e.stopPropagation()); holoOp = { el: w, sl, ov }; }
 function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); holoOpBuild(); holoOp.el.hidden = !on;
   /* the primary note always has its tab in the column, lit (Nick, Nov 7: its tab was missing after a click away) */
   if (on && EDS.left.path && !TABS[TCUR]) { const ex = TABS.findIndex(t => t.path === EDS.left.path); if (ex >= 0) TCUR = ex; else { TABS.splice(0, 0, { path: EDS.left.path }); TCUR = 0; } tabsSave(); }
-  if (on) { root.setCssProps({ "--holov": Math.round(10 + (CARDOP - 15) / 85 * 70) + "%" }); holoOp.sl.value = String(CARDOP); holoOp.ov.setText(CARDOP + "%"); try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoOp.el.setCssProps({ "--hol": Math.round(c.left - m.left) + "px", "--hob": Math.round(m.bottom - c.bottom + 52) + "px", "--how": (HOLOTW - 14) + "px" }); } catch (_) { /* not laid out yet */ } }
+  if (on) { root.setCssProps({ "--holov": Math.round(4 + (CARDOP - 5) / 95 * 76) + "%" }); holoOp.sl.value = String(CARDOP); holoOp.ov.setText(CARDOP + "%"); try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoOp.el.setCssProps({ "--hol": Math.round(c.left - m.left) + "px", "--hob": Math.round(m.bottom - c.bottom + 52) + "px", "--how": (HOLOTW - 14) + "px" }); } catch (_) { /* not laid out yet */ } }
   if (!holoVeil) { holoVeil = $("#main").createDiv({ cls: "ivm-holoveil" }); for (const ty of ["pointerdown", "pointermove", "wheel", "click", "dblclick", "contextmenu"]) holoVeil.addEventListener(ty, e => { e.stopPropagation(); if (ty === "wheel" || ty === "contextmenu") e.preventDefault(); }, { passive: false }); }
   holoVeil.hidden = !on;
   try { if (orbBar) syncOrbs(); } catch (_) { /* the orbs aren't built yet */ }
@@ -7660,9 +7660,6 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
   // More: Chord, Corona, Tesla, Treemap and Bookshelf straight away; Geometric, Linear, Planet and Unfinished under Experimental
   { const pop = $("#vmorepop"), ex = $("#mexp"), sk = ex.querySelector(":scope > details"); for (const b of [...ex.querySelectorAll(":scope > button")]) pop.insertBefore(b, ex);
     if (sk) { sk.classList.remove("mexp2"); sk.querySelector(":scope > summary").setText("Experimental"); pop.insertBefore(sk, ex); } ex.remove();
-    // Posters: a targeted dataset by its own properties, right after Bookshelf
-    const gp = doc.createElement("button"); gp.className = "chip"; gp.id = "goposters"; gp.textContent = "Posters"; gp.setAttribute("aria-label", "Your notes as cards, laid out by their own properties (a year, a genre, a rating), with their pictures");
-    $("#goshelf").after(gp); gp.onclick = () => { closePops(); driftStop(); setView("posters"); };
     // Base Builder: any base (any targeted set) by its own columns, right after Bookshelf
     const gbb = doc.createElement("button"); gbb.className = "chip"; gbb.id = "gobuilder"; gbb.textContent = "Base Builder"; gbb.setAttribute("aria-label", "The notes in a base laid out by the base's own columns: a date or number left to right, a category per row, a number for size");
     $("#goshelf").after(gbb); gbb.onclick = () => { closePops(); driftStop(); setView("builder"); };
@@ -7686,12 +7683,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     // Mosaic: every note a tile, after Treemap
     const gm = doc.createElement("button"); gm.className = "chip"; gm.id = "gomosaic"; gm.textContent = "Mosaic"; gm.setAttribute("aria-label", "Every note a tile, set like stones: Level 5 at the heart, each level a frame around it");
     $("#gotreemap").after(gm); gm.onclick = () => { closePops(); driftStop(); setView("mosaic"); };
-    // People: a constellation of the people your notes name, after Posters
-    const gpp = doc.createElement("button"); gpp.className = "chip"; gpp.id = "gopeople"; gpp.textContent = "People"; gpp.setAttribute("aria-label", "The people your notes name (director, actors, author, guests) as stars, joined by the notes they share");
-    gpp.onclick = () => { closePops(); driftStop(); setView("people"); };
-    // Posters and People are for targeted sets (a base of films, a collection of books): Experimental → Specialized
-    { const exp_ = pop.querySelector(":scope > details"), sp = doc.createElement("details"); sp.className = "mexp mexp2"; sp.id = "mspec"; const su = doc.createElement("summary"); su.textContent = "Specialized"; sp.appendChild(su);
-      sp.appendChild(gp); sp.appendChild(gpp); sp.hidden = true; root.appendChild(sp); void exp_; } }   /* Posters and People removed from the menu (0.8.319, Nick: "You can delete the posters and people map views"); kept off-screen for old saved views, which land in Base Builder */
+  }   /* Posters and People are gone as maps of their own (0.9.25, Nick); their engines live on in Base Builder's layouts, and an old saved view opens Base Builder */
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "pplctl" } }); pc.hidden = true;
     pc.createDiv({ cls: "phint", text: "People from these properties:" }); pc.createDiv({ cls: "plchips pplchips" });
     const row = pc.createEl("label", { cls: "prow" }); row.createSpan({ text: "Show" }); const r = row.createEl("input", { type: "range" }); r.min = "5"; r.max = "150"; r.step = "1"; r.value = String(PPL.max);
@@ -8084,7 +8076,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     for (const [v, t] of [["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]]) { const b = ms_.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDMODE === v) } });
       b.onclick = e => { e.stopPropagation(); CARDMODE = v; save("iv-cardmode", v); ms_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; }
     syncM(); seg.addEventListener("click", () => win.setTimeout(syncM, 0));
-    const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "15", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
+    const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "5", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
     CARDOPSL = { sl, ov }; sl.oninput = () => { cardOpSet(+sl.value, sl); ov.setText(CARDOP + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
     /* Editor text size (0.8.229, Nick: "a little large… a slider to make it smaller"): 70–120% of Obsidian's text size; double-click it for 100% */
     const fr_ = g.createDiv({ cls: "drow eorow tchoice" }); fr_.createSpan({ cls: "eol", text: "Editor text size" }); const fs = fr_.createEl("input", { type: "range", attr: { min: "70", max: "120", step: "5" } }); fs.value = String(CARDFS); const fv = fr_.createSpan({ cls: "eov", text: CARDFS + "%" });
@@ -8347,7 +8339,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
   // a narrow map: the main tabs that don't fit fold into More (from the right: Sensemakers, then Starfield, then Ideaverse), which becomes More maps, with them at the top
   // a small Lucide icon before each map's name in the maps menu
   const MICON = { gocockpit: "gauge", gokandinsky: "target", goarena: "circle-dashed", gocompass: "navigation", emergence: "layers", ideaverse: "orbit", stars: "sparkles", sense: "compass", gogravity: "circle-dot", gograph: "gem", gochord: "aperture", gocso: "sun", gocsi: "zap",
-    gotreemap: "layout-dashboard", gomosaic: "layout-grid", goshelf: "library", gobuilder: "table-2", golincal: "calendar-range", lincal: "calendar-range", gosense: "compass", goposters: "image", gopeople: "users",
+    gotreemap: "layout-dashboard", gomosaic: "layout-grid", goshelf: "library", gobuilder: "table-2", golincal: "calendar-range", lincal: "calendar-range", gosense: "compass",
     gogeosquare: "square", gogeohex: "hexagon", gogeomandala: "flower", gogeoocta: "diamond", gogeoshells: "globe", gospiral: "rotate-cw", golifeline: "activity",
     goplflat: "map", gopltable: "table", goplglobe: "earth", gotree: "tree-deciduous", goskyline: "building-2" };
   const micon = (el, name) => { if (!name || el.querySelector(":scope > .mic")) return; const s_ = doc.createElement("span"); s_.className = "mic"; s_.setAttribute("aria-hidden", "true"); setIcon(s_, name); el.prepend(s_); };
@@ -8452,7 +8444,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       no.onclick = e => { e.stopPropagation(); cf.hidden = true; rst.hidden = false; };
       yes.onclick = e => { e.stopPropagation(); apply(DEF); save("iv-maporder", undefined); for (const d of GS) gapply(d, DEFX.get(d)); save("iv-maporderx", undefined); cf.hidden = true; rst.hidden = true; keys(); }; }
     const chipFor = () => { if (view === "cockpit" && SFSHIP) return MP.querySelector('.vfoldb[data-v="stars"]'); const id = { stars: "gostarchart", sense: "gosense", gravity: "gogravity", graph: "gograph", treemap: "gotreemap", mosaic: "gomosaic", shelf: "goshelf", builder: "gobuilder", spiral: "gospiral", lifeline: "golifeline",
-        tree: "gotree", skyline: "goskyline", posters: "goposters", people: "gopeople", chord: CSPH === "out" || CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
+        tree: "gotree", skyline: "goskyline", chord: CSPH === "out" || CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
       return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };
     // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
     // every map's gear in Starfield's tighter look (0.8.13, Nick: "apply to the other map settings"): a group of choices becomes one row with
