@@ -5823,7 +5823,7 @@ function makeEd(kind){
   const body = el.createDiv({ cls: "cardbody" });
   { let tt = 0; new MutationObserver(() => { win.clearTimeout(tt); tt = win.setTimeout(() => { try { edTint(o); } catch (_) { /* o not ready */ } }, 150); }).observe(el, { childList: true, subtree: true, characterData: true }); }   /* links keep their colors as you type (0.8.224) */
   for (const ty of ["pointerdown", "wheel", "click"]) el.addEventListener(ty, e => e.stopPropagation());
-  const act_ = () => { if (!o.path) return; hudFollow(kind === "right" ? PIDX.get(o.path) : null); }; el.addEventListener("pointerdown", act_, true); el.addEventListener("focusin", act_);
+  const act_ = () => { if (!o.path) return; hudFollow(kind === "right" ? PIDX.get(o.path) : null); }; el.addEventListener("pointerdown", () => { win.setTimeout(act_, 0); }, true); el.addEventListener("focusin", act_);   /* after the press, so the editor gets its focus first (0.9.50) */
   // the side editors tuck away to a tab on their edge, like the legend and the note panel; the note stays open in them
   const side = kind !== "center", cb = side ? hd.createEl("button", { cls: "cardbtn cardcol", text: kind === "left" ? "‹" : "›", attr: { type: "button", "aria-label": "Tuck away", title: "Tuck away" } }) : null;
   if (cb) hd.insertBefore(cb, ob);

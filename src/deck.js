@@ -54,6 +54,10 @@ export class DeckView extends ItemView {
   /* a real Obsidian editor in a split of our own, outside the saved layout (the map's technique) */
   editor(slot, host) { let o = this.eds[slot]; if (!o) { const W = this.app.workspace, Split = W.rootSplit.constructor, split = new Split(W, "vertical");
       split.getRoot = () => W.rootSplit; split.getContainer = () => W.rootSplit; let leaf = null, cur = null;
+      let aeInfo = null;   /* editor hotkeys reach the editor you're in (0.9.50): Obsidian's active editor, as Canvas sets it */
+      split.containerEl.addEventListener("focusin", () => { if (Platform.isMobile) return; window.setTimeout(() => { const v = leaf && leaf.view; if (!v || !v.editor || !split.containerEl.contains(document.activeElement)) return;
+        aeInfo = { app: this.app, get file() { return v.file; }, get editor() { return v.editor; }, getMode: () => v.getMode(), hoverPopover: null }; W.activeEditor = aeInfo; }, 0); });
+      split.containerEl.addEventListener("focusout", e => { if (e.relatedTarget instanceof Node && split.containerEl.contains(e.relatedTarget)) return; window.setTimeout(() => { if (aeInfo && W._activeEditor === aeInfo && !split.containerEl.contains(document.activeElement)) W.activeEditor = null; aeInfo = null; }, 0); });
       o = this.eds[slot] = { el: split.containerEl, get leaf() { return leaf; },
         open: async path => { const f = this.app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return false; if (cur === path && leaf) return true;
           if (!leaf) { leaf = W.createLeafInParent(split, 0); leaf.ivmCard = true; leaf.ivmOwner = this.leaf; } cur = path;
