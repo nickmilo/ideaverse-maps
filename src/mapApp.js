@@ -5900,7 +5900,13 @@ async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.left.close();
 // a link clicked inside a card: the map picks that note (the primary note follows); ⌘-click (or a modifier Obsidian reads as "new tab") opens it as the support note.
 // A note that isn't on the map right now (filtered out, or not mapped) opens in Obsidian as usual
 // Shift-click opens it as a new tab (an orb); while the primary note is pinned, a plain click opens it as the support note
-if (host.onCardLink) host.onCardLink((path, mode) => { const i = PIDX.get(path); if (i == null || !vis[i] || !edOn() || dead) return false;
+if (host.onCardLink) host.onCardLink((path, mode) => { const i = PIDX.get(path); if (i == null || !edOn() || dead) return false;
+  /* a note that Focus (or, in the Holodeck, a filter) hides stays in the map instead of falling out to an Obsidian tab (0.9.29, Nick):
+     pinned, in the Holodeck or ⌘-clicked it opens as the support note; otherwise, in Focus, it becomes the primary note and the focus */
+  if (!vis[i]) { const okF = focus >= 0 && visNoFocus(i), pin = !!(TABS[TCUR] && TABS[TCUR].pin);
+    if (mode === "tab" || !(okF || holoOn())) return false;
+    if (mode === "side" || pin || (holoOn() && !okF)) { if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(i); draw(); return true; }
+    setFocus(i); draw(); return true; }
   if (mode === "side") void EDS.right.open(i); else if (mode === "tab") openAs(i, "tab"); else select(i); draw(); return true; });
 
 // ---------- tabs, shown as orbs (0.8.28, Nick) ----------
