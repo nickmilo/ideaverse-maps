@@ -5815,7 +5815,7 @@ function makeEd(kind){
   /* Focus, right after the pin (0.8.272, Nick): the same as the toolbar's Focus on active note; lit while this note is focused */
   const fb_ = kind === "left" ? hd.createEl("button", { cls: "cardbtn cardfoc", attr: { type: "button", "aria-description": "Focus on this note" } }) : null;
   const hb_ = kind === "left" ? hd.createEl("button", { cls: "cardbtn cardholo", attr: { type: "button", "aria-description": "Turn on Holodeck", "aria-pressed": String(HOLO) } }) : null;
-  if (hb_) { setIcon(hb_, "panels-top-left"); hd.insertBefore(hb_, cb || ob); hb_.onclick = e => { e.stopPropagation(); holoSet(!HOLO); }; }
+  if (hb_) { setIcon(hb_, "eclipse");   /* the notes in front, the map behind (0.9.40, Nick) */ hd.insertBefore(hb_, cb || ob); hb_.onclick = e => { e.stopPropagation(); holoSet(!HOLO); }; }
   if (fb_) { setIcon(fb_, "locate-fixed"); hd.insertBefore(fb_, cb || ob); fb_.onclick = e => { e.stopPropagation(); const i = o.path != null ? PIDX.get(o.path) : null; if (i == null) return; focusArmed = false; setFocus(focus === i ? -1 : i); }; }
   const tab = side ? $("#main").createEl("button", { cls: "dtab edtab edtab-" + kind, attr: { "aria-label": "Show the editor", title: "Show the editor" } }) : null; if (tab) tab.hidden = true;
   const o = { kind, el, nav, strip, drop, open_: "", sub_: "", ed: null, path: null, key: "", pb, col: side && pref("iv-edcol-" + kind, false) === true,
