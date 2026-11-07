@@ -18,7 +18,7 @@ export class DeckView extends ItemView {
   getDisplayText() { return this.st.mini ? "Deck Mini" : "Deck"; }
   getIcon() { return this.st.mini ? "panel-right" : "layout-dashboard"; }
   getState() { return Object.assign({}, super.getState(), JSON.parse(JSON.stringify(this.st))); }
-  async setState(state, result) { if (state && typeof state === "object") for (const k of Object.keys(this.st)) if (k in state) this.st[k] = state[k];
+  async setState(state, result) { if (state && typeof state === "object") for (const k of Object.keys(this.st)) if (k in state) this.st[k] = state[k]; this.st.mini = true;   /* every Deck is a Mini now (0.9.45) */
     await super.setState(state, result); this.render(); }
   save() { this.app.workspace.requestSaveLayout(); }
 
@@ -242,63 +242,27 @@ export class DeckView extends ItemView {
         r.oninput = () => v.setText(r.value); r.onchange = () => this.setOpt("recn", +r.value); }
       if (S.mini) { const l = pop.createEl("label", { cls: "ivd-sw" }), cb = l.createEl("input", { type: "checkbox" }); cb.checked = S.drawerDock !== false; l.createEl("i"); l.createSpan({ text: "Drawer beside the note, not over it" });
         cb.onchange = () => { S.drawerDock = cb.checked; this.save(); this.render(); }; }   /* 0.9.14, Nick: the drawer can stay open to the right without covering the text */
-      if (!S.mini) { const r_ = pop.createEl("button", { cls: "ivd-reset", text: "Reset column widths", attr: { type: "button" } }); r_.onclick = () => { S.leftW = 340; S.hudW = 230; S.rightW = 380; this.save(); this.render(); }; }
       cog.onclick = e => { e.stopPropagation(); pop.hidden = !pop.hidden; cog.toggleClass("on", !pop.hidden); };
       this.registerDomEvent(root.ownerDocument, "pointerdown", e => { if (!pop.hidden && !top.contains(e.target)) { pop.hidden = true; cog.removeClass("on"); } }); }
     const want = new Set(); const keep = s => want.add(s);
-    if (S.mini) { const pc = this.card(root, "ivd-primary", "", P, "p", { strip: this.optD("strip-p", true), nav: this.navBtns("p"), btns: [["panel-right", "Recents and links", b => { S.drawerMain = !S.drawerMain; this.save(); this.render(); void b; }]], empty: "Open a note (from any tab) and run “Deck: show the active note”" });
+    /* the full Deck is gone (0.9.45, Nick: "Holodeck is just a superior mode"); Deck Mini stays */
+    { const pc = this.card(root, "ivd-primary", "", P, "p", { strip: this.optD("strip-p", true), nav: this.navBtns("p"), btns: [["panel-right", "Recents and links", b => { S.drawerMain = !S.drawerMain; this.save(); this.render(); void b; }]], empty: "Open a note (from any tab) and run “Deck: show the active note”" });
       keep("p"); pc.toggleClass("ivd-docked", !!(S.drawerMain && S.drawerDock)); if (S.drawerMain) { const dr = pc.createDiv({ cls: "ivd-drawer ivd-main-drawer" }); pc.style.setProperty("--ivd-mdw", Math.max(140, Math.min(460, +S.drawerW || 220)) + "px"); dr.style.setProperty("--ivd-mdw", Math.max(140, Math.min(460, +S.drawerW || 220)) + "px");
         /* its left edge can be dragged wider or narrower (0.9.7, Nick); only a CSS width changes while dragging, so nothing re-renders */
         const g = dr.createDiv({ cls: "ivd-grip ivd-grip-l" }); g.addEventListener("pointerdown", e => { e.preventDefault(); g.setPointerCapture(e.pointerId); const x0 = e.clientX, w0 = dr.getBoundingClientRect().width;
           const mv = ev => { S.drawerW = Math.round(Math.max(140, Math.min(460, w0 - (ev.clientX - x0)))); dr.style.setProperty("--ivd-mdw", S.drawerW + "px"); pc.style.setProperty("--ivd-mdw", S.drawerW + "px"); };
           const up = () => { g.removeEventListener("pointermove", mv); g.removeEventListener("pointerup", up); this.save(); this.onResize(); }; g.addEventListener("pointermove", mv); g.addEventListener("pointerup", up); });
         const hin = dr.createDiv({ cls: "ivd-hudin" }); this.hudEl = hin; this.hud(hin, P, true); } else this.hudEl = null;
-      for (const k of Object.keys(this.eds)) if (!want.has(k)) this.dropEditor(k); return; }
-    const CL = { leftW: [240, 560, 340, "--ivd-lw"], hudW: [120, 440, 230, "--ivd-hw"], rightW: [280, 600, 380, "--ivd-rw"] }, setW = (k, v) => { const [a, b, d, cv] = CL[k]; S[k] = Math.round(Math.max(a, Math.min(b, +v || d))); root.style.setProperty(cv, S[k] + "px"); };
-    for (const k of Object.keys(CL)) setW(k, S[k]);
-    /* the map's orb tabs (the same list), over the primary: click = primary, ⌘ click = a support slot, drag onto any slot (0.9.5) */
-    const orbs = (this.plugin.store.get("iv-tabs") || []).filter(t => t && this.file(t.path));
-    if (orbs.length) { const ob = root.createDiv({ cls: "ivd-orbs" }); for (const t of orbs) { const o = ob.createEl("button", { cls: "ivd-orb" + (t.path === P ? " on" : ""), attr: { type: "button", draggable: "true", "aria-description": this.title(t.path) } });
-        const nd = this.G && this.G.idx.get(t.path); o.dataset.l = String(nd ? nd.level : 2); o.onclick = e => { if (e.metaKey || e.ctrlKey) this.openSupport(t.path); else this.openPrimary(t.path); };
-        o.addEventListener("dragstart", e => { e.dataTransfer.setData("text/ivd-path", t.path); root.addClass("ivd-dragging"); }); o.addEventListener("dragend", () => root.removeClass("ivd-dragging"));
-        o.addEventListener("mouseenter", e => { this.hovPath = t.path; this.hovEl = o; if (e.metaKey || e.ctrlKey) this.showPv(t.path, o); }); o.addEventListener("mouseleave", () => { if (this.hovEl === o) { this.hovPath = null; this.hovEl = null; } }); } }
-    /* a narrow window: the left column folds into two edge tabs, and opens over the primary when one is clicked (0.9.5) */
-    { const et = root.createDiv({ cls: "ivd-etabs" }); for (const [t, k] of [["PREVIOUS", "prev"], ["SIDEKICK", "side"]]) { const b = et.createEl("button", { cls: "ivd-etab ivd-etab-" + k, text: t, attr: { type: "button" } }); b.onclick = () => { root.toggleClass("ivd-leftopen", !root.hasClass("ivd-leftopen")); this.onResize(); }; } }
-    const L = root.createDiv({ cls: "ivd-left" }), M = root.createDiv({ cls: "ivd-mid" }), H = root.createDiv({ cls: "ivd-hud" }), R = root.createDiv({ cls: "ivd-right" });
-    /* left: the previous primary (read-only, click to swap back) and the pinned sidekick */
-    const pv = this.card(L, "ivd-prev", "PREVIOUS", S.prev, "prev", { readOnly: true, empty: "The note you were on shows here" });
-    if (S.prev) pv.onclick = () => { this.setSlot("p", S.prev); this.save(); this.render(); };
-    this.card(L, "ivd-side", "SIDEKICK", S.side, "side", { strip: this.optD("strip-side", false), nav: this.navBtns("side"), btns: S.side ? [this.drawerBtn("side"), ["pin-off", "Unpin the sidekick", () => { this.setSlot("side", null); this.save(); this.render(); }]] : [], drawer: true, empty: "Pin a note here: a map of content, usually", drop: p => { this.setSlot("side", p); this.save(); this.render(); } }); if (S.side) keep("side");
-    /* middle: the primary note */
-    this.card(M, "ivd-primary", "PRIMARY", P, "p", { strip: this.optD("strip-p", true), nav: this.navBtns("p"), btns: P ? [["pin", "Pin as the sidekick", () => { this.setSlot("side", P); this.save(); this.render(); }]] : [], drop: p => this.openPrimary(p) }); if (P) keep("p");
-    /* its recents and links, straight, right beside it */
-    { const Hi = H.createDiv({ cls: "ivd-hudin" }); this.hudEl = Hi; this.hud(Hi, P, false); }   /* content inside, so a refresh keeps the grip on H */
-    /* right: two support slots; the focused one is taller */
-    for (const i of [0, 1]) { const p_ = S.sup[i], c = this.card(R, "ivd-sup" + (S.focus === i ? " ivd-focus" : ""), "SUPPORT", p_, "s" + i,
-        { strip: this.optD("strip-s", true), nav: this.navBtns("s" + i), btns: p_ ? [this.drawerBtn("s" + i), ["x", "Close", () => { this.setSlot("s" + i, null); this.save(); this.render(); }]] : [], drawer: true, drop: p => this.openSupport(p, i) });
-      if (p_) keep("s" + i); c.addEventListener("pointerdown", () => { if (S.focus !== i) { S.focus = i; this.save(); R.querySelectorAll(".ivd-sup").forEach((el, j) => el.toggleClass("ivd-focus", j === i)); window.setTimeout(() => this.onResize(), 260); } }, true); }
-    /* every column can be made wider or narrower within limits (0.9.2 the sidekick; 0.9.3 all of them, Nick): a grip on the left column's right edge, and on the left edges of the HUD and the supports */
-    const grip = (host, k, side, sign) => { const g = host.createDiv({ cls: "ivd-grip ivd-grip-" + side, attr: { "aria-description": "Drag to resize" } });
-      g.addEventListener("pointerdown", e => { e.preventDefault(); g.setPointerCapture(e.pointerId); const x0 = e.clientX, w0 = S[k]; root.addClass("ivd-resizing");
-        const mv = ev => { setW(k, w0 + sign * (ev.clientX - x0)); this.onResize(); };
-        const up = () => { g.removeEventListener("pointermove", mv); g.removeEventListener("pointerup", up); root.removeClass("ivd-resizing"); this.save(); };
-        g.addEventListener("pointermove", mv); g.addEventListener("pointerup", up); }); };
-    grip(L, "leftW", "r", 1); grip(H, "hudW", "l", -1); grip(R, "rightW", "l", -1);
-    for (const k of Object.keys(this.eds)) if (!want.has(k)) this.dropEditor(k);
-    for (const [k, el] of Object.entries(this.drawerEls)) { const b = el.parentElement.querySelector('.ivd-ib[aria-label="Links drawer"]'); if (b) b.toggleClass("on", !!S.drawers[k]); }
+      for (const k of Object.keys(this.eds)) if (!want.has(k)) this.dropEditor(k); }
     window.setTimeout(() => this.onResize(), 50); }
 }
 
 export function registerDeck(plugin) {
   plugin.registerView(DECK_TYPE, leaf => new DeckView(leaf, plugin));
   const active = () => { const f = plugin.app.workspace.getActiveFile(); return f && f.extension === "md" ? f.path : null; };
-  plugin.addCommand({ id: "open-deck", name: "Open the Deck", callback: async () => { const W = plugin.app.workspace;
-    let leaf = W.getLeavesOfType(DECK_TYPE).find(l => l.view instanceof DeckView && !l.view.st.mini);
-    if (!leaf) { const p = active(); leaf = W.getLeaf("tab"); await leaf.setViewState({ type: DECK_TYPE, active: true, state: { mini: false, primary: p } }); }
-    await W.revealLeaf(leaf); } });
   plugin.addCommand({ id: "pop-out-deck-mini", name: "Pop out Deck Mini", callback: async () => { const W = plugin.app.workspace, p = active();
     const leaf = typeof W.openPopoutLeaf === "function" ? W.openPopoutLeaf({ size: { width: 560, height: 900 } }) : W.getLeaf("window");
     await leaf.setViewState({ type: DECK_TYPE, active: true, state: { mini: true, primary: p, drawerMain: true } }); } });
-  plugin.addCommand({ id: "deck-show-active", name: "Deck: show the active note as the primary", checkCallback: checking => { const p = active(); const ds = plugin.app.workspace.getLeavesOfType(DECK_TYPE).map(l => l.view).filter(v => v instanceof DeckView);
+  plugin.addCommand({ id: "deck-show-active", name: "Deck Mini: show the active note as the primary", checkCallback: checking => { const p = active(); const ds = plugin.app.workspace.getLeavesOfType(DECK_TYPE).map(l => l.view).filter(v => v instanceof DeckView);
     if (!p || !ds.length) return false; if (!checking) for (const v of ds) v.openPrimary(p); return true; } });
 }
