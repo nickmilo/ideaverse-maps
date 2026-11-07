@@ -5670,8 +5670,8 @@ const HOLOTW = 168;   /* the tab column's width, its gap included */
 let holoVeil = null, holoOp = null, CARDOPSL = null;
 /* Editor see-through (stored as the editors' opacity, CARDOP) has two handles (0.9.21, Nick: "a quick peek behind the Holodeck"): Display's slider and one at the foot of the Holodeck's tab column, always in step.
    In the Holodeck the veil over the map thins as the notes get more see-through, so the peek shows the map */
-function cardOpSet(v, from){ CARDOP = Math.max(5, Math.min(100, Math.round(v))); for (const o of Object.values(EDS)) edLook(o.el); try { for (const e_ of HPV.values()) edLook(e_); } catch (_) { /* no previews yet */ }
-  root.setCssProps({ "--holov": Math.round(4 + (CARDOP - 5) / 95 * 76) + "%" });
+function cardOpSet(v, from){ CARDOP = Math.max(0, Math.min(100, Math.round(v))); for (const o of Object.values(EDS)) edLook(o.el); try { for (const e_ of HPV.values()) edLook(e_); } catch (_) { /* no previews yet */ }
+  root.setCssProps({ "--holov": Math.round(4 + CARDOP / 100 * 76) + "%" });
   for (const S_ of [CARDOPSL, holoOp]) if (S_ && S_.sl !== from && S_.sl.isConnected) { S_.sl.value = String(100 - CARDOP); S_.ov.setText((100 - CARDOP) + "%"); } }
 /* sort the tabs once, then drag as before (0.9.30, Nick: "sometimes the tabs can get unruly"): by level, highest on top; or by top folder (Atlas, Calendar, Efforts…), each by level */
 function tabSort(by){ const cur = TABS[TCUR], lv = t => { const i = PIDX.get(t.path); return i == null ? [-1, 0] : [N[i].level, N[i].score]; }, top = t => t.path.includes("/") ? t.path.split("/")[0].toLowerCase() : "\uffff";
@@ -5683,13 +5683,13 @@ function holoOpBuild(){ if (holoOp) return; const box = $("#main").createDiv({ c
   const sr = box.createDiv({ cls: "hosort" }); sr.createSpan({ cls: "hosl", text: "Sort" });
   for (const [k_, t_, d_] of [["level", "Level", "Sort the tabs by level, highest on top"], ["folder", "Folder", "Sort the tabs by their top folder, each by level"]]) { const b_ = sr.createEl("button", { cls: "hosb", text: t_, attr: { type: "button", "aria-description": d_ } }); b_.onclick = e => { e.stopPropagation(); tabSort(k_); }; }
   const w = box.createDiv({ cls: "horow" }); const ic = w.createSpan({ cls: "hoi" }); setIcon(ic, "eye");
-  const sl = w.createEl("input", { type: "range", attr: { min: "0", max: "95", step: "1", "aria-description": "Editor see-through: raise it to see the map behind" } }); sl.value = String(100 - CARDOP); const ov = w.createSpan({ cls: "hov", text: (100 - CARDOP) + "%" });
+  const sl = w.createEl("input", { type: "range", attr: { min: "0", max: "100", step: "1", "aria-description": "Editor see-through: raise it to see the map behind" } }); sl.value = String(100 - CARDOP); const ov = w.createSpan({ cls: "hov", text: (100 - CARDOP) + "%" });
   sl.oninput = () => { cardOpSet(100 - +sl.value, sl); ov.setText((100 - CARDOP) + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP);
   for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) box.addEventListener(ty, e => e.stopPropagation()); holoOp = { el: box, sl, ov }; }
 function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); holoOpBuild(); holoOp.el.hidden = !on;
   /* the primary note always has its tab in the column, lit (Nick, Nov 7: its tab was missing after a click away) */
   if (on && EDS.left.path && !TABS[TCUR]) { const ex = TABS.findIndex(t => t.path === EDS.left.path); if (ex >= 0) TCUR = ex; else { TABS.splice(0, 0, { path: EDS.left.path }); TCUR = 0; } tabsSave(); }
-  if (on) { root.setCssProps({ "--holov": Math.round(4 + (CARDOP - 5) / 95 * 76) + "%" }); holoOp.sl.value = String(100 - CARDOP); holoOp.ov.setText((100 - CARDOP) + "%"); try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoOp.el.setCssProps({ "--hol": Math.round(c.left - m.left) + "px", "--hob": Math.round(m.bottom - c.bottom + 52) + "px", "--how": (HOLOTW - 14) + "px" }); } catch (_) { /* not laid out yet */ } }
+  if (on) { root.setCssProps({ "--holov": Math.round(4 + CARDOP / 100 * 76) + "%" }); holoOp.sl.value = String(100 - CARDOP); holoOp.ov.setText((100 - CARDOP) + "%"); try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoOp.el.setCssProps({ "--hol": Math.round(c.left - m.left) + "px", "--hob": Math.round(m.bottom - c.bottom + 52) + "px", "--how": (HOLOTW - 14) + "px" }); } catch (_) { /* not laid out yet */ } }
   if (!holoVeil) { holoVeil = $("#main").createDiv({ cls: "ivm-holoveil" }); for (const ty of ["pointerdown", "pointermove", "wheel", "click", "dblclick", "contextmenu"]) holoVeil.addEventListener(ty, e => { e.stopPropagation(); if (ty === "wheel" || ty === "contextmenu") e.preventDefault(); }, { passive: false }); }
   holoVeil.hidden = !on;
   try { if (orbBar) syncOrbs(); } catch (_) { /* the orbs aren't built yet */ }
@@ -5699,7 +5699,7 @@ function holoSet(v){ HOLO = v; save("iv-holo", v); orbKey = ""; holoSync(); edFr
 function holoRight(vw){ let r = vw - 10; try { const c = cv.getBoundingClientRect(); for (const P of [RECEL, LKEL]) if (P && !P.hidden) { const q = P.getBoundingClientRect(); if (q.width) r = Math.min(r, q.left - c.left - 10); } } catch (_) { /* not laid out yet */ } return Math.max(HOLOTW + 400, r); }   // every map since 0.8.68 (Nick); maps you turn keep their camera (edCam)
 const edCam = () => !(S3D_ON() || sphOn() || domeOn() || geo3On() || csphOn() || (typeof globeOn === "function" && globeOn()));
 let CARDMODE = ["light", "dark"].includes(pref("iv-cardmode", "")) ? pref("iv-cardmode", "") : "auto";
-let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = +pref("iv-cardop", 84) || 84, CARDFS = Math.max(70, Math.min(120, +pref("iv-cardfs", 100) || 100));   /* CARDFS: the editors' text size, % of Obsidian's (0.8.229, Nick) */   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
+let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = (v => Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 84)(+pref("iv-cardop", 84)),   /* 0 is allowed (100% see-through, 0.9.32) */ CARDFS = Math.max(70, Math.min(120, +pref("iv-cardfs", 100) || 100));   /* CARDFS: the editors' text size, % of Obsidian's (0.8.229, Nick) */   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
 // Editor theme → Map: Obsidian works out its colors once, on the page body (--background-primary: var(--color-base-00)…), so a dark or light
 // class alone changes nothing; each editor re-declares those body colors itself, so they resolve with its own dark or light base colors
 let BODYV = null;
@@ -8099,7 +8099,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     for (const [v, t] of [["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]]) { const b = ms_.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDMODE === v) } });
       b.onclick = e => { e.stopPropagation(); CARDMODE = v; save("iv-cardmode", v); ms_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; }
     syncM(); seg.addEventListener("click", () => win.setTimeout(syncM, 0));
-    const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor see-through" }); const sl = or_.createEl("input", { type: "range", attr: { min: "0", max: "95", step: "1" } }); sl.value = String(100 - CARDOP); const ov = or_.createSpan({ cls: "eov", text: (100 - CARDOP) + "%" });   /* "Editor see-through" (0.9.27, Nick): how much of the map shows through the editors' backing; stored as its opacity, iv-cardop */
+    const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor see-through" }); const sl = or_.createEl("input", { type: "range", attr: { min: "0", max: "100", step: "1" } }); sl.value = String(100 - CARDOP); const ov = or_.createSpan({ cls: "eov", text: (100 - CARDOP) + "%" });   /* "Editor see-through" (0.9.27, Nick): how much of the map shows through the editors' backing; stored as its opacity, iv-cardop */
     CARDOPSL = { sl, ov }; sl.oninput = () => { cardOpSet(100 - +sl.value, sl); ov.setText((100 - CARDOP) + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
     /* Editor text size (0.8.229, Nick: "a little large… a slider to make it smaller"): 70–120% of Obsidian's text size; double-click it for 100% */
     const fr_ = g.createDiv({ cls: "drow eorow tchoice" }); fr_.createSpan({ cls: "eol", text: "Editor text size" }); const fs = fr_.createEl("input", { type: "range", attr: { min: "70", max: "120", step: "5" } }); fs.value = String(CARDFS); const fv = fr_.createSpan({ cls: "eov", text: CARDFS + "%" });
