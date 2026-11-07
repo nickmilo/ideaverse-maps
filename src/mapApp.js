@@ -5711,8 +5711,19 @@ function holoOpBuild(){ if (holoOp) return; const box = $("#main").createDiv({ c
   sl.oninput = () => { cardOpSet(100 - +sl.value, sl); ov.setText((100 - CARDOP) + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP);
   for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) box.addEventListener(ty, e => e.stopPropagation()); holoOp = { el: box, sl, ov }; }
 /* a thin "Holodeck" tag in the toolbar while it's on (0.9.34, Nick); a click turns it off */
-function holoTag(on){ let t = root.querySelector("#holotag"); if (!t) { const d = root.querySelector("#dispms"); if (!d || !d.parentElement) return; t = doc.createElement("button"); t.id = "holotag"; t.type = "button"; t.className = "holotag"; t.textContent = "Holodeck"; t.setAttribute("aria-description", "Turn off Holodeck"); t.onclick = e => { e.stopPropagation(); holoSet(false); }; d.after(t); }
-  t.hidden = !on; }
+/* off, it's the Holodeck's icon in the toolbar, like its neighbors; a click turns it on and it becomes the tag (0.9.44, Nick: "people can just use the header menu to turn on Holodeck") */
+function holoTag(on){ let t = root.querySelector("#holotag"); if (!t) { const d = root.querySelector("#dispms"); if (!d || !d.parentElement) return; t = doc.createElement("button"); t.id = "holotag"; t.type = "button";
+    t.onclick = e => { e.stopPropagation(); if (holoOn()) { holoSet(false); return; } holoStart(); }; d.after(t); }
+  const can = edOn() && view !== "cockpit"; t.hidden = !can; if (!can) return;
+  if (t.dataset.on !== String(on)) { t.dataset.on = String(on); t.empty();
+    if (on) { t.className = "holotag"; t.setText("Holodeck"); t.setAttribute("aria-description", "Turn off Holodeck"); }
+    else { t.className = "chip tbb tbi holoicon"; setIcon(t, "eclipse"); t.setAttribute("aria-description", "Turn on Holodeck"); } } }
+function holoStart(){ const m = EDS.left; if (m.col && m.path) m.collapse(false);
+  if (m.path && !m.el.hidden) { holoSet(true); return; }
+  let i = sel >= 0 && vis[sel] ? sel : -1; if (i < 0) { try { const L = recList(); if (L.length) i = L[0]; } catch (_) { /* no recents yet */ } }
+  if (i < 0) { new Notice("Open a note first: the Holodeck brings your notes forward."); return; }
+  select(i); win.setTimeout(() => { if (!dead) holoSet(true); }, 400); }
+win.setTimeout(() => { if (!dead) try { holoSync(); } catch (_) { /* not ready yet */ } }, 0);
 function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); holoOpBuild(); holoOp.el.hidden = !on; holoTag(on);
   /* the primary note always has its tab in the column, lit (Nick, Nov 7: its tab was missing after a click away) */
   if (on && EDS.left.path && !TABS[TCUR]) { const ex = TABS.findIndex(t => t.path === EDS.left.path); if (ex >= 0) TCUR = ex; else { TABS.splice(0, 0, { path: EDS.left.path }); TCUR = 0; } tabsSave(); }
