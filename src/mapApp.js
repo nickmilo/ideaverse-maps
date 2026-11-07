@@ -6012,11 +6012,11 @@ function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".card
         win.addEventListener("pointermove", mv, true); win.addEventListener("pointerup", upf, true); win.addEventListener("pointercancel", upf, true); }); }); }
   placeOrbs(); }
 function placeOrbs(){ win.setTimeout(() => { if (!dead && typeof sfSwPlace === "function") sfSwPlace(); }, 0); if (orbBar.hidden) return;
-  if (orbBar.classList.contains("holo")) { try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); orbBar.style.left = Math.round(c.left - m.left) + "px"; orbBar.style.top = Math.round(c.top - m.top + 8) + "px"; orbBar.style.width = (HOLOTW - 14) + "px"; } catch (_) { /* not laid out yet */ }
+  if (orbBar.classList.contains("holo")) { try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); orbBar.style.left = Math.round(c.left - m.left) + "px"; orbBar.setCssProps({ "--orbt": Math.round(c.top - m.top + 8) + "px" }); orbBar.style.width = (HOLOTW - 14) + "px"; } catch (_) { /* not laid out yet */ }
     /* a long name wraps to a second line; only one that still doesn't fit gets smaller (Nick, Nov 7) */
-    win.requestAnimationFrame(() => { for (const h of orbBar.querySelectorAll(".orbh")) { let f = 12.5; h.style.fontSize = ""; while (h.scrollHeight > h.clientHeight + 1 && f > 9) { f -= .5; h.style.fontSize = f + "px"; } } });
+    win.requestAnimationFrame(() => { for (const h of orbBar.querySelectorAll(".orbh")) { let f = 12.5; h.setCssProps({ "--ohf": "12.5px" }); while (h.scrollHeight > h.clientHeight + 1 && f > 9) { f -= .5; h.setCssProps({ "--ohf": f + "px" }); } } });
     return; }
-  orbBar.style.top = ""; const L = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 12, R = (!EDS.right.el.hidden ? edRect("right").x : W - sideW()) - 12;
+  const L = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 12, R = (!EDS.right.el.hidden ? edRect("right").x : W - sideW()) - 12;
   orbBar.style.left = Math.round(L) + "px"; orbBar.style.width = Math.max(40, Math.round(R - L)) + "px"; }
 // Starfield: a small read-only preview of each galaxy's hub note, above it
 const pvLayer = doc.createElement("div"); pvLayer.className = "ivm-pvl"; root.after(pvLayer); const HPV = new Map();

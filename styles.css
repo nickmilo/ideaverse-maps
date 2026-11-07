@@ -2149,14 +2149,14 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 /* Holodeck (0.9.19): the map behind the notes, quiet and out of reach; the orb tabs as a column of tabs on the far left */
 .ivm .ivm-holoveil{position:absolute;inset:0;z-index:3;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(1.5px)}
 .ivm .ivm-holoveil[hidden]{display:none}
-.ivm .ivm-orbs.holo{flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;align-items:stretch;gap:4px;padding:0;max-height:calc(100% - 24px);overflow-y:auto;overflow-x:visible;pointer-events:auto;scrollbar-width:none}
+.ivm .ivm-orbs.holo{top:var(--orbt,10px);flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;align-items:stretch;gap:4px;padding:0;max-height:calc(100% - 24px);overflow-y:auto;overflow-x:visible;pointer-events:auto;scrollbar-width:none}
 .ivm .ivm-orbs.holo .ivm-orb{white-space:normal;justify-content:flex-start;width:auto;height:46px;flex:none;display:flex;align-items:center;padding:0 12px 0 34px;border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--bg) 88%,transparent);border:1px solid var(--line);border-left:0;text-align:left;color:var(--muted)}
 .ivm .ivm-orbs.holo .ivm-orb .orbd{inset:auto;left:12px;top:calc(50% - 7px);width:14px;height:14px}
 .ivm .ivm-orbs.holo .ivm-orb.lv4 .orbd{left:13px;top:calc(50% - 6px);width:12px;height:12px}
 .ivm .ivm-orbs.holo .ivm-orb:hover .orbd{transform:none}
 .ivm .ivm-orbs.holo .ivm-orb.lv4:hover .orbd{transform:rotate(45deg)}
 .ivm .ivm-orbs.holo .ivm-orb::after{display:none}
-.ivm .ivm-orbs.holo .ivm-orb .orbh{white-space:normal;word-break:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;max-height:2.4em;font:500 12.5px/1.2 var(--body);overflow-wrap:anywhere}
+.ivm .ivm-orbs.holo .ivm-orb .orbh{white-space:normal;word-break:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;max-height:2.4em;font:500 var(--ohf,12.5px)/1.2 var(--body);overflow-wrap:anywhere}
 .ivm .ivm-orbs.holo .ivm-orb:hover{color:var(--ink)}
 .ivm .ivm-orbs.holo .ivm-orb.cur{color:var(--ink);background:color-mix(in srgb,var(--ink) 12%,var(--bg));border-color:color-mix(in srgb,var(--ink) 40%,transparent)}
 .ivm .ivm-orbs.holo .ivm-orb.cur .orbh,.ivm .ivm-orbs.holo .ivm-orb.beside .orbh{font-weight:650}
