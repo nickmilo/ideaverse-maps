@@ -1,6 +1,6 @@
 /* Maps of the Ideaverse: the map itself. Ported from the standalone HTML map (index.html) with its logic intact:
    the page's code runs inside the plugin's view, scoped to `root`, with Obsidian handling storage, events and notes. */
-import { Notice, Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
+import { Menu, Notice, Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 
 export const VIEWS_ON = ["cockpit", "kandinsky", "arena", "compass", "emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
@@ -6069,6 +6069,14 @@ function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".card
       x.onclick = e => { e.stopPropagation(); tabClose(j); }; b.onauxclick = e => { if (e.button === 1) { e.preventDefault(); tabClose(j); } };
       if (HO) { b.createSpan({ cls: "orbh", text: nm }); if (bes && t.path === bes && j !== TCUR) b.classList.add("beside"); } else if (ORBN) b.createSpan({ cls: "orbn", text: nm });
       b.onclick = e => { e.stopPropagation(); if (orbDragged) { orbDragged = false; return; } tabGo(j); };
+      /* right-click: where to show it, pin, close (0.9.39, Nick) */
+      b.addEventListener("contextmenu", e => { e.preventDefault(); e.stopPropagation(); if (!t.path) return; const m = new Menu(), isP = j === TCUR && EDS.left.path === t.path, isS = !EDS.right.el.hidden && EDS.right.path === t.path;
+        m.addItem(it => it.setTitle("Open as primary note").setIcon("panel-left").setDisabled(isP).onClick(() => tabDrop(j, "left")));
+        m.addItem(it => it.setTitle("Open as support note").setIcon("panel-right").setDisabled(isS || EDS.left.path === t.path).onClick(() => tabDrop(j, "right")));
+        m.addSeparator();
+        m.addItem(it => it.setTitle(t.pin ? "Unpin" : "Pin").setIcon(t.pin ? "pin-off" : "pin").onClick(() => { t.pin = !t.pin; tabsSave(); orbKey = ""; syncOrbs(); syncNav(); cmpSync(); arenaSync(); }));
+        m.addItem(it => it.setTitle("Close tab").setIcon("x").onClick(() => tabClose(j)));
+        m.showAtMouseEvent(e); });
       // drag an orb left or right to reorder the tabs (0.8.36; 0.8.39 follows the pointer, and the others make way as you pass them)
       b.addEventListener("pointerdown", e => { if (e.button !== 0 || (e.target instanceof Element && e.target.closest(".orbx"))) return; e.stopPropagation(); e.preventDefault();
         const x0 = e.clientX; let on = false, base = 0;
