@@ -2191,3 +2191,6 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .holotag{flex:none;align-self:center;height:20px;padding:0 9px;margin-left:4px;border:1px solid color-mix(in srgb,var(--accent) 70%,transparent);border-radius:10px;background:none;box-shadow:none;color:var(--accent);font:600 9.5px var(--mono,ui-monospace,monospace);letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
 .ivm .holotag[hidden]{display:none}
 .ivm .holotag:hover{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+/* the Sort buttons are a quiet control: lit in ink (blue), never Obsidian's accent focus ring (0.9.35, Nick: "Yellow feels too strong in that area") */
+.ivm .ivm-holoop .hosb:focus,.ivm .ivm-holoop .hosb:focus-visible{box-shadow:none;outline:none}
+.ivm .ivm-holoop .hosb:focus-visible{border-color:var(--ink)}
