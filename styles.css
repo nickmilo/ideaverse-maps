@@ -2197,3 +2197,5 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 /* the Holodeck's tab column widens at its right edge (0.9.41): only the cursor shows it */
 .ivm .ivm-hologrip{position:absolute;left:var(--hgl,155px);top:var(--hgt,8px);bottom:var(--hgb,52px);width:10px;z-index:8;cursor:ew-resize}
 .ivm .ivm-hologrip[hidden]{display:none}
+/* dragging a title bar onto the other note (0.9.42) */
+body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}

@@ -5836,8 +5836,20 @@ function makeEd(kind){
     close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; o.tabSync(); if (o.ed) { o.ed.close(); o.ed = null; } if (kind === "right") hudFollow(null); edFree(); },
     async open(i){ const p = N[i].path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
       const nw = o.path !== p; o.path = p; t.setText(N[i].title); if (nw) { o.open_ = ""; o.sub_ = ""; } fillStrip(o, i); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
-      if (kind === "right" && nw) hudFollow(i);   /* a note that opens beside is the active one: the HUD, and in Focus the graph, follow it (0.9.28, Nick) */
+      if (kind === "right" && nw) { hudFollow(i); if (holoOn() && !TABS.some(t_ => t_.path === p)) tabAddBg(i); }   /* in the Holodeck every note beside you has a tab (0.9.42, Nick: search → support, "I expected to see it as a tab") */   /* a note that opens beside is the active one: the HUD, and in Focus the graph, follow it (0.9.28, Nick) */
       if (nw) { await o.ed.open(p); o.ed.resize(); propKeep(el); } } };
+  /* drag a title bar onto the other note and they swap (0.9.42, Nick): a plain click still tucks it away */
+  { let hd_ = null, swallow = false;
+    hd.addEventListener("pointerdown", e => { if (e.button !== 0 || !(e.target instanceof Element) || e.target.closest("button") || !o.path) return; hd_ = { x: e.clientX, y: e.clientY, on: false, gh: null, tgt: null };
+      const mv = ev => { if (!hd_) return; if (!hd_.on) { if (Math.hypot(ev.clientX - hd_.x, ev.clientY - hd_.y) < 6) return; hd_.on = true; doc.body.classList.add("ivm-grabbing");
+          hd_.gh = $("#main").createDiv({ cls: "ivm-orbghost" }); hd_.gh.createSpan({ text: t.textContent || "" }); }
+        const m = $("#main").getBoundingClientRect(); hd_.gh.setCssProps({ "--gx": Math.round(ev.clientX - m.left + 12) + "px", "--gy": Math.round(ev.clientY - m.top + 8) + "px" });
+        const other = kind === "left" ? EDS.right : EDS.left, r = other.el.hidden ? null : other.el.getBoundingClientRect(), over = !!r && ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+        if (over !== !!hd_.tgt) { if (hd_.tgt) hd_.tgt.el.classList.remove("ivm-dropt"); hd_.tgt = over ? other : null; if (hd_.tgt) hd_.tgt.el.classList.add("ivm-dropt"); } };
+      const upf = () => { win.removeEventListener("pointermove", mv, true); win.removeEventListener("pointerup", upf, true); win.removeEventListener("pointercancel", upf, true); if (!hd_) return; const h = hd_; hd_ = null;
+        if (!h.on) return; swallow = true; win.setTimeout(() => { swallow = false; }, 0); doc.body.classList.remove("ivm-grabbing"); if (h.gh) h.gh.remove(); if (h.tgt) { h.tgt.el.classList.remove("ivm-dropt"); edSwap(); } };
+      win.addEventListener("pointermove", mv, true); win.addEventListener("pointerup", upf, true); win.addEventListener("pointercancel", upf, true); });
+    hd.addEventListener("click", e => { if (swallow) { swallow = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true); }
   // a side editor tucks away from anywhere on its header but its buttons, like the legend (0.8.31); its inner edge drags to resize
   if (side) { hd.classList.add("cardhd-tuck"); hd.title = "Tuck away"; hd.addEventListener("click", e => { if (!(e.target instanceof Element) || e.target.closest("button")) return; o.collapse(true); });
     const gr = el.createDiv({ cls: "cardgrip cardgrip-" + kind, attr: { "aria-label": "Drag to resize" } }); let drag_ = null;
@@ -6052,6 +6064,10 @@ function tabGo(j){ const t = TABS[j]; if (!t) return; if (!t.path) { if (TABS[TC
   if (j !== TCUR && TABS[TCUR] && TABS[TCUR].pin) { void EDS.right.open(i); return; }
   TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }
 /* a tab dropped on an editor: on the support note it opens there; on the primary note it becomes the primary, past a pin, and the pin stays with the primary (0.9.23, Nick) */
+/* the primary and the support note trade places (a title bar dragged onto the other one, 0.9.42): like a tab dropped on the primary, it goes past a pin and the primary stays pinned */
+function edSwap(){ const a = EDS.left.path, b = EDS.right.el.hidden ? null : EDS.right.path; if (!a || !b) return; const ib = PIDX.get(b), ia = PIDX.get(a); if (ib == null) return;
+  let j = TABS.findIndex(t_ => t_.path === b); if (j < 0) { const at = TCUR >= 0 ? TCUR + 1 : TABS.length; TABS.splice(at, 0, { path: b }); j = at; tabsSave(); }
+  tabDrop(j, "left"); if (ia != null) win.setTimeout(() => { if (dead || EDS.left.path !== b) return; if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(ia).then(() => { hudFollow(null); orbKey = ""; syncOrbs(); }); }, 350); }
 function tabDrop(j, side){ const t = TABS[j]; if (!t || !t.path) return; const i = PIDX.get(t.path); if (i == null) return;
   if (side === "right") { if (EDS.left.path === t.path) return; if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(i).then(() => { orbKey = ""; syncOrbs(); hudFollow(i); }); return; }
   if (j === TCUR && EDS.left.path === t.path) return;
