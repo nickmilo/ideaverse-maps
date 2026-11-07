@@ -210,6 +210,7 @@ function baseOK(i){ const d = N[i];
     && collOK(d); }
 const visBase = baseOK;
 let NVIS = 0, NARROW = false, BOOST = 1;
+const visNoFocus = i => baseOK(i) && (!BQS || BQS[i]) && (!MS || MS[i]) && (!PRS || PRS[i]);   /* would it show if Focus were off (0.9.24) */
 function computeVis(){ VISV++; const fs = new Set(folders);
   for (let i=0;i<n;i++) { const d = N[i];
     vis[i] = ((!SCOPE || SCOPE[i]) && (!ARCH[i] || showArch)
@@ -5989,8 +5990,10 @@ function newTabSync(){ const on = !dead && edOn() && !!TABS[TCUR] && !TABS[TCUR]
 function tabGo(j){ const t = TABS[j]; if (!t) return; if (!t.path) { if (TABS[TCUR] && TABS[TCUR].pin && j !== TCUR) return; TCUR = j; tabsSave(); select(-1); EDS.left.close(); syncOrbs(); return; }
   const i = PIDX.get(t.path); if (i == null) return;
   /* in the Holodeck the map is the backdrop, so a filter doesn't stop a tab opening beside you (Nick, Nov 7) */
-  if (holoOn() && j !== TCUR && !(EDS.right.path === t.path && !EDS.right.el.hidden && vis[i] && !(TABS[TCUR] && TABS[TCUR].pin))) { if (EDS.right.col) EDS.right.collapse(false); /* a tucked support note comes back: in the Holodeck a tab opens beside, in plain view (Nick, Nov 7) */ void EDS.right.open(i).then(() => { orbKey = ""; syncOrbs(); }); orbKey = ""; syncOrbs(); return; }
+  if (holoOn() && j !== TCUR && !(EDS.right.path === t.path && !EDS.right.el.hidden && (vis[i] || (focus >= 0 && visNoFocus(i))) && !(TABS[TCUR] && TABS[TCUR].pin))) { if (EDS.right.col) EDS.right.collapse(false); /* a tucked support note comes back: in the Holodeck a tab opens beside, in plain view (Nick, Nov 7) */ void EDS.right.open(i).then(() => { orbKey = ""; syncOrbs(); }); orbKey = ""; syncOrbs(); return; }
   if (holoOn() && j !== TCUR) { EDS.right.close(); edFree(); }   /* a second click on the tab beside makes it the primary note */
+  /* in Focus, a tab's note becomes the focus too, even one outside the focused links (0.9.24, Nick: "once you're focused… we can't change it") */
+  if (focus >= 0 && visNoFocus(i) && !(j !== TCUR && TABS[TCUR] && TABS[TCUR].pin)) { TCUR = j; tabsSave(); if (focus !== i) setFocus(i); else void openMain(i); syncOrbs(); win.setTimeout(() => { if (!dead) syncOrbs(); }, 300); return; }
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
   // pinned: the primary note keeps its note, and another orb's note opens as the support note (0.8.68, Nick). Unpin to switch tabs
   if (j !== TCUR && TABS[TCUR] && TABS[TCUR].pin) { void EDS.right.open(i); return; }
@@ -5999,9 +6002,9 @@ function tabGo(j){ const t = TABS[j]; if (!t) return; if (!t.path) { if (TABS[TC
 function tabDrop(j, side){ const t = TABS[j]; if (!t || !t.path) return; const i = PIDX.get(t.path); if (i == null) return;
   if (side === "right") { if (EDS.left.path === t.path) return; if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(i).then(() => { orbKey = ""; syncOrbs(); hudFollow(i); }); return; }
   if (j === TCUR && EDS.left.path === t.path) return;
-  if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
+  if (!vis[i] && !(focus >= 0 && visNoFocus(i))) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
   const pin = !!(TABS[TCUR] && TABS[TCUR].pin); if (EDS.right.path === t.path) EDS.right.close();
-  TCUR = j; if (pin) t.pin = true; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); syncNav(); win.setTimeout(() => { if (!dead) { syncOrbs(); syncNav(); } }, 300); }   /* again once the editor holds the note, so its pin lights */
+  TCUR = j; if (pin) t.pin = true; tabsSave(); if (focus >= 0 && focus !== i) setFocus(i); else if (sel === i) void openMain(i); else select(i); syncOrbs(); syncNav(); win.setTimeout(() => { if (!dead) { syncOrbs(); syncNav(); } }, 300); }   /* again once the editor holds the note, so its pin lights */
 function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j === TCUR; if (j < TCUR) TCUR--;
   if (TCUR >= 0 || was) TCUR = Math.max(0, Math.min(TCUR, TABS.length - 1)); tabsSave();
   if (was) { if (TABS[TCUR]) tabGo(TCUR); else EDS.left.close(); } syncOrbs(); }
