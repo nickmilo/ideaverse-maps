@@ -1954,7 +1954,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivd-drawer[hidden]{display:none}
 /* narrower: the left column goes first, then the HUD tucks into the primary's drawer */
 @container (max-width:1300px){.ivd{grid-template-columns:minmax(420px,1fr) var(--ivd-hw,230px) var(--ivd-rw,380px)}.ivd-left{display:none}}
-/* Deck Mini: the note fills the window; recents and links in its drawer */
+/* Mini Deck: the note fills the window; recents and links in its drawer */
 .ivd.ivd-mini{display:flex;padding:8px}
 .ivd.ivd-mini .ivd-primary{flex:1}
 .ivd .ivd-nav{border-color:transparent;width:22px;height:22px}

@@ -1,7 +1,7 @@
 /* The Deck (0.9.1, Nick, Nov 5): a writing-first view with no graph. The primary note in the middle, the biggest rectangle; its Recents and Links
    in a straight column right beside it; two support notes on the right (the one you click grows); the note that was primary before, small, top left
    (click to swap back); a pinned sidekick note below it (a MOC, usually). Each support and the sidekick has a links drawer that slides out over its
-   right side. Deck Mini is the primary note alone with its drawer, made to pop out into its own window for meetings.
+   right side. The Mini Deck is the primary note alone with its drawer, made to pop out into its own window for meetings.
    Each Deck tab keeps its own notes in its own saved state, so a Mini and the full Deck (and the main map) never fight over settings. */
 import { ItemView, MarkdownRenderer, Notice, Platform, TFile, normalizePath, setIcon } from "obsidian";
 import { FolderPicker, NotePicker } from "./view.js";
@@ -15,7 +15,7 @@ export class DeckView extends ItemView {
     this.st = { mini: false, primary: null, prev: null, sup: [null, null], focus: 0, side: null, drawers: {}, drawerMain: true, drawerDock: true, hist: {}, leftW: 340, hudW: 230, rightW: 380 };
     this.eds = {}; }
   getViewType() { return DECK_TYPE; }
-  getDisplayText() { return "Deck Mini"; }
+  getDisplayText() { return "Mini Deck"; }
   getIcon() { return this.st.mini ? "panel-right" : "layout-dashboard"; }
   getState() { return Object.assign({}, super.getState(), JSON.parse(JSON.stringify(this.st))); }
   async setState(state, result) { if (state && typeof state === "object") for (const k of Object.keys(this.st)) if (k in state) this.st[k] = state[k]; this.st.mini = true;   /* every Deck is a Mini now (0.9.45) */
@@ -235,7 +235,7 @@ export class DeckView extends ItemView {
     root.empty(); root.toggleClass("ivd-mini", !!this.st.mini); const S = this.st, P = S.primary;
     /* a strip at the top: the Deck's settings (⚙), top left where a map's menu sits (0.9.3, Nick) */
     { const top = root.createDiv({ cls: "ivd-top" }), cog = top.createEl("button", { cls: "ivd-ib ivd-cog", attr: { type: "button", "aria-description": "Deck settings" } }); setIcon(cog, "settings");
-      top.createSpan({ cls: "ivd-lab", text: S.mini ? "DECK MINI" : "DECK" });
+      top.createSpan({ cls: "ivd-lab", text: "MINI DECK" });
       const pop = top.createDiv({ cls: "ivd-pop" }); pop.hidden = true;
       for (const [k, t] of [["rel", "Show relevance scores"], ["age", "Show time since modified"], ["col", "Color links by Idea Emergence"], ["strip-p", "Note strip on the primary note"], ["strip-s", "Note strip on the support notes"], ["strip-side", "Note strip on the sidekick"]]) {
         if (S.mini && k.startsWith("strip-") && k !== "strip-p") continue;
@@ -247,7 +247,7 @@ export class DeckView extends ItemView {
       cog.onclick = e => { e.stopPropagation(); pop.hidden = !pop.hidden; cog.toggleClass("on", !pop.hidden); };
       this.registerDomEvent(root.ownerDocument, "pointerdown", e => { if (!pop.hidden && !top.contains(e.target)) { pop.hidden = true; cog.removeClass("on"); } }); }
     const want = new Set(); const keep = s => want.add(s);
-    /* the full Deck is gone (0.9.45, Nick: "Holodeck is just a superior mode"); Deck Mini stays */
+    /* the full Deck is gone (0.9.45, Nick: "Holodeck is just a superior mode"); the Mini Deck stays */
     { const pc = this.card(root, "ivd-primary", "", P, "p", { strip: this.optD("strip-p", true), nav: this.navBtns("p"), btns: [["panel-right", "Recents and links", b => { S.drawerMain = !S.drawerMain; this.save(); this.render(); void b; }]], empty: "Open a note (from any tab) and run “Deck: show the active note”" });
       keep("p"); pc.toggleClass("ivd-docked", !!(S.drawerMain && S.drawerDock && !Platform.isPhone)); pc.toggleClass("ivd-phone", Platform.isPhone); if (S.drawerMain) { const dr = pc.createDiv({ cls: "ivd-drawer ivd-main-drawer" }); pc.style.setProperty("--ivd-mdw", Platform.isPhone ? "86%" : Math.max(140, Math.min(460, +S.drawerW || 220)) + "px"); dr.style.setProperty("--ivd-mdw", Platform.isPhone ? "86%" : Math.max(140, Math.min(460, +S.drawerW || 220)) + "px");
         /* its left edge can be dragged wider or narrower (0.9.7, Nick); only a CSS width changes while dragging, so nothing re-renders */
@@ -262,14 +262,22 @@ export class DeckView extends ItemView {
 export function registerDeck(plugin) {
   plugin.registerView(DECK_TYPE, leaf => new DeckView(leaf, plugin));
   const active = () => { const f = plugin.app.workspace.getActiveFile(); return f && f.extension === "md" ? f.path : null; };
-  /* on mobile there are no pop-out windows: Deck Mini opens as a tab, and has its own ribbon icon (0.9.46, Nick: "a quick way between recent notes… as opposed to all these panes you swipe left and right for") */
-  const openMini = async () => { const W = plugin.app.workspace, p = active();
-    if (Platform.isMobile) { const ex = W.getLeavesOfType(DECK_TYPE)[0]; if (ex) { await W.revealLeaf(ex); if (typeof ex.loadIfDeferred === "function") await ex.loadIfDeferred(); if (ex.view instanceof DeckView) { ex.view.st.drawerMain = true; ex.view.save(); ex.view.render(); } return; }   /* back to Deck Mini: the drawer opens, ready to jump */
+  /* on mobile there are no pop-out windows: the Mini Deck opens as a tab (0.9.46, Nick: "a quick way between recent notes… as opposed to all these panes you swipe left and right for");
+     "Mini Deck", not "Deck Mini": the Holodeck is the main one, the Mini Deck the tiny one (0.9.48, Nick) */
+  const openMini = async pin => { const W = plugin.app.workspace, p = pin || active();
+    if (Platform.isMobile) { const ex = W.getLeavesOfType(DECK_TYPE)[0]; if (ex) { await W.revealLeaf(ex); if (typeof ex.loadIfDeferred === "function") await ex.loadIfDeferred(); if (ex.view instanceof DeckView) { if (pin && ex.view.st.primary !== pin) ex.view.setSlot("p", pin); ex.view.st.drawerMain = true; ex.view.save(); ex.view.render(); } return; }   /* back to the Mini Deck: the drawer opens, ready to jump */
       const lf = W.getLeaf("tab"); await lf.setViewState({ type: DECK_TYPE, active: true, state: { mini: true, primary: p, drawerMain: true } }); await W.revealLeaf(lf); return; }
     const leaf = typeof W.openPopoutLeaf === "function" ? W.openPopoutLeaf({ size: { width: 560, height: 900 } }) : W.getLeaf("window");
     await leaf.setViewState({ type: DECK_TYPE, active: true, state: { mini: true, primary: p, drawerMain: true } }); };
-  plugin.addCommand({ id: "pop-out-deck-mini", name: Platform.isMobile ? "Open Deck Mini" : "Pop out Deck Mini", callback: () => { void openMini(); } });
-  if (Platform.isMobile) plugin.addRibbonIcon("panel-right", "Open Deck Mini", () => { void openMini(); });
-  plugin.addCommand({ id: "deck-show-active", name: "Deck Mini: show the active note as the primary", checkCallback: checking => { const p = active(); const ds = plugin.app.workspace.getLeavesOfType(DECK_TYPE).map(l => l.view).filter(v => v instanceof DeckView);
+  plugin.addCommand({ id: "pop-out-deck-mini", name: Platform.isMobile ? "Open Mini Deck" : "Pop out Mini Deck", callback: () => { void openMini(); } });
+  /* in every note's ⋯ menu (and a note's right-click or long-press menu), not the ribbon (0.9.48, Nick: "no one uses the ribbon") */
+  /* Convert to Mini Deck (0.9.48, Nick): the note's own tab becomes the Mini Deck, no extra tab or window; from the file list (no tab) it opens one */
+  const convert = async (leaf, path) => { await leaf.setViewState({ type: DECK_TYPE, active: true, state: { mini: true, primary: path, drawerMain: true } }); await plugin.app.workspace.revealLeaf(leaf); };
+  plugin.registerEvent(plugin.app.workspace.on("file-menu", (menu, file, source, leaf) => { if (!(file instanceof TFile) || file.extension !== "md") return;
+    if (leaf && leaf.view && leaf.view.getViewType() === "markdown") menu.addItem(it => it.setTitle("Convert to Mini Deck").setIcon("panel-right").onClick(() => { void convert(leaf, file.path); }));
+    else menu.addItem(it => it.setTitle(Platform.isMobile ? "Open in Mini Deck" : "Pop out in Mini Deck").setIcon("panel-right").onClick(() => { void openMini(file.path); })); }));
+  plugin.addCommand({ id: "convert-to-mini-deck", name: "Convert to Mini Deck", checkCallback: checking => { const lf = plugin.app.workspace.getMostRecentLeaf(), v = lf && lf.view;
+    if (!v || v.getViewType() !== "markdown" || !v.file) return false; if (!checking) void convert(lf, v.file.path); return true; } });
+  plugin.addCommand({ id: "deck-show-active", name: "Mini Deck: show the active note as the primary", checkCallback: checking => { const p = active(); const ds = plugin.app.workspace.getLeavesOfType(DECK_TYPE).map(l => l.view).filter(v => v instanceof DeckView);
     if (!p || !ds.length) return false; if (!checking) for (const v of ds) v.openPrimary(p); return true; } });
 }
