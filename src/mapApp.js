@@ -5346,7 +5346,10 @@ function lkGroups(i, list){ if (LKG.i === i && LKG.n === list.length && LKG.rj =
    HUDI is the support note's note while it's the active one; -1 follows the pick (the primary note) */
 let HUDI = -1;
 const hsel = () => HUDI >= 0 && N[HUDI] ? HUDI : sel;
-function hudFollow(i){ const v = i == null || i === sel ? -1 : i; if (v === HUDI) return; HUDI = v; if (focus >= 0) focusQuiet(v >= 0 ? v : sel); RECKEY = ""; try { recSync(); } catch (_) { /* not built yet */ } draw(); }
+function hudFollow(i){ const pI = EDS && EDS.left && EDS.left.path ? PIDX.get(EDS.left.path) : null, v = i == null || i === pI ? -1 : i; if (v === HUDI) return; HUDI = v;
+  if (focus >= 0) focusQuiet(v >= 0 ? v : (pI != null ? pI : sel));
+  else { const t_ = v >= 0 ? v : pI; if (t_ != null && t_ >= 0 && vis[t_] && t_ !== sel) { const h_ = HUDI; LIVEQ = true; try { select(t_, true); } finally { LIVEQ = false; } HUDI = h_; if (!holoOn() && typeof nudgeTo === "function") nudgeTo(t_); } }   /* outside Focus the map picks the active note quietly: its links light, the editors and tabs stay (0.9.37, Nick) */
+  RECKEY = ""; try { recSync(); } catch (_) { /* not built yet */ } draw(); }
 /* in Focus, the focus follows the active note too (0.9.26, Nick: "I would like the background graph to show the support note's locally focused links"):
    the graph regroups round it, and the primary note stays where it is */
 function focusQuiet(i, force){ if (i < 0 || focus < 0 || (focus === i && !force) || !N[i] || !visNoFocus(i)) return; focus = i; computeFocus(); const prev = sel; sel = i;
@@ -6682,7 +6685,7 @@ cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.data
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 dbg.__lfx = (add = true) => linkFxTry(add);
-dbg.__k = () => k; dbg.__ckp = () => ({ T: CK.c >= 0 && CKW === "sf" ? [0, 1, 2].map(q => Math.round(ckSF().P[3 * CK.c + q])) : null, v: Math.round(CK.v), P: CK.P.map(Math.round), c: CK.c, view, d: drifting, wd: CK.wd ? CK.wd.phase : 0, au: !!CK.auto, gl: !!CK.glide, wp: CK.warp, hy: CK.hyper, ks: CK.keys.size, dr: !!CK.drag, w: CKW }); dbg.__pd = () => { const o = postersDetect(); return { across: o.across.map(a => a.id), cur: PSC().cur }; }; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
+dbg.__k = () => k; dbg.__cur = () => sel >= 0 ? N[sel].title : null; dbg.__ckp = () => ({ T: CK.c >= 0 && CKW === "sf" ? [0, 1, 2].map(q => Math.round(ckSF().P[3 * CK.c + q])) : null, v: Math.round(CK.v), P: CK.P.map(Math.round), c: CK.c, view, d: drifting, wd: CK.wd ? CK.wd.phase : 0, au: !!CK.auto, gl: !!CK.glide, wp: CK.warp, hy: CK.hyper, ks: CK.keys.size, dr: !!CK.drag, w: CKW }); dbg.__pd = () => { const o = postersDetect(); return { across: o.across.map(a => a.id), cur: PSC().cur }; }; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
 dbg.__hud = () => [HUDHOV, !!LKHV, !!(LKHV && LKHV.isConnected), HUDHOV >= 0 && !!vis[HUDHOV], HUDHOV >= 0 ? [sx(X[HUDHOV]), sy(Y[HUDHOV])] : null];
 dbg.__ck = () => [CK.yaw, CK.pitch];
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
