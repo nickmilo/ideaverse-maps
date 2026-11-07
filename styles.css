@@ -2180,3 +2180,6 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .ivm-holoop .hosl{flex:1;font:600 9.5px var(--mono,ui-monospace,monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .ivm .ivm-holoop .hosb{height:20px;padding:0 7px;border:1px solid var(--line);border-radius:10px;background:none;box-shadow:none;color:var(--muted);font:600 10.5px var(--body);cursor:pointer}
 .ivm .ivm-holoop .hosb:hover{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 40%,transparent)}
+/* no visible grab bars anywhere: the cursor change says it (0.9.31, Nick: "It's intuitive enough when the cursor changes") */
+.ivm .dgrip::after,.ivm-card .cardgrip::after,.ivd .ivd-grip-l::after,.ivd-vgrip::after,.ivd-main-drawer .ivd-grip-l::after{display:none}
+.ivm .tgrip:hover,.ivm .tgrip.on,.ivd-grip:hover,.ivd-grip:active{background:none}
