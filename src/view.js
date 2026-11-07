@@ -118,7 +118,7 @@ export class MapView extends ItemView {
 
   async reload() {
     this.unmount();
-    this.map = await mountInto(this, this.contentEl, { isActive: () => this.app.workspace.getActiveViewOfType(MapView) === this, openNote: (p, t, b) => this.openNote(p, t, b) });
+    this.map = await mountInto(this, this.contentEl, { isActive: () => this.app.workspace.getActiveViewOfType(MapView) === this, openNote: (p, t, b) => this.openNote(p, t, b), remount: () => { window.setTimeout(() => { void this.reload(); }, 0); } });
   }
 
   showStale(c) { const b = this.staleBtn; if (!b) return; b.hidden = false; const t = `${c || "Some"} notes changed · rescan`; b.setAttribute("aria-label", t); b.title = t; const n = b.querySelector(".tbadge"); if (n) n.setText(String(c || "")); }
@@ -190,6 +190,7 @@ export async function mountInto(owner, el, opts) {
     isActive: opts.isActive,
     registerDomEvent: (target, type, fn, o) => events.registerDomEvent(target, type, fn, o),
     openNote: opts.openNote,
+    remount: opts.remount,
     // saved views and tours live in one JSON file, in a folder the user picks before the first save
     // PKM Planet's map art: a full-size image from the vault if one is set in Settings, otherwise the small built-in one
     creatorSrc: () => { const v = plugin.settings.creatorImage; if (v) { const f = app.vault.getAbstractFileByPath(normalizePath(v)); if (f instanceof TFile) return {src: app.vault.getResourcePath(f), disc: false}; } return {src: CREATOR_IMG, disc: true}; },
