@@ -5341,12 +5341,17 @@ function lkGroups(i, list){ if (LKG.i === i && LKG.n === list.length && LKG.rj =
     let k2 = ""; try { for (const [k_, p_] of host.propLinks(N[j].path)) if (p_ === N[i].path) { k2 = k_; break; } } catch (_) { k2 = ""; }
     m.set(j, (a === 5 ? "→ " : "← ") + (k2 || (a === 5 ? outK.get(j) : "") || "other")); }
   LKG = { i, n: list.length, rj: RADJ, m }; return m; }   /* LKHV: the Links row under the pointer; HUDTC: names in their level's color instead of a dot (0.8.284, Nick) */
+/* the Links HUD follows whichever editor you're in (0.9.23, Nick: "If I click on the support note, the HUD should update. If I click on the primary note, it should update"):
+   HUDI is the support note's note while it's the active one; -1 follows the pick (the primary note) */
+let HUDI = -1;
+const hsel = () => HUDI >= 0 && N[HUDI] ? HUDI : sel;
+function hudFollow(i){ const v = i == null || i === sel ? -1 : i; if (v === HUDI) return; HUDI = v; RECKEY = ""; try { recSync(); } catch (_) { /* not built yet */ } draw(); }
 const lkOn = () => { try { if (isPhone()) return false; if (view === "cockpit") return CK.c >= 0 && (CK.merged || []).length > 0;   /* the Starship's own list, always (0.8.289) */
-  return HUDL && sel >= 0 && !!vis[sel] && hudData(sel).list.length > 0; } catch (_) { return false; } };
+  const h_ = hsel(); return HUDL && h_ >= 0 && (h_ !== sel || !!vis[sel]) && hudData(h_).list.length > 0; } catch (_) { return false; } };
 /* what the Links panel lists: the picked note's links on a map, or in the Starship the note you're at (0.8.289, Nick: "Starship map can integrate the new Recents/Links HUD") */
-const lkData = () => { if (view !== "cockpit") return hudData(sel); const lockI = (CK.items[CK.lock] || {}).i;
+const lkData = () => { if (view !== "cockpit") return hudData(hsel()); const lockI = (CK.items[CK.lock] || {}).i;
   return { ck: true, i: CK.c, v: (CK.merged || []).length + "/" + lockI + "/" + (CK.only || ""), list: CK.merged || [], inS: new Set(CK.inL), outS: new Set(CK.outL), upS: new Set(CK.upL || []), sc: CK.relS || new Map(), lock: lockI }; };
-function drawHudLinks(){ HUDBOX = null; if (view === "cockpit") { hudPv(-1); return; } if (!HUDL || sel < 0 || !vis[sel] || isPhone()) { hudTab(0); hudPv(-1); return; } const D_ = hudData(sel), n_ = D_.list.length; hudTab(n_); if (!n_ || HUDCOL) { hudPv(-1); return; }
+function drawHudLinks(){ HUDBOX = null; if (view === "cockpit") { hudPv(-1); return; } const h_ = hsel(); if (!HUDL || h_ < 0 || (h_ === sel && !vis[sel]) || isPhone()) { hudTab(0); hudPv(-1); return; } const D_ = hudData(h_), n_ = D_.list.length; hudTab(n_); if (!n_ || HUDCOL) { hudPv(-1); return; }
   const c = cv.getBoundingClientRect(); if (LKEL && !LKEL.hidden) { const r = LKEL.getBoundingClientRect(); HUDBOX = [r.left - c.left, r.top - c.top, r.width, r.height]; }
   if (HUDHOV >= 0 && LKHV && LKHV.isConnected && vis[HUDHOV]) { const q = LKHV.getBoundingClientRect(); ctx.save(); ctx.globalAlpha = .6; ctx.strokeStyle = css.accent || css.ink || "#ddd"; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(q.left - c.left + 2, q.top + q.height / 2 - c.top); ctx.lineTo(sx(X[HUDHOV]), sy(Y[HUDHOV])); ctx.stroke(); ctx.restore(); } }
@@ -5438,10 +5443,10 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
     const x2 = lhd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Links away" } }); x2.onclick = e => { e.stopPropagation(); hudCol(true); RECKEY = ""; recSync(); };
     lbox = LKEL.createDiv({ cls: "rcl lkl rcleft" });
     { let sr = 0; lbox.addEventListener("scroll", () => { if (!sr) sr = win.requestAnimationFrame(() => { sr = 0; if (RECLAY) RECLAY(); }); }, { passive: true }); }
-    const G_ = HUDGRP ? lkGroups(D_.ck ? D_.i : sel, D_.list) : new Map(), order = [...D_.list.filter(j => !G_.has(j))], groups = new Map();
+    const G_ = HUDGRP ? lkGroups(D_.i, D_.list) : new Map(), order = [...D_.list.filter(j => !G_.has(j))], groups = new Map();
     for (const j of D_.list) if (G_.has(j)) { const g_ = G_.get(j); if (!groups.has(g_)) groups.set(g_, []); groups.get(g_).push(j); }
     /* this note's own collections, as the first coral group (0.8.299, Nick: Sources belongs in Groundhog Day's Links); a collection that's also a written link stays there */
-    { const cI = D_.ck ? D_.i : sel, ck_ = (host.collectionKeys ? host.collectionKeys()[0] : "") || "collections", ex = cI >= 0 ? collOf(cI, true).filter(j => !D_.list.includes(j) && vis[j]) : [];
+    { const cI = D_.i, ck_ = (host.collectionKeys ? host.collectionKeys()[0] : "") || "collections", ex = cI >= 0 ? collOf(cI, true).filter(j => !D_.list.includes(j) && vis[j]) : [];
       if (ex.length) { const g0 = "→ " + ck_, rest = [...groups]; groups.clear(); groups.set(g0, ex); for (const [k_, v_] of rest) groups.set(k_, v_); } }
     /* this note's own property links (→) above other notes' properties pointing back (←), each side in its usual order (0.8.316, Nick: groupPeople above by) */
     const rowsFor = [[null, order], ...[...groups].filter(([g_]) => g_[0] === "→"), ...[...groups].filter(([g_]) => g_[0] !== "→")];
@@ -5451,7 +5456,7 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
     for (const j of js) { if (!N[j]) continue; const dimJ = D_.ck && CK.only ? !(CK.only === "in" ? D_.inS.has(j) : D_.outS.has(j)) : false;   /* the Starship's F / R scopes dim the other side */
       const r = lbox.createEl("button", { cls: "rcr lkr" + (D_.ck && j === D_.lock ? " on" : "") + (dimJ ? " dim" : ""), attr: { type: "button" } });
       /* each name in the color of its line, map or Starship: up gold, related purple, above blue, below green (0.8.301, Nick: Forgetting curve was blue here, green on the map) */
-      const col = (D_.ck ? (SL[CK.kind.get(j) || "prop"] || (CK.SL || {})[CK.kind.get(j) || "prop"]) : (() => { try { return edgeColor(sel, j, upOf(sel, j)); } catch (_) { return ""; } })()) || ink;
+      const col = (D_.ck ? (SL[CK.kind.get(j) || "prop"] || (CK.SL || {})[CK.kind.get(j) || "prop"]) : (() => { try { return edgeColor(D_.i, j, upOf(D_.i, j)); } catch (_) { return ""; } })()) || ink;
       if (!HUDTC) { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": col }); }
       r.createSpan({ cls: "lka", text: g_ ? g_[0] : D_.inS.has(j) && D_.outS.has(j) ? "↔" : D_.inS.has(j) ? "←" : "→" });
       const nm = r.createSpan({ cls: "rcn" + (HUDTC || g_ ? " lkc" : ""), text: N[j].title }); if (g_) nm.setCssProps({ "--lc": g_ === GCOLL_ && COLLON ? collCoral() : css.prop });   /* other properties in slate, as on the map; collections coral only with the switch (0.8.354, Nick) */ else if (HUDTC) nm.setCssProps({ "--lc": col });
@@ -5660,17 +5665,17 @@ const HOLOTW = 168;   /* the tab column's width, its gap included */
 let holoVeil = null, holoOp = null, CARDOPSL = null;
 /* Editor opacity has two handles (0.9.21, Nick: "a quick peek behind the Holodeck"): Display's slider and one at the foot of the Holodeck's tab column, always in step.
    In the Holodeck the veil over the map thins as the notes get more see-through, so the peek shows the map */
-function cardOpSet(v, from){ CARDOP = Math.max(50, Math.min(100, Math.round(v))); for (const o of Object.values(EDS)) edLook(o.el); try { for (const e_ of HPV.values()) edLook(e_); } catch (_) { /* no previews yet */ }
-  root.setCssProps({ "--holov": Math.round(28 + (CARDOP - 50) / 50 * 52) + "%" });
+function cardOpSet(v, from){ CARDOP = Math.max(15, Math.min(100, Math.round(v))); for (const o of Object.values(EDS)) edLook(o.el); try { for (const e_ of HPV.values()) edLook(e_); } catch (_) { /* no previews yet */ }
+  root.setCssProps({ "--holov": Math.round(10 + (CARDOP - 15) / 85 * 70) + "%" });
   for (const S_ of [CARDOPSL, holoOp]) if (S_ && S_.sl !== from && S_.sl.isConnected) { S_.sl.value = String(CARDOP); S_.ov.setText(CARDOP + "%"); } }
 function holoOpBuild(){ if (holoOp) return; const w = $("#main").createDiv({ cls: "ivm-holoop" }); w.hidden = true; const ic = w.createSpan({ cls: "hoi" }); setIcon(ic, "eye");
-  const sl = w.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1", "aria-description": "Editor opacity: lower it to see the map behind" } }); sl.value = String(CARDOP); const ov = w.createSpan({ cls: "hov", text: CARDOP + "%" });
+  const sl = w.createEl("input", { type: "range", attr: { min: "15", max: "100", step: "1", "aria-description": "Editor opacity: lower it to see the map behind" } }); sl.value = String(CARDOP); const ov = w.createSpan({ cls: "hov", text: CARDOP + "%" });
   sl.oninput = () => { cardOpSet(+sl.value, sl); ov.setText(CARDOP + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP);
   for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) w.addEventListener(ty, e => e.stopPropagation()); holoOp = { el: w, sl, ov }; }
 function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); holoOpBuild(); holoOp.el.hidden = !on;
   /* the primary note always has its tab in the column, lit (Nick, Nov 7: its tab was missing after a click away) */
-  if (on && EDS.left.path && !(TABS[TCUR] && TABS[TCUR].path === EDS.left.path)) { const ex = TABS.findIndex(t => t.path === EDS.left.path); if (ex >= 0) TCUR = ex; else { TABS.splice(0, 0, { path: EDS.left.path }); TCUR = 0; } tabsSave(); }
-  if (on) { root.setCssProps({ "--holov": Math.round(28 + (CARDOP - 50) / 50 * 52) + "%" }); holoOp.sl.value = String(CARDOP); holoOp.ov.setText(CARDOP + "%"); try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoOp.el.setCssProps({ "--hol": Math.round(c.left - m.left) + "px", "--hob": Math.round(m.bottom - c.bottom + 52) + "px", "--how": (HOLOTW - 14) + "px" }); } catch (_) { /* not laid out yet */ } }
+  if (on && EDS.left.path && !TABS[TCUR]) { const ex = TABS.findIndex(t => t.path === EDS.left.path); if (ex >= 0) TCUR = ex; else { TABS.splice(0, 0, { path: EDS.left.path }); TCUR = 0; } tabsSave(); }
+  if (on) { root.setCssProps({ "--holov": Math.round(10 + (CARDOP - 15) / 85 * 70) + "%" }); holoOp.sl.value = String(CARDOP); holoOp.ov.setText(CARDOP + "%"); try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoOp.el.setCssProps({ "--hol": Math.round(c.left - m.left) + "px", "--hob": Math.round(m.bottom - c.bottom + 52) + "px", "--how": (HOLOTW - 14) + "px" }); } catch (_) { /* not laid out yet */ } }
   if (!holoVeil) { holoVeil = $("#main").createDiv({ cls: "ivm-holoveil" }); for (const ty of ["pointerdown", "pointermove", "wheel", "click", "dblclick", "contextmenu"]) holoVeil.addEventListener(ty, e => { e.stopPropagation(); if (ty === "wheel" || ty === "contextmenu") e.preventDefault(); }, { passive: false }); }
   holoVeil.hidden = !on;
   try { if (orbBar) syncOrbs(); } catch (_) { /* the orbs aren't built yet */ }
@@ -5764,6 +5769,7 @@ function makeEd(kind){
   const body = el.createDiv({ cls: "cardbody" });
   { let tt = 0; new MutationObserver(() => { win.clearTimeout(tt); tt = win.setTimeout(() => { try { edTint(o); } catch (_) { /* o not ready */ } }, 150); }).observe(el, { childList: true, subtree: true, characterData: true }); }   /* links keep their colors as you type (0.8.224) */
   for (const ty of ["pointerdown", "wheel", "click"]) el.addEventListener(ty, e => e.stopPropagation());
+  const act_ = () => { if (!o.path) return; hudFollow(kind === "right" ? PIDX.get(o.path) : null); }; el.addEventListener("pointerdown", act_, true); el.addEventListener("focusin", act_);
   // the side editors tuck away to a tab on their edge, like the legend and the note panel; the note stays open in them
   const side = kind !== "center", cb = side ? hd.createEl("button", { cls: "cardbtn cardcol", text: kind === "left" ? "‹" : "›", attr: { type: "button", "aria-label": "Tuck away", title: "Tuck away" } }) : null;
   if (cb) hd.insertBefore(cb, ob);
@@ -5784,7 +5790,7 @@ function makeEd(kind){
     collapse(c){ o.col = c; save("iv-edcol-" + kind, c); if (o.path) { el.hidden = c; o.key = ""; o.place(); } o.tabSync(); edFree(); if (!c && o.ed) { o.ed.resize(); } draw(); },
     place(){ o.tabSync(); if (el.hidden) return; const r = edRect(kind), c = cv.getBoundingClientRect(), pr = (el.offsetParent || el.parentElement).getBoundingClientRect(), key = [r.x, r.y, r.w, r.h, c.left - pr.left, c.top - pr.top].join(); if (key === o.key) return; o.key = key;
       el.style.left = (c.left - pr.left + r.x) + "px"; el.style.top = (c.top - pr.top + r.y) + "px"; el.style.width = r.w + "px"; el.style.height = r.h + "px"; if (o.ed) o.ed.resize(); },
-    close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; o.tabSync(); if (o.ed) { o.ed.close(); o.ed = null; } edFree(); },
+    close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; o.tabSync(); if (o.ed) { o.ed.close(); o.ed = null; } if (kind === "right") hudFollow(null); edFree(); },
     async open(i){ const p = N[i].path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
       const nw = o.path !== p; o.path = p; t.setText(N[i].title); if (nw) { o.open_ = ""; o.sub_ = ""; } fillStrip(o, i); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
       if (nw) { await o.ed.open(p); o.ed.resize(); propKeep(el); } } };
@@ -5989,6 +5995,13 @@ function tabGo(j){ const t = TABS[j]; if (!t) return; if (!t.path) { if (TABS[TC
   // pinned: the primary note keeps its note, and another orb's note opens as the support note (0.8.68, Nick). Unpin to switch tabs
   if (j !== TCUR && TABS[TCUR] && TABS[TCUR].pin) { void EDS.right.open(i); return; }
   TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }
+/* a tab dropped on an editor: on the support note it opens there; on the primary note it becomes the primary, past a pin, and the pin stays with the primary (0.9.23, Nick) */
+function tabDrop(j, side){ const t = TABS[j]; if (!t || !t.path) return; const i = PIDX.get(t.path); if (i == null) return;
+  if (side === "right") { if (EDS.left.path === t.path) return; if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(i).then(() => { orbKey = ""; syncOrbs(); hudFollow(i); }); return; }
+  if (j === TCUR && EDS.left.path === t.path) return;
+  if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
+  const pin = !!(TABS[TCUR] && TABS[TCUR].pin); if (EDS.right.path === t.path) EDS.right.close();
+  TCUR = j; if (pin) t.pin = true; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); syncNav(); win.setTimeout(() => { if (!dead) { syncOrbs(); syncNav(); } }, 300); }   /* again once the editor holds the note, so its pin lights */
 function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j === TCUR; if (j < TCUR) TCUR--;
   if (TCUR >= 0 || was) TCUR = Math.max(0, Math.min(TCUR, TABS.length - 1)); tabsSave();
   if (was) { if (TABS[TCUR]) tabGo(TCUR); else EDS.left.close(); } syncOrbs(); }
@@ -6012,14 +6025,25 @@ function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".card
         const x0 = e.clientX; let on = false, base = 0;
         const VY = orbBar.classList.contains("holo"), cx_ = ev => VY ? ev.clientY : ev.clientX, mid = r => VY ? r.top + r.height / 2 : r.left + r.width / 2;   /* the Holodeck's column drags up and down */
         const y0 = e.clientY, shift = () => mid(b.getBoundingClientRect());
-        const mv = ev => { const dx = VY ? ev.clientY - y0 : ev.clientX - x0; if (!on && Math.abs(dx) < 4) return; if (!on) { on = true; b.classList.add("drag"); base = shift(); }
+        /* drag a tab out onto the primary or the support note and that note changes to it (0.9.23, Nick); on the primary note it even overrides a pin, "a manual, forceful maneuver" */
+        let out = null, gh = null, tgt = null;
+        const outOf = ev => { const r = orbBar.getBoundingClientRect(); return VY ? ev.clientX > r.right + 12 : ev.clientY > r.bottom + 24; };
+        const tgtAt = ev => { for (const o of [EDS.left, EDS.right]) { if (!o.el || o.el.hidden) continue; const r = o.el.getBoundingClientRect(); if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) return o; } return null; };
+        const mv = ev => { const dx = VY ? ev.clientY - y0 : ev.clientX - x0, dd = Math.max(Math.abs(ev.clientX - x0), Math.abs(ev.clientY - y0)); if (!on && dd < 4) return; if (!on) { on = true; b.classList.add("drag"); base = shift(); }
+          out = outOf(ev);
+          if (out) { b.setCssProps({ "--odx": "0px" }); b.classList.add("dragout");
+            if (!gh) { gh = $("#main").createDiv({ cls: "ivm-orbghost" }); const d_ = gh.createSpan({ cls: "ogd" }); d_.setCssProps({ "--o0": b.style.getPropertyValue("--o0"), "--o1": b.style.getPropertyValue("--o1") }); gh.createSpan({ text: b.dataset.name || "" }); }
+            const m = $("#main").getBoundingClientRect(); gh.setCssProps({ "--gx": Math.round(ev.clientX - m.left + 12) + "px", "--gy": Math.round(ev.clientY - m.top + 8) + "px" });
+            const t_ = tgtAt(ev); if (t_ !== tgt) { if (tgt) tgt.el.classList.remove("ivm-dropt"); tgt = t_; if (tgt) tgt.el.classList.add("ivm-dropt"); } return; }
+          b.classList.remove("dragout"); if (gh) { gh.remove(); gh = null; } if (tgt) { tgt.el.classList.remove("ivm-dropt"); tgt = null; }
           // past the middle of a neighbour: swap places in the row, so the gap follows the pointer
           const nx = b.nextElementSibling, pv = b.previousElementSibling, px = cx_(ev);
           if (nx && nx.classList.contains("ivm-orb")) { const r = nx.getBoundingClientRect(); if (px > mid(r)) orbBar.insertBefore(nx, b); }
           if (pv && pv.classList.contains("ivm-orb")) { const r = pv.getBoundingClientRect(); if (px < mid(r)) orbBar.insertBefore(b, pv); }
           b.setCssProps({ "--odx": "0px" }); const c = shift(); b.setCssProps({ "--odx": (px - c) + "px" }); };
         const upf = () => { win.removeEventListener("pointermove", mv, true); win.removeEventListener("pointerup", upf, true); win.removeEventListener("pointercancel", upf, true); if (!on) return;
-          orbDragged = true; win.setTimeout(() => { orbDragged = false; }, 0); b.classList.remove("drag"); b.setCssProps({ "--odx": "0px" });
+          orbDragged = true; win.setTimeout(() => { orbDragged = false; }, 0); b.classList.remove("drag", "dragout"); b.setCssProps({ "--odx": "0px" }); if (gh) { gh.remove(); gh = null; }
+          if (out) { const o_ = tgt; if (tgt) tgt.el.classList.remove("ivm-dropt"); tgt = null; orbKey = ""; syncOrbs(); if (o_) tabDrop(j, o_ === EDS.left ? "left" : "right"); return; }
           const order = [...orbBar.querySelectorAll(".ivm-orb")].map(o => o.dataset.i == null ? -1 : +o.dataset.i), cur = TABS[TCUR];
           if (order.every((v, q) => v === q)) { orbKey = ""; syncOrbs(); return; }
           TABS = order.map(q => TABS[q]).filter(Boolean); TCUR = cur ? Math.max(0, TABS.indexOf(cur)) : -1; tabsSave(); orbKey = ""; syncOrbs(); };
@@ -6072,7 +6096,7 @@ function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap 
     { const L = Math.round(ox + g.px) + "px", T = Math.round(oy + g.py) + "px"; if (e.style.left !== L) e.style.left = L; if (e.style.top !== T) e.style.top = T; } }
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
 cv.addEventListener("pointerdown", () => { if (CK.edit && CK.edit.host === pvLayer) ckEditClose(); });   /* a click on the map finishes a Compass edit */
-function select(i, fromTrail){
+function select(i, fromTrail){ HUDI = -1;
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
   else if (!LIVEQ && i < 0 && edOn() && TABS[TCUR] && !TABS[TCUR].pin && TABS[TCUR].path) { TCUR = -1; tabsSave(); syncOrbs(); }   /* clicking away lets go of the orb: it stays, and the next note you pick opens in a new one (0.8.192, Nick) */
   if (view === "compass" && !LIVEQ) win.setTimeout(cmpSync, 0);
@@ -8057,7 +8081,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     for (const [v, t] of [["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]]) { const b = ms_.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDMODE === v) } });
       b.onclick = e => { e.stopPropagation(); CARDMODE = v; save("iv-cardmode", v); ms_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; }
     syncM(); seg.addEventListener("click", () => win.setTimeout(syncM, 0));
-    const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
+    const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "15", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
     CARDOPSL = { sl, ov }; sl.oninput = () => { cardOpSet(+sl.value, sl); ov.setText(CARDOP + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
     /* Editor text size (0.8.229, Nick: "a little large… a slider to make it smaller"): 70–120% of Obsidian's text size; double-click it for 100% */
     const fr_ = g.createDiv({ cls: "drow eorow tchoice" }); fr_.createSpan({ cls: "eol", text: "Editor text size" }); const fs = fr_.createEl("input", { type: "range", attr: { min: "70", max: "120", step: "5" } }); fs.value = String(CARDFS); const fv = fr_.createSpan({ cls: "eov", text: CARDFS + "%" });
