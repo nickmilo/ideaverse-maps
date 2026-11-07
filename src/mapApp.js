@@ -5845,9 +5845,9 @@ function makeEd(kind){
     place(){ o.tabSync(); if (el.hidden) return; const r = edRect(kind), c = cv.getBoundingClientRect(), pr = (el.offsetParent || el.parentElement).getBoundingClientRect(), key = [r.x, r.y, r.w, r.h, c.left - pr.left, c.top - pr.top].join(); if (key === o.key) return; o.key = key;
       el.style.left = (c.left - pr.left + r.x) + "px"; el.style.top = (c.top - pr.top + r.y) + "px"; el.style.width = r.w + "px"; el.style.height = r.h + "px"; if (o.ed) o.ed.resize(); },
     close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; o.tabSync(); if (o.ed) { o.ed.close(); o.ed = null; } if (kind === "right") hudFollow(null); edFree(); },
-    async open(i){ const p = N[i].path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
+    async open(i){ const p = N[i].path, prevP = o.path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
       const nw = o.path !== p; o.path = p; t.setText(N[i].title); if (nw) { o.open_ = ""; o.sub_ = ""; } fillStrip(o, i); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
-      if (kind === "right" && nw) { hudFollow(i); if (holoOn() && !TABS.some(t_ => t_.path === p)) tabAddBg(i); }   /* in the Holodeck every note beside you has a tab (0.9.42, Nick: search → support, "I expected to see it as a tab") */   /* a note that opens beside is the active one: the HUD, and in Focus the graph, follow it (0.9.28, Nick) */
+      if (kind === "right" && nw) { hudFollow(i); if (holoOn()) supTab(i, prevP); }   /* in the Holodeck every note beside you has a tab (0.9.42) */   /* a note that opens beside is the active one: the HUD, and in Focus the graph, follow it (0.9.28, Nick) */
       if (nw) { await o.ed.open(p); o.ed.resize(); propKeep(el); } } };
   /* drag a title bar onto the other note and they swap (0.9.42, Nick): a plain click still tucks it away */
   { let hd_ = null, swallow = false;
@@ -5873,6 +5873,13 @@ function makeEd(kind){
     gr.addEventListener("dblclick", e => { e.stopPropagation(); if (holoOn()) delete EDW.holo; else delete EDW[kind]; save("iv-edw", EDW); edFree(); draw(); }); }   // double-click: back to the default width
   xb.onclick = () => { if (kind === "left") edCloseTab(); else { o.close(); panBack(); } };   /* the primary note's ×: closes its orb too (0.8.196, Nick) */ if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
   return o; }
+/* the support note's tab works like an Obsidian tab (0.9.47, Nick): a plain link opens in the same tab, replacing the note that was there;
+   ⌘-click opens a new tab; a note that has a tab already uses it; a pinned tab is never replaced */
+let SUPTAB = null, SUPNEW = false;
+function supTab(i, prevP){ const p = N[i].path, ex = TABS.find(t_ => t_.path === p), nw = SUPNEW; SUPNEW = false;
+  if (ex) { SUPTAB = ex; return; }
+  if (!nw && SUPTAB && TABS.includes(SUPTAB) && SUPTAB !== TABS[TCUR] && !SUPTAB.pin && SUPTAB.path === prevP) { SUPTAB.path = p; tabsSave(); orbKey = ""; syncOrbs(); return; }
+  tabAddBg(i); SUPTAB = TABS.find(t_ => t_.path === p) || null; }
 let LIVEQ = false;   // the map reacting as you write refreshes the note panel quietly: no camera move, no editor reload
 let EDS = null; EDS = { left: makeEd("left"), right: makeEd("right") };   /* the editor in the middle is gone (0.8.195, Nick): the primary note is always on the left */
 const edMain = () => EDS.left;
@@ -5963,6 +5970,9 @@ async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.left.close();
 // A note that isn't on the map right now (filtered out, or not mapped) opens in Obsidian as usual
 // Shift-click opens it as a new tab (an orb); while the primary note is pinned, a plain click opens it as the support note
 if (host.onCardLink) host.onCardLink((path, mode) => { const i = PIDX.get(path); if (i == null || !edOn() || dead) return false;
+  /* in the Holodeck, ⌘-click opens it in the support note and gives it a new tab (0.9.47, Nick: "that will just ensure that the tabs don't run rampant") */
+  if (holoOn() && mode === "tab") { SUPNEW = true; if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(i).then(() => { SUPNEW = false; }); draw(); return true; }
+  SUPNEW = false;
   /* a note that Focus (or, in the Holodeck, a filter) hides stays in the map instead of falling out to an Obsidian tab (0.9.29, Nick):
      pinned, in the Holodeck or ⌘-clicked it opens as the support note; otherwise, in Focus, it becomes the primary note and the focus */
   if (!vis[i]) { const okF = focus >= 0 && visNoFocus(i), pin = !!(TABS[TCUR] && TABS[TCUR].pin);
