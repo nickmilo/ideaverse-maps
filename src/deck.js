@@ -54,9 +54,9 @@ export class DeckView extends ItemView {
   /* a real Obsidian editor in a split of our own, outside the saved layout (the map's technique) */
   editor(slot, host) { let o = this.eds[slot]; if (!o) { const W = this.app.workspace, Split = W.rootSplit.constructor, split = new Split(W, "vertical");
       split.getRoot = () => W.rootSplit; split.getContainer = () => W.rootSplit; let leaf = null, cur = null;
-      o = this.eds[slot] = { el: split.containerEl,
+      o = this.eds[slot] = { el: split.containerEl, get leaf() { return leaf; },
         open: async path => { const f = this.app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return false; if (cur === path && leaf) return true;
-          if (!leaf) { leaf = W.createLeafInParent(split, 0); leaf.ivmCard = true; } cur = path;
+          if (!leaf) { leaf = W.createLeafInParent(split, 0); leaf.ivmCard = true; leaf.ivmOwner = this.leaf; } cur = path;
           await leaf.openFile(f, { state: { mode: "source", source: false }, active: false }); return true; },
         resize: () => { if (leaf && leaf.view && typeof leaf.view.onResize === "function") leaf.view.onResize(); },
         close: () => { if (leaf) { leaf.detach(); leaf = null; } cur = null; split.containerEl.remove(); } }; }

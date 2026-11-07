@@ -1,4 +1,4 @@
-import { Plugin, TFile, normalizePath } from "obsidian";
+import { Platform, Plugin, TFile, normalizePath } from "obsidian";
 import { MapView, VIEW_TYPE } from "./view.js";
 import { registerBases } from "./bases.js";
 import { registerEmbeds } from "./embed.js";
@@ -33,6 +33,11 @@ export default class IdeaverseMapsPlugin extends Plugin {
     registerLinkColors(this);   // every link in every note colored by Idea Emergence, when Display asks (0.8.234)
     /* the dev layout (⌘⌥⌃K) is retired (0.8.351, Nick): its saved menu layout is cleared, so the maps menu is the default for everyone: Emergence, Ideaverse, Starfield, Calendar */
     for (const k of ["iv-devlayout", "iv-devon"]) if (this.store.get(k) != null) this.store.set(k, undefined);
+    /* on a phone Obsidian shows only the active pane: our editors live in splits of their own, so if one became the active pane the screen went blank
+       (0.9.49, Nick: "clicking on the text editing area creates a blank window"). The tab that holds it, the Mini Deck or the map, stays the active one */
+    if (Platform.isMobile) { const W = this.app.workspace, origSAL = W.setActiveLeaf;
+      W.setActiveLeaf = function (leaf, ...rest) { if (leaf && leaf.ivmCard) { const own = leaf.ivmOwner; if (!own || own === this.activeLeaf) return; leaf = own; } return origSAL.call(this, leaf, ...rest); };
+      this.register(() => { W.setActiveLeaf = origSAL; }); }
     registerDeck(this);   // the Mini Deck: writing first, no graph (0.9.1)
     registerEmbeds(this);   // a map inside a note: a ```moti code block, or ![[name.moti]] (0.8.171)
 

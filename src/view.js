@@ -259,7 +259,7 @@ export async function mountInto(owner, el, opts) {
       // Shift-click on a link is the editor's own again (it extends the selection): ⌘-click opens a new orb, ⌘⌥-click the support note (0.8.189)
       return { el: split.containerEl,
         open: async path => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return false;
-          if (!leaf) { leaf = W.createLeafInParent(split, 0); leaf.ivmCard = true; }   // the map's own editor: never caught by keepNotesIn
+          if (!leaf) { leaf = W.createLeafInParent(split, 0); leaf.ivmCard = true; leaf.ivmOwner = this.leaf; }   // the map's own editor: never caught by keepNotesIn
           await leaf.openFile(f, { state: { mode: "source", source: false }, active: false }); return true; },
         resize: () => { if (leaf && leaf.view && typeof leaf.view.onResize === "function") leaf.view.onResize(); },
         focus: () => { const ed = leaf && leaf.view && leaf.view.editor; if (ed) ed.focus(); },   // straight to the editor: our leaf has no tab group, so it can't be the workspace's active leaf
