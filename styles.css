@@ -2183,3 +2183,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 /* no visible grab bars anywhere: the cursor change says it (0.9.31, Nick: "It's intuitive enough when the cursor changes") */
 .ivm .dgrip::after,.ivm-card .cardgrip::after,.ivd .ivd-grip-l::after,.ivd-vgrip::after,.ivd-main-drawer .ivd-grip-l::after{display:none}
 .ivm .tgrip:hover,.ivm .tgrip.on,.ivd-grip:hover,.ivd-grip:active{background:none}
+/* folder headers in the Holodeck's tab column while the tabs are grouped by folder (0.9.33): the Sort label's look */
+.ivm .ivm-orbs.holo .orbfh{flex:none;padding:8px 0 1px 12px;font:600 9.5px var(--mono,ui-monospace,monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);pointer-events:none}
+.ivm .ivm-orbs.holo .orbfh:first-child{padding-top:0}
+.ivm .ivm-holoop .hosb[aria-pressed="true"]{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 55%,transparent)}

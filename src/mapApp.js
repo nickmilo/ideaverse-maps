@@ -5674,14 +5674,15 @@ function cardOpSet(v, from){ CARDOP = Math.max(0, Math.min(100, Math.round(v)));
   root.setCssProps({ "--holov": Math.round(4 + CARDOP / 100 * 76) + "%" });
   for (const S_ of [CARDOPSL, holoOp]) if (S_ && S_.sl !== from && S_.sl.isConnected) { S_.sl.value = String(100 - CARDOP); S_.ov.setText((100 - CARDOP) + "%"); } }
 /* sort the tabs once, then drag as before (0.9.30, Nick: "sometimes the tabs can get unruly"): by level, highest on top; or by top folder (Atlas, Calendar, Efforts…), each by level */
-function tabSort(by){ const cur = TABS[TCUR], lv = t => { const i = PIDX.get(t.path); return i == null ? [-1, 0] : [N[i].level, N[i].score]; }, top = t => t.path.includes("/") ? t.path.split("/")[0].toLowerCase() : "\uffff";
+let TSORT = pref("iv-tabsort", "") === "folder" ? "folder" : "";   /* folder grouping keeps its headers until you drag a tab or sort by level (0.9.33, Nick) */
+function tabSort(by){ TSORT = by === "folder" ? "folder" : ""; save("iv-tabsort", TSORT); const cur = TABS[TCUR], lv = t => { const i = PIDX.get(t.path); return i == null ? [-1, 0] : [N[i].level, N[i].score]; }, top = t => t.path.includes("/") ? t.path.split("/")[0].toLowerCase() : "\uffff";
   const byLv = (a, b) => { const A = lv(a), B = lv(b); return B[0] - A[0] || B[1] - A[1]; };
   const blank = TABS.filter(t => !t.path), rest = TABS.filter(t => t.path);
   rest.sort(by === "folder" ? (a, b) => top(a).localeCompare(top(b)) || byLv(a, b) : byLv);
-  TABS = rest.concat(blank); TCUR = cur ? TABS.indexOf(cur) : -1; tabsSave(); orbKey = ""; syncOrbs(); }
+  TABS = rest.concat(blank); TCUR = cur ? TABS.indexOf(cur) : -1; tabsSave(); orbKey = ""; syncOrbs(); if (holoOp) for (const b_ of holoOp.el.querySelectorAll(".hosb")) b_.setAttribute("aria-pressed", String(b_.dataset.k === TSORT)); }
 function holoOpBuild(){ if (holoOp) return; const box = $("#main").createDiv({ cls: "ivm-holoop" }); box.hidden = true;
   const sr = box.createDiv({ cls: "hosort" }); sr.createSpan({ cls: "hosl", text: "Sort" });
-  for (const [k_, t_, d_] of [["level", "Level", "Sort the tabs by level, highest on top"], ["folder", "Folder", "Sort the tabs by their top folder, each by level"]]) { const b_ = sr.createEl("button", { cls: "hosb", text: t_, attr: { type: "button", "aria-description": d_ } }); b_.onclick = e => { e.stopPropagation(); tabSort(k_); }; }
+  for (const [k_, t_, d_] of [["level", "Level", "Sort the tabs by level, highest on top"], ["folder", "Folder", "Sort the tabs by their top folder, each by level"]]) { const b_ = sr.createEl("button", { cls: "hosb", text: t_, attr: { type: "button", "aria-description": d_, "data-k": k_, "aria-pressed": String(k_ === TSORT) } }); b_.onclick = e => { e.stopPropagation(); tabSort(k_); }; }
   const w = box.createDiv({ cls: "horow" }); const ic = w.createSpan({ cls: "hoi" }); setIcon(ic, "eye");
   const sl = w.createEl("input", { type: "range", attr: { min: "0", max: "100", step: "1", "aria-description": "Editor see-through: raise it to see the map behind" } }); sl.value = String(100 - CARDOP); const ov = w.createSpan({ cls: "hov", text: (100 - CARDOP) + "%" });
   sl.oninput = () => { cardOpSet(100 - +sl.value, sl); ov.setText((100 - CARDOP) + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP);
@@ -6036,8 +6037,10 @@ let orbKey = "", orbDragged = false;
 function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".cardfoc"); if (fb) fb.setAttribute("aria-pressed", String(focus >= 0 && EDS.left.path != null && (PIDX.get(EDS.left.path) === focus || (HUDI >= 0 && HUDI === focus)))); } for (const o of [EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
   const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); const HO = holoOn(); orbBar.classList.toggle("holo", HO); if (!on) { orbKey = ""; return; }
   const bes = HO && !EDS.right.el.hidden ? EDS.right.path : null;
-  const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : "") + (HO ? "h" + bes : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
-    TABS.forEach((t, j) => { const i = PIDX.get(t.path), nm = !t.path ? "New tab" : i != null ? N[i].title : t.path.replace(/^.*\//, "").replace(/\.md$/, ""), lv = i != null ? N[i].level : 1;
+  const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : "") + (HO ? "h" + bes + TSORT : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
+    let lastF = null;
+    TABS.forEach((t, j) => { if (HO && TSORT === "folder") { const f_ = !t.path ? "" : t.path.includes("/") ? t.path.split("/")[0] : "Vault root"; if (f_ && f_ !== lastF) orbBar.createDiv({ cls: "orbfh", text: f_ }); lastF = f_; }   /* a small header per folder while they're grouped */
+      const i = PIDX.get(t.path), nm = !t.path ? "New tab" : i != null ? N[i].title : t.path.replace(/^.*\//, "").replace(/\.md$/, ""), lv = i != null ? N[i].level : 1;
       const b = orbBar.createEl("button", { cls: "ivm-orb lv" + lv + (t.path ? "" : " blank") + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""),   /* shaped like the note's dot (0.8.202, Nick): Level 5 a square, Level 4 a diamond, the rest round */ attr: { type: "button", "data-name": nm, "data-i": String(j) } });   // no aria-label: Obsidian would add its own tooltip over ours (Nick, 0.8.33); the name is read from a hidden span
       b.createSpan({ cls: "orbsr", text: nm });
       b.setCssProps({ "--o0": lv >= 3 ? GRAD[lv][0] : lv === 2 ? css.l2 : css.l1, "--o1": lv >= 3 ? GRAD[lv][1] : lv === 2 ? css.l2 : css.l1 });
@@ -6072,7 +6075,7 @@ function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".card
           if (out) { const o_ = tgt; if (tgt) tgt.el.classList.remove("ivm-dropt"); tgt = null; orbKey = ""; syncOrbs(); if (o_) tabDrop(j, o_ === EDS.left ? "left" : "right"); return; }
           const order = [...orbBar.querySelectorAll(".ivm-orb")].map(o => o.dataset.i == null ? -1 : +o.dataset.i), cur = TABS[TCUR];
           if (order.every((v, q) => v === q)) { orbKey = ""; syncOrbs(); return; }
-          TABS = order.map(q => TABS[q]).filter(Boolean); TCUR = cur ? Math.max(0, TABS.indexOf(cur)) : -1; tabsSave(); orbKey = ""; syncOrbs(); };
+          TABS = order.map(q => TABS[q]).filter(Boolean); TCUR = cur ? Math.max(0, TABS.indexOf(cur)) : -1; tabsSave(); if (TSORT) { TSORT = ""; save("iv-tabsort", ""); if (holoOp) for (const b_ of holoOp.el.querySelectorAll(".hosb")) b_.setAttribute("aria-pressed", "false"); } orbKey = ""; syncOrbs(); };
         win.addEventListener("pointermove", mv, true); win.addEventListener("pointerup", upf, true); win.addEventListener("pointercancel", upf, true); }); }); }
   placeOrbs(); }
 function placeOrbs(){ win.setTimeout(() => { if (!dead && typeof sfSwPlace === "function") sfSwPlace(); }, 0); if (orbBar.hidden) return;
