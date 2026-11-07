@@ -2194,3 +2194,6 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 /* the Sort buttons are a quiet control: lit in ink (blue), never Obsidian's accent focus ring (0.9.35, Nick: "Yellow feels too strong in that area") */
 .ivm .ivm-holoop .hosb:focus,.ivm .ivm-holoop .hosb:focus-visible{box-shadow:none;outline:none}
 .ivm .ivm-holoop .hosb:focus-visible{border-color:var(--ink)}
+/* the Holodeck's tab column widens at its right edge (0.9.41): only the cursor shows it */
+.ivm .ivm-hologrip{position:absolute;left:var(--hgl,155px);top:var(--hgt,8px);bottom:var(--hgb,52px);width:10px;z-index:8;cursor:ew-resize}
+.ivm .ivm-hologrip[hidden]{display:none}

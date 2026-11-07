@@ -5669,7 +5669,15 @@ const edOn = () => EDITM && !!host.editCard && !isPhone();
    The orb tabs become a column of tabs on the far left, and a tab you click opens just to the right of the primary note */
 let HOLO = pref("iv-holo", false) === true;
 const holoOn = () => HOLO && edOn() && view !== "cockpit" && !!EDS && !!EDS.left && !EDS.left.el.hidden;
-const HOLOTW = 168;   /* the tab column's width, its gap included */
+let HOLOTW = Math.max(130, Math.min(340, +pref("iv-holotw", 168) || 168));   /* the tab column's width, its gap included; dragged at its right edge (0.9.41, Nick) */
+let holoGrip = null;
+function holoGripBuild(){ if (holoGrip) return; const g = $("#main").createDiv({ cls: "ivm-hologrip" }); g.hidden = true; let d_ = null;
+  g.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); g.setPointerCapture(e.pointerId); d_ = { x: e.clientX, w: HOLOTW }; g.classList.add("on"); });
+  g.addEventListener("pointermove", e => { if (!d_) return; const w = Math.max(130, Math.min(340, Math.round(d_.w + e.clientX - d_.x))); if (w === HOLOTW) return; HOLOTW = w; orbKey = ""; edFree(); });
+  const up = () => { if (!d_) return; d_ = null; g.classList.remove("on"); save("iv-holotw", HOLOTW); for (const q of Object.values(EDS)) if (q.ed) q.ed.resize(); };
+  g.addEventListener("pointerup", up); g.addEventListener("pointercancel", up);
+  g.addEventListener("dblclick", e => { e.stopPropagation(); HOLOTW = 168; save("iv-holotw", 168); orbKey = ""; edFree(); });
+  for (const ty of ["click", "wheel"]) g.addEventListener(ty, e => e.stopPropagation()); holoGrip = g; }
 let holoVeil = null, holoOp = null, CARDOPSL = null;
 /* Editor see-through (stored as the editors' opacity, CARDOP) has two handles (0.9.21, Nick: "a quick peek behind the Holodeck"): Display's slider and one at the foot of the Holodeck's tab column, always in step.
    In the Holodeck the veil over the map thins as the notes get more see-through, so the peek shows the map */
@@ -5709,6 +5717,7 @@ function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); hol
   /* the primary note always has its tab in the column, lit (Nick, Nov 7: its tab was missing after a click away) */
   if (on && EDS.left.path && !TABS[TCUR]) { const ex = TABS.findIndex(t => t.path === EDS.left.path); if (ex >= 0) TCUR = ex; else { TABS.splice(0, 0, { path: EDS.left.path }); TCUR = 0; } tabsSave(); }
   if (on) { root.setCssProps({ "--holov": Math.round(4 + CARDOP / 100 * 76) + "%" }); holoOp.sl.value = String(100 - CARDOP); holoOp.ov.setText((100 - CARDOP) + "%"); try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoOp.el.setCssProps({ "--hol": Math.round(c.left - m.left) + "px", "--hob": Math.round(m.bottom - c.bottom + 52) + "px", "--how": (HOLOTW - 14) + "px" }); } catch (_) { /* not laid out yet */ } }
+  holoGripBuild(); holoGrip.hidden = !on || !TABS.length; if (!holoGrip.hidden) { try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoGrip.setCssProps({ "--hgl": Math.round(c.left - m.left + HOLOTW - 13) + "px", "--hgt": Math.round(c.top - m.top + 8) + "px", "--hgb": Math.round(m.bottom - c.bottom + 52) + "px" }); } catch (_) { /* not laid out yet */ } }
   if (!holoVeil) { holoVeil = $("#main").createDiv({ cls: "ivm-holoveil" }); for (const ty of ["pointerdown", "pointermove", "wheel", "click", "dblclick", "contextmenu"]) holoVeil.addEventListener(ty, e => { e.stopPropagation(); if (ty === "wheel" || ty === "contextmenu") e.preventDefault(); }, { passive: false }); }
   holoVeil.hidden = !on;
   try { if (orbBar) syncOrbs(); } catch (_) { /* the orbs aren't built yet */ }
