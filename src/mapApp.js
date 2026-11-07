@@ -5673,10 +5673,19 @@ let holoVeil = null, holoOp = null, CARDOPSL = null;
 function cardOpSet(v, from){ CARDOP = Math.max(5, Math.min(100, Math.round(v))); for (const o of Object.values(EDS)) edLook(o.el); try { for (const e_ of HPV.values()) edLook(e_); } catch (_) { /* no previews yet */ }
   root.setCssProps({ "--holov": Math.round(4 + (CARDOP - 5) / 95 * 76) + "%" });
   for (const S_ of [CARDOPSL, holoOp]) if (S_ && S_.sl !== from && S_.sl.isConnected) { S_.sl.value = String(100 - CARDOP); S_.ov.setText((100 - CARDOP) + "%"); } }
-function holoOpBuild(){ if (holoOp) return; const w = $("#main").createDiv({ cls: "ivm-holoop" }); w.hidden = true; const ic = w.createSpan({ cls: "hoi" }); setIcon(ic, "eye");
+/* sort the tabs once, then drag as before (0.9.30, Nick: "sometimes the tabs can get unruly"): by level, highest on top; or by top folder (Atlas, Calendar, Efforts…), each by level */
+function tabSort(by){ const cur = TABS[TCUR], lv = t => { const i = PIDX.get(t.path); return i == null ? [-1, 0] : [N[i].level, N[i].score]; }, top = t => t.path.includes("/") ? t.path.split("/")[0].toLowerCase() : "\uffff";
+  const byLv = (a, b) => { const A = lv(a), B = lv(b); return B[0] - A[0] || B[1] - A[1]; };
+  const blank = TABS.filter(t => !t.path), rest = TABS.filter(t => t.path);
+  rest.sort(by === "folder" ? (a, b) => top(a).localeCompare(top(b)) || byLv(a, b) : byLv);
+  TABS = rest.concat(blank); TCUR = cur ? TABS.indexOf(cur) : -1; tabsSave(); orbKey = ""; syncOrbs(); }
+function holoOpBuild(){ if (holoOp) return; const box = $("#main").createDiv({ cls: "ivm-holoop" }); box.hidden = true;
+  const sr = box.createDiv({ cls: "hosort" }); sr.createSpan({ cls: "hosl", text: "Sort" });
+  for (const [k_, t_, d_] of [["level", "Level", "Sort the tabs by level, highest on top"], ["folder", "Folder", "Sort the tabs by their top folder, each by level"]]) { const b_ = sr.createEl("button", { cls: "hosb", text: t_, attr: { type: "button", "aria-description": d_ } }); b_.onclick = e => { e.stopPropagation(); tabSort(k_); }; }
+  const w = box.createDiv({ cls: "horow" }); const ic = w.createSpan({ cls: "hoi" }); setIcon(ic, "eye");
   const sl = w.createEl("input", { type: "range", attr: { min: "0", max: "95", step: "1", "aria-description": "Editor see-through: raise it to see the map behind" } }); sl.value = String(100 - CARDOP); const ov = w.createSpan({ cls: "hov", text: (100 - CARDOP) + "%" });
   sl.oninput = () => { cardOpSet(100 - +sl.value, sl); ov.setText((100 - CARDOP) + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP);
-  for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) w.addEventListener(ty, e => e.stopPropagation()); holoOp = { el: w, sl, ov }; }
+  for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) box.addEventListener(ty, e => e.stopPropagation()); holoOp = { el: box, sl, ov }; }
 function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); holoOpBuild(); holoOp.el.hidden = !on;
   /* the primary note always has its tab in the column, lit (Nick, Nov 7: its tab was missing after a click away) */
   if (on && EDS.left.path && !TABS[TCUR]) { const ex = TABS.findIndex(t => t.path === EDS.left.path); if (ex >= 0) TCUR = ex; else { TABS.splice(0, 0, { path: EDS.left.path }); TCUR = 0; } tabsSave(); }
