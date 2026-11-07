@@ -6720,7 +6720,7 @@ cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.data
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 dbg.__lfx = (add = true) => linkFxTry(add);
-dbg.__k = () => k; dbg.__icon = id => { const e_ = doc.createElement("div"); setIcon(e_, id); return e_.innerHTML; }; dbg.__cur = () => sel >= 0 ? N[sel].title : null; dbg.__ckp = () => ({ T: CK.c >= 0 && CKW === "sf" ? [0, 1, 2].map(q => Math.round(ckSF().P[3 * CK.c + q])) : null, v: Math.round(CK.v), P: CK.P.map(Math.round), c: CK.c, view, d: drifting, wd: CK.wd ? CK.wd.phase : 0, au: !!CK.auto, gl: !!CK.glide, wp: CK.warp, hy: CK.hyper, ks: CK.keys.size, dr: !!CK.drag, w: CKW }); dbg.__pd = () => { const o = postersDetect(); return { across: o.across.map(a => a.id), cur: PSC().cur }; }; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
+dbg.__k = () => k; dbg.__snap = nm => snapView(nm); dbg.__apply = v => applySaved(v); dbg.__icon = id => { const e_ = doc.createElement("div"); setIcon(e_, id); return e_.innerHTML; }; dbg.__cur = () => sel >= 0 ? N[sel].title : null; dbg.__ckp = () => ({ T: CK.c >= 0 && CKW === "sf" ? [0, 1, 2].map(q => Math.round(ckSF().P[3 * CK.c + q])) : null, v: Math.round(CK.v), P: CK.P.map(Math.round), c: CK.c, view, d: drifting, wd: CK.wd ? CK.wd.phase : 0, au: !!CK.auto, gl: !!CK.glide, wp: CK.warp, hy: CK.hyper, ks: CK.keys.size, dr: !!CK.drag, w: CKW }); dbg.__pd = () => { const o = postersDetect(); return { across: o.across.map(a => a.id), cur: PSC().cur }; }; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
 dbg.__hud = () => [HUDHOV, !!LKHV, !!(LKHV && LKHV.isConnected), HUDHOV >= 0 && !!vis[HUDHOV], HUDHOV >= 0 ? [sx(X[HUDHOV]), sy(Y[HUDHOV])] : null];
 dbg.__ck = () => [CK.yaw, CK.pitch];
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
@@ -7238,6 +7238,8 @@ function snapView(name){
     emo: { ...EMON },   // Show emojis, map by map (0.7.58, Nick)
     // Base Builder and Posters (0.7.58): the layout (Rows, Scatter, Mosaic, Constellation, Timeline) and what each axis, row and size reads (Nick's movies Mosaic came back as Rows)
     pst: view === "builder" || view === "posters" ? (P_ => ({ across: P_.across, lanes: P_.lanes, size: P_.size, height: P_.height, mosaic: !!P_.mosaic, con: !!P_.con, tl: !!P_.tl, conSel: P_.conSel, conMax: P_.conMax, rng: JSON.parse(JSON.stringify(P_.rng || {})), lhide: JSON.parse(JSON.stringify(P_.lhide || {})) }))(view === "builder" ? PSTB : PSTP) : null,
+    /* the Holodeck (0.9.43, Nick: "Saved Views doesn't save Holodecks"): its tabs, primary and support notes, column width and sort */
+    holo: holoOn() ? { tabs: TABS.map(t_ => ({ path: t_.path, pin: !!t_.pin })), p: EDS.left.path, s: !EDS.right.el.hidden ? EDS.right.path : null, tw: HOLOTW, sort: TSORT, man: [...TMAN] } : null,
     cam: {cx: +((W/2 - tx)/k).toFixed(1), cy: +((H/2 - ty)/k).toFixed(1), k: +k.toFixed(4)}, saved: new Date().toISOString().slice(0,10)};
 }
 function applySaved(v){
@@ -7274,7 +7276,12 @@ function applySaved(v){
   if (v.lanes) { lanes = v.lanes; save("iv-lanes", lanes); } if (v.subOrder) { subOrder = v.subOrder; save("iv-suborder", subOrder); }
   showAll = !!v.links; $("#alllinks").setAttribute("aria-pressed", String(showAll));
   fDir = v.fDir || "both"; fDepth = v.fDepth || 1; focusArmed = false;
-  const fi = v.focus && PIDX.has(v.focus) ? PIDX.get(v.focus) : -1, si = v.sel && PIDX.has(v.sel) ? PIDX.get(v.sel) : fi;
+  const HV = v.holo && typeof v.holo === "object" && v.holo.p && PIDX.has(v.holo.p) ? v.holo : null;
+  if (HV) { TABS = (Array.isArray(HV.tabs) ? HV.tabs : []).filter(t_ => t_ && typeof t_.path === "string").map(t_ => ({ path: t_.path, pin: !!t_.pin })); if (!TABS.some(t_ => t_.path === HV.p)) TABS.unshift({ path: HV.p });
+    TCUR = TABS.findIndex(t_ => t_.path === HV.p); tabsSave(); HOLOTW = Math.max(130, Math.min(340, +HV.tw || 168)); save("iv-holotw", HOLOTW);
+    TSORT = HV.sort === "level" || HV.sort === "folder" ? HV.sort : ""; save("iv-tabsort", TSORT); TMAN = Array.isArray(HV.man) ? HV.man : []; save("iv-tabman", TMAN); orbKey = ""; }
+  else if ("holo" in v && HOLO) { HOLO = false; save("iv-holo", false); }   /* a view saved outside the Holodeck opens outside it; older views leave it as it is */
+  const fi = v.focus && PIDX.has(v.focus) ? PIDX.get(v.focus) : -1, si = HV ? PIDX.get(HV.p) : v.sel && PIDX.has(v.sel) ? PIDX.get(v.sel) : fi;
   focus = fi; computeFocus();
   const fb = $("#focusbar"); fb.hidden = fi < 0; if (fi >= 0 && !fb.hasChildNodes()) html(fb).v = "&nbsp;";
   if (si >= 0 && !isPhone() && drawer.hidden && !drawerCollapsed) drawer.hidden = false;   // open the panel first, so the saved camera lands on the same map width
@@ -7296,6 +7303,9 @@ function applySaved(v){
   relayout(true, false, cam);
   if (si >= 0) select(si, true); else select(-1);
   $("#focusmode").setAttribute("aria-pressed", String(focus >= 0)); renderFocusBar();
+  if (HV) { const sp = HV.s && PIDX.has(HV.s) && HV.s !== HV.p ? PIDX.get(HV.s) : null;
+    win.setTimeout(() => { if (dead) return; holoSet(true); if (sp != null) { if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(sp).then(() => { hudFollow(null); orbKey = ""; syncOrbs(); }); } else EDS.right.close(); }, 350); }
+  else { holoSync(); edFree(); syncOrbs(); }
   renderViewList();
 }
 // Saved: like Filter's lists. Your groups fold open and shut; each view moves up or down within its group, or to another group; views in no group come last.
