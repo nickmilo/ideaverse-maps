@@ -5668,6 +5668,8 @@ function holoOpBuild(){ if (holoOp) return; const w = $("#main").createDiv({ cls
   sl.oninput = () => { cardOpSet(+sl.value, sl); ov.setText(CARDOP + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP);
   for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) w.addEventListener(ty, e => e.stopPropagation()); holoOp = { el: w, sl, ov }; }
 function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); holoOpBuild(); holoOp.el.hidden = !on;
+  /* the primary note always has its tab in the column, lit (Nick, Nov 7: its tab was missing after a click away) */
+  if (on && EDS.left.path && !(TABS[TCUR] && TABS[TCUR].path === EDS.left.path)) { const ex = TABS.findIndex(t => t.path === EDS.left.path); if (ex >= 0) TCUR = ex; else { TABS.splice(0, 0, { path: EDS.left.path }); TCUR = 0; } tabsSave(); }
   if (on) { root.setCssProps({ "--holov": Math.round(28 + (CARDOP - 50) / 50 * 52) + "%" }); holoOp.sl.value = String(CARDOP); holoOp.ov.setText(CARDOP + "%"); try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoOp.el.setCssProps({ "--hol": Math.round(c.left - m.left) + "px", "--hob": Math.round(m.bottom - c.bottom + 52) + "px", "--how": (HOLOTW - 14) + "px" }); } catch (_) { /* not laid out yet */ } }
   if (!holoVeil) { holoVeil = $("#main").createDiv({ cls: "ivm-holoveil" }); for (const ty of ["pointerdown", "pointermove", "wheel", "click", "dblclick", "contextmenu"]) holoVeil.addEventListener(ty, e => { e.stopPropagation(); if (ty === "wheel" || ty === "contextmenu") e.preventDefault(); }, { passive: false }); }
   holoVeil.hidden = !on;
@@ -5980,8 +5982,10 @@ function newTabSync(){ const on = !dead && edOn() && !!TABS[TCUR] && !TABS[TCUR]
   newTabEl.setCssProps({ "--ntx": Math.round(c.left - pr.left + r.x) + "px", "--nty": Math.round(c.top - pr.top + r.y) + "px", "--ntw": Math.round(r.w) + "px" }); }
 function tabGo(j){ const t = TABS[j]; if (!t) return; if (!t.path) { if (TABS[TCUR] && TABS[TCUR].pin && j !== TCUR) return; TCUR = j; tabsSave(); select(-1); EDS.left.close(); syncOrbs(); return; }
   const i = PIDX.get(t.path); if (i == null) return;
+  /* in the Holodeck the map is the backdrop, so a filter doesn't stop a tab opening beside you (Nick, Nov 7) */
+  if (holoOn() && j !== TCUR && !(EDS.right.path === t.path && !EDS.right.el.hidden && vis[i] && !(TABS[TCUR] && TABS[TCUR].pin))) { if (EDS.right.col) EDS.right.collapse(false); /* a tucked support note comes back: in the Holodeck a tab opens beside, in plain view (Nick, Nov 7) */ void EDS.right.open(i).then(() => { orbKey = ""; syncOrbs(); }); orbKey = ""; syncOrbs(); return; }
+  if (holoOn() && j !== TCUR) { EDS.right.close(); edFree(); }   /* a second click on the tab beside makes it the primary note */
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
-  if (holoOn() && j !== TCUR) { if (EDS.right.path === t.path && !EDS.right.el.hidden && !(TABS[TCUR] && TABS[TCUR].pin)) { EDS.right.close(); edFree(); } else { void EDS.right.open(i).then(() => { orbKey = ""; syncOrbs(); }); orbKey = ""; syncOrbs(); return; } }
   // pinned: the primary note keeps its note, and another orb's note opens as the support note (0.8.68, Nick). Unpin to switch tabs
   if (j !== TCUR && TABS[TCUR] && TABS[TCUR].pin) { void EDS.right.open(i); return; }
   TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }
