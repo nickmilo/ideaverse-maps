@@ -5346,7 +5346,11 @@ function lkGroups(i, list){ if (LKG.i === i && LKG.n === list.length && LKG.rj =
    HUDI is the support note's note while it's the active one; -1 follows the pick (the primary note) */
 let HUDI = -1;
 const hsel = () => HUDI >= 0 && N[HUDI] ? HUDI : sel;
-function hudFollow(i){ const v = i == null || i === sel ? -1 : i; if (v === HUDI) return; HUDI = v; RECKEY = ""; try { recSync(); } catch (_) { /* not built yet */ } draw(); }
+function hudFollow(i){ const v = i == null || i === sel ? -1 : i; if (v === HUDI) return; HUDI = v; if (focus >= 0) focusQuiet(v >= 0 ? v : sel); RECKEY = ""; try { recSync(); } catch (_) { /* not built yet */ } draw(); }
+/* in Focus, the focus follows the active note too (0.9.26, Nick: "I would like the background graph to show the support note's locally focused links"):
+   the graph regroups round it, and the primary note stays where it is */
+function focusQuiet(i, force){ if (i < 0 || focus < 0 || (focus === i && !force) || !N[i] || !visNoFocus(i)) return; focus = i; computeFocus(); const prev = sel; sel = i;
+  relayout(true, false, (xs, ys) => (FZC && fzOn() ? closeTarget(xs, ys, i) : visTarget(xs, ys))); sel = prev; renderFocusBar(); syncFZ(); syncOrbs(); }
 const lkOn = () => { try { if (isPhone()) return false; if (view === "cockpit") return CK.c >= 0 && (CK.merged || []).length > 0;   /* the Starship's own list, always (0.8.289) */
   const h_ = hsel(); return HUDL && h_ >= 0 && (h_ !== sel || !!vis[sel]) && hudData(h_).list.length > 0; } catch (_) { return false; } };
 /* what the Links panel lists: the picked note's links on a map, or in the Starship the note you're at (0.8.289, Nick: "Starship map can integrate the new Recents/Links HUD") */
@@ -6010,7 +6014,7 @@ function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j ===
   if (was) { if (TABS[TCUR]) tabGo(TCUR); else EDS.left.close(); } syncOrbs(); }
 const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; win.setTimeout(() => { if (!dead) syncOrbs(); }, 0);   // saved tabs show from the start
 let orbKey = "", orbDragged = false;
-function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".cardfoc"); if (fb) fb.setAttribute("aria-pressed", String(focus >= 0 && EDS.left.path != null && PIDX.get(EDS.left.path) === focus)); } for (const o of [EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
+function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".cardfoc"); if (fb) fb.setAttribute("aria-pressed", String(focus >= 0 && EDS.left.path != null && (PIDX.get(EDS.left.path) === focus || (HUDI >= 0 && HUDI === focus)))); } for (const o of [EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
   const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); const HO = holoOn(); orbBar.classList.toggle("holo", HO); if (!on) { orbKey = ""; return; }
   const bes = HO && !EDS.right.el.hidden ? EDS.right.path : null;
   const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : "") + (HO ? "h" + bes : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
@@ -6099,7 +6103,7 @@ function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap 
     { const L = Math.round(ox + g.px) + "px", T = Math.round(oy + g.py) + "px"; if (e.style.left !== L) e.style.left = L; if (e.style.top !== T) e.style.top = T; } }
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
 cv.addEventListener("pointerdown", () => { if (CK.edit && CK.edit.host === pvLayer) ckEditClose(); });   /* a click on the map finishes a Compass edit */
-function select(i, fromTrail){ HUDI = -1;
+function select(i, fromTrail){ if (i !== sel) HUDI = -1;
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
   else if (!LIVEQ && i < 0 && edOn() && TABS[TCUR] && !TABS[TCUR].pin && TABS[TCUR].path) { TCUR = -1; tabsSave(); syncOrbs(); }   /* clicking away lets go of the orb: it stays, and the next note you pick opens in a new one (0.8.192, Nick) */
   if (view === "compass" && !LIVEQ) win.setTimeout(cmpSync, 0);
@@ -6787,8 +6791,8 @@ function renderFocusBar(){
     ${pos >= 0 ? `<span class="nav"><button id="fprev" ${pos <= 0 ? "disabled" : ""} aria-label="Previous effort" title="Previous effort">‹</button><button id="fnext" ${pos >= EFF_ORDER.length-1 ? "disabled" : ""} aria-label="Next effort" title="Next effort">›</button></span>` : ""}
     <button class="fx" id="fexit" title="Exit focus (Esc)">Exit</button>`;
   fb.hidden = false;
-  fb.querySelectorAll("[data-fd]").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.fd === fDir)); b.onclick = () => { fDir = b.dataset.fd; setFocus(focus); }; });
-  fb.querySelectorAll("[data-fs]").forEach(b => { b.setAttribute("aria-pressed", String(+b.dataset.fs === fDepth)); b.onclick = () => { fDepth = +b.dataset.fs; setFocus(focus); }; });
+  fb.querySelectorAll("[data-fd]").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.fd === fDir)); b.onclick = () => { fDir = b.dataset.fd; if (HUDI >= 0 && focus === HUDI) focusQuiet(focus, true); else setFocus(focus); }; });
+  fb.querySelectorAll("[data-fs]").forEach(b => { b.setAttribute("aria-pressed", String(+b.dataset.fs === fDepth)); b.onclick = () => { fDepth = +b.dataset.fs; if (HUDI >= 0 && focus === HUDI) focusQuiet(focus, true); else setFocus(focus); }; });
   if (pos >= 0) { $("#fprev").onclick = () => setFocus(EFF_ORDER[pos-1]); $("#fnext").onclick = () => setFocus(EFF_ORDER[pos+1]); }
   $("#fexit").onclick = () => { focusArmed = false; setFocus(-1); };
   fitFocus();
