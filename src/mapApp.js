@@ -5753,7 +5753,8 @@ const EDW = (() => { const o = pref("iv-edw", null); return o && typeof o === "o
 const edW = (kind, def, lo, hi, vw) => clampN(EDW[kind] > 0 ? EDW[kind] : clampN(vw*def, lo, hi), 260, Math.max(260, vw*.7));
 function edRect(kind){ const vw = W - sideW();
   if (holoOn()) { const x0 = TABS.length ? HOLOTW : 8, R = holoRight(vw), av = R - x0, two = !EDS.right.el.hidden || kind === "right";
-    const lw = two ? Math.round(Math.max(340, Math.min(760, (av - 12) * .54))) : Math.round(Math.min(av, 820));
+    const hw = EDW.holo > 0 ? EDW.holo : 0;   /* the primary note's width, dragged at either inner edge (0.9.28, Nick: the grip showed but didn't drag) */
+    const lw = two ? Math.round(Math.max(340, Math.min(av - 12 - 300, hw || Math.min(760, (av - 12) * .54)))) : Math.round(Math.max(340, Math.min(av, hw || 820)));
     if (kind === "left") return { x: x0, y: 8, w: lw, h: H - 16 };
     const rx = x0 + lw + 12; return { x: rx, y: 8, w: Math.max(260, R - rx), h: H - 16 }; }
   if (kind === "left") { const w = edW("left", .34, 340, 560, vw); return { x: 8, y: 8, w, h: H - 16 }; }
@@ -5798,15 +5799,18 @@ function makeEd(kind){
     close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; o.tabSync(); if (o.ed) { o.ed.close(); o.ed = null; } if (kind === "right") hudFollow(null); edFree(); },
     async open(i){ const p = N[i].path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
       const nw = o.path !== p; o.path = p; t.setText(N[i].title); if (nw) { o.open_ = ""; o.sub_ = ""; } fillStrip(o, i); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
+      if (kind === "right" && nw) hudFollow(i);   /* a note that opens beside is the active one: the HUD, and in Focus the graph, follow it (0.9.28, Nick) */
       if (nw) { await o.ed.open(p); o.ed.resize(); propKeep(el); } } };
   // a side editor tucks away from anywhere on its header but its buttons, like the legend (0.8.31); its inner edge drags to resize
   if (side) { hd.classList.add("cardhd-tuck"); hd.title = "Tuck away"; hd.addEventListener("click", e => { if (!(e.target instanceof Element) || e.target.closest("button")) return; o.collapse(true); });
     const gr = el.createDiv({ cls: "cardgrip cardgrip-" + kind, attr: { "aria-label": "Drag to resize" } }); let drag_ = null;
-    gr.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); gr.setPointerCapture(e.pointerId); const r = el.getBoundingClientRect(); drag_ = { x0: e.clientX, w0: r.width }; el.classList.add("resizing"); });
-    gr.addEventListener("pointermove", e => { if (!drag_) return; const dx = e.clientX - drag_.x0; EDW[kind] = Math.round(drag_.w0 + (kind === "left" ? dx : -dx)); edFree(); draw(); });
-    const up = () => { if (!drag_) return; drag_ = null; el.classList.remove("resizing"); EDW[kind] = Math.round(edRect(kind).w); save("iv-edw", EDW); if (o.ed) o.ed.resize(); };
+    gr.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); gr.setPointerCapture(e.pointerId); const r = el.getBoundingClientRect(); drag_ = { x0: e.clientX, w0: r.width, ho: holoOn(), lw0: edRect("left").w }; el.classList.add("resizing"); });
+    gr.addEventListener("pointermove", e => { if (!drag_) return; const dx = e.clientX - drag_.x0;
+      if (drag_.ho) EDW.holo = Math.round(drag_.lw0 + dx);   /* in the Holodeck both inner edges move the line between the primary and the support note */
+      else EDW[kind] = Math.round(drag_.w0 + (kind === "left" ? dx : -dx)); edFree(); draw(); });
+    const up = () => { if (!drag_) return; const ho = drag_.ho; drag_ = null; el.classList.remove("resizing"); if (ho) EDW.holo = Math.round(edRect("left").w); else EDW[kind] = Math.round(edRect(kind).w); save("iv-edw", EDW); for (const q of Object.values(EDS)) if (q.ed) q.ed.resize(); };
     gr.addEventListener("pointerup", up); gr.addEventListener("pointercancel", up);
-    gr.addEventListener("dblclick", e => { e.stopPropagation(); delete EDW[kind]; save("iv-edw", EDW); edFree(); draw(); }); }   // double-click: back to the default width
+    gr.addEventListener("dblclick", e => { e.stopPropagation(); if (holoOn()) delete EDW.holo; else delete EDW[kind]; save("iv-edw", EDW); edFree(); draw(); }); }   // double-click: back to the default width
   xb.onclick = () => { if (kind === "left") edCloseTab(); else { o.close(); panBack(); } };   /* the primary note's ×: closes its orb too (0.8.196, Nick) */ if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
   return o; }
 let LIVEQ = false;   // the map reacting as you write refreshes the note panel quietly: no camera move, no editor reload
