@@ -2187,3 +2187,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .ivm-orbs.holo .orbfh{flex:none;padding:8px 0 1px 12px;font:600 9.5px var(--mono,ui-monospace,monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);pointer-events:none}
 .ivm .ivm-orbs.holo .orbfh:first-child{padding-top:0}
 .ivm .ivm-holoop .hosb[aria-pressed="true"]{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 55%,transparent)}
+/* the toolbar's Holodeck tag (0.9.34) */
+.ivm .holotag{flex:none;align-self:center;height:20px;padding:0 9px;margin-left:4px;border:1px solid color-mix(in srgb,var(--accent) 70%,transparent);border-radius:10px;background:none;box-shadow:none;color:var(--accent);font:600 9.5px var(--mono,ui-monospace,monospace);letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.ivm .holotag[hidden]{display:none}
+.ivm .holotag:hover{background:color-mix(in srgb,var(--accent) 12%,transparent)}

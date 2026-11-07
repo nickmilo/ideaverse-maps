@@ -5687,7 +5687,10 @@ function holoOpBuild(){ if (holoOp) return; const box = $("#main").createDiv({ c
   const sl = w.createEl("input", { type: "range", attr: { min: "0", max: "100", step: "1", "aria-description": "Editor see-through: raise it to see the map behind" } }); sl.value = String(100 - CARDOP); const ov = w.createSpan({ cls: "hov", text: (100 - CARDOP) + "%" });
   sl.oninput = () => { cardOpSet(100 - +sl.value, sl); ov.setText((100 - CARDOP) + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP);
   for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) box.addEventListener(ty, e => e.stopPropagation()); holoOp = { el: box, sl, ov }; }
-function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); holoOpBuild(); holoOp.el.hidden = !on;
+/* a thin "Holodeck" tag in the toolbar while it's on (0.9.34, Nick); a click turns it off */
+function holoTag(on){ let t = root.querySelector("#holotag"); if (!t) { const d = root.querySelector("#dispms"); if (!d || !d.parentElement) return; t = doc.createElement("button"); t.id = "holotag"; t.type = "button"; t.className = "holotag"; t.textContent = "Holodeck"; t.setAttribute("aria-description", "Turn off Holodeck"); t.onclick = e => { e.stopPropagation(); holoSet(false); }; d.after(t); }
+  t.hidden = !on; }
+function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); holoOpBuild(); holoOp.el.hidden = !on; holoTag(on);
   /* the primary note always has its tab in the column, lit (Nick, Nov 7: its tab was missing after a click away) */
   if (on && EDS.left.path && !TABS[TCUR]) { const ex = TABS.findIndex(t => t.path === EDS.left.path); if (ex >= 0) TCUR = ex; else { TABS.splice(0, 0, { path: EDS.left.path }); TCUR = 0; } tabsSave(); }
   if (on) { root.setCssProps({ "--holov": Math.round(4 + CARDOP / 100 * 76) + "%" }); holoOp.sl.value = String(100 - CARDOP); holoOp.ov.setText((100 - CARDOP) + "%"); try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoOp.el.setCssProps({ "--hol": Math.round(c.left - m.left) + "px", "--hob": Math.round(m.bottom - c.bottom + 52) + "px", "--how": (HOLOTW - 14) + "px" }); } catch (_) { /* not laid out yet */ } }
@@ -8381,7 +8384,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     // keep one row as long as possible: first Find shrinks to its magnifying glass, then tabs fold into the ☰ list, and only if even one tab won't fit do the tools drop to a second row
     // the icons after the map button (Arrange, Sync, Focus, Saved, Display) stay on the first row while they fit; when the tools have taken a second row and the first still runs out of room,
     // they move down one at a time, from the end, so the first row stays full and nothing runs off the edge (0.7.51; Nick: "one should only move down when it runs out of space")
-    const MOV = ["#arrms", "#follownote", "#focusmode", "#viewms", "#dispms"].map(id => $(id)).filter(Boolean), tr = root.querySelector("header .tbr");
+    const MOV = ["#arrms", "#follownote", "#focusmode", "#viewms", "#dispms", "#holotag"].map(id => $(id)).filter(Boolean), tr = root.querySelector("header .tbr");
     if (MOV.some(el => el.parentElement !== tl)) for (const el of MOV) tl.appendChild(el);
     root.dataset.tbone = Platform.isMobile ? "" : "1"; root.dataset.tbwrap = ""; root.dataset.findmini = ""; fold();
     // a tight header: Find shrinks to its magnifying glass first
