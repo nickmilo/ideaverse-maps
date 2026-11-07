@@ -5657,8 +5657,18 @@ const edOn = () => EDITM && !!host.editCard && !isPhone();
 let HOLO = pref("iv-holo", false) === true;
 const holoOn = () => HOLO && edOn() && view !== "cockpit" && !!EDS && !!EDS.left && !EDS.left.el.hidden;
 const HOLOTW = 168;   /* the tab column's width, its gap included */
-let holoVeil = null;
-function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on);
+let holoVeil = null, holoOp = null, CARDOPSL = null;
+/* Editor opacity has two handles (0.9.21, Nick: "a quick peek behind the Holodeck"): Display's slider and one at the foot of the Holodeck's tab column, always in step.
+   In the Holodeck the veil over the map thins as the notes get more see-through, so the peek shows the map */
+function cardOpSet(v, from){ CARDOP = Math.max(50, Math.min(100, Math.round(v))); for (const o of Object.values(EDS)) edLook(o.el); try { for (const e_ of HPV.values()) edLook(e_); } catch (_) { /* no previews yet */ }
+  root.setCssProps({ "--holov": Math.round(28 + (CARDOP - 50) / 50 * 52) + "%" });
+  for (const S_ of [CARDOPSL, holoOp]) if (S_ && S_.sl !== from && S_.sl.isConnected) { S_.sl.value = String(CARDOP); S_.ov.setText(CARDOP + "%"); } }
+function holoOpBuild(){ if (holoOp) return; const w = $("#main").createDiv({ cls: "ivm-holoop" }); w.hidden = true; const ic = w.createSpan({ cls: "hoi" }); setIcon(ic, "eye");
+  const sl = w.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1", "aria-description": "Editor opacity: lower it to see the map behind" } }); sl.value = String(CARDOP); const ov = w.createSpan({ cls: "hov", text: CARDOP + "%" });
+  sl.oninput = () => { cardOpSet(+sl.value, sl); ov.setText(CARDOP + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP);
+  for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) w.addEventListener(ty, e => e.stopPropagation()); holoOp = { el: w, sl, ov }; }
+function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); holoOpBuild(); holoOp.el.hidden = !on;
+  if (on) { root.setCssProps({ "--holov": Math.round(28 + (CARDOP - 50) / 50 * 52) + "%" }); holoOp.sl.value = String(CARDOP); holoOp.ov.setText(CARDOP + "%"); try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoOp.el.setCssProps({ "--hol": Math.round(c.left - m.left) + "px", "--hob": Math.round(m.bottom - c.bottom + 52) + "px", "--how": (HOLOTW - 14) + "px" }); } catch (_) { /* not laid out yet */ } }
   if (!holoVeil) { holoVeil = $("#main").createDiv({ cls: "ivm-holoveil" }); for (const ty of ["pointerdown", "pointermove", "wheel", "click", "dblclick", "contextmenu"]) holoVeil.addEventListener(ty, e => { e.stopPropagation(); if (ty === "wheel" || ty === "contextmenu") e.preventDefault(); }, { passive: false }); }
   holoVeil.hidden = !on;
   try { if (orbBar) syncOrbs(); } catch (_) { /* the orbs aren't built yet */ }
@@ -8044,7 +8054,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       b.onclick = e => { e.stopPropagation(); CARDMODE = v; save("iv-cardmode", v); ms_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; }
     syncM(); seg.addEventListener("click", () => win.setTimeout(syncM, 0));
     const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor opacity" }); const sl = or_.createEl("input", { type: "range", attr: { min: "50", max: "100", step: "1" } }); sl.value = String(CARDOP); const ov = or_.createSpan({ cls: "eov", text: CARDOP + "%" });
-    sl.oninput = () => { CARDOP = +sl.value; ov.setText(CARDOP + "%"); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
+    CARDOPSL = { sl, ov }; sl.oninput = () => { cardOpSet(+sl.value, sl); ov.setText(CARDOP + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
     /* Editor text size (0.8.229, Nick: "a little large… a slider to make it smaller"): 70–120% of Obsidian's text size; double-click it for 100% */
     const fr_ = g.createDiv({ cls: "drow eorow tchoice" }); fr_.createSpan({ cls: "eol", text: "Editor text size" }); const fs = fr_.createEl("input", { type: "range", attr: { min: "70", max: "120", step: "5" } }); fs.value = String(CARDFS); const fv = fr_.createSpan({ cls: "eov", text: CARDFS + "%" });
     const fsSet = v => { CARDFS = v; fs.value = String(v); fv.setText(v + "%"); for (const o of Object.values(EDS)) { edLook(o.el); if (o.ed) o.ed.resize(); } };

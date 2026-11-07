@@ -2147,9 +2147,9 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .fixrow .fixkeep:hover,.ivm .fixrow .fixclr:hover{color:var(--ink);border-color:var(--accent)}
 .ivm .fixrow .fixkeep[hidden],.ivm .fixrow .fixclr[hidden]{display:none}
 /* Holodeck (0.9.19): the map behind the notes, quiet and out of reach; the orb tabs as a column of tabs on the far left */
-.ivm .ivm-holoveil{position:absolute;inset:0;z-index:3;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(1.5px)}
+.ivm .ivm-holoveil{position:absolute;inset:0;z-index:3;background:color-mix(in srgb,var(--bg) var(--holov,72%),transparent);backdrop-filter:blur(1.5px)}
 .ivm .ivm-holoveil[hidden]{display:none}
-.ivm .ivm-orbs.holo{top:var(--orbt,10px);flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;align-items:stretch;gap:4px;padding:0;max-height:calc(100% - 24px);overflow-y:auto;overflow-x:visible;pointer-events:auto;scrollbar-width:none}
+.ivm .ivm-orbs.holo{top:var(--orbt,10px);flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;align-items:stretch;gap:4px;padding:0;max-height:calc(100% - 116px);overflow-y:auto;overflow-x:visible;pointer-events:auto;scrollbar-width:none}
 .ivm .ivm-orbs.holo .ivm-orb{white-space:normal;justify-content:flex-start;width:auto;height:46px;flex:none;display:flex;align-items:center;padding:0 12px 0 34px;border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--bg) 88%,transparent);border:1px solid var(--line);border-left:0;text-align:left;color:var(--muted)}
 .ivm .ivm-orbs.holo .ivm-orb .orbd{inset:auto;left:12px;top:calc(50% - 7px);width:14px;height:14px}
 .ivm .ivm-orbs.holo .ivm-orb.lv4 .orbd{left:13px;top:calc(50% - 6px);width:12px;height:12px}
@@ -2165,3 +2165,8 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .ivm-orbs.holo .ivm-orb .orbp{left:22px;right:auto;bottom:6px}
 .ivm .ivm-orbs.holo .ivm-orb.drag{transform:translateY(var(--odx,0px))}
 .cardholo[aria-pressed="true"]{color:var(--interactive-accent)}
+.ivm .ivm-holoop{position:absolute;left:var(--hol,0px);bottom:var(--hob,12px);width:var(--how,154px);z-index:7;box-sizing:border-box;display:flex;align-items:center;gap:7px;padding:7px 10px 7px 12px;border:1px solid var(--line);border-left:0;border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--bg) 88%,transparent);color:var(--muted)}
+.ivm .ivm-holoop[hidden]{display:none}
+.ivm .ivm-holoop .hoi{display:flex;flex:none}.ivm .ivm-holoop .hoi svg{width:14px;height:14px}
+.ivm .ivm-holoop input{flex:1;min-width:0;margin:0}
+.ivm .ivm-holoop .hov{flex:none;width:32px;text-align:right;font:600 10.5px var(--mono,ui-monospace,monospace)}
