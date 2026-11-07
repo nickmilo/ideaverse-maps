@@ -5909,6 +5909,8 @@ function histNote(p){ if (HNAV === p) { HNAV = null; return; } HNAV = null;
 function syncNav(){ let pin = false; try { pin = !!(TABS[TCUR] && TABS[TCUR].pin); } catch (_) { /* not ready yet */ }
   for (const o of [EDS.left]) if (o && o.nav) { o.nav[0].disabled = pin || HPOS <= 0; o.nav[1].disabled = pin || HPOS >= HIST.length - 1; } }
 function histGo(d_){ const q = HPOS + d_; if (q < 0 || q >= HIST.length) return; const i = PIDX.get(HIST[q]); if (i == null) return;
+  /* in Focus, back and forward go to a note outside the focused links too, and the focus moves with you (0.9.38, Nick: "we should still be able to hit back and forward just fine") */
+  if (!vis[i] && focus >= 0 && visNoFocus(i)) { HPOS = q; HNAV = HIST[q]; setFocus(i); syncNav(); return; }
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map.`); return; } HPOS = q; HNAV = HIST[q]; select(i); syncNav(); }
 function edFree(){ holoSync(); EDLW = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 0; for (const o of Object.values(EDS)) { o.key = ""; o.place(); } }
 function panBack(){ if (PANAUTO && EDS.left.el.hidden) { PANAUTO = false; setCollapsed(false, true); } }   // the note panel returns when the primary note closes
@@ -6685,7 +6687,7 @@ cv.addEventListener("drop", e => { if (!e.dataTransfer) return; const p = e.data
   LDROP = -1; draw(); if (t < 0 || j == null || t === j) return; ldLink(t, j, LDCTRL || e.ctrlKey); });
 dbg.__xy = t => { const i = N.findIndex(d => d.title === t); return i >= 0 && VV(i) ? [sx(X[i]), sy(Y[i])] : null; };
 dbg.__lfx = (add = true) => linkFxTry(add);
-dbg.__k = () => k; dbg.__cur = () => sel >= 0 ? N[sel].title : null; dbg.__ckp = () => ({ T: CK.c >= 0 && CKW === "sf" ? [0, 1, 2].map(q => Math.round(ckSF().P[3 * CK.c + q])) : null, v: Math.round(CK.v), P: CK.P.map(Math.round), c: CK.c, view, d: drifting, wd: CK.wd ? CK.wd.phase : 0, au: !!CK.auto, gl: !!CK.glide, wp: CK.warp, hy: CK.hyper, ks: CK.keys.size, dr: !!CK.drag, w: CKW }); dbg.__pd = () => { const o = postersDetect(); return { across: o.across.map(a => a.id), cur: PSC().cur }; }; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
+dbg.__k = () => k; dbg.__icon = id => { const e_ = doc.createElement("div"); setIcon(e_, id); return e_.innerHTML; }; dbg.__cur = () => sel >= 0 ? N[sel].title : null; dbg.__ckp = () => ({ T: CK.c >= 0 && CKW === "sf" ? [0, 1, 2].map(q => Math.round(ckSF().P[3 * CK.c + q])) : null, v: Math.round(CK.v), P: CK.P.map(Math.round), c: CK.c, view, d: drifting, wd: CK.wd ? CK.wd.phase : 0, au: !!CK.auto, gl: !!CK.glide, wp: CK.warp, hy: CK.hyper, ks: CK.keys.size, dr: !!CK.drag, w: CKW }); dbg.__pd = () => { const o = postersDetect(); return { across: o.across.map(a => a.id), cur: PSC().cur }; }; dbg.__sel = t => { const i = N.findIndex(d => d.title === t); if (i >= 0) select(i); return i; }; dbg.__fz = () => ({ on: fzOn(), c: FZC, hidden: (root.querySelector("#fzbtn") || {}).hidden });
 dbg.__hud = () => [HUDHOV, !!LKHV, !!(LKHV && LKHV.isConnected), HUDHOV >= 0 && !!vis[HUDHOV], HUDHOV >= 0 ? [sx(X[HUDHOV]), sy(Y[HUDHOV])] : null];
 dbg.__ck = () => [CK.yaw, CK.pitch];
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
