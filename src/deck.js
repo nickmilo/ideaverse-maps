@@ -352,7 +352,9 @@ export class LinksPaneView extends DeckView {
     /* Display, beside Sort (0.9.64); time since modified is offered only while sorted by modified time */
     const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal");
     db.onclick = e => { const m = new Menu(), it_ = (k, t) => m.addItem(it => it.setTitle(t).setChecked(this.opt(k)).onClick(() => this.setLOpt(k, !this.opt(k))));
-      it_("rel", "Show relevance scores"); it_("col", "Show Idea Emergence link colors"); if (SO === "lvl") it_("lvh", "Show Idea Emergence headers");   /* headers only while sorted by Idea Emergence: they are that order (0.9.73, Nick) */ it_("orb", "Show Idea Emergence orbs"); it_("emo", "Show emojis"); if (MOD) it_("age", "Show time since modified"); if (CRE) it_("cage", "Show time since created");   /* each offered only while its sort is on (0.9.66, Nick) */ m.showAtMouseEvent(e); };
+      it_("rel", "Show relevance scores"); it_("col", "Show Idea Emergence link colors"); it_("orb", "Show Idea Emergence orbs"); it_("emo", "Show emojis");
+      /* a sort's own switch goes last, under a thin line, so it reads as new for this order (0.9.79, Nick); headers only while sorted by Idea Emergence (0.9.73) */
+      if (SO === "lvl" || MOD || CRE) m.addSeparator(); if (SO === "lvl") it_("lvh", "Show Idea Emergence headers"); if (MOD) it_("age", "Show time since modified"); if (CRE) it_("cage", "Show time since created");   /* each offered only while its sort is on (0.9.66, Nick) */ m.showAtMouseEvent(e); };
     const G = this.G, fi = p => this.file(p), lv = p => { const n_ = G && G.idx.get(p); return n_ ? [n_.level || 0, n_.score || 0] : [0, 0]; }, sc0 = new Map(ls.map(l => [l.p, l.s]));
     const cmp = {
       rel: (a, b) => (sc0.get(b) || 0) - (sc0.get(a) || 0) || this.title(a).localeCompare(this.title(b)),
