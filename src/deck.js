@@ -360,11 +360,11 @@ export class LinksPaneView extends DeckView {
     /* sort (0.9.61, Nick: relevance by default, Idea Emergence, and Obsidian's own six); up and related stay on top in every order */
     const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "rel", MOD = SO === "mnew" || SO === "mold", CRE = SO === "cnew" || SO === "cold";
     /* our three orders explain themselves (0.9.96, Nick: "Hey, how are these things being scored?"): a small circled ? before Sort while one is on opens a card */
-    const HELPT = LINKHELP[SO]; if (HELPT) { const qb = hd.createEl("button", { cls: "ivd-lkqh" + (this.helpOpen ? " on" : ""), text: "?", attr: { type: "button", "aria-description": "How this order works" } }); qb.onclick = () => { this.helpOpen = !this.helpOpen; this.render(); }; }
+    const HELPT = LINKHELP[SO];
     const sb = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Sort links", "aria-pressed": String(SO !== "rel") } }); setIcon(sb, "arrow-up-narrow-wide");
     sb.onclick = () => { if (this.menuJust(sb)) return; const m = new Menu(); for (const x of LINKSORTS) { if (!x) { m.addSeparator(); continue; } m.addItem(it => it.setTitle(x[1]).setChecked(x[0] === SO).onClick(() => this.setLOpt("sort", x[0]))); } this.menuUnder(m, sb); };
     /* Display, beside Sort (0.9.64); time since modified is offered only while sorted by modified time */
-    const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal");
+    const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal"); if (HELPT) { const qb = hd.createEl("button", { cls: "ivd-lkqh" + (this.helpOpen ? " on" : ""), text: "?", attr: { type: "button", "aria-description": "How this order works" } }); qb.onclick = () => { this.helpOpen = !this.helpOpen; this.render(); }; }   /* after Sort and Display: its card opens inline and covers nothing (0.9.97, Nick) */
     /* each switch shows a sample of what it turns on (0.9.82, Nick: "ways to help the user understand what they're about to toggle on") */
     db.onclick = () => { if (this.menuJust(db)) return; const m = new Menu(), D = this.contentEl.ownerDocument; if (typeof m.setUseNativeMenu === "function") m.setUseNativeMenu(false);   /* macOS draws native menus as plain text by default (Settings → Appearance → Native menus): the samples and headers need Obsidian's own menu, as Canvas does for its rich menus (0.9.90) */
       const it_ = (k, t, hint, dis) => m.addItem(it => { const f = D.createDocumentFragment(), sp = D.createElement("span"); sp.className = "ivd-mh"; if (typeof t === "string") sp.append(t); else t(sp); if (hint) { const h = D.createElement("span"); h.className = "ivd-mhx"; hint(h); sp.append("\u2002", h); }   /* an en space too, so the sample never touches the words even where the menu's styles differ */ f.append(sp); it.setTitle(f).setChecked(dis ? false : this.opt(k)); if (dis) it.setDisabled(true); else it.onClick(() => this.setLOpt(k, !this.opt(k))); });
@@ -373,7 +373,7 @@ export class LinksPaneView extends DeckView {
       /* three mini headers for where on a row each switch shows (0.9.88, Nick): LEFT arrows, orbs, emojis; MIDDLE the name's color; RIGHT the score column.
          A sort's own number joins RIGHT; Idea Emergence's headers get a LIST section of their own */
       const hd_ = t => m.addItem(it => { const f = D.createDocumentFragment(), x = D.createElement("span"); x.className = "ivd-mlab"; x.textContent = t; f.append(x); it.setTitle(f); if (typeof it.setIsLabel === "function") it.setIsLabel(true); else it.setDisabled(true); });
-      const TAKEN = ((SO === "lvl" || SO === "remg") && this.opt("lsc")) || (MOD && this.opt("age")) || (CRE && this.opt("cage"));
+      const TAKEN = ((SO === "lvl" || SO === "remg" || SO === "az" || SO === "za") && this.opt("lsc")) || (MOD && this.opt("age")) || (CRE && this.opt("cage"));
       hd_("Left");
       it_("arr", "Show inlink/outlink arrows", h => tx(h, "← → ↔", "ivd-mha"));   /* Nick's name (0.9.88) */
       it_("orb", "Show Idea Emergence orbs", h => { orbS(h, 5); orbS(h, 4); orbS(h, 3); });
@@ -384,7 +384,7 @@ export class LinksPaneView extends DeckView {
       m.addSeparator(); hd_("Right");
       /* the score column holds one thing: while link score or a time fills it, relevance shows unchecked and greyed, its own setting kept (0.9.87, Nick) */
       it_("rel", "Show relevance scores", h => tx(h, "82", "ivd-mhn"), TAKEN);
-      const EMG = SO === "lvl" || SO === "remg";
+      const EMG = SO === "lvl" || SO === "remg" || SO === "az" || SO === "za";   /* link score under the file-name sorts too (0.9.97, Nick) */
       if (EMG) it_("lsc", "Show link score", h => tx(h, "9.9", "ivd-mhn"));   /* the score that sets each note's level, in place of relevance (0.9.80, Nick) */
       if (MOD) it_("age", "Show time since modified", h => tx(h, "6d", "ivd-mhn")); if (CRE) it_("cage", "Show time since created", h => tx(h, "3y", "ivd-mhn"));   /* each offered only while its sort is on (0.9.66) */
 
@@ -402,7 +402,7 @@ export class LinksPaneView extends DeckView {
     if (HELPT && this.helpOpen) { const c_ = box.createDiv({ cls: "ivd-lkhelp" }); c_.createDiv({ cls: "ivd-lkht", text: LINKSORTS.find(x => x && x[0] === SO)[1] }); for (const para of HELPT) c_.createEl("p", { text: para }); c_.onclick = () => { this.helpOpen = false; this.render(); }; }
     const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
-    const ARR = this.opt("arr"), LSC = (SO === "lvl" || SO === "remg") && this.opt("lsc"), ORB = this.opt("orb"), AGE = MOD && this.opt("age"), CAGE = CRE && this.opt("cage"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
+    const ARR = this.opt("arr"), LSC = (SO === "lvl" || SO === "remg" || SO === "az" || SO === "za") && this.opt("lsc"), ORB = this.opt("orb"), AGE = MOD && this.opt("age"), CAGE = CRE && this.opt("cage"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
     const onG = p => !this.G || this.G.ek.has(path + "\u0000" + p) || this.G.ek.has(p + "\u0000" + path), right = p => LSC ? (() => { const n_ = this.G && this.G.idx.get(p); if (!n_ || n_.score == null) return ""; const v = +n_.score; return v.toFixed(v < 10 ? 1 : 0); })() : AGE ? (fi(p) ? this.age(fi(p).stat.mtime) : "") : CAGE ? (fi(p) ? this.age(this.createdMs(p)) : "") : REL && sc.has(p) && onG(p) ? String(sc.get(p).s) : "";   /* no score for a collection: the map never counts it */
     const put = (p, a, c) => { if (!ARR) a = ""; if (MC.has(p)) c = !COL ? "var(--ivd-link)" : this.plugin.store.get("iv-colllinks") !== false ? "var(--ivd-coll)" : "var(--ivd-prop)"; else if (MP.has(p) && !MC.has(p) && COL && !KEEP.has(this.kindOf(path, p))) c = "var(--ivd-prop)"; const r = this.row(list, p, a, c, right(p)); r.dataset.q = this.title(p).toLowerCase();
       /* the Holodeck tab's orb (0.9.67, Nick): its level's shape and gradient, 5 a rounded square, 4 a diamond, 3 to 1 a circle */
