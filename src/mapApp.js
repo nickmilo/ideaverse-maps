@@ -223,6 +223,8 @@ function computeVis(){ VISV++; const fs = new Set(folders);
       && (!fset || fset[i] || curV() === "people")) ? 1 : 0; }
   // tags switched off (Treemap, Bookshelf and Chord by tags) leave the map
   if (tagHide.on()) for (let i=0;i<n;i++) if (vis[i] && tagHide.hid(i)) vis[i] = 0;
+  /* Place by coordinates, places only (0.9.143): notes without coordinates (a galaxy's regions, sectors, routes, its home note) leave Starfield, so the way home and the paths run place to place */
+  try { if (COORDONLY && coordOn() && (view === "stars" || view === "cockpit")) for (let i = 0; i < n; i++) if (vis[i] && !COORDV(i)) vis[i] = 0; } catch (_) { /* not set up yet */ }
   if (YRV.has(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
   if (winSpan() && YRV.has(curV()) && !YRALL) { const w0 = winStart(), w1 = winEnd(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0 && TV[i] < w1)) vis[i] = 0; }   /* both ends: fixed dates end before today (0.9.17) */
   if (BYMT) capDays();
@@ -563,7 +565,8 @@ let BODIES = [], UB = {x0:0, y0:0, x1:WW, y1:WH}, starsDirty = true, starVer = 0
 const COORDK = (() => { const k = (D.settings && D.settings.coord_props) || ["x", "y"]; return [k[0] || "x", k[1] || "y"]; })();
 const COORDV = i => { const v = N[i] && N[i].p && N[i].p.n; if (!v) return null; const x = v[COORDK[0]], y = v[COORDK[1]]; return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null; };
 let COORDN = -1; const coordCount = () => { if (COORDN < 0) { COORDN = 0; for (let i = 0; i < n; i++) if (COORDV(i)) COORDN++; } return COORDN; };
-let COORDS = pref("iv-sfcoord", false) === true; const coordOn = () => COORDS && coordCount() >= 20;
+let COORDS = pref("iv-sfcoord", false) === true, COORDONLY = pref("iv-sfplaces", false) === true; const coordOn = () => COORDS && coordCount() >= 20;
+if (COORDONLY) win.setTimeout(() => { try { if (coordOn()) { relayout(false); BAC.key = ""; } } catch (_) { /* the map closed first */ } }, 0);   /* the first filter ran before these existed */
 /* where a group of points is thickest: the mean of the fullest cell on a grid an eighth of their spread wide. A ring (the Outer Rim) has no middle worth naming,
    so a hub or a region's name goes where its notes actually gather */
 function denseAt(xy){ if (xy.length < 4) { let x = 0, y = 0; for (const [a, b] of xy) { x += a; y += b; } return [x / xy.length, y / xy.length]; }
@@ -629,7 +632,7 @@ function drawCoordArt(bgDim){ const cvA = buildCoordArt(); if (!cvA) return; ctx
 function drawCoordRoutes(bgDim){ const A = COORDART; if (!A || !A.routes.length) return; ctx.save(); ctx.lineJoin = "round"; ctx.lineCap = "round";
   const smooth = (path, PW) => { const P = PW.map(([x, y]) => [sx(x), sy(y)]); ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for (let q = 1; q < P.length - 1; q++) { const mx = (P[q][0] + P[q + 1][0]) / 2, my = (P[q][1] + P[q + 1][1]) / 2; ctx.quadraticCurveTo(P[q][0], P[q][1], mx, my); } const L = P[P.length - 1]; ctx.lineTo(L[0], L[1]); };
   for (const major of [false, true]) for (const [lw, al] of major ? [[6, .08], [1.6, .7]] : [[1, .13]]) { ctx.lineWidth = lw; ctx.strokeStyle = `rgba(255,255,255,${al * Math.max(.4, bgDim)})`;
-    for (const r_ of A.routes) { if (r_.major !== major || !vis[r_.i]) continue; smooth(r_.path, r_.P); ctx.stroke(); } }
+    for (const r_ of A.routes) { if (r_.major !== major || (!vis[r_.i] && !COORDONLY)) continue; smooth(r_.path, r_.P); ctx.stroke(); } }
   ctx.restore(); }
 const UC = {x: WW/2, y: WH/2};
 const SADJ = Array.from({length:n}, () => []);
@@ -1235,7 +1238,7 @@ function setView(v){ if (v === "posters" || v === "people") v = "builder"; if (v
   ungrow(); view = v; save("iv-view", v); if (senseT == null) { SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; }   /* a Timelapse under way keeps its place (Ship ⇄ Chart, 0.8.348) */
   root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === tabOf())));
   root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : "";
-  if (yrNarrow() || (HASTAGS && TMOFF.size)) { computeVis(); layoutACE(); layoutTime(); layoutProp(); updateCounts(); }
+  if (yrNarrow() || (HASTAGS && TMOFF.size) || COORDONLY) { computeVis(); layoutACE(); layoutTime(); layoutProp(); updateCounts(); }
   syncRange(); legend(); morph(!SFJUMP, () => fitTarget()); SFJUMP = false;   /* the trip back from the Starship lands at once, behind the dark, so the chart can pull back out (0.8.228) */
   { const bb = root.querySelector(`#vseg button[data-v="${view}"]`); if (bb && isPhone()) bb.scrollIntoView({inline:"nearest", block:"nearest"}); }
 }
@@ -8099,6 +8102,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       cb.onchange = () => set(cb.checked); };
     tog("Twinkle", () => twOn, v => { twOn = v; save("iv-twinkle", v); twWake(); });
     if (coordCount() >= 20) tog("Place by coordinates", () => COORDS, v => { COORDS = v; save("iv-sfcoord", v); starsDirty = true; glowKey = ""; s3dVer = -1; CKSF.ver = -1; morph(true); });   /* (0.9.139) */
+    if (coordCount() >= 20) tog("Places only", () => COORDONLY, v => { COORDONLY = v; save("iv-sfplaces", v); computeVis(); BAC.key = ""; glowKey = ""; morph(true); });   /* (0.9.143) notes without coordinates step out */
     tog("Turning galaxies", () => sTurn, v => { sTurn = v; save("iv-sturn", v); turnSync(); if (!v && view === "stars") { glowKey = ""; morph(true); } }); }
   // a tighter Starfield menu (0.8.9, with Filter as the reference): the three ways to see it as one row, the chosen one's line beneath,
   // Star Chart's layers two to a row under it, then Galaxy glow, then the switches in one list
