@@ -2281,3 +2281,7 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-mhx .ivd-orb.lv4{border-radius:1.5px;width:7px;height:7px;transform:rotate(45deg);margin:0 1px}
 .menu-item.is-disabled .ivd-mhx{opacity:.4}   /* a greyed switch greys its sample too (0.9.87) */
 .ivd-mlab{font:600 9px var(--font-monospace);letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint)}   /* the Display menu's mini headers (0.9.88) */
+/* the Links pane's menus: the check on the left, as macOS menus show it (0.9.92, Nick) */
+.menu.ivd-menu .menu-item-icon{flex:none;width:16px;min-width:16px;margin-right:6px}
+.menu.ivd-menu .menu-item.mod-checked > .menu-item-icon:first-child{display:none}
+.menu.ivd-menu .menu-item-icon.mod-checked{order:-1;margin-left:0}

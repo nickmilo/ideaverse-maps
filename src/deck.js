@@ -295,7 +295,7 @@ export class LinksPaneView extends DeckView {
     for (const k of dateKeys(this.plugin.settings || {})) { const d = parseDay(low[String(k).toLowerCase()]); if (d) return Date.parse(d); }
     const m = /(\d{4}-\d{2}-\d{2})/.exec(f.basename); return m ? Date.parse(m[1]) : f.stat.ctime; }
   /* the Sort and Display menus open below their button, right edges together, so the button stays clear: a second click on it closes the menu (0.9.91, Nick) */
-  menuUnder(m, btn) { const r = btn.getBoundingClientRect(); m.onHide(() => { this.menuShut = { btn, t: Date.now() }; btn.removeClass("is-active"); }); btn.addClass("is-active"); m.showAtPosition({ x: r.right, y: r.bottom + 4, left: true }, btn.ownerDocument); }
+  menuUnder(m, btn) { if (typeof m.setUseNativeMenu === "function") m.setUseNativeMenu(false); if (m.dom) m.dom.addClass("ivd-menu");   /* Obsidian's own menu for both (macOS native menus drop the samples), with the check on the left as macOS shows it (0.9.92, Nick) */ const r = btn.getBoundingClientRect(); m.onHide(() => { this.menuShut = { btn, t: Date.now() }; btn.removeClass("is-active"); }); btn.addClass("is-active"); m.showAtPosition({ x: r.right, y: r.bottom + 4, left: true }, btn.ownerDocument); }
   menuJust(btn) { const z = this.menuShut; return !!(z && z.btn === btn && Date.now() - z.t < 350); }
   soon() { window.clearTimeout(this.soonT); this.soonT = window.setTimeout(() => this.render(), 400); }
   /* relevance as the Links HUD scores it (0.9.65, Nick saw the two disagree): the map's relFrom, a walk from this note along weighted links that keeps coming home
