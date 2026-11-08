@@ -1911,7 +1911,8 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm[data-view="cockpit"] #tlfx button[data-f="rain"]{display:none}   /* no "down" in space (0.8.358, Nick) */
 
 /* ---------- the Deck (0.9.1): writing first, no graph ---------- */
-.ivd{--ivd-upp:#e8bf45;--ivd-rel:#b48cf2;--ivd-up:#5aa9ec;--ivd-down:#4fc77a;--ivd-prop:#8e9ab0;--ivd-link:var(--text-accent);--ivd-recent:var(--text-normal);--ivd-acc:#e8bf45;--ivd-line:var(--background-modifier-border);
+.ivd{--ivd-upp:#b8860b;--ivd-rel:#8a3ff0;--ivd-up:#1f86c4;--ivd-down:#1f8f6a;--ivd-prop:#6b7c93;--ivd-link:var(--text-accent);--ivd-recent:var(--text-normal);--ivd-acc:#a87a05;   /* light themes: the map's Play palette, a gold dark enough to read on paper (0.9.77, Nick) */
+  --ivd-line:var(--background-modifier-border);
   container-type:inline-size;display:grid;grid-template-columns:var(--ivd-lw,340px) minmax(420px,1fr) var(--ivd-hw,230px) var(--ivd-rw,380px);grid-template-rows:auto minmax(0,1fr);gap:12px;padding:12px;box-sizing:border-box;height:100%;overflow:hidden;background:var(--background-secondary)}
 .theme-dark .ivd{--ivd-upp:#ffcf5a;--ivd-rel:#c9a2ff;--ivd-up:#6fbcff;--ivd-down:#6fe08f;--ivd-prop:#a9b4c8;--ivd-acc:#f2d45c}
 .ivd-left,.ivd-right{display:flex;flex-direction:column;gap:12px;min-height:0}
