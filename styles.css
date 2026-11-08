@@ -2213,3 +2213,8 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivm-card.theme-dark .document-search-container .clickable-icon svg,.theme-dark .ivm-card .document-search-container .clickable-icon svg,.theme-dark .ivd .document-search-container .clickable-icon svg{opacity:1}
 .ivm-card.theme-dark .document-search-container .clickable-icon:hover,.theme-dark .ivm-card .document-search-container .clickable-icon:hover,.theme-dark .ivd .document-search-container .clickable-icon:hover{color:var(--text-normal)}
 .ivm-card.theme-dark .document-search-container .clickable-icon:disabled,.ivm-card.theme-dark .document-search-container .clickable-icon.is-disabled,.theme-dark .ivm-card .document-search-container .clickable-icon:disabled,.theme-dark .ivd .document-search-container .clickable-icon:disabled{color:color-mix(in srgb,var(--text-normal) 45%,transparent)}
+/* notes dropped in from Obsidian (0.9.54): a line where they'll land among the tabs */
+.ivm .ivm-orbs.holo .ivm-orb.dropb{box-shadow:inset 0 2px 0 var(--accent)}
+.ivm .ivm-orbs.holo .ivm-orb.dropa{box-shadow:inset 0 -2px 0 var(--accent)}
+.ivm .ivm-orbs:not(.holo) .ivm-orb.dropb{box-shadow:-3px 0 0 var(--accent)}
+.ivm .ivm-orbs:not(.holo) .ivm-orb.dropa{box-shadow:3px 0 0 var(--accent)}

@@ -6125,6 +6125,31 @@ function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j ===
   if (TCUR >= 0 || was) TCUR = Math.max(0, Math.min(TCUR, TABS.length - 1)); tabsSave();
   if (was) { if (TABS[TCUR]) tabGo(TCUR); else EDS.left.close(); } syncOrbs(); }
 const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; win.setTimeout(() => { if (!dead) syncOrbs(); }, 0);   // saved tabs show from the start
+/* drop notes in from Obsidian (0.9.54, Nick: "dragging notes in from the file list or the search results… That's huge"): a tab, a file, files or a link
+   dropped on the tabs becomes tabs where the line shows (a tab dragged in leaves Obsidian's tab bar, as a moved tab does); dropped on the primary note it becomes the primary (past a pin),
+   on the support note it opens beside */
+{ const src = () => { try { return host.dragSource ? host.dragSource() : null; } catch (_) { return null; } };
+  let mark = null; const unmark = () => { if (mark) { mark.el.classList.remove("dropb", "dropa"); mark = null; } for (const q of [EDS.left, EDS.right]) if (q && q.el) q.el.classList.remove("ivm-dropt"); orbBar.classList.remove("dropin"); };
+  const slot = e => { const VY = orbBar.classList.contains("holo"), os = [...orbBar.querySelectorAll(".ivm-orb[data-i]")]; for (const b of os) { const r = b.getBoundingClientRect(); if ((VY ? e.clientY < r.top + r.height / 2 : e.clientX < r.left + r.width / 2)) return { el: b, at: +b.dataset.i, after: false }; }
+    const L = os[os.length - 1]; return L ? { el: L, at: TABS.length, after: true } : { el: null, at: TABS.length, after: true }; };
+  const quiet = () => { if (host.dragQuiet) host.dragQuiet(); };
+  const over = (e, fn) => { const S_ = src(); if (!S_ || !edOn()) return; e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = S_.leaf ? "move" : "copy"; quiet(); fn(); };
+  orbBar.addEventListener("dragover", e => over(e, () => { unmark(); orbBar.classList.add("dropin"); const m = slot(e); if (m.el) { m.el.classList.add(m.after ? "dropa" : "dropb"); mark = m; } }));
+  orbBar.addEventListener("dragleave", e => { if (!(e.relatedTarget instanceof Node) || !orbBar.contains(e.relatedTarget)) unmark(); });
+  orbBar.addEventListener("drop", e => { const S_ = src(); if (!S_) return; e.preventDefault(); e.stopPropagation(); const m = slot(e); unmark();
+    const cur = TABS[TCUR]; let at = m.at; for (const p of S_.paths) { if (!PIDX.has(p)) continue; const ex = TABS.findIndex(t_ => t_.path === p); let t_ = { path: p };
+      if (ex >= 0) { t_ = TABS[ex]; TABS.splice(ex, 1); if (ex < at) at--; } TABS.splice(at, 0, t_); at++; }
+    TCUR = cur ? TABS.indexOf(cur) : -1; tabsSave(); if (TSORT) sortEnd(); orbKey = ""; syncOrbs(); dropDone(S_); });
+  const card = (o, side) => { if (!o || !o.el) return; o.el.addEventListener("dragover", e => over(e, () => { unmark(); o.el.classList.add("ivm-dropt"); }), true);
+    o.el.addEventListener("dragleave", e => { if (!(e.relatedTarget instanceof Node) || !o.el.contains(e.relatedTarget)) o.el.classList.remove("ivm-dropt"); }, true);
+    o.el.addEventListener("drop", e => { const S_ = src(); if (!S_ || !edOn()) return; e.preventDefault(); e.stopPropagation(); unmark(); const p = S_.paths.find(q => PIDX.has(q)); if (!p) return; const i = PIDX.get(p);
+      if (side === "left") { let j = TABS.findIndex(t_ => t_.path === p); if (j < 0) { j = TCUR >= 0 ? TCUR + 1 : TABS.length; TABS.splice(j, 0, { path: p }); tabsSave(); } tabDrop(j, "left"); }
+      else { SUPNEW = true; if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(i).then(() => { SUPNEW = false; }); }
+      dropDone(S_); }, true); };
+  card(EDS.left, "left"); card(EDS.right, "right");
+  doc.addEventListener("dragend", unmark, true);
+  /* a tab dragged in moves: it leaves Obsidian's tab bar, unless it's the last tab there */
+  function dropDone(S_){ if (S_.leaf && host.dragMoved) host.dragMoved(S_.leaf); } }
 let orbKey = "", orbDragged = false;
 function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".cardfoc"); if (fb) fb.setAttribute("aria-pressed", String(focus >= 0 && EDS.left.path != null && (PIDX.get(EDS.left.path) === focus || (HUDI >= 0 && HUDI === focus)))); } for (const o of [EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
   const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); const HO = holoOn(); orbBar.classList.toggle("holo", HO); if (!on) { orbKey = ""; return; } sortApply();
