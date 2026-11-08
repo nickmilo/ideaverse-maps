@@ -2220,3 +2220,12 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivm .ivm-orbs:not(.holo) .ivm-orb.dropa{box-shadow:3px 0 0 var(--accent)}
 /* the map behind the Holodeck, paused (0.9.56): no blur on the veil, the still map shows through as it was */
 .ivm.holo.holopause .ivm-holoveil{backdrop-filter:none}
+/* Display → Editors → Holodeck icon (0.9.58): a row of small icon buttons, the picked one lit in ink (a quiet choice) */
+.ivm .hoicons{display:flex;align-items:center;gap:8px}
+.ivm .hoicons .hoil{flex:none}
+.ivm .hoicons .hoibox{display:flex;gap:3px;margin-left:auto}
+.ivm .hoicons .hoib{appearance:none;display:flex;align-items:center;justify-content:center;width:24px;height:22px;padding:0;border:1px solid transparent;border-radius:6px;background:none;box-shadow:none;color:var(--muted);cursor:pointer}
+.ivm .hoicons .hoib svg{width:14px;height:14px}
+.ivm .hoicons .hoib:hover{color:var(--ink)}
+.ivm .hoicons .hoib[aria-pressed="true"]{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 55%,transparent)}
+.ivm .hoicons .hoib:focus,.ivm .hoicons .hoib:focus-visible{box-shadow:none;outline:none}
