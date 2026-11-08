@@ -588,7 +588,49 @@ function coordPlace(B, web){
   const HUES = ["#8fa6ff", "#ffb36b", "#7fe0c4", "#ff8fb1", "#c9a2ff", "#ffe07a", "#6fd3ff", "#ff9e7d", "#a6e37a", "#e7a6ff", "#7aa8ff", "#ffc7a0"];
   if (groups) groups.sort((p, q) => q[1].length - p[1].length).forEach(([k, mem], g) => { const [mx, my] = denseAt(mem.map(i => [SX[i], SY[i]]));
     const ds = mem.map(i => Math.hypot(SX[i] - mx, SY[i] - my)).sort((p, q) => p - q), r = Math.max(60, Math.min(520, ds[Math.floor(ds.length * .5)] || 60));
-    const b = { kind: "neb", coord: true, name: k.split("/").pop(), members: mem, x: mx - UC.x, y: my - UC.y, r, hue: HUES[g % HUES.length], seed: "coord" + k, id: B.length }; B.push(b); }); }
+    const b = { kind: "neb", coord: true, name: k.split("/").pop(), members: mem, x: mx - UC.x, y: my - UC.y, r, hue: HUES[g % HUES.length], seed: "coord" + k, id: B.length }; B.push(b); });
+  /* the art the coordinates call for (0.9.142): region bands coloured from the middle out, the routes as lines, a spiral behind */
+  let cx0 = 0, cy0 = 0; for (const i of pts) { cx0 += SX[i]; cy0 += SY[i]; } cx0 /= pts.length || 1; cy0 /= pts.length || 1;
+  const RAMP = ["#f4f1ea", "#ffd27a", "#ffa98f", "#ff8fb8", "#c9a2ff", "#8fd3e8", "#6fb2ff", "#5b8de6", "#4b6fc9", "#3d5aa8"];
+  const regs = (groups || []).map(([k, mem]) => { const pm = mem.filter(i => COORDV(i)); const d = pm.map(i => Math.hypot(SX[i] - cx0, SY[i] - cy0)).sort((p, q) => p - q); return { k, mem: pm, d: d.length ? d[d.length >> 1] : 1e9 }; }).filter(r_ => r_.mem.length);
+  regs.sort((p, q) => p.d - q.d); regs.forEach((r_, q) => { r_.col = RAMP[Math.min(RAMP.length - 1, Math.round(q * (RAMP.length - 1) / Math.max(1, regs.length - 1)))]; });
+  const isC = new Uint8Array(n); for (const i of pts) isC[i] = 1; const routes = [];
+  for (let i = 0; i < n; i++) { if (isC[i]) continue; const st = [...new Set(out[i])].filter(j => isC[j]); if (st.length < 3 || st.length > 80) continue;
+    /* along the stops' main axis (their first principal direction), so a long lane reads as one stroke, not a zigzag */
+    let mx = 0, my = 0; for (const j of st) { mx += SX[j]; my += SY[j]; } mx /= st.length; my /= st.length; let sxx = 0, syy = 0, sxy = 0; for (const j of st) { const dx = SX[j] - mx, dy = SY[j] - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
+    const th = .5 * Math.atan2(2 * sxy, sxx - syy), ux = Math.cos(th), uy = Math.sin(th); const path = st.slice().sort((p, q) => ((SX[p] - mx) * ux + (SY[p] - my) * uy) - ((SX[q] - mx) * ux + (SY[q] - my) * uy));
+    const P0 = path.map(j => [SX[j], SY[j]]), K = Math.max(1, Math.round(P0.length / 8)), P = P0.map((_, q) => { let x = 0, y = 0, c_ = 0; for (let z = Math.max(0, q - K); z <= Math.min(P0.length - 1, q + K); z++) { x += P0[z][0]; y += P0[z][1]; c_++; } return [x / c_, y / c_]; });   /* a running mean along the lane: a smooth stroke through where its stops lie */
+    P[0] = P0[0]; P[P.length - 1] = P0[P0.length - 1]; routes.push({ i, path, P, w: st.length }); }
+  routes.sort((p, q) => q.w - p.w); routes.forEach((r_, q) => { r_.major = q < 6; });
+  COORDART = { regs, routes, cx: cx0, cy: cy0, ver: -1 }; }
+let COORDART = null, COORDCV = null;
+/* one picture in map space, drawn once per layout: a spiral of faint dust round the middle, then each region as a soft band in its colour (a fine grid,
+   each cell given to the region whose notes are densest there, then blurred) */
+function buildCoordArt(){ const A = COORDART; if (!A || A.ver === starVer) return COORDCV; A.ver = starVer;
+  const ww = UB.x1 - UB.x0, wh = UB.y1 - UB.y0, gs = Math.min(1, 1600 / Math.max(ww, wh)); COORDCV ||= doc.createElement("canvas"); COORDCV.width = Math.ceil(ww * gs); COORDCV.height = Math.ceil(wh * gs);
+  const c = COORDCV.getContext("2d"), gx = x => (x - UB.x0) * gs, gy = y => (y - UB.y0) * gs; c.clearRect(0, 0, COORDCV.width, COORDCV.height);
+  let R = 0; for (const r_ of A.regs) for (const i of r_.mem) R = Math.max(R, Math.hypot(SX[i] - A.cx, SY[i] - A.cy)); R = R || 1000;
+  /* the spiral: two arms of dust, turning out past the regions */
+  c.globalCompositeOperation = "lighter"; let a_ = 97; const rnd = () => { a_ = (a_ * 16807) % 2147483647; return a_ / 2147483647; };
+  for (let q = 0; q < 16000; q++) { const arm = q % 3, t = Math.pow(rnd(), .85), r = R * (.1 + 1.2 * t), ang = arm * 2.0944 + 5.2 * Math.log(1 + 2.2 * t) + (rnd() - .5) * (.35 + .25 * t), sp = R * .035 * (rnd() - .5);
+    const x = A.cx + Math.cos(ang) * r + sp, y = A.cy + Math.sin(ang) * r + sp, s = (.6 + rnd() * 1.6) * Math.max(1, gs * 4); c.globalAlpha = (.06 + .14 * rnd()) * (1.25 - .55 * t); c.fillStyle = rnd() < .55 ? "#5fd0d8" : rnd() < .5 ? "#7f9cff" : "#cfe6ff"; c.beginPath(); c.arc(gx(x), gy(y), s, 0, 6.2832); c.fill(); }
+  c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
+  /* the bands */
+  const cell = 30, nx = Math.ceil(ww / cell), ny = Math.ceil(wh / cell), dens = A.regs.map(() => new Float32Array(nx * ny)), rad = 4;
+  A.regs.forEach((r_, q) => { const D = dens[q]; for (const i of r_.mem) { const ix = Math.floor((SX[i] - UB.x0) / cell), iy = Math.floor((SY[i] - UB.y0) / cell);
+    for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) { const x = ix + dx, y = iy + dy; if (x < 0 || y < 0 || x >= nx || y >= ny) continue; const w = Math.exp(-(dx * dx + dy * dy) / 8); D[y * nx + x] += w; } } });
+  const band = doc.createElement("canvas"); band.width = COORDCV.width; band.height = COORDCV.height; const bc = band.getContext("2d");
+  for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) { let best = -1, bv = .35; for (let q = 0; q < dens.length; q++) { const v = dens[q][y * nx + x]; if (v > bv) { bv = v; best = q; } } if (best < 0) continue;
+    bc.globalAlpha = Math.min(.5, .16 + bv * .04); bc.fillStyle = A.regs[best].col; bc.fillRect(Math.floor(x * cell * gs), Math.floor(y * cell * gs), Math.ceil(cell * gs) + 1, Math.ceil(cell * gs) + 1); }
+  c.filter = `blur(${Math.max(3, cell * gs * 1.4)}px)`; c.drawImage(band, 0, 0); c.filter = "none"; return COORDCV; }
+function drawCoordArt(bgDim){ const cvA = buildCoordArt(); if (!cvA) return; ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = Math.min(1, .9 * Math.max(.35, bgDim));
+  ctx.drawImage(cvA, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0) * k, (UB.y1 - UB.y0) * k); ctx.globalAlpha = 1; }
+/* the routes, bright and thin over the bands, a soft glow under each; drawn every frame so they stay sharp at any zoom */
+function drawCoordRoutes(bgDim){ const A = COORDART; if (!A || !A.routes.length) return; ctx.save(); ctx.lineJoin = "round"; ctx.lineCap = "round";
+  const smooth = (path, PW) => { const P = PW.map(([x, y]) => [sx(x), sy(y)]); ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for (let q = 1; q < P.length - 1; q++) { const mx = (P[q][0] + P[q + 1][0]) / 2, my = (P[q][1] + P[q + 1][1]) / 2; ctx.quadraticCurveTo(P[q][0], P[q][1], mx, my); } const L = P[P.length - 1]; ctx.lineTo(L[0], L[1]); };
+  for (const major of [false, true]) for (const [lw, al] of major ? [[6, .08], [1.6, .7]] : [[1, .13]]) { ctx.lineWidth = lw; ctx.strokeStyle = `rgba(255,255,255,${al * Math.max(.4, bgDim)})`;
+    for (const r_ of A.routes) { if (r_.major !== major || !vis[r_.i]) continue; smooth(r_.path, r_.P); ctx.stroke(); } }
+  ctx.restore(); }
 const UC = {x: WW/2, y: WH/2};
 const SADJ = Array.from({length:n}, () => []);
 for (const [a,b,t] of E) if ((t <= 1 || t === 4) && !ARCH[a] && !ARCH[b]) { SADJ[a].push(b); SADJ[b].push(a); }
@@ -706,7 +748,7 @@ function layoutStars(){
         lx += g1*wdt; ly += g2*wdt; const m = Math.hypot(lx, ly), soft = .75*b.r; if (m > soft) { const m2 = soft + (b.r - soft)*(1 - Math.exp(-(m - soft)/(b.r - soft))); lx *= m2/m; ly *= m2/m; }   // past three-quarters out, ease toward the edge instead of piling up on it
         SX[i] = UC.x + b.x + lx; SY[i] = UC.y + b.y + ly; continue; }
     } }
-  if (coordOn()) coordPlace(B, web);
+  COORDART = null; if (coordOn()) coordPlace(B, web);
   for (let i=0;i<n;i++) { const lv = N[i].level;
     SR[i] = (lv === 5 ? 3.4 + Math.min(N[i].score, 30)*.08 : lv === 4 ? 2.4 : lv === 3 ? 1.6 : lv === 2 ? 1 + Math.min(N[i].score, 5)*.1 : .8) * (ARCH[i] ? .85 : 1); }
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -800,12 +842,13 @@ function starsBg(){
   const bgDim = (sel >= 0 ? .22 : focus >= 0 ? .7 : 1)*GLOWF();   // a selected note dims the galaxies so its links read clearly
   if (S3D) { halos3D(bgDim); if (chx("gas")) chartGas(bgDim); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; galNames(); return; }
   buildGlow();
+  if (coordOn() && COORDART) drawCoordArt(bgDim);
   ctx.globalCompositeOperation = "lighter";
   for (let a = bgDim; a > .001; a -= 1) { ctx.globalAlpha = Math.min(1, a); ctx.drawImage(GLOW, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
   const wf = Math.max(0, Math.min(1, (.7 - k)/.45));   // the cosmic web fades out as you zoom into a galaxy
   if (wf > 0 && showAll) { ctx.globalAlpha = wf*bgDim; ctx.drawImage(WEB, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
   if (chx("gas")) chartGas(bgDim);
-  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; galNames();
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; if (coordOn() && COORDART) drawCoordRoutes(bgDim); galNames();
 }
 // Starfield: galaxy names sit behind everything but the Linking Your Thinking mark (0.8.19): drawn with the sky, before links, stars and note names
 const galNames = () => { if (view !== "stars" || expOn() || domeOn()) return; LH = []; ctx.save(); starLabels(); ctx.restore(); };
@@ -843,7 +886,7 @@ function starLabels(){
   ctx.textAlign = "center"; ctx.textBaseline = "top";
   const hasLS = "letterSpacing" in ctx, taken = [];
   for (const b of [...BODIES].sort((p,q2) => q2.r - p.r)) {
-    if (b.kind === "home" || (b.kind === "dwarf" && b.members.length < 12) || !galLabelOn(b)) continue;
+    if (b.kind === "home" || b.coord || (b.kind === "dwarf" && b.members.length < 12) || !galLabelOn(b)) continue;   /* placed by coordinates: the region notes name the regions */
     let any = false; for (const i of b.members) if (VV(i)) { any = true; break; } if (!any) continue;
     const [bpx, bpy] = bodyPos(b), cx = sx(bpx), cy = sy(bpy), rr = b.r*k*(S3D && B3[b.id] ? B3[b.id].s*B3[b.id].flatK : 1), y = cy + rr*Math.max(b.q || 1, .55)*.92 + 8;
     if (cx < -200 || cx > W + 200 || y < -20 || y > H + 20) continue;
