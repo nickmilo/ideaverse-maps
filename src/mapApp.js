@@ -6146,12 +6146,18 @@ const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; 
     const L = os[os.length - 1]; return L ? { el: L, at: TABS.length, after: true } : { el: null, at: TABS.length, after: true }; };
   const quiet = () => { if (host.dragQuiet) host.dragQuiet(); };
   const over = (e, fn) => { const S_ = src(); if (!S_ || !edOn()) return; e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = S_.leaf ? "move" : "copy"; quiet(); fn(); };
-  orbBar.addEventListener("dragover", e => over(e, () => { unmark(); orbBar.classList.add("dropin"); const m = slot(e); if (m.el) { m.el.classList.add(m.after ? "dropa" : "dropb"); mark = m; } }));
+  const orbOver = e => over(e, () => { unmark(); orbBar.classList.add("dropin"); const m = slot(e); if (m.el) { m.el.classList.add(m.after ? "dropa" : "dropb"); mark = m; } });
+  orbBar.addEventListener("dragover", orbOver);
+  /* in the Holodeck the whole tab column takes a drop, not only the tabs themselves (0.9.81, Nick: "anywhere in the vertical tab bar"): from the top of the column down to the Sort box, its full width */
+  const inCol = e => { if (!holoOn() || orbBar.contains(e.target)) return false; const r = orbBar.getBoundingClientRect(), rr = root.getBoundingClientRect(), op = root.querySelector(".ivm-holoop"), bot = op && !op.hidden && op.getBoundingClientRect().height ? op.getBoundingClientRect().top : rr.bottom; return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= bot; };
+  root.addEventListener("dragover", e => { if (inCol(e)) orbOver(e); }, true);
+  root.addEventListener("drop", e => { if (inCol(e)) orbDrop(e); }, true);
   orbBar.addEventListener("dragleave", e => { if (!(e.relatedTarget instanceof Node) || !orbBar.contains(e.relatedTarget)) unmark(); });
-  orbBar.addEventListener("drop", e => { const S_ = src(); if (!S_) return; e.preventDefault(); e.stopPropagation(); const m = slot(e); unmark();
+  const orbDrop = e => { const S_ = src(); if (!S_) return; e.preventDefault(); e.stopPropagation(); const m = slot(e); unmark();
     const cur = TABS[TCUR]; let at = m.at; for (const p of S_.paths) { if (!PIDX.has(p)) continue; const ex = TABS.findIndex(t_ => t_.path === p); let t_ = { path: p };
       if (ex >= 0) { t_ = TABS[ex]; TABS.splice(ex, 1); if (ex < at) at--; } TABS.splice(at, 0, t_); at++; }
-    TCUR = cur ? TABS.indexOf(cur) : -1; tabsSave(); if (TSORT) sortEnd(); orbKey = ""; syncOrbs(); dropDone(S_); });
+    TCUR = cur ? TABS.indexOf(cur) : -1; tabsSave(); if (TSORT) sortEnd(); orbKey = ""; syncOrbs(); dropDone(S_); };
+  orbBar.addEventListener("drop", orbDrop);
   const card = (o, side) => { if (!o || !o.el) return; o.el.addEventListener("dragover", e => over(e, () => { unmark(); o.el.classList.add("ivm-dropt"); }), true);
     o.el.addEventListener("dragleave", e => { if (!(e.relatedTarget instanceof Node) || !o.el.contains(e.relatedTarget)) o.el.classList.remove("ivm-dropt"); }, true);
     o.el.addEventListener("drop", e => { const S_ = src(); if (!S_ || !edOn()) return; e.preventDefault(); e.stopPropagation(); unmark(); const p = S_.paths.find(q => PIDX.has(q)); if (!p) return; const i = PIDX.get(p);
