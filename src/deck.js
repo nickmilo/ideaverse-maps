@@ -478,7 +478,7 @@ export class RecentsPaneView extends LinksPaneView {
   getViewType() { return RECENTS_TYPE; }
   getDisplayText() { return "Recents"; }
   getIcon() { return "history"; }
-  opt(k) { const v = this.plugin.store.get("iv-recents-" + k); return v == null ? k === "age" : v === true; }   /* time since modified on; every other Show switch off */
+  opt(k) { const v = this.plugin.store.get("iv-recents-" + k); return v == null ? k === "age" || k === "emo" : v === true; }   /* time since modified and emojis on (emojis: 0.9.135, Nick); every other Show switch off */
   title(p) { const f = this.file(p); return !f ? "" : f.extension === "md" ? f.basename : f.name; }   /* a non-note keeps its extension, as a base shows it (0.9.125) */
   showPv(path, anchor) { if (/\.md$/i.test(path)) super.showPv(path, anchor); }
   setLOpt(k, v) { this.plugin.store.set("iv-recents-" + k, v); for (const l of this.app.workspace.getLeavesOfType(RECENTS_TYPE)) if (l.view instanceof RecentsPaneView) l.view.render(); }
