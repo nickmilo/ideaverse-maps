@@ -482,7 +482,7 @@ export class RecentsPaneView extends LinksPaneView {
   render() { const box = this.contentEl; if (!box) return; box.empty(); this.ensureGraph(); const cur = this.cur, D = box.ownerDocument;
     const ex = ((this.plugin.settings && this.plugin.settings.exclude) || []).map(x => String(x).replace(/\/+$/, "")).filter(Boolean), HIDF = (v => Array.isArray(v) ? v : [])(this.plugin.store.get("iv-recents-hidef"));
     const dirOf = p => p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "", under = (p, L) => { const d = dirOf(p); return L.some(h => d === h || d.startsWith(h + "/")); };
-    const all = this.app.vault.getMarkdownFiles().filter(f => !under(f.path, ex)).sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, 200), files = all.filter(f => !under(f.path, HIDF)).slice(0, 100);
+    const all = this.app.vault.getMarkdownFiles().filter(f => !under(f.path, ex)).sort((a, b) => b.stat.mtime - a.stat.mtime), files = all.filter(f => !under(f.path, HIDF)).slice(0, 100);   /* every note feeds the folder filter, and the 100 shown are the newest that pass it, as a base fills its limit (0.9.123, Nick) */
     const hd = box.createDiv({ cls: "ivd-lkhd" }); const hc = hd.createSpan({ cls: "ivd-h", text: `◷ RECENTS · ${files.length}` });
     const qOpen = this.qOpen || !!this.q, sk = hd.createEl("button", { cls: "ivd-lksb" + (qOpen ? " on" : ""), attr: { type: "button", "aria-description": "Search recents" } }); setIcon(sk, "search");
     const qi = hd.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search recents", spellcheck: "false" } }); qi.value = this.q; qi.hidden = !qOpen;
