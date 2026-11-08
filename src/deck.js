@@ -356,19 +356,24 @@ export class LinksPaneView extends DeckView {
       const it_ = (k, t, hint, dis) => m.addItem(it => { const f = D.createDocumentFragment(), sp = D.createElement("span"); sp.className = "ivd-mh"; if (typeof t === "string") sp.append(t); else t(sp); if (hint) { const h = D.createElement("span"); h.className = "ivd-mhx"; hint(h); sp.append("\u2002", h); }   /* an en space too, so the sample never touches the words even where the menu's styles differ */ f.append(sp); it.setTitle(f).setChecked(dis ? false : this.opt(k)); if (dis) it.setDisabled(true); else it.onClick(() => this.setLOpt(k, !this.opt(k))); });
       const tx = (h, s_, c) => { const x = D.createElement("span"); x.className = c || ""; x.textContent = s_; h.append(x); return x; };
       const orbS = (h, L_) => { const o = D.createElement("span"); o.className = "ivd-orb lv" + L_; const g_ = LVGRAD[L_]; o.style.setProperty("--o0", g_[0]); o.style.setProperty("--o1", g_[1]); h.append(o); };
-      /* left to right along a row: arrows, orb, emoji, color, score (0.9.85, Nick) */
-      it_("arr", "Show in-link/out-links", h => tx(h, "← → ↔", "ivd-mha"));   /* Nick's name for it (0.9.83) */
+      /* three mini headers for where on a row each switch shows (0.9.88, Nick): LEFT arrows, orbs, emojis; MIDDLE the name's color; RIGHT the score column.
+         A sort's own number joins RIGHT; Idea Emergence's headers get a LIST section of their own */
+      const hd_ = t => m.addItem(it => { const f = D.createDocumentFragment(), x = D.createElement("span"); x.className = "ivd-mlab"; x.textContent = t; f.append(x); it.setTitle(f); if (typeof it.setIsLabel === "function") it.setIsLabel(true); else it.setDisabled(true); });
+      const TAKEN = ((SO === "lvl" || SO === "remg") && this.opt("lsc")) || (MOD && this.opt("age")) || (CRE && this.opt("cage"));
+      hd_("Left");
+      it_("arr", "Show inlink/outlink arrows", h => tx(h, "← → ↔", "ivd-mha"));   /* Nick's name (0.9.88) */
       it_("orb", "Show Idea Emergence orbs", h => { orbS(h, 5); orbS(h, 4); orbS(h, 3); });
       it_("emo", "Show emojis", h => tx(h, "✨"));
+      m.addSeparator(); hd_("Middle");
       it_("col", sp => { sp.append("Show "); tx(sp, "Idea", "ivd-mc-upp"); sp.append(" "); tx(sp, "Emergence", "ivd-mc-rel"); sp.append(" "); tx(sp, "link", "ivd-mc-up"); sp.append(" "); tx(sp, "colors", "ivd-mc-down"); });
-      /* the score column holds one thing: while link score or a time fills it, relevance shows unchecked and greyed (its own setting kept for later) (0.9.87, Nick) */
-      const TAKEN = ((SO === "lvl" || SO === "remg") && this.opt("lsc")) || (MOD && this.opt("age")) || (CRE && this.opt("cage"));
+      m.addSeparator(); hd_("Right");
+      /* the score column holds one thing: while link score or a time fills it, relevance shows unchecked and greyed, its own setting kept (0.9.87, Nick) */
       it_("rel", "Show relevance scores", h => tx(h, "82", "ivd-mhn"), TAKEN);
-      /* a sort's own switch goes last, under a thin line, so it reads as new for this order (0.9.79, Nick); headers only while sorted by Idea Emergence (0.9.73) */
-      const EMG = SO === "lvl" || SO === "remg"; if (EMG || MOD || CRE) m.addSeparator();
-      if (SO === "lvl") it_("lvh", "Show Idea Emergence headers", h => tx(h, "LEVEL 5", "ivd-mhh"));
+      const EMG = SO === "lvl" || SO === "remg";
       if (EMG) it_("lsc", "Show link score", h => tx(h, "9.9", "ivd-mhn"));   /* the score that sets each note's level, in place of relevance (0.9.80, Nick) */
-      if (MOD) it_("age", "Show time since modified", h => tx(h, "6d", "ivd-mhn")); if (CRE) it_("cage", "Show time since created", h => tx(h, "3y", "ivd-mhn"));   /* each offered only while its sort is on (0.9.66, Nick) */ m.showAtMouseEvent(e); };
+      if (MOD) it_("age", "Show time since modified", h => tx(h, "6d", "ivd-mhn")); if (CRE) it_("cage", "Show time since created", h => tx(h, "3y", "ivd-mhn"));   /* each offered only while its sort is on (0.9.66) */
+      if (SO === "lvl") { m.addSeparator(); hd_("List"); it_("lvh", "Show Idea Emergence headers", h => tx(h, "LEVEL 5", "ivd-mhh")); }   /* only while sorted by Idea Emergence (0.9.73) */
+      m.showAtMouseEvent(e); };
     const G = this.G, fi = p => this.file(p), lv = p => { const n_ = G && G.idx.get(p); return n_ ? [n_.level || 0, n_.score || 0] : [0, 0]; }, sc0 = new Map(ls.map(l => [l.p, l.s]));
     const cmp = {
       rel: (a, b) => (sc0.get(b) || 0) - (sc0.get(a) || 0) || this.title(a).localeCompare(this.title(b)),
