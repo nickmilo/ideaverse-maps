@@ -2408,3 +2408,5 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd.ivd-links .ivd-row .ivd-n{font-size:10.75px}
 /* 0.9.129, Nick: the panes looked darker than Backlinks beside them in Soft Paper. .ivd (the Mini Deck) paints --background-secondary; a pane in Obsidian's sidebar shows whatever the theme gives its views */
 .ivd.ivd-links{background:transparent}
+/* 0.9.130, Nick: a little less gap between the Recents and Links HUDs. Recents (paired) ends 10px closer under its last row, so Links rides up with it; the two shapes still don't touch */
+.ivm .ivm-recents.paired:not(.ivm-lkhud){padding-bottom:12px}
