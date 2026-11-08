@@ -2311,8 +2311,8 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-lkqh{margin-left:12px}
 .ivd-links .ivd-lkqh-ph{visibility:hidden;border:0}
 /* the header's icons at Obsidian's own icon color, not faint: they're working controls (0.9.99, Nick: Display "so muted") */
-.ivd-links .ivd-lksort{color:var(--icon-color,var(--text-muted));opacity:var(--icon-opacity,.85)}
-.ivd-links .ivd-lksort:hover{color:var(--icon-color-hover,var(--text-normal));opacity:1}
+.ivd-links .ivd-lksort{color:var(--text-muted);opacity:.85}
+.ivd-links .ivd-lksort:hover{color:var(--text-normal);opacity:1}
 .ivd-links .ivd-lkqh{opacity:.85;color:var(--icon-color,var(--text-muted));border-color:currentColor}
 .ivd-links .ivd-lksb{opacity:.7;color:var(--icon-color,var(--text-muted))}
 /* group headers: a touch bigger, the count quiet beside the name (0.9.101, Nick: "Quiet number… a little bit bigger") */
@@ -2385,3 +2385,8 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivm .hudsortrow .seg{flex-wrap:nowrap;white-space:nowrap}   /* the three orders on one line (0.9.118) */
 /* the Recents pane (0.9.120): the note you're in, marked as in the Recents HUD */
 .ivd-links.ivd-recents .ivd-row.ivd-cur{background:color-mix(in srgb,var(--ivd-acc) 14%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ivd-acc) 45%,transparent)}
+
+/* 0.9.121: a pane in the top-right corner of the right sidebar sits inside .mod-top-right-space, and Soft Paper paints every .clickable-icon there cream (meant for its blue tab header), so Sort, Filter and Display vanished on paper in the Recents pane. Our own colors, specific enough to hold. */
+.ivd.ivd-links .ivd-lkhd .ivd-lksort{color:var(--text-muted);--icon-color:var(--text-muted);--icon-color-hover:var(--text-normal);--icon-color-focused:var(--text-muted)}
+.ivd.ivd-links .ivd-lkhd .ivd-lksort:hover,.ivd.ivd-links .ivd-lkhd .ivd-lksort.is-active{color:var(--text-normal)}
+.ivd.ivd-links .ivd-lkhd .ivd-lksort[aria-pressed="true"]{color:var(--ivd-up)}
