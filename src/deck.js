@@ -203,7 +203,7 @@ export class DeckView extends ItemView {
     if (right) r.createSpan({ cls: "ivd-n", text: right });
     r.onclick = e => { e.preventDefault(); if (e.metaKey || e.ctrlKey) this.openSupport(path); else this.openPrimary(path); };
     r.addEventListener("mouseenter", e => { this.hovPath = path; this.hovEl = r; if (e.metaKey || e.ctrlKey) this.showPv(path, r); });
-    r.addEventListener("mouseleave", () => { if (this.hovEl === r) { this.hovPath = null; this.hovEl = null; } window.setTimeout(() => this.hidePv(), 120); });
+    r.addEventListener("mouseleave", () => { if (this.hovEl === r) { this.hovPath = null; this.hovEl = null; } window.setTimeout(() => { if (this.pvEl && this.pvEl.dataset.path === path) this.hidePv(); }, 120); });   /* only this row's card: moving on with ⌘ held keeps the next one (0.9.111, Nick) */
     r.addEventListener("dragstart", e => { e.dataTransfer.setData("text/ivd-path", path); e.dataTransfer.effectAllowed = "copy"; this.contentEl.addClass("ivd-dragging"); });
     r.addEventListener("dragend", () => this.contentEl.removeClass("ivd-dragging")); return r; }
   hud(box, path, mini, linksOnly) { box.empty(); const rh = linksOnly ? null : box.createDiv({ cls: "ivd-h", text: "◷ RECENTS" });
@@ -320,7 +320,7 @@ export class LinksPaneView extends DeckView {
     pv.createDiv({ cls: "ivd-pvt", text: this.title(path) });
     /* a plain line under the title says what the card is showing (0.9.109, Nick) */
     const outOnly = !hit && !fmHit && cur && fc !== undefined && !!(mc.resolvedLinks[cur] || {})[path];
-    pv.createDiv({ cls: "ivd-pvsub", text: hit ? "Links to the active note here" : fmHit ? `Linked in the ${String(fmHit.key).split(".")[0]} property` : outOnly ? "The active note links to this note" : "" });
+    pv.createDiv({ cls: "ivd-pvsub", text: hit ? "Links to the active note at the spot below." : fmHit ? `Links to the active note via the ${String(fmHit.key).split(".")[0]} property.` : outOnly ? "The active note links to this note." : "" });   /* Nick's wording (0.9.111) */
     const body = pv.createDiv({ cls: "ivd-pvb markdown-rendered" });
     if (f) void this.app.vault.cachedRead(f).then(t => { if (!pv.isConnected) return; let md;
       if (hit && hit.position) { const lines = t.split(/\r?\n/), L = hit.position.start.line; let a = L, b = L; while (a > 0 && lines[a - 1].trim() !== "" && L - a < 2) a--; while (b < lines.length - 1 && lines[b + 1].trim() !== "" && b - L < 8) b++; md = lines.slice(Math.max(0, a), b + 1).join("\n"); if (a > 0) md = "…\n\n" + md; }
