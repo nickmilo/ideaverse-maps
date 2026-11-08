@@ -199,7 +199,7 @@ export class DeckView extends ItemView {
     pv.addEventListener("mouseleave", () => { if (!this.pvDrag) this.hidePv(); });
     pv.onclick = e => { if (e.metaKey || e.ctrlKey) this.openSupport(path); else this.openPrimary(path); this.hidePv(true); }; }
   hidePv(force) { const pv = this.pvEl; if (!pv) return; if (!force && (this.pvDrag || pv.matches(":hover"))) return; pv.remove(); this.pvEl = null; }
-  row(box, path, a, col, right) { const r = box.createEl("button", { cls: "ivd-row", attr: { type: "button", draggable: "true" } });
+  row(box, path, a, col, right) { const r = box.createEl("button", { cls: "ivd-row", attr: { type: "button", draggable: "true" } }); r.dataset.path = path;
     if (a) r.createSpan({ cls: "ivd-a", text: a }); const t = r.createSpan({ cls: "ivd-t", text: this.title(path) }); t.style.setProperty("--c", col || "var(--ivd-link)");
     if (right) r.createSpan({ cls: "ivd-n", text: right });
     r.onclick = e => { e.preventDefault(); if (e.metaKey || e.ctrlKey) this.openSupport(path); else this.openPrimary(path); };
@@ -280,14 +280,20 @@ export class LinksPaneView extends DeckView {
   getState() { return {}; }
   async setState(state, result) { await ItemView.prototype.setState.call(this, state, result); this.render(); }
   async onOpen() { this.contentEl.empty(); this.contentEl.addClass("ivd", "ivd-links");
-    const follow = () => { const f = this.app.workspace.getActiveFile(); if (f && f.extension === "md" && f.path !== this.cur) { this.cur = f.path; this.render(); } };
+    const follow = () => { const f = this.app.workspace.getActiveFile(); if (f && f.extension === "md" && f.path !== this.cur) { this.cur = f.path; this.followed(); } };
     this.registerEvent(this.app.workspace.on("file-open", follow)); this.registerEvent(this.app.workspace.on("active-leaf-change", follow));
-    this.registerEvent(this.app.metadataCache.on("resolved", () => this.soon()));
+    this.registerEvent(this.app.metadataCache.on("changed", f => this.noteChanged(f))); this.registerEvent(this.app.metadataCache.on("resolved", () => this.onResolved()));
+    this.registerEvent(this.app.vault.on("delete", f => { if (f && (f.path === this.cur || this.rowSet && this.rowSet.has(f.path))) this.soon(); }));
     this.registerEvent(this.app.vault.on("rename", (f, old) => { if (this.cur === old) { this.cur = f.path; this.render(); } }));
     const D = this.contentEl.ownerDocument;
     this.registerDomEvent(D, "keydown", e => { if ((e.key === "Meta" || e.key === "Control") && this.hovPath) this.showPv(this.hovPath, this.hovEl); });
     this.registerDomEvent(D, "keyup", e => { if (e.key === "Meta" || e.key === "Control") this.hidePv(); });
     follow(); this.render(); }
+  /* cheaper (0.9.137, Nick): a save redraws the pane only when it can change this note's links: the note itself, a note listed here, or a note that now links here */
+  followed() { this.render(); }
+  noteChanged(f) { const p = f && f.path; if (!p || !this.cur) return; if (p === this.cur || this.rowSet && this.rowSet.has(p)) { this.linkDirty = true; return; }
+    const c = this.app.metadataCache.getFileCache(f) || {}, mc = this.app.metadataCache; for (const l of [...(c.links || []), ...(c.embeds || []), ...(c.frontmatterLinks || [])]) { const d = mc.getFirstLinkpathDest(String(l.link || "").split("#")[0].split("|")[0], p); if (d && d.path === this.cur) { this.linkDirty = true; return; } } }
+  onResolved() { if (this.linkDirty || !this.rowSet) { this.linkDirty = false; this.soon(); } }
   /* when a note was made (0.9.69, Nick: "Always, always, always go by the created property"): the map's own date for it (Settings → created properties, then a date in
      its name, then the file), else the note's created property read the same way, else the file's creation time */
   createdMs(p) { const n_ = this.G && this.G.idx.get(p); if (n_ && /^\d{4}-\d{2}-\d{2}$/.test(n_.date || "")) return Date.parse(n_.date);
@@ -317,7 +323,7 @@ export class LinksPaneView extends DeckView {
   soon() { window.clearTimeout(this.soonT); this.soonT = window.setTimeout(() => this.render(), 400); }
   /* relevance as the Links HUD scores it (0.9.65, Nick saw the two disagree): the map's relFrom, a walk from this note along weighted links that keeps coming home
      (personalized PageRank, 24 rounds, 20% home), up and related weighted double, tempered by how linked a note is, then up ×3 and related ×1.6; 100 for the closest */
-  relFrom(path) { const G = this.G; if (!G || !G.g) return null; if (G.relP === path) return G.relV;
+  relFrom(path) { const G = this.G; if (!G || !G.g) return null; if (G.relP === path) return G.relV; if (!G.relC) G.relC = new Map(); { const c_ = G.relC.get(path); if (c_) { G.relP = path; G.relV = c_; return c_; } }   /* each note's relevance kept once worked out (the graph is fixed until it reloads), the last 40 (0.9.137) */
     if (!G.R) { const ns = G.g.nodes, n = ns.length, ix = new Map(ns.map((d, q) => [d.id, q])), nb = Array.from({ length: n }, () => []), wt = Array.from({ length: n }, () => []), sw = new Float64Array(n), P_ = new Map();
       const wOf = t => t === 1 || t === 4 ? 2 : t === 5 ? .6 : t === 2 ? .5 : 1;
       for (const [a0, b0, t] of G.g.edges) { const a = ix.get(a0), b = ix.get(b0); if (a == null || b == null || t === 3 || a === b || ns[a].archived || ns[b].archived) continue; const lo = Math.min(a, b), hi = Math.max(a, b), k_ = lo * n + hi; let o = P_.get(k_); if (!o) P_.set(k_, o = { lo, hi, w: 0, f: 0 }); o.w += wOf(t); o.f |= a === lo ? 1 : 2; }
@@ -329,7 +335,7 @@ export class LinksPaneView extends DeckView {
     /* as the map does it, once per link between the two (its loop runs over out[a] and inn[a], so a note linked both ways gets the boost twice) */
     const ns = G.g.nodes, aid = ns[a].id, cnt = new Map(); for (const [a0, b0] of G.g.edges) { if (a0 === aid && b0 !== aid) cnt.set(b0, (cnt.get(b0) || 0) + 1); else if (b0 === aid && a0 !== aid) cnt.set(a0, (cnt.get(a0) || 0) + 1); }
     for (const [q, v] of out) { const c_ = cnt.get(ns[q].id); if (!c_) continue; const p = ns[q].path, k1 = G.ek.get(path + "\u0000" + p), kk = k1 ?? G.ek.get(p + "\u0000" + path); if (kk === 1 && k1 === 1) out.set(q, v * Math.pow(3, c_)); else if (kk === 4) out.set(q, v * Math.pow(1.6, c_)); }
-    const byP = new Map(); for (const [q, v] of out) byP.set(ns[q].path, v); G.relP = path; G.relV = byP; return byP; }
+    const byP = new Map(); for (const [q, v] of out) byP.set(ns[q].path, v); G.relP = path; G.relV = byP; G.relC.set(path, byP); if (G.relC.size > 40) G.relC.delete(G.relC.keys().next().value); return byP; }
   linksOf(path) { const rows = super.linksOf(path), rv = this.relFrom(path); if (!rv) return rows; for (const x of rows) x.r = rv.get(x.p) || 0;
     const mx = Math.max(1e-12, ...rows.map(x => x.r)); for (const x of rows) x.s = Math.round(100 * x.r / mx); return rows; }
   /* the pane's own Display (0.9.64, Nick): relevance scores, link colors, Idea Emergence headers, emojis, time since modified; shared by every Links pane */
@@ -369,7 +375,7 @@ export class LinksPaneView extends DeckView {
     const lsAll = this.linksOf(path), { own, back } = this.propGroups(path);
     /* Filter → folders (0.9.110, Nick: "all I need right now is just the ability to deselect specific folders"): a hidden folder hides its notes and everything under it */
     const HIDF = (v => Array.isArray(v) ? v : [])(this.plugin.store.get("iv-links-hidef")), dirOf = p => p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "", hidden = p => { const d = dirOf(p); return HIDF.some(h => d === h || d.startsWith(h + "/")); };
-    const ls = lsAll.filter(l => !hidden(l.p)); for (const m of [own, back]) for (const [k, set] of m) { for (const x of [...set]) if (hidden(x)) set.delete(x); if (!set.size) m.delete(k); }
+    const ls = lsAll.filter(l => !hidden(l.p)); this.rowSet = new Set(lsAll.map(l => l.p)); for (const m of [own, back]) for (const [k, set] of m) { for (const x of [...set]) if (hidden(x)) set.delete(x); if (!set.size) m.delete(k); }
     /* collections join the other links under Obsidian's six sorts; only Relevance and Idea Emergence keep them in their own group (0.9.68, Nick) */
     const SO0 = this.plugin.store.get("iv-links-sort"), MC = new Set(), MP = new Set();
     if (SO0 && SO0 !== "rel" && SO0 !== "remg") {   /* Idea Emergence merges them too: a clean list (0.9.116, Nick); Relative Emergence and Relevance keep the groups */ const ck0 = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
@@ -483,11 +489,15 @@ export class RecentsPaneView extends LinksPaneView {
   showPv(path, anchor) { if (/\.md$/i.test(path)) super.showPv(path, anchor); }
   setLOpt(k, v) { this.plugin.store.set("iv-recents-" + k, v); for (const l of this.app.workspace.getLeavesOfType(RECENTS_TYPE)) if (l.view instanceof RecentsPaneView) l.view.render(); }
   async onOpen() { await super.onOpen(); this.contentEl.addClass("ivd-recents");
-    for (const ev of ["modify", "create", "delete", "rename"]) this.registerEvent(this.app.vault.on(ev, () => this.soon())); }
+    this.registerEvent(this.app.vault.on("modify", f => this.touched(f))); for (const ev of ["create", "delete", "rename"]) this.registerEvent(this.app.vault.on(ev, () => this.soon())); }
+  /* cheaper (0.9.137): links don't change Recents, a note switch only moves the highlight, and saving the note already at the top only refreshes its time */
+  noteChanged() {} onResolved() {}
+  followed() { const box = this.contentEl; if (!box.querySelector(".ivd-row")) { this.render(); return; } for (const r of box.querySelectorAll(".ivd-row")) r.toggleClass("ivd-cur", r.dataset.path === this.cur); }
+  touched(f) { const r = this.contentEl.querySelector(".ivd-lklist .ivd-row"); if (f && this.topPath === f.path && r && r.dataset.path === f.path) { const n = r.querySelector(".ivd-n"); if (n && this.opt("age")) n.setText(this.age(f.stat.mtime)); return; } this.soon(); }
   render() { const box = this.contentEl; if (!box) return; this.keepScroll(box, "recents"); box.empty(); this.ensureGraph(); const cur = this.cur, D = box.ownerDocument;
     const ex = ((this.plugin.settings && this.plugin.settings.exclude) || []).map(x => String(x).replace(/\/+$/, "")).filter(Boolean), HIDF = (v => Array.isArray(v) ? v : [])(this.plugin.store.get("iv-recents-hidef"));
     const dirOf = p => p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "", under = (p, L) => { const d = dirOf(p); return L.some(h => d === h || d.startsWith(h + "/")); };
-    const all = this.app.vault.getFiles().filter(f => !under(f.path, ex)).sort((a, b) => b.stat.mtime - a.stat.mtime), files = all.filter(f => !under(f.path, HIDF)).slice(0, 100);   /* every file (images, PDFs, canvases too, as a base lists them: 0.9.125) feeds the folder filter, and the 100 shown are the newest that pass it, as a base fills its limit (0.9.123, Nick) */
+    const all = this.app.vault.getFiles().filter(f => !under(f.path, ex)).sort((a, b) => b.stat.mtime - a.stat.mtime), files = all.filter(f => !under(f.path, HIDF)).slice(0, 100); this.topPath = files[0] ? files[0].path : null;   /* every file (images, PDFs, canvases too, as a base lists them: 0.9.125) feeds the folder filter, and the 100 shown are the newest that pass it, as a base fills its limit (0.9.123, Nick) */
     const hd = box.createDiv({ cls: "ivd-lkhd" }); const hc = hd.createSpan({ cls: "ivd-h", text: `RECENTS · ${files.length}` });
     const qOpen = this.qOpen || !!this.q, sk = hd.createEl("button", { cls: "ivd-lksb" + (qOpen ? " on" : ""), attr: { type: "button", "aria-description": "Search recents" } }); setIcon(sk, "search");
     const qi = hd.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search recents", spellcheck: "false" } }); qi.value = this.q; qi.hidden = !qOpen;
