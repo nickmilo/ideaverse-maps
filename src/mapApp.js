@@ -5849,7 +5849,8 @@ function makeEd(kind){
   if (cb) hd.insertBefore(cb, ob);
   // the primary note can be pinned (0.8.28): then a note you pick opens as the support note, and the pinned note stays (Nick's Mapping Method)
   // back and forward through the notes this editor has shown (0.8.45, Nick: the trail works too, but that's a leap)
-  const nav = kind !== "right" ? [["arrow-left", "Back", -1], ["arrow-right", "Forward", 1]].map(([ic, lb, d_]) => { const b_ = doc.createElement("button"); b_.className = "cardbtn cardnav"; b_.type = "button"; b_.setAttribute("aria-label", lb); setIcon(b_, ic); hd.insertBefore(b_, t); b_.onclick = e => { e.stopPropagation(); histGo(d_); }; return b_; }) : null;
+  /* back and forward on both notes: the primary walks the map's history, the support note its own (0.9.53, Nick) */
+  const nav = [["arrow-left", "Back", -1], ["arrow-right", "Forward", 1]].map(([ic, lb, d_]) => { const b_ = doc.createElement("button"); b_.className = "cardbtn cardnav"; b_.type = "button"; b_.setAttribute("aria-label", lb); setIcon(b_, ic); hd.insertBefore(b_, t); b_.onclick = e => { e.stopPropagation(); if (kind === "right") supGo(d_); else histGo(d_); }; return b_; });
   const pb = kind !== "right" ? hd.createEl("button", { cls: "cardbtn cardpin", attr: { type: "button", "aria-label": "Pin this note", title: "Pin this note" } }) : null;
   if (pb) { setIcon(pb, "pin"); hd.insertBefore(pb, cb || ob); pb.onclick = () => tabPin(); }
   /* Focus, right after the pin (0.8.272, Nick): the same as the toolbar's Focus on active note; lit while this note is focused */
@@ -5867,7 +5868,7 @@ function makeEd(kind){
     close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; o.tabSync(); if (o.ed) { o.ed.close(); o.ed = null; } if (kind === "right") hudFollow(null); edFree(); },
     async open(i){ const p = N[i].path, prevP = o.path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
       const nw = o.path !== p; o.path = p; t.setText(N[i].title); if (nw) { o.open_ = ""; o.sub_ = ""; } fillStrip(o, i); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
-      if (kind === "right" && nw) { hudFollow(i); if (holoOn()) supTab(i, prevP); }   /* in the Holodeck every note beside you has a tab (0.9.42) */   /* a note that opens beside is the active one: the HUD, and in Focus the graph, follow it (0.9.28, Nick) */
+      if (kind === "right" && nw) { supHist(p); hudFollow(i); if (holoOn()) supTab(i, prevP); }   /* in the Holodeck every note beside you has a tab (0.9.42) */   /* a note that opens beside is the active one: the HUD, and in Focus the graph, follow it (0.9.28, Nick) */
       if (nw) { await o.ed.open(p); o.ed.resize(); propKeep(el); } } };
   /* drag a title bar onto the other note and they swap (0.9.42, Nick): a plain click still tucks it away */
   { let hd_ = null, swallow = false;
@@ -5966,7 +5967,12 @@ function histNote(p){ if (HNAV === p) { HNAV = null; return; } HNAV = null;
   if (HIST[HPOS + 1] === p) { HPOS++; return; } if (HIST[HPOS - 1] === p) { HPOS--; return; }
   HIST = HIST.slice(0, HPOS + 1); HIST.push(p); if (HIST.length > 100) HIST.shift(); HPOS = HIST.length - 1; }
 function syncNav(){ let pin = false; try { pin = !!(TABS[TCUR] && TABS[TCUR].pin); } catch (_) { /* not ready yet */ }
-  for (const o of [EDS.left]) if (o && o.nav) { o.nav[0].disabled = pin || HPOS <= 0; o.nav[1].disabled = pin || HPOS >= HIST.length - 1; } }
+  for (const o of [EDS.left]) if (o && o.nav) { o.nav[0].disabled = pin || HPOS <= 0; o.nav[1].disabled = pin || HPOS >= HIST.length - 1; }
+  { const o = EDS.right; if (o && o.nav) { o.nav[0].disabled = SHPOS <= 0; o.nav[1].disabled = SHPOS >= SHIST.length - 1; } } }
+/* the support note's own history (0.9.53) */
+let SHIST = [], SHPOS = -1, SHNAV = null;
+function supHist(p){ if (SHNAV === p) { SHNAV = null; syncNav(); return; } SHNAV = null; if (SHIST[SHPOS] === p) return; SHIST = SHIST.slice(0, SHPOS + 1); SHIST.push(p); if (SHIST.length > 60) SHIST.shift(); SHPOS = SHIST.length - 1; syncNav(); }
+function supGo(d_){ let q = SHPOS + d_; while (q >= 0 && q < SHIST.length && PIDX.get(SHIST[q]) == null) q += d_; if (q < 0 || q >= SHIST.length) return; SHPOS = q; SHNAV = SHIST[q]; if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(PIDX.get(SHIST[q])); syncNav(); }
 function histGo(d_){ const q = HPOS + d_; if (q < 0 || q >= HIST.length) return; const i = PIDX.get(HIST[q]); if (i == null) return;
   /* in Focus, back and forward go to a note outside the focused links too, and the focus moves with you (0.9.38, Nick: "we should still be able to hit back and forward just fine") */
   if (!vis[i] && focus >= 0 && visNoFocus(i)) { HPOS = q; HNAV = HIST[q]; setFocus(i); syncNav(); return; }
