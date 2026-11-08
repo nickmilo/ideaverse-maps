@@ -2199,3 +2199,12 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .ivm-hologrip[hidden]{display:none}
 /* dragging a title bar onto the other note (0.9.42) */
 body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
+/* the Links HUD's search (0.9.51): a faint magnifier after the count, a slim field in the header */
+.ivm .rch.lkh .rct{flex:none}
+.ivm .rch.lkh .lksp{flex:1}
+.ivm .rch.lkh .lksb{appearance:none;flex:none;display:flex;align-items:center;height:auto;margin-left:6px;padding:0 2px;border:0;background:none;box-shadow:none;color:var(--muted);opacity:.45;cursor:pointer}
+.ivm .rch.lkh .lksb svg{width:11px;height:11px}
+.ivm .rch.lkh .lksb:hover,.ivm .rch.lkh .lksb.on{opacity:1;color:var(--ink)}
+.ivm .rch.lkh .lkq{flex:1;min-width:0;height:18px;margin:0 4px 0 4px;padding:0 6px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 80%,transparent);color:var(--ink);font:500 11px var(--body);box-shadow:none}
+.ivm .rch.lkh .lkq:focus{border-color:color-mix(in srgb,var(--ink) 45%,transparent);outline:none;box-shadow:none}
+.ivm .lkr[hidden],.ivm .lkg[hidden]{display:none}

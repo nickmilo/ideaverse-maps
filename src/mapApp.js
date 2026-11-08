@@ -5330,6 +5330,8 @@ function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && HUDC.vv === VISV) r
   return (HUDC = { i, rj: RADJ, vv: VISV, v: (HUDC.v || 0) + 1, list: all, inS, outS, upS, sc: new Map(all.map(j => [j, mx > 0 ? Math.round(100 * rv(j) / mx) : 0])) }); }
 /* Links lives in the Recents panel now (0.8.284, Nick: "do opt 2, but each needs to work independently"): one background, one curve, two sections; each tucks to its own
    edge tab. The map only draws the dashed line from a hovered row to its note, and keeps HUDBOX (the panel, in map pixels) for maps that leave it room */
+/* a search in the Links HUD (0.9.51, Nick: "I just want to search for one keyword" in LYT Book Home's links): a faint magnifier after the count opens a field that narrows the rows as you type */
+let LKQ = "", LKQOPEN = false, RECLKQF = false;   /* RECLKQF: the field had the focus when the HUD redrew, so it keeps it */
 let LKHV = null, HUDTC = pref("iv-hudtc", true) !== false, HUDGRP = true,   /* always grouped now; the switch is gone (0.8.316, Nick: "make that the default") */ LKFOLD = (() => { const o = pref("iv-lkfold", null); return o && typeof o === "object" ? o : {}; })();   /* HUDGRP: property links grouped under their property (0.8.297, Nick: option H2); LKFOLD: which groups are folded */
 /* which property each of note i's property-only links sits in (0.8.297): written links (text, up, related, either way) stay ungrouped; the rest go under "→ KEY" (this note's
    property) or "← KEY" (the other note's property pointing here). Cached per note */
@@ -5406,7 +5408,7 @@ function recPv(){ if (RECHV < 0 || !RECHVEL || !(CMDK || HUDPV)) { if (!(HUDHOV 
   hudPv(RECHV, pe.left - c.left - 6, r.top + r.height / 2 - c.top, true); }
 /* in the Starship it's its own: always starts tucked away, and opening it there doesn't change the map's (0.8.273, Nick) */
 const recIsOpen = () => view === "cockpit" ? RECCK : RECOPEN, recSetOpen = v => { if (view === "cockpit") RECCK = v; else { RECOPEN = v; save("iv-recopen", v); } };
-function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "cockpit" || edOn()); let R_ = 0; try { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); R_ = Math.max(0, Math.round(mr.right - c.right + sideW())); } catch (_) { /* not laid out yet */ }
+function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.classList && ae_.classList.contains("lkq")); } recBuild(); const on = RECON && !isPhone() && (view === "cockpit" || edOn()); let R_ = 0; try { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); R_ = Math.max(0, Math.round(mr.right - c.right + sideW())); } catch (_) { /* not laid out yet */ }
   /* two panels on one arc (0.8.287, Nick): Recents, and Links below it in its own slot; either tucks to its own tab and the other stays where it is */
   const recShow = on && recIsOpen(), lkShow = lkOn() && !HUDCOL, both = recShow && lkShow;
   RECTAB.hidden = !on || recIsOpen(); RECEL.hidden = !recShow; LKEL.hidden = !lkShow;
@@ -5446,7 +5448,22 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
      (or a dot, Display → HUD links → Colored names) and its relevance score where Recents shows the age. Hover draws a line to its note; click goes there (⌘ support note, Shift a new orb) */
   let lhd = null, lbox = null;
   if (lkShow) { const n_ = D_.list.length, SL = (() => { try { return SPACELINK(); } catch (_) { return {}; } })(), ink = css.ink || "#ddd";
-    lhd = LKEL.createDiv({ cls: "rch lkh cardhd-tuck" }); lhd.createSpan({ cls: "rct", text: `⇄  LINKS · ${n_}` });
+    lhd = LKEL.createDiv({ cls: "rch lkh cardhd-tuck" }); const lct = lhd.createSpan({ cls: "rct", text: `⇄  LINKS · ${n_}` });
+    const lsb = lhd.createEl("button", { cls: "lksb", attr: { type: "button", "aria-description": "Search these links" } }); setIcon(lsb, "search"); lsb.toggleClass("on", LKQOPEN);
+    let lqi = null; if (LKQOPEN) { lqi = lhd.createEl("input", { cls: "lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); lqi.value = LKQ; } else lhd.createDiv({ cls: "lksp" });
+    const lkApply = () => { const q = LKQ.trim().toLowerCase(); let m = 0;
+      for (const r_ of lbox.querySelectorAll(".lkr")) { const hit = !q || (r_.dataset.q || "").includes(q); r_.hidden = !hit; if (hit) m++; }
+      for (const g_ of lbox.querySelectorAll(".lkg")) { let nx = g_.nextElementSibling, any = false; while (nx && !nx.classList.contains("lkg")) { if (!nx.hidden && nx.classList.contains("lkr")) any = true; nx = nx.nextElementSibling; } g_.hidden = !!q && !any; }
+      lct.setText(q ? `⇄  LINKS · ${m}/${n_}` : `⇄  LINKS · ${n_}`); if (RECLAY) RECLAY(); };
+    const lkClose = () => { LKQ = ""; LKQOPEN = false; RECKEY = ""; recSync(); };
+    lsb.onclick = e => { e.stopPropagation(); if (LKQOPEN) { lkClose(); return; } LKQOPEN = true; RECKEY = ""; recSync(); const f_ = LKEL.querySelector(".lkq"); if (f_ instanceof HTMLInputElement) f_.focus(); };
+    if (lqi) { const q_ = lqi; for (const ty of ["pointerdown", "click", "wheel"]) q_.addEventListener(ty, e => e.stopPropagation());
+      q_.addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Escape") { e.preventDefault(); lkClose(); } });
+      q_.addEventListener("input", () => { const was = !!LKQ.trim(); LKQ = q_.value; const nowQ = !!LKQ.trim();
+        /* folded groups hide their rows: the first letter typed (or the last erased) redraws with them open, keeping the field's focus */
+        if (was !== nowQ && Object.keys(LKFOLD).length) { const pos = q_.selectionStart; RECKEY = ""; recSync(); const f_ = LKEL.querySelector(".lkq"); if (f_ instanceof HTMLInputElement) { f_.focus(); f_.setSelectionRange(pos, pos); } return; }
+        lkApply(); });
+      if (RECLKQF) win.setTimeout(() => { if (q_.isConnected) { q_.focus(); const L_ = q_.value.length; q_.setSelectionRange(L_, L_); } }, 0); }
     lhd.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest("label, input, button")) return; e.stopPropagation(); hudCol(true); RECKEY = ""; recSync(); });
     const x2 = lhd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Links away" } }); x2.onclick = e => { e.stopPropagation(); hudCol(true); RECKEY = ""; recSync(); };
     lbox = LKEL.createDiv({ cls: "rcl lkl rcleft" });
@@ -5460,9 +5477,9 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
     const rowsFor = [[null, order], ...[...groups].filter(([g_]) => g_[0] === "→"), ...[...groups].filter(([g_]) => g_[0] !== "→")];
     const GCOLL_ = "→ " + ((host.collectionKeys ? host.collectionKeys()[0] : "") || "collections");
     for (const [g_, js] of rowsFor) { if (g_) { const fo = LKFOLD[g_] === true, gh = lbox.createEl("button", { cls: "lkg", attr: { type: "button" } }); gh.setCssProps({ "--lgc": g_ === GCOLL_ && COLLON ? collCoral() : css.prop }); gh.createSpan({ text: `${g_.slice(2).toUpperCase()} · ${js.length}  ${fo ? "▸" : "▾"}` });   /* the name first, its fold arrow after; each row carries its own → or ← (0.8.307, Nick) */
-        gh.onclick = e => { e.stopPropagation(); if (LKFOLD[g_]) delete LKFOLD[g_]; else LKFOLD[g_] = true; save("iv-lkfold", LKFOLD); RECKEY = ""; recSync(); }; if (fo) continue; }   /* a property's group folds, remembered (0.8.297) */
+        gh.onclick = e => { e.stopPropagation(); if (LKFOLD[g_]) delete LKFOLD[g_]; else LKFOLD[g_] = true; save("iv-lkfold", LKFOLD); RECKEY = ""; recSync(); }; if (fo && !LKQ.trim()) continue; }   /* a property's group folds, remembered (0.8.297) */
     for (const j of js) { if (!N[j]) continue; const dimJ = D_.ck && CK.only ? !(CK.only === "in" ? D_.inS.has(j) : D_.outS.has(j)) : false;   /* the Starship's F / R scopes dim the other side */
-      const r = lbox.createEl("button", { cls: "rcr lkr" + (D_.ck && j === D_.lock ? " on" : "") + (dimJ ? " dim" : ""), attr: { type: "button" } });
+      const r = lbox.createEl("button", { cls: "rcr lkr" + (D_.ck && j === D_.lock ? " on" : "") + (dimJ ? " dim" : ""), attr: { type: "button", "data-q": N[j].title.toLowerCase() } });
       /* each name in the color of its line, map or Starship: up gold, related purple, above blue, below green (0.8.301, Nick: Forgetting curve was blue here, green on the map) */
       const col = (D_.ck ? (SL[CK.kind.get(j) || "prop"] || (CK.SL || {})[CK.kind.get(j) || "prop"]) : (() => { try { return edgeColor(D_.i, j, upOf(D_.i, j)); } catch (_) { return ""; } })()) || ink;
       if (!HUDTC) { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": col }); }
@@ -5473,6 +5490,9 @@ function recSync(){ recBuild(); const on = RECON && !isPhone() && (view === "coc
       r.onclick = e => { e.stopPropagation(); if (openKind(e)) { openAs(j, openKind(e)); return; } if (D_.ck) { const was = (CK.items[CK.lock] || {}).i === j; ckLockNote(j); if (was) CK.auto = true; else ckSwingTo(j); RECKEY = ""; return; } if (shiftLink(j, e)) return; navTo(j); toEditor(j); };
       r.addEventListener("pointerenter", () => { if (D_.ck) { CK.hovS = j; CK.hovEl = r; return; } HUDHOV = j; LKHV = r; RECHV = j; RECHVEL = r; recPv(); draw(); });
       r.addEventListener("pointerleave", () => { if (D_.ck) { if (CK.hovS === j) { CK.hovS = -1; CK.hovEl = null; } return; } if (HUDHOV === j) { HUDHOV = -1; LKHV = null; } if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } draw(); }); } } }
+  if (lkShow && LKQ.trim()) { const q = LKQ.trim().toLowerCase(), lct_ = lhd.querySelector(".rct"); let m = 0; for (const r_ of lbox.querySelectorAll(".lkr")) { const hit = (r_.dataset.q || "").includes(q); r_.hidden = !hit; if (hit) m++; }
+    for (const g_ of lbox.querySelectorAll(".lkg")) { let nx = g_.nextElementSibling, any = false; while (nx && !nx.classList.contains("lkg")) { if (!nx.hidden && nx.classList.contains("lkr")) any = true; nx = nx.nextElementSibling; } g_.hidden = !any; }
+    if (lct_) lct_.setText(`⇄  LINKS · ${m}/${D_.list.length}`); }
   if (recShow) recGrip(RECEL); if (lkShow) recGrip(LKEL); RECEL.setCssProps({ "--rcrows": String(RECROWS) }); if (both) recVGrip();
   RECLAY = () => { if (recShow && hd && box) layPanel(RECEL, hd, box, LH); if (lkShow && lhd && lbox) layPanel(LKEL, lhd, lbox, LH);
     if (both && !RECEL.hidden) { const ph = RECEL.offsetHeight; if (ph && Math.abs(ph - RECPH) > 2) { RECPH = ph; win.requestAnimationFrame(() => { if (!dead) recSync(); }); } } };   /* Links' slot follows Recents' real height */
