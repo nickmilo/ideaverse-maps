@@ -2250,7 +2250,7 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-lklist{display:flex;flex-direction:column;overflow-y:auto;min-height:0;flex:1}
 .ivd-links .ivd-lklist::after{content:"";flex:none;height:40px}   /* room to scroll the last rows clear of Obsidian's status bar (0.9.76, Nick) */
 .ivd-links .ivd-lkg{margin-top:10px}
-.ivd-links .ivd-lkhd{align-items:center;padding-right:40px}   /* 0.9.93, Nick: the icons sit clear of the score column, so their menus (right edges at the button) leave the scores in view; was: the icons sit a little in from the edge, over the score column (0.9.72, Nick) */
+.ivd-links .ivd-lkhd{align-items:center;padding-right:4px}   /* 0.9.93, Nick: the icons sit clear of the score column, so their menus (right edges at the button) leave the scores in view; was: the icons sit a little in from the edge, over the score column (0.9.72, Nick) */
 .ivd-links .ivd-lksp{flex:1}
 .ivd-links .ivd-lvh{margin-top:8px;padding:0 0 1px 6px;font:600 9.5px var(--font-monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
 .ivd-links .ivd-lklist>.ivd-lvh:first-child{margin-top:0}
@@ -2294,3 +2294,19 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-lkhelp{flex:none;margin:0 0 4px;padding:8px 10px;border:1px solid var(--background-modifier-border);border-radius:8px;background:var(--background-primary-alt,var(--background-primary));font-size:11.5px;line-height:1.45;color:var(--text-muted);cursor:pointer}
 .ivd-links .ivd-lkhelp p{margin:4px 0 0}
 .ivd-links .ivd-lkht{font:600 9.5px var(--font-monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--text-normal)}
+/* the Links pane's header at Obsidian's pane-header size, not the HUD's small print (0.9.98, Nick: "as a header text area, it should be a little bit bigger") */
+.ivd-links .ivd-lkhd{min-height:28px}
+.ivd-links .ivd-lkhd .ivd-h{font-size:11.5px;letter-spacing:.1em;padding:4px 6px}
+.ivd-links .ivd-lksb svg{width:14px;height:14px}
+.ivd-links .ivd-lkq{height:24px;padding:0 9px;border-radius:12px;font-size:12.5px}
+.ivd-links .ivd-lksort{width:28px;height:26px}
+.ivd-links .ivd-lksort svg{width:17px;height:17px}
+.ivd-links .ivd-lkqh{width:16px;height:16px;font-size:10px}
+.ivd-links .ivd-lvh,.ivd-links .ivd-lkg{font-size:10px}
+/* in a narrow pane an open search takes its own row under the header, so it's never squeezed to nothing (0.9.98) */
+.ivd-links .ivd-lkhd{flex-wrap:wrap;row-gap:4px}
+.ivd-links .ivd-lkq{order:10;flex:1 0 100%}
+.ivd-links .ivd-lkdiv[hidden]{display:none}
+/* the ? (or its empty slot) sits over the score column, so Sort and Display stay left of it and their menus leave the scores in view (0.9.98) */
+.ivd-links .ivd-lkqh{margin-left:12px}
+.ivd-links .ivd-lkqh-ph{visibility:hidden;border:0}

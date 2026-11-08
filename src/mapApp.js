@@ -4567,8 +4567,7 @@ const sx = x => x*k + tx, sy = y => y*k + ty, wx = x => (x - tx)/k, wy = y => (y
    Measured on a 15,700-note vault: idle and typing it costs nothing either way; a note switch did ~175ms of work with the map live, ~110ms paused, ~117ms in plain Obsidian */
 let HOLOPAUSE = pref("iv-holopause", false) === true;
 /* the Holodeck's icon, picked in Display → Editors (0.9.58, Nick); rectangle goggles by default */
-const HOLOICONS = ["rectangle-goggles", "glasses", "eclipse", "projector", "aperture", "joystick"];   /* glasses for blend (0.9.84, Nick) */
-let HOLOICON = (v => HOLOICONS.includes(v) ? v : "rectangle-goggles")(pref("iv-holoicon", "rectangle-goggles"));
+const HOLOICON = "glasses";   /* the Holodeck's icon (0.9.98, Nick: glasses, and the picker is gone) */
 let raf = 0; function draw(){ if (HOLOPAUSE && typeof holoOn === "function" && holoOn()) return; if (!raf) raf = RAF(render); }
 function animateTo(t){ const k0=k, x0=tx, y0=ty, t0=performance.now(), dur=420, mid = morphId;
   const step = now => { if (camBusy && camBusy !== mid) return; const p = Math.min(1,(now-t0)/dur), e = 1-Math.pow(1-p,3);
@@ -8252,10 +8251,6 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     cb.onchange = () => { save("iv-editm", cb.checked); if (host.remount) host.remount(); }; }
   if (!host.embed) { const l = DI.p.createEl("label", { cls: "pmaps drow" }), cb = l.createEl("input", { type: "checkbox" }); cb.checked = HOLOPAUSE; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Pause the map behind the Holodeck" });
     cb.onchange = () => { holoPause(cb.checked); }; }
-  if (!host.embed) { const row = DI.p.createDiv({ cls: "pmaps drow hoicons" }); row.createSpan({ cls: "hoil", text: "Holodeck icon" }); const box_ = row.createDiv({ cls: "hoibox" });
-    for (const id of HOLOICONS) { const b_ = box_.createEl("button", { cls: "hoib", attr: { type: "button", "aria-description": id.replace(/-/g, " "), "aria-pressed": String(id === HOLOICON) } }); setIcon(b_, id);
-      b_.onclick = e => { e.preventDefault(); e.stopPropagation(); HOLOICON = id; save("iv-holoicon", id); for (const x of box_.querySelectorAll(".hoib")) x.setAttribute("aria-pressed", String(x === b_));
-        const hb = EDS.left && EDS.left.el.querySelector(".cardholo"); if (hb) setIcon(hb, id); const tg = root.querySelector("#holotag"); if (tg && tg.dataset.on === "false") { tg.empty(); setIcon(tg, id); } }; } }
   { const g = DI.p;
     const tr = g.createDiv({ cls: "drow eorow tchoice" }); tr.createSpan({ cls: "eol", text: "Editor theme" }); const seg = tr.createDiv({ cls: "seg" });
     for (const [v, t] of [["obsidian", "Obsidian"], ["map", "MOTI"], ["starfield", "Starfield"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDTH === v) } });
