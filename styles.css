@@ -2413,3 +2413,10 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 /* 0.9.131, Nick: the panes lost space on the left and top next to his base. Tighter edges: 4px top, 4px sides; the header keeps its own air */
 .ivd.ivd-links{padding:4px 4px 0;gap:3px}
 .ivd.ivd-links .ivd-lkhd{padding-left:2px}
+/* 0.9.132, Nick: less space on either side of the HUD's divider line, most in Links (its first group header sat far below), a little in Recents */
+.ivm .ivm-recents.ivm-lkhud > .rch:not(.lksub){padding-bottom:2px}
+.ivm .ivm-recents.ivm-lkhud .rcl{margin-top:2px;padding-top:6px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 5px,#000 calc(100% - 6px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 5px,#000 calc(100% - 6px),transparent 100%)}
+.ivm .ivm-recents.ivm-lkhud .rcl > .lkg:first-child{padding-top:2px}
+.ivm .ivm-recents:not(.ivm-lkhud) > .rch{padding-bottom:3px}
+.ivm .ivm-recents:not(.ivm-lkhud) .rcl{margin-top:3px;padding-top:9px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 8px,#000 calc(100% - 6px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 8px,#000 calc(100% - 6px),transparent 100%)}
+.ivm .ivm-recents.paired:not(.ivm-lkhud) .rcl.rcrec{max-height:calc(17.5px * var(--rcrows,10) + 15px)}
