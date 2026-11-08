@@ -334,6 +334,17 @@ export class LinksPaneView extends DeckView {
     const mx = Math.max(1e-12, ...rows.map(x => x.r)); for (const x of rows) x.s = Math.round(100 * x.r / mx); return rows; }
   /* the pane's own Display (0.9.64, Nick): relevance scores, link colors, Idea Emergence headers, emojis, time since modified; shared by every Links pane */
   opt(k) { const v = this.plugin.store.get("iv-links-" + k); return v === true; }   /* every Show switch starts off for a new user (0.9.100, Nick) */
+  /* the folder filter's tree: top-level folders, each folding open with Obsidian's file-tree arrow (0.9.122, Nick: "toggle collapse arrows for the folders"); open folders remembered per pane kind; a folder with something hidden inside shows a dash */
+  folderTree(fp, cnt, HIDF, openKey) { const OPEN = new Set((v => Array.isArray(v) ? v : [])(this.plugin.store.get(openKey))), kids = new Map();
+    for (const d of [...cnt.keys()].filter(Boolean)) { const pa = d.includes("/") ? d.slice(0, d.lastIndexOf("/")) : ""; if (!kids.has(pa)) kids.set(pa, []); kids.get(pa).push(d); }
+    for (const a of kids.values()) a.sort((x, y) => x.localeCompare(y));
+    fp.querySelectorAll(".ivd-lkfr").forEach(e => e.remove());
+    const draw = (pa, depth) => { for (const d of kids.get(pa) || []) { const off = HIDF.some(h => d === h || d.startsWith(h + "/")), part = !off && HIDF.some(h => h.startsWith(d + "/")), has = kids.has(d), open = OPEN.has(d), row = fp.createEl("button", { cls: "ivd-lkfr" + (off ? " off" : ""), attr: { type: "button" } }); row.style.setProperty("--fd", String(depth));
+        const ar = row.createSpan({ cls: "ivd-lkfa" + (has ? "" : " none") + (open ? "" : " shut") }); if (has) { setIcon(ar, "right-triangle"); ar.onclick = e => { e.stopPropagation(); if (open) OPEN.delete(d); else OPEN.add(d); this.plugin.store.set(openKey, [...OPEN]); this.folderTree(fp, cnt, HIDF, openKey); }; }
+        const cb = row.createSpan({ cls: "ivd-lkfc" }); if (!off) setIcon(cb, part ? "minus" : "check"); row.createSpan({ cls: "ivd-lkfn", text: d.split("/").pop() }); row.createSpan({ cls: "ivd-lkfk", text: String(cnt.get(d)) });
+        row.onclick = () => { const own_ = HIDF.includes(d); const nx = own_ ? HIDF.filter(h => h !== d) : off ? HIDF : [...HIDF.filter(h => !h.startsWith(d + "/")), d]; this.setLOpt("hidef", nx); };
+        if (has && open) draw(d, depth + 1); } };
+    draw("", 0); }
   setLOpt(k, v) { this.plugin.store.set("iv-links-" + k, v); for (const l of this.app.workspace.getLeavesOfType(LINKS_TYPE)) if (l.view instanceof LinksPaneView) l.view.render(); }
   /* a note's emoji as the map finds it (Display → Assign emojis): its deepest folder with one, else the emoji base's column */
   emoOf(p) { const F = this.plugin.store.get("iv-emofold") || {}; let q = p; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (F[q]) return F[q]; }
@@ -415,10 +426,7 @@ export class LinksPaneView extends DeckView {
     /* the folder list: every folder this note's links live in, as a tree with counts; a click hides or shows it (like the map's Filter → Folders) */
     if (this.filtOpen) { const fp = box.createDiv({ cls: "ivd-lkfilt" }), cnt = new Map(); for (const l of lsAll) { let d = dirOf(l.p); while (true) { cnt.set(d, (cnt.get(d) || 0) + 1); if (!d) break; d = dirOf(d); } }
       const hd2 = fp.createDiv({ cls: "ivd-lkfh" }); hd2.createSpan({ text: "Folders" }); if (HIDF.length) { const all = hd2.createEl("button", { cls: "ivd-lkfall", text: "Show all", attr: { type: "button" } }); all.onclick = () => this.setLOpt("hidef", []); }
-      const dirs = [...cnt.keys()].filter(Boolean).sort((a_, b_) => a_.localeCompare(b_));
-      for (const d of dirs) { const depth = d.split("/").length - 1, off = HIDF.some(h => d === h || d.startsWith(h + "/")), row = fp.createEl("button", { cls: "ivd-lkfr" + (off ? " off" : ""), attr: { type: "button" } }); row.style.setProperty("--fd", String(depth));
-        const cb = row.createSpan({ cls: "ivd-lkfc" }); if (!off) setIcon(cb, "check"); row.createSpan({ cls: "ivd-lkfn", text: d.split("/").pop() }); row.createSpan({ cls: "ivd-lkfk", text: String(cnt.get(d)) });
-        row.onclick = () => { const own_ = HIDF.includes(d); let nx = own_ ? HIDF.filter(h => h !== d) : off ? HIDF : [...HIDF.filter(h => !h.startsWith(d + "/")), d]; this.setLOpt("hidef", nx); }; } }
+      this.folderTree(fp, cnt, HIDF, "iv-links-fopen"); }
     if (HELPT && this.helpOpen) { const c_ = box.createDiv({ cls: "ivd-lkhelp" }); c_.createDiv({ cls: "ivd-lkht", text: LINKSORTS.find(x => x && x[0] === SO)[1] }); for (const para of HELPT) c_.createEl("p", { text: para }); c_.onclick = () => { this.helpOpen = false; this.render(); }; }
     const list = box.createDiv({ cls: "ivd-lklist" }); this.underHead = false;   /* rows under a group header tuck in, always (0.9.113, Nick: no longer a setting) */ const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
@@ -492,9 +500,7 @@ export class RecentsPaneView extends LinksPaneView {
       this.menuUnder(m, db); };
     if (this.filtOpen) { const fp = box.createDiv({ cls: "ivd-lkfilt" }), cnt = new Map(); for (const f of all) { let d = dirOf(f.path); while (true) { cnt.set(d, (cnt.get(d) || 0) + 1); if (!d) break; d = dirOf(d); } }
       const h2 = fp.createDiv({ cls: "ivd-lkfh" }); h2.createSpan({ text: "Folders" }); if (HIDF.length) { const b = h2.createEl("button", { cls: "ivd-lkfall", text: "Show all", attr: { type: "button" } }); b.onclick = () => this.setLOpt("hidef", []); }
-      for (const d of [...cnt.keys()].filter(Boolean).sort((a, b) => a.localeCompare(b))) { const off = HIDF.some(h => d === h || d.startsWith(h + "/")), row = fp.createEl("button", { cls: "ivd-lkfr" + (off ? " off" : ""), attr: { type: "button" } }); row.style.setProperty("--fd", String(d.split("/").length - 1));
-        const cb = row.createSpan({ cls: "ivd-lkfc" }); if (!off) setIcon(cb, "check"); row.createSpan({ cls: "ivd-lkfn", text: d.split("/").pop() }); row.createSpan({ cls: "ivd-lkfk", text: String(cnt.get(d)) });
-        row.onclick = () => this.setLOpt("hidef", HIDF.includes(d) ? HIDF.filter(h => h !== d) : off ? HIDF : [...HIDF.filter(h => !h.startsWith(d + "/")), d]); } }
+      this.folderTree(fp, cnt, HIDF, "iv-recents-fopen"); }
     const list = box.createDiv({ cls: "ivd-lklist" }); this.underHead = false;
     const G = this.G, LC = { 5: "var(--ivd-upp)", 4: "var(--ivd-rel)", 3: "var(--ivd-up)", 2: "var(--ivd-down)", 1: "var(--text-muted)" }, ORB = this.opt("orb"), EMO = this.opt("emo"), COL = this.opt("col"), AGE = this.opt("age"), DAY = this.opt("day");
     const dayOf = ms => { const d0 = new Date(); d0.setHours(0, 0, 0, 0); const t0 = d0.getTime(), dd = (t0 - ms) / 86400000; return ms >= t0 ? "Today" : dd <= 1 ? "Yesterday" : dd <= 6 ? "This week" : dd <= 30 ? "This month" : "Earlier"; };
