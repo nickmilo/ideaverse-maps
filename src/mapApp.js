@@ -117,8 +117,9 @@ const CIDX = new Map(); N.forEach((d, i) => { if (d.archive) return; const k_ = 
 const collOf = (i, any) => { if (!(COLLON || any) || i < 0) return []; const r_ = []; for (const c of N[i].collections || []) { const j = CIDX.get(String(c).replace(/^\[\[|\]\]$/g, "").split("/").pop().toLowerCase()); if (j != null && j !== i && !r_.includes(j)) r_.push(j); } return r_; };
 let COLLS = { i: -2, s: new Set() }; const collSet = i => { if (COLLS.i !== i) COLLS = { i, s: new Set(collOf(i, true)) }; return COLLS.s; };
 let VISV = 0, RECCK = true;   // bumps whenever what shows changes (Recent caches by it)
-const emoBuild = () => { const has = Object.keys(EMOF).length > 0; if (!has && !EMO) { EMOI = null; return; }
-  EMOI = N.map(d => { if (has) { let q = d.path; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (EMOF[q]) return EMOF[q]; } } return EMO ? EMO.get(d.path) : undefined; }); };
+const LEAD_EMO = /^((?:\p{Extended_Pictographic}|\p{Regional_Indicator}{2})(?:\uFE0F|\p{Emoji_Modifier}|\u200D\p{Extended_Pictographic}\uFE0F?)*)\s*/u;
+const emoBuild = () => { const has = Object.keys(EMOF).length > 0;
+  EMOI = N.map(d => { const m0 = LEAD_EMO.exec(String(d.title || "")); if (m0) return m0[1];   /* an emoji leading the file name wins (0.9.102, Nick) */ if (has) { let q = d.path; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (EMOF[q]) return EMOF[q]; } } return EMO ? EMO.get(d.path) : undefined; }); };
 emoBuild();
 const loadEmo = async () => { if (!host.emojis) return Object.keys(EMOF).length ? "" : "Emoji labels need a newer Obsidian"; if (emoBusy) return emoBusy; emoBusy = (async () => { const r = await host.emojis(); emoBusy = null;
   if (r.err) { EMO = null; emoBuild(); return Object.keys(EMOF).length ? "" : `Couldn't read emojis: ${r.err}`; } EMO = new Map(Object.entries(r.map)); emoBuild(); return ""; })(); return emoBusy; };
@@ -5385,7 +5386,8 @@ let RECON = pref("iv-recent", true) !== false, RECOPEN = pref("iv-recopen", fals
 const ago = ms => { const s_ = Math.max(0, (Date.now() - ms) / 1000); return s_ < 60 ? "now" : s_ < 3600 ? Math.floor(s_ / 60) + "m" : s_ < 86400 ? Math.floor(s_ / 3600) + "h" : s_ < 86400 * 30 ? Math.floor(s_ / 86400) + "d" : s_ < 86400 * 365 ? Math.floor(s_ / 86400 / 30) + "mo" : Math.floor(s_ / 86400 / 365) + "y"; };
 function recList(){ const key = RECV + ":" + VISV + ":" + RECN; if (RECC.v === key) return RECC.list; const L = []; for (let i = 0; i < n; i++) if (vis[i] && N[i].mt > 0 && !ARCH[i]) L.push(i);
   L.sort((a, b) => N[b].mt - N[a].mt); RECC = { v: key, list: L.slice(0, RECN) }; return RECC.list; }
-const recEmoji = i => { if (!RECEMO || !EMOI || !EMOI[i]) return ""; return /^\p{Extended_Pictographic}/u.test(N[i].title) ? "" : EMOI[i]; };
+const recEmoji = i => { if (!RECEMO || !EMOI || !EMOI[i]) return ""; return EMOI[i]; };   /* a leading emoji in the name is the emoji now, shown once (0.9.102) */
+const recName = (i, em) => { const m_ = em ? LEAD_EMO.exec(N[i].title) : null; return m_ ? N[i].title.slice(m_[0].length) : N[i].title; };
 /* Recents and Links rows drag like files from Obsidian's list (0.9.73, Nick): onto the Holodeck's tabs, the primary or the support note */
 function hudDrag(r, j){ if (!host.dragNote || !N[j]) return; r.draggable = true; r.addEventListener("dragstart", e => { e.stopPropagation(); if (!host.dragNote(e, N[j].path)) e.preventDefault(); RECHV = -1; RECHVEL = null; try { recPv(); } catch (_) { /* no preview */ } }); }
 function recBuild(){ if (RECEL) return; const st = e => e.stopPropagation();
@@ -5447,8 +5449,8 @@ function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.cla
   L.forEach((j, r_) => { const r = box.createEl("button", { cls: "rcr" + (j === sel ? " on" : ""), attr: { type: "button" } }), em = recEmoji(j);
     const u = Math.max(-1, Math.min(1, (r_ - mid) * LH / RY)); r.setCssProps({ "--rx": (-60 * (1 - Math.sqrt(1 - u * u))).toFixed(1) + "px", "--rr": (Math.asin(u) * .25).toFixed(4) + "rad" });
     const mark = () => { if (em) r.createSpan({ cls: "rce", text: em }); else { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1 }); } };
-    if (RECEFRONT) { mark(); r.createSpan({ cls: "rcn", text: N[j].title }); if (RECAGE) r.createSpan({ cls: "rca", text: ago(N[j].mt) }); }
-    else { r.createSpan({ cls: "rca", text: ago(N[j].mt) }); r.createSpan({ cls: "rcn", text: N[j].title }); mark(); }
+    if (RECEFRONT) { mark(); r.createSpan({ cls: "rcn", text: recName(j, em) }); if (RECAGE) r.createSpan({ cls: "rca", text: ago(N[j].mt) }); }
+    else { r.createSpan({ cls: "rca", text: ago(N[j].mt) }); r.createSpan({ cls: "rcn", text: recName(j, em) }); mark(); }
     r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); RECKEY = ""; }; hudDrag(r, j);
     /* hold ⌘ over a row for its mini preview, as on Links (0.8.244, Nick); with "Automatically see mini-preview on hover" on, it shows on hover alone */
     r.addEventListener("pointerenter", () => { RECHV = j; RECHVEL = r; recPv(); }); r.addEventListener("pointerleave", () => { if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } }); }); }

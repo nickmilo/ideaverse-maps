@@ -280,6 +280,8 @@ const LINKHELP = {
     "Link score: each kind of link, counted with diminishing returns, times its weight, added up (Maps of the Ideaverse → Display → How notes are scored)."],
   remg: ["Where each link sits relative to this note, as its note strip and link colors show it.",
     "Up: named in this note's up. Related: named in its related. Above: a higher level, or the same level with a higher link score. Below: the rest. This note sits between Above and Below; each group goes by relevance."] };
+/* an emoji leading a file name (with its variation selector, skin tone or joined parts), and the space after it */
+export const LEADEMO = /^((?:\p{Extended_Pictographic}|\p{Regional_Indicator}{2})(?:\uFE0F|\p{Emoji_Modifier}|\u200D\p{Extended_Pictographic}\uFE0F?)*)\s*/u;
 const LINKSORTS = [["remg", "Relative Emergence"], ["lvl", "Idea Emergence"], ["rel", "Relevance"], null, ["az", "File name (A to Z)"], ["za", "File name (Z to A)"], null, ["mnew", "Modified time (new to old)"], ["mold", "Modified time (old to new)"], null, ["cnew", "Created time (new to old)"], ["cold", "Created time (old to new)"]];
 export class LinksPaneView extends DeckView {
   constructor(leaf, plugin) { super(leaf, plugin); this.cur = null; this.q = ""; }
@@ -409,7 +411,8 @@ export class LinksPaneView extends DeckView {
     const put = (p, a, c) => { if (!ARR) a = ""; if (MC.has(p)) c = !COL ? "var(--ivd-link)" : this.plugin.store.get("iv-colllinks") !== false ? "var(--ivd-coll)" : "var(--ivd-prop)"; else if (MP.has(p) && !MC.has(p) && COL && !KEEP.has(this.kindOf(path, p))) c = "var(--ivd-prop)"; const r = this.row(list, p, a, c, right(p)); r.dataset.q = this.title(p).toLowerCase();
       /* the Holodeck tab's orb (0.9.67, Nick): its level's shape and gradient, 5 a rounded square, 4 a diamond, 3 to 1 a circle */
       if (ORB) { const L_ = lv(p)[0], t0 = r.querySelector(".ivd-t"), o_ = createSpan({ cls: "ivd-orb lv" + L_ }), g_ = LVGRAD[L_]; if (g_) { o_.style.setProperty("--o0", g_[0]); o_.style.setProperty("--o1", g_[1]); } if (t0) t0.before(o_); }
-      if (EMO) { const em = this.emoOf(p), t = r.querySelector(".ivd-t"), sp = createSpan({ cls: "ivd-e", text: em && !this.title(p).startsWith(em) ? em : "" }); if (t) t.before(sp); } return r; };
+      /* an emoji at the start of the file name is the note's emoji: it fills the column, ahead of folders and the base, and leaves the name (0.9.102, Nick) */
+      if (EMO) { const t = r.querySelector(".ivd-t"), m_ = LEADEMO.exec(this.title(p)), em = m_ ? m_[1] : this.emoOf(p), sp = createSpan({ cls: "ivd-e" + (em && !m_ ? " ivd-e-inh" : ""), text: em || "" });   /* one from a folder or the base shows softer; the file name's own, full (0.9.102, Nick: a signifier that it's in the name) */ if (t) { if (m_) t.setText(this.title(p).slice(m_[0].length)); t.before(sp); } } return r; };
     /* Idea Emergence headers (0.9.64, Nick): the main list grouped by level, highest first, in the Holodeck's folder-header style; up and related lead each level */
     /* Relative Emergence (0.9.74, Nick): this note's links by where they sit relative to it, as the note strip and the link colors say: up, related, above, below,
        each by relevance; property groups follow as in Relevance */

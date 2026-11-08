@@ -2318,3 +2318,5 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 /* group headers: a touch bigger, the count quiet beside the name (0.9.101, Nick: "Quiet number… a little bit bigger") */
 .ivd-links .ivd-lvh,.ivd-links .ivd-lkg{font-size:10.5px}
 .ivd-links .ivd-gn{margin-left:7px;font-weight:500;opacity:.5}
+/* an emoji the note inherits (folder, base) sits softer than one in its own file name (0.9.102) */
+.ivd-links .ivd-e.ivd-e-inh{opacity:.6;filter:grayscale(.35)}
