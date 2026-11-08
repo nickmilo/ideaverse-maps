@@ -315,7 +315,7 @@ export async function mountInto(owner, el, opts) {
     /* while a drag is over the map's own drop targets, Obsidian's tab-drop preview stays out of sight; it cleans itself up when the drag ends */
     dragQuiet: () => { try { const dm = app.dragManager; if (dm && dm.hideOverlay) dm.hideOverlay(); } catch (_) { /* not there */ }
       for (const o of document.querySelectorAll(".workspace-fake-target-overlay, .workspace-fake-target-container")) o.hide();
-      for (const o of document.querySelectorAll(".workspace-leaf, .workspace-tabs, .workspace-split")) if (o instanceof HTMLElement && o.style.opacity === "0") o.style.opacity = ""; },
+      for (const o of document.querySelectorAll(".workspace-leaf, .workspace-tabs, .workspace-split")) if (o instanceof HTMLElement && o.style.opacity === "0") o.style.removeProperty("opacity"); },
     /* a tab dragged into the map moves there: it leaves Obsidian's tab bar, unless it's the only tab left in the main area */
     dragMoved: leaf => { window.setTimeout(() => { try { if (!leaf || leaf === this.leaf || leaf.ivmCard) return; const W = app.workspace; let n = 0; W.iterateRootLeaves(() => { n++; }); if (leaf.getRoot() === W.rootSplit && n <= 1) return; leaf.detach(); } catch (_) { /* already gone */ } }, 60); },
     collectionKeys: () => { const v = plugin.settings.collectionProps; return (Array.isArray(v) ? v : String(v || "collections").split(",")).map(x => String(x).trim().toLowerCase()).filter(Boolean); },

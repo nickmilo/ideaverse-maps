@@ -40,7 +40,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
       this.register(() => { W.setActiveLeaf = origSAL; }); }
     /* which tab is being dragged (0.9.54, Nick: drag a note's tab onto the Holodeck): Obsidian drags tabs on a track of its own, so the map is told here */
     { const W = this.app.workspace, oDL = W.onDragLeaf;
-      if (typeof oDL === "function") { const plug = this; W.onDragLeaf = function (e, leaf, ...rest) { plug.dragLeaf = leaf; const end = () => { window.setTimeout(() => { plug.dragLeaf = null; }, 50); }; document.addEventListener("dragend", end, { once: true, capture: true }); return oDL.call(this, e, leaf, ...rest); };
+      if (typeof oDL === "function") { W.onDragLeaf = (e, leaf, ...rest) => { this.dragLeaf = leaf; const end = () => { window.setTimeout(() => { this.dragLeaf = null; }, 50); }; document.addEventListener("dragend", end, { once: true, capture: true }); return oDL.call(W, e, leaf, ...rest); };
         this.register(() => { W.onDragLeaf = oDL; }); } }
     registerDeck(this);   // the Mini Deck: writing first, no graph (0.9.1)
     registerEmbeds(this);   // a map inside a note: a ```moti code block, or ![[name.moti]] (0.8.171)
