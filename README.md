@@ -228,4 +228,4 @@ Two buttons on the Capture card open a website, and only when you press them: **
 
 ## License
 
-MIT
+Copyright (C) 2026 Nick Milo. Licensed under the GNU General Public License, version 3 (GPL-3.0); see LICENSE. Versions up to 0.9.137 were released under the MIT License.

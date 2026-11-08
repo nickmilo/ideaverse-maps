@@ -1,6 +1,6 @@
 {
   "name": "ideaverse-maps",
-  "version": "0.9.137",
+  "version": "0.9.138",
   "description": "Visualize your notes across a suite of insanely cool interactive maps—Emergence, Ideaverse, Starfield, and many more.",
   "main": "main.js",
   "type": "module",
@@ -17,7 +17,7 @@
     "map"
   ],
   "author": "Nick Milo",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "esbuild": "0.25.5",
