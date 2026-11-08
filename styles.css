@@ -2410,3 +2410,6 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd.ivd-links{background:transparent}
 /* 0.9.130, Nick: a little less gap between the Recents and Links HUDs. Recents (paired) ends 10px closer under its last row, so Links rides up with it; the two shapes still don't touch */
 .ivm .ivm-recents.paired:not(.ivm-lkhud){padding-bottom:12px}
+/* 0.9.131, Nick: the panes lost space on the left and top next to his base. Tighter edges: 4px top, 4px sides; the header keeps its own air */
+.ivd.ivd-links{padding:4px 4px 0;gap:3px}
+.ivd.ivd-links .ivd-lkhd{padding-left:2px}
