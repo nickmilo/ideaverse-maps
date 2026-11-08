@@ -310,6 +310,27 @@ export class LinksPaneView extends DeckView {
   menuJust(btn) { const z = this.menuShut; return !!(z && z.btn === btn && Date.now() - z.t < 350); }
   /* a group header: its name in mono caps, the count lighter a small step after it, no dot (0.9.101, Nick picked "Quiet number") */
   ghead(list, cls, lab, n) { const h = list.createDiv({ cls }); h.createSpan({ text: lab }); h.createSpan({ cls: "ivd-gn", text: String(n) }); return h; }
+  /* the mini preview, at the spot (0.9.106, Nick: Obsidian's backlink snippets "don't render"): hold ⌘ over a row and the card opens beside the pane, never off screen.
+     For a note that links here, it shows the passage in that note where the link sits, rendered, with the link lit; for a note this one links to, its opening, as before */
+  showPv(path, anchor) { if (!path || !anchor || !anchor.isConnected) return; if (this.pvEl && this.pvEl.dataset.path === path) return; this.hidePv(true);
+    const D = anchor.ownerDocument, pv = D.body.createDiv({ cls: "ivd-pvcard ivd-pvfloat", attr: { draggable: "true" } }); pv.dataset.path = path; this.pvEl = pv;
+    const f = this.file(path), cur = this.cur, mc = this.app.metadataCache, fc = f ? mc.getFileCache(f) : null;
+    const hit = cur && fc ? (fc.links || []).concat(fc.embeds || []).find(l => { const t = mc.getFirstLinkpathDest(l.link.split("#")[0].split("|")[0], path); return t && t.path === cur; }) : null;
+    const fmHit = !hit && cur && fc ? (fc.frontmatterLinks || []).find(l => { const t = mc.getFirstLinkpathDest(l.link.split("#")[0].split("|")[0], path); return t && t.path === cur; }) : null;
+    const hd = pv.createDiv({ cls: "ivd-pvt" }); hd.createSpan({ text: this.title(path) }); if (hit || fmHit) hd.createSpan({ cls: "ivd-pvwhere", text: hit ? "where it links here" : "in its " + String(fmHit.key).split(".")[0] });
+    const body = pv.createDiv({ cls: "ivd-pvb markdown-rendered" });
+    if (f) void this.app.vault.cachedRead(f).then(t => { if (!pv.isConnected) return; let md;
+      if (hit && hit.position) { const lines = t.split(/\r?\n/), L = hit.position.start.line; let a = L, b = L; while (a > 0 && lines[a - 1].trim() !== "" && L - a < 6) a--; while (b < lines.length - 1 && lines[b + 1].trim() !== "" && b - L < 8) b++; md = lines.slice(Math.max(0, a), b + 1).join("\n"); if (a > 0) md = "…\n\n" + md; }
+      else md = t.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").slice(0, 700);
+      void MarkdownRenderer.render(this.app, md, body, path, this).then(() => { if (!cur) return; for (const el of body.querySelectorAll("a.internal-link")) { const h = el.getAttribute("data-href") || el.getAttribute("href") || ""; const t2 = mc.getFirstLinkpathDest(h.split("#")[0].split("|")[0], path); if (t2 && t2.path === cur) el.addClass("ivd-pvhit"); } }); });
+    const r = anchor.getBoundingClientRect(), pr = this.contentEl.getBoundingClientRect(), vw = D.documentElement.clientWidth, vh = D.documentElement.clientHeight, w = 320, h = 260;
+    let x = pr.left - w - 10; if (x < 8) x = Math.min(vw - w - 8, pr.right + 10); const y = Math.max(8, Math.min(r.top - 20, vh - h - 8));
+    pv.setCssProps({ "--pvx": Math.round(x) + "px", "--pvy": Math.round(y) + "px" });
+    pv.addEventListener("dragstart", e => { e.dataTransfer.setData("text/ivd-path", path); e.dataTransfer.effectAllowed = "copy"; this.pvDrag = true; });
+    pv.addEventListener("dragend", () => { this.pvDrag = false; this.hidePv(true); });
+    pv.addEventListener("mouseleave", () => { if (!this.pvDrag) this.hidePv(); });
+    pv.onclick = e => { if (e.metaKey || e.ctrlKey) this.openSupport(path); else this.openPrimary(path); this.hidePv(true); }; }
+  onClose() { this.hidePv(true); return super.onClose ? super.onClose() : Promise.resolve(); }
   soon() { window.clearTimeout(this.soonT); this.soonT = window.setTimeout(() => this.render(), 400); }
   /* relevance as the Links HUD scores it (0.9.65, Nick saw the two disagree): the map's relFrom, a walk from this note along weighted links that keeps coming home
      (personalized PageRank, 24 rounds, 20% home), up and related weighted double, tempered by how linked a note is, then up ×3 and related ×1.6; 100 for the closest */

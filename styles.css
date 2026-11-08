@@ -2334,3 +2334,9 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-here{position:relative;padding-left:30px;padding-right:30px}
 .ivd-links .ivd-here .ivd-n{position:absolute;right:6px}
 .ivd-links .ivd-here .ivd-orb{position:absolute;left:9px}
+/* the Links pane's mini preview floats beside the pane, at the spot where the link sits (0.9.106) */
+.ivd-pvcard.ivd-pvfloat{position:fixed;left:var(--pvx);top:var(--pvy);width:320px;max-height:260px;z-index:var(--layer-popover,30);cursor:pointer}
+.ivd-pvfloat .ivd-pvt{display:flex;align-items:baseline;gap:8px;font-weight:600;font-size:13px}
+.ivd-pvfloat .ivd-pvwhere{font:600 9px var(--font-monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
+.ivd-pvfloat .ivd-pvb{overflow:hidden;font-size:12.5px}
+.ivd-pvfloat a.ivd-pvhit{background:color-mix(in srgb,var(--ivd-acc,#e8bf45) 22%,transparent);border-radius:3px;padding:0 2px;color:var(--text-normal)}
