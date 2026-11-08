@@ -358,7 +358,7 @@ export class LinksPaneView extends DeckView {
     const ls = lsAll.filter(l => !hidden(l.p)); for (const m of [own, back]) for (const [k, set] of m) { for (const x of [...set]) if (hidden(x)) set.delete(x); if (!set.size) m.delete(k); }
     /* collections join the other links under Obsidian's six sorts; only Relevance and Idea Emergence keep them in their own group (0.9.68, Nick) */
     const SO0 = this.plugin.store.get("iv-links-sort"), MC = new Set(), MP = new Set();
-    if (SO0 && SO0 !== "rel" && SO0 !== "lvl" && SO0 !== "remg") { const ck0 = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
+    if (SO0 && SO0 !== "rel" && SO0 !== "remg") {   /* Idea Emergence merges them too: a clean list (0.9.116, Nick); Relative Emergence and Relevance keep the groups */ const ck0 = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
       for (const k of [...own.keys()]) { for (const x of own.get(k)) (ck0.has(k) ? MC : MP).add(x); own.delete(k); } for (const k of [...back.keys()]) { for (const x of back.get(k)) MP.add(x); back.delete(k); } }   /* every property group joins in (0.9.70, Nick: "just do it for everything") */
     const inG = new Set([...[...own.values()].flatMap(x => [...x]), ...[...back.values()].flatMap(x => [...x])]);
     const KR = { upp: 0 }, KEEP = new Set(["upp", "rel"]), main = ls.filter(l => !inG.has(l.p) || KEEP.has(this.kindOf(path, l.p)))

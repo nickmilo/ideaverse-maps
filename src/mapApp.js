@@ -5489,12 +5489,16 @@ function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.cla
       if (ex.length) { const g0 = "→ " + ck_, rest = [...groups]; groups.clear(); groups.set(g0, ex); for (const [k_, v_] of rest) groups.set(k_, v_); } }
     /* this note's own property links (→) above other notes' properties pointing back (←), each side in its usual order (0.8.316, Nick: groupPeople above by) */
     /* the order (0.9.115): Relevance as before; Idea Emergence highest level first, then link score, the picked note in its place; Relative Emergence in UP, RELATED, ABOVE, BELOW with the picked note between */
+    const GCOLL0 = "→ " + ((host.collectionKeys ? host.collectionKeys()[0] : "") || "collections");
     const pI = D_.i, lvS = j => [N[j] ? N[j].level || 0 : 0, N[j] ? N[j].score || 0 : 0], segs = [];
     if (D_.ck || HUDSORT === "rel" || pI < 0) segs.push([null, order]);
     else if (HUDSORT === "lvl") { const o2 = [...order].sort((a, b) => { const A = lvS(a), B = lvS(b); return B[0] - A[0] || B[1] - A[1]; }), me = lvS(pI), k = o2.findIndex(j => { const A = lvS(j); return A[0] < me[0] || (A[0] === me[0] && A[1] < me[1]); }), cut = k < 0 ? o2.length : k; segs.push([null, o2.slice(0, cut)], ["@here", []], [null, o2.slice(cut)]); }
     else { const kd = j => { const a = EKIND.get(pI * n + j); if (a === 1) return "upp"; if (a === 4) return "rel"; try { return upOf(pI, j) ? "up" : "down"; } catch (_) { return "down"; } };
       for (const [k, lab] of [["upp", "UP"], ["rel", "RELATED"], ["up", "ABOVE"]]) { const js = order.filter(j => kd(j) === k); if (js.length) segs.push(["@h:" + lab, js]); }
       segs.push(["@here", []]); { const js = order.filter(j => kd(j) === "down"); if (js.length) segs.push(["@h:BELOW", js]); } }
+    /* Emergence is one clean list: property groups and collections join it (0.9.116, Nick; the pane does the same) */
+    const collJ = new Set(); if (!D_.ck && HUDSORT === "lvl" && pI >= 0) { const extra = []; for (const [g_, js] of groups) for (const j of js) if (!extra.includes(j)) { extra.push(j); if (g_ === GCOLL0) collJ.add(j); } groups.clear();
+      const all = [...segs[0][1], ...segs[2][1], ...extra].sort((a, b) => { const A = lvS(a), B = lvS(b); return B[0] - A[0] || B[1] - A[1]; }), me = lvS(pI), k = all.findIndex(j => { const A = lvS(j); return A[0] < me[0] || (A[0] === me[0] && A[1] < me[1]); }), cut = k < 0 ? all.length : k; segs[0][1] = all.slice(0, cut); segs[2][1] = all.slice(cut); }
     const rowsFor = [...segs, ...[...groups].filter(([g_]) => g_[0] === "→"), ...[...groups].filter(([g_]) => g_[0] !== "→")];
     if (HUDEMO && !HUDEMOL) { HUDEMOL = true; void loadEmo().then(() => { RECKEY = ""; recSync(); }); }
     const GCOLL_ = "→ " + ((host.collectionKeys ? host.collectionKeys()[0] : "") || "collections");
@@ -5512,7 +5516,7 @@ function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.cla
       if (HUDUNQ && !D_.ck && !(D_.inS.has(j) && !D_.outS.has(j))) r.classList.add("unqdim");   /* Show unrequited notes: the rest step back (0.9.115) */
       r.createSpan({ cls: "lka", text: g_ ? g_[0] : D_.inS.has(j) && D_.outS.has(j) ? "↔" : D_.inS.has(j) ? "←" : "→" });
       let emL = null; if (HUDEMO && !D_.ck && EMOI && EMOI[j]) { emL = LEAD_EMO.exec(N[j].title); const e_ = r.createSpan({ cls: "rce" + (emL ? " rceown" : ""), text: EMOI[j] }); void e_; }   /* emojis on Links rows, the file name's own with a dot (0.9.115) */
-      const nm = r.createSpan({ cls: "rcn" + (HUDTC || g_ ? " lkc" : ""), text: emL ? N[j].title.slice(emL[0].length) : N[j].title }); if (g_) nm.setCssProps({ "--lc": g_ === GCOLL_ && COLLON ? collCoral() : css.prop });   /* other properties in slate, as on the map; collections coral only with the switch (0.8.354, Nick) */ else if (HUDTC) nm.setCssProps({ "--lc": col });
+      const nm = r.createSpan({ cls: "rcn" + (HUDTC || g_ || collJ.has(j) ? " lkc" : ""), text: emL ? N[j].title.slice(emL[0].length) : N[j].title }); if (g_) nm.setCssProps({ "--lc": g_ === GCOLL_ && COLLON ? collCoral() : css.prop });   /* other properties in slate, as on the map; collections coral only with the switch (0.8.354, Nick) */ else if (collJ.has(j)) nm.setCssProps({ "--lc": COLLON ? collCoral() : css.prop }); else if (HUDTC) nm.setCssProps({ "--lc": col });
       if (HUDLSC && !D_.ck && HUDSORT !== "rel") { const v = +(N[j].score || 0); r.createSpan({ cls: "rca lks", text: v.toFixed(v < 10 ? 1 : 0) }); }   /* link score in place of relevance (0.9.115) */
       else if (HUDR && D_.sc.has(j)) r.createSpan({ cls: "rca lks", text: String(D_.sc.get(j)) });
       /* in the Starship a click locks onto that note's panel, a second click flies there, as its own list did */
