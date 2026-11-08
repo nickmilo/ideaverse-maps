@@ -5454,7 +5454,7 @@ function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.cla
   /* Links, the second section (0.8.284): each linked note once (← in, → out, ↔ both), up links first, then by relevance. A row is the arrow, the name in its level's color
      (or a dot, Display → HUD links → Colored names) and its relevance score where Recents shows the age. Hover draws a line to its note; click goes there (⌘ support note, Shift a new orb) */
   let lhd = null, lbox = null;
-  if (lkShow) { const n_ = D_.list.length, SL = (() => { try { return SPACELINK(); } catch (_) { return {}; } })(), ink = css.ink || "#ddd";
+  if (lkShow) { const n_ = D_.list.length + (D_.i >= 0 ? collOf(D_.i, true).filter(j => !D_.list.includes(j) && vis[j]).length : 0),   /* collections count too (0.9.70, Nick): every row in the panel is a link */ SL = (() => { try { return SPACELINK(); } catch (_) { return {}; } })(), ink = css.ink || "#ddd";
     lhd = LKEL.createDiv({ cls: "rch lkh cardhd-tuck" }); const lct = lhd.createSpan({ cls: "rct", text: `⇄  LINKS · ${n_}` });
     const lsb = lhd.createEl("button", { cls: "lksb", attr: { type: "button", "aria-description": "Search these links" } }); setIcon(lsb, "search"); lsb.toggleClass("on", LKQOPEN);
     let lqi = null; if (LKQOPEN) { lqi = lhd.createEl("input", { cls: "lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); lqi.value = LKQ; } else lhd.createDiv({ cls: "lksp" });
@@ -5499,7 +5499,7 @@ function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.cla
       r.addEventListener("pointerleave", () => { if (D_.ck) { if (CK.hovS === j) { CK.hovS = -1; CK.hovEl = null; } return; } if (HUDHOV === j) { HUDHOV = -1; LKHV = null; } if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } draw(); }); } } }
   if (lkShow && LKQ.trim()) { const q = LKQ.trim().toLowerCase(), lct_ = lhd.querySelector(".rct"); let m = 0; for (const r_ of lbox.querySelectorAll(".lkr")) { const hit = (r_.dataset.q || "").includes(q); r_.hidden = !hit; if (hit) m++; }
     for (const g_ of lbox.querySelectorAll(".lkg")) { let nx = g_.nextElementSibling, any = false; while (nx && !nx.classList.contains("lkg")) { if (!nx.hidden && nx.classList.contains("lkr")) any = true; nx = nx.nextElementSibling; } g_.hidden = !any; }
-    if (lct_) lct_.setText(`⇄  LINKS · ${m}/${D_.list.length}`); }
+    if (lct_) lct_.setText(`⇄  LINKS · ${m}/${lbox.querySelectorAll(".lkr").length}`); }
   if (recShow) recGrip(RECEL); if (lkShow) recGrip(LKEL); RECEL.setCssProps({ "--rcrows": String(RECROWS) }); if (both) recVGrip();
   RECLAY = () => { if (recShow && hd && box) layPanel(RECEL, hd, box, LH); if (lkShow && lhd && lbox) layPanel(LKEL, lhd, lbox, LH);
     if (both && !RECEL.hidden) { const ph = RECEL.offsetHeight; if (ph && Math.abs(ph - RECPH) > 2) { RECPH = ph; win.requestAnimationFrame(() => { if (!dead) recSync(); }); } } };   /* Links' slot follows Recents' real height */
