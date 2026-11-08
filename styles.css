@@ -2250,7 +2250,7 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-lklist{display:flex;flex-direction:column;overflow-y:auto;min-height:0;flex:1}
 .ivd-links .ivd-lklist::after{content:"";flex:none;height:40px}   /* room to scroll the last rows clear of Obsidian's status bar (0.9.76, Nick) */
 .ivd-links .ivd-lkg{margin-top:10px}
-.ivd-links .ivd-lkhd{align-items:center;padding-right:8px}   /* the icons sit a little in from the edge, over the score column (0.9.72, Nick) */
+.ivd-links .ivd-lkhd{align-items:center;padding-right:40px}   /* 0.9.93, Nick: the icons sit clear of the score column, so their menus (right edges at the button) leave the scores in view; was: the icons sit a little in from the edge, over the score column (0.9.72, Nick) */
 .ivd-links .ivd-lksp{flex:1}
 .ivd-links .ivd-lvh{margin-top:8px;padding:0 0 1px 6px;font:600 9.5px var(--font-monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
 .ivd-links .ivd-lklist>.ivd-lvh:first-child{margin-top:0}
