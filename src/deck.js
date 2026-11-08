@@ -6,6 +6,7 @@
 import { ItemView, MarkdownRenderer, Menu, Notice, Platform, TFile, normalizePath, setIcon } from "obsidian";
 import { FolderPicker, NotePicker } from "./view.js";
 import { BaseQ } from "./baseq.js";
+import { dateKeys, parseDay } from "./scan.js";
 
 export const DECK_TYPE = "ideaverse-deck";
 
@@ -183,7 +184,7 @@ export class DeckView extends ItemView {
   optN() { const v = +this.plugin.store.get("iv-deck-recn"); return v >= 5 && v <= 50 ? v : 30; }
   setOpt(k, v) { this.plugin.store.set("iv-deck-" + k, v); for (const l of this.app.workspace.getLeavesOfType(DECK_TYPE)) if (l.view instanceof DeckView) l.view.render(); }
   recents(n) { return this.app.vault.getMarkdownFiles().sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, n); }
-  age(ms) { const s = (Date.now() - ms) / 1000; return s < 3600 ? Math.max(1, Math.round(s / 60)) + "m" : s < 86400 ? Math.round(s / 3600) + "h" : s < 365 * 86400 ? Math.round(s / 86400) + "d" : Math.round(s / 31557600) + "y"; }   /* years past a year (0.9.66), so a 2019 note reads 7y, not 2500d */
+  age(ms) { const s = (Date.now() - ms) / 1000; return s < 3600 ? Math.max(1, Math.round(s / 60)) + "m" : s < 86400 ? Math.round(s / 3600) + "h" : s < 365 * 86400 ? Math.round(s / 86400) + "d" : Math.floor(s / 31557600) + "y"; }   /* years past a year (0.9.66), so a 2019 note reads 7y, not 2500d */
 
   /* one row: click = primary; ⌘ click = a support slot; drag it onto a slot */
   showPv(path, anchor) { if (!path || !anchor || !anchor.isConnected) return; if (this.pvEl && this.pvEl.dataset.path === path) return; this.hidePv(true);
@@ -287,6 +288,12 @@ export class LinksPaneView extends DeckView {
     this.registerDomEvent(D, "keydown", e => { if ((e.key === "Meta" || e.key === "Control") && this.hovPath) this.showPv(this.hovPath, this.hovEl); });
     this.registerDomEvent(D, "keyup", e => { if (e.key === "Meta" || e.key === "Control") this.hidePv(); });
     follow(); this.render(); }
+  /* when a note was made (0.9.69, Nick: "Always, always, always go by the created property"): the map's own date for it (Settings → created properties, then a date in
+     its name, then the file), else the note's created property read the same way, else the file's creation time */
+  createdMs(p) { const n_ = this.G && this.G.idx.get(p); if (n_ && /^\d{4}-\d{2}-\d{2}$/.test(n_.date || "")) return Date.parse(n_.date);
+    const f = this.file(p); if (!f) return 0; const fm = (this.app.metadataCache.getFileCache(f) || {}).frontmatter || {}, low = {}; for (const [k, v] of Object.entries(fm)) low[k.toLowerCase()] = v;
+    for (const k of dateKeys(this.plugin.settings || {})) { const d = parseDay(low[String(k).toLowerCase()]); if (d) return Date.parse(d); }
+    const m = /(\d{4}-\d{2}-\d{2})/.exec(f.basename); return m ? Date.parse(m[1]) : f.stat.ctime; }
   soon() { window.clearTimeout(this.soonT); this.soonT = window.setTimeout(() => this.render(), 400); }
   /* relevance as the Links HUD scores it (0.9.65, Nick saw the two disagree): the map's relFrom, a walk from this note along weighted links that keeps coming home
      (personalized PageRank, 24 rounds, 20% home), up and related weighted double, tempered by how linked a note is, then up ×3 and related ×1.6; 100 for the closest */
@@ -349,12 +356,12 @@ export class LinksPaneView extends DeckView {
       lvl: (a, b) => { const A = lv(a), B = lv(b); return B[0] - A[0] || B[1] - A[1] || this.title(a).localeCompare(this.title(b)); },
       az: (a, b) => this.title(a).localeCompare(this.title(b), undefined, { numeric: true }), za: (a, b) => this.title(b).localeCompare(this.title(a), undefined, { numeric: true }),
       mnew: (a, b) => ((fi(b) || {}).stat || {}).mtime - ((fi(a) || {}).stat || {}).mtime || 0, mold: (a, b) => ((fi(a) || {}).stat || {}).mtime - ((fi(b) || {}).stat || {}).mtime || 0,
-      cnew: (a, b) => ((fi(b) || {}).stat || {}).ctime - ((fi(a) || {}).stat || {}).ctime || 0, cold: (a, b) => ((fi(a) || {}).stat || {}).ctime - ((fi(b) || {}).stat || {}).ctime || 0 }[SO];
+      cnew: (a, b) => this.createdMs(b) - this.createdMs(a) || ((fi(b) || {}).stat || {}).ctime - ((fi(a) || {}).stat || {}).ctime || 0, cold: (a, b) => this.createdMs(a) - this.createdMs(b) || ((fi(a) || {}).stat || {}).ctime - ((fi(b) || {}).stat || {}).ctime || 0 }[SO];
     main.sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || cmp(a.p, b.p));
     const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
     const ORB = this.opt("orb"), AGE = MOD && this.opt("age"), CAGE = CRE && this.opt("cage"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
-    const onG = p => !this.G || this.G.ek.has(path + "\u0000" + p) || this.G.ek.has(p + "\u0000" + path), right = p => AGE ? (fi(p) ? this.age(fi(p).stat.mtime) : "") : CAGE ? (fi(p) ? this.age(fi(p).stat.ctime) : "") : REL && sc.has(p) && onG(p) ? String(sc.get(p).s) : "";   /* no score for a collection: the map never counts it */
+    const onG = p => !this.G || this.G.ek.has(path + "\u0000" + p) || this.G.ek.has(p + "\u0000" + path), right = p => AGE ? (fi(p) ? this.age(fi(p).stat.mtime) : "") : CAGE ? (fi(p) ? this.age(this.createdMs(p)) : "") : REL && sc.has(p) && onG(p) ? String(sc.get(p).s) : "";   /* no score for a collection: the map never counts it */
     const put = (p, a, c) => { if (MC.has(p)) c = !COL ? "var(--ivd-link)" : this.plugin.store.get("iv-colllinks") !== false ? "var(--ivd-coll)" : "var(--ivd-prop)"; const r = this.row(list, p, a, c, right(p)); r.dataset.q = this.title(p).toLowerCase();
       /* the Holodeck tab's orb (0.9.67, Nick): its level's shape and gradient, 5 a rounded square, 4 a diamond, 3 to 1 a circle */
       if (ORB) { const L_ = lv(p)[0], t0 = r.querySelector(".ivd-t"), o_ = createSpan({ cls: "ivd-orb lv" + L_ }), g_ = LVGRAD[L_]; if (g_) { o_.style.setProperty("--o0", g_[0]); o_.style.setProperty("--o1", g_[1]); } if (t0) t0.before(o_); }
