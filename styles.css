@@ -2208,3 +2208,8 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivm .rch.lkh .lkq{flex:1;min-width:0;height:18px;margin:0 4px 0 4px;padding:0 6px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--bg) 80%,transparent);color:var(--ink);font:500 11px var(--body);box-shadow:none}
 .ivm .rch.lkh .lkq:focus{border-color:color-mix(in srgb,var(--ink) 45%,transparent);outline:none;box-shadow:none}
 .ivm .lkr[hidden],.ivm .lkg[hidden]{display:none}
+/* the find bar's icons (⌘F) in a dark card: Obsidian's faint icon color nearly vanished on the dark editor themes (0.9.52, Nick); light themes keep Obsidian's own */
+.ivm-card.theme-dark .document-search-container .clickable-icon,.theme-dark .ivm-card .document-search-container .clickable-icon,.theme-dark .ivd .document-search-container .clickable-icon{color:color-mix(in srgb,var(--text-normal) 72%,transparent);opacity:1}
+.ivm-card.theme-dark .document-search-container .clickable-icon svg,.theme-dark .ivm-card .document-search-container .clickable-icon svg,.theme-dark .ivd .document-search-container .clickable-icon svg{opacity:1}
+.ivm-card.theme-dark .document-search-container .clickable-icon:hover,.theme-dark .ivm-card .document-search-container .clickable-icon:hover,.theme-dark .ivd .document-search-container .clickable-icon:hover{color:var(--text-normal)}
+.ivm-card.theme-dark .document-search-container .clickable-icon:disabled,.ivm-card.theme-dark .document-search-container .clickable-icon.is-disabled,.theme-dark .ivm-card .document-search-container .clickable-icon:disabled,.theme-dark .ivd .document-search-container .clickable-icon:disabled{color:color-mix(in srgb,var(--text-normal) 45%,transparent)}

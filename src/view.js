@@ -260,7 +260,7 @@ export async function mountInto(owner, el, opts) {
          (0.9.50, Nick: hotkeys in the support note were "a 50/50 coin flip"). A click on the map hands it back to the map, as before */
       let aeInfo = null;   /* Obsidian's active editor, the way Canvas sets it for its cards (a file info, not a view: our leaf has no tab group, so it can't be the active leaf) */
       split.containerEl.addEventListener("focusin", () => { if (Platform.isMobile) return; window.setTimeout(() => { const v = leaf && leaf.view; if (!v || !v.editor || !split.containerEl.contains(document.activeElement)) return;
-        aeInfo = { app, get file() { return v.file; }, get editor() { return v.editor; }, getMode: () => v.getMode(), hoverPopover: null }; app.workspace.activeEditor = aeInfo; }, 0); });
+        aeInfo = new Proxy(v, { getPrototypeOf: () => Object.prototype, get: (t, k) => { const x = Reflect.get(t, k, t); return typeof x === "function" ? x.bind(t) : x; } });   /* the note's own view (Find, ⌘F, needs its methods), dressed so the setter takes it: it refuses a MarkdownView */ app.workspace.activeEditor = aeInfo; }, 0); });
       split.containerEl.addEventListener("focusout", e => { if (e.relatedTarget instanceof Node && split.containerEl.contains(e.relatedTarget)) return; window.setTimeout(() => { if (aeInfo && app.workspace._activeEditor === aeInfo && !split.containerEl.contains(document.activeElement)) app.workspace.activeEditor = null; aeInfo = null; }, 0); });
       // Shift-click on a link is the editor's own again (it extends the selection): ⌘-click opens a new orb, ⌘⌥-click the support note (0.8.189)
       return { el: split.containerEl,
