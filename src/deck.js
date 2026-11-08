@@ -405,7 +405,9 @@ export class LinksPaneView extends DeckView {
         const ar = main.filter(l => RK(l.p) === k); if (!ar.length) continue; list.createDiv({ cls: "ivd-lkg ivd-lvh", text: `${lab} · ${ar.length}` }); for (const l of ar) put(l.p, l.a, l.c); } }
     else if (SO === "lvl" && this.opt("lvh")) { const by = new Map(); for (const l of main) { const k = lv(l.p)[0]; if (!by.has(k)) by.set(k, []); by.get(k).push(l); }
       for (const k of [...by.keys()].sort((a, b) => b - a)) { const ar = by.get(k); list.createDiv({ cls: "ivd-lkg ivd-lvh", text: k ? `Level ${k} · ${ar.length}` : `Not on the map · ${ar.length}` }); for (const l of ar) put(l.p, l.a, l.c); } }
-    else for (const l of main) put(l.p, l.a, l.c);
+    /* pinned up links say so (0.9.94, Nick: "Why is this link at the top with a lower score than the one right below it?"): an UP header over them and a thin line after */
+    else { const ups = PIN ? main.filter(l => this.kindOf(path, l.p) === "upp") : []; if (ups.length) { list.createDiv({ cls: "ivd-lkg ivd-lvh", text: `Up · ${ups.length}` }); for (const l of ups) put(l.p, l.a, l.c); list.createDiv({ cls: "ivd-lkdiv" }); }
+      for (const l of main) if (!ups.includes(l)) put(l.p, l.a, l.c); }
     /* a group's header takes its rows' color, as in the HUD (0.9.65, Nick): collections coral (with Display → Collection links in coral), other properties slate; plain with link colors off */
     const CORAL = this.plugin.store.get("iv-colllinks") !== false;
     const group = (lab, set, arrow, coral) => { if (!set.size) return; const c_ = !COL ? "" : coral && CORAL ? "var(--ivd-coll)" : "var(--ivd-prop)"; const h_ = list.createDiv({ cls: "ivd-h ivd-lkg", text: `${lab.toUpperCase()} · ${set.size}` }); if (c_) h_.style.setProperty("--c", c_); if (c_) h_.addClass("ivd-lkgc");

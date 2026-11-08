@@ -2285,3 +2285,4 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .menu.ivd-menu .menu-item-icon{flex:none;width:16px;min-width:16px;margin-right:6px}
 .menu.ivd-menu .menu-item.mod-checked > .menu-item-icon:first-child{display:none}
 .menu.ivd-menu .menu-item-icon.mod-checked{order:-1;margin-left:0}
+.ivd-links .ivd-lkdiv{flex:none;height:1px;margin:6px 6px 4px;background:var(--background-modifier-border)}   /* after the pinned up links (0.9.94) */
