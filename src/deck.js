@@ -3,7 +3,7 @@
    (click to swap back); a pinned sidekick note below it (a MOC, usually). Each support and the sidekick has a links drawer that slides out over its
    right side. The Mini Deck is the primary note alone with its drawer, made to pop out into its own window for meetings.
    Each Deck tab keeps its own notes in its own saved state, so a Mini and the full Deck (and the main map) never fight over settings. */
-import { ItemView, MarkdownRenderer, Notice, Platform, TFile, normalizePath, setIcon } from "obsidian";
+import { ItemView, MarkdownRenderer, Menu, Notice, Platform, TFile, normalizePath, setIcon } from "obsidian";
 import { FolderPicker, NotePicker } from "./view.js";
 
 export const DECK_TYPE = "ideaverse-deck";
@@ -267,6 +267,7 @@ export class DeckView extends ItemView {
    for the note you're reading anywhere in Obsidian, straight, in a tab or the sidebar. It sorts links the HUD's way: up and related first, then by relevance,
    with ← → ↔ and level colors; then this note's own properties, one group each (collections in coral); then other notes' properties pointing back */
 export const LINKS_TYPE = "ideaverse-links";
+const LINKSORTS = [["rel", "Relevance"], ["lvl", "Idea Emergence"], null, ["az", "File name (A to Z)"], ["za", "File name (Z to A)"], null, ["mnew", "Modified time (new to old)"], ["mold", "Modified time (old to new)"], null, ["cnew", "Created time (new to old)"], ["cold", "Created time (old to new)"]];
 export class LinksPaneView extends DeckView {
   constructor(leaf, plugin) { super(leaf, plugin); this.cur = null; this.q = ""; }
   getViewType() { return LINKS_TYPE; }
@@ -300,12 +301,24 @@ export class LinksPaneView extends DeckView {
     const KR = { upp: 0, rel: 1 }, main = ls.filter(l => !inG.has(l.p) || KR[this.kindOf(path, l.p, l.a !== "←", l.a !== "→")] != null)
       .sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || b.s - a.s);
     const hd = box.createDiv({ cls: "ivd-lkhd" }); hd.createSpan({ cls: "ivd-h", text: `⇄ LINKS · ${ls.length}` }); hd.createSpan({ cls: "ivd-lkn", text: this.title(path) });
-    const qi = box.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); qi.value = this.q;
+    const qr = box.createDiv({ cls: "ivd-lkqr" }), qi = qr.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); qi.value = this.q;
+    /* sort (0.9.61, Nick: relevance by default, Idea Emergence, and Obsidian's own six); up and related stay on top in every order */
+    const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "rel";
+    const sb = qr.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Sort links", "aria-pressed": String(SO !== "rel") } }); setIcon(sb, "arrow-up-narrow-wide");
+    sb.onclick = e => { const m = new Menu(); for (const x of LINKSORTS) { if (!x) { m.addSeparator(); continue; } m.addItem(it => it.setTitle(x[1]).setChecked(x[0] === SO).onClick(() => { this.plugin.store.set("iv-links-sort", x[0]); for (const l of this.app.workspace.getLeavesOfType(LINKS_TYPE)) if (l.view instanceof LinksPaneView) l.view.render(); })); } m.showAtMouseEvent(e); };
+    const G = this.G, fi = p => this.file(p), lv = p => { const n_ = G && G.idx.get(p); return n_ ? [n_.level || 0, n_.score || 0] : [0, 0]; }, sc0 = new Map(ls.map(l => [l.p, l.s]));
+    const cmp = {
+      rel: (a, b) => (sc0.get(b) || 0) - (sc0.get(a) || 0) || this.title(a).localeCompare(this.title(b)),
+      lvl: (a, b) => { const A = lv(a), B = lv(b); return B[0] - A[0] || B[1] - A[1] || this.title(a).localeCompare(this.title(b)); },
+      az: (a, b) => this.title(a).localeCompare(this.title(b), undefined, { numeric: true }), za: (a, b) => this.title(b).localeCompare(this.title(a), undefined, { numeric: true }),
+      mnew: (a, b) => ((fi(b) || {}).stat || {}).mtime - ((fi(a) || {}).stat || {}).mtime || 0, mold: (a, b) => ((fi(a) || {}).stat || {}).mtime - ((fi(b) || {}).stat || {}).mtime || 0,
+      cnew: (a, b) => ((fi(b) || {}).stat || {}).ctime - ((fi(a) || {}).stat || {}).ctime || 0, cold: (a, b) => ((fi(a) || {}).stat || {}).ctime - ((fi(b) || {}).stat || {}).ctime || 0 }[SO];
+    main.sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || cmp(a.p, b.p));
     const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
     for (const l of main) this.row(list, l.p, l.a, l.c, this.opt("rel") ? String(l.s) : "").dataset.q = this.title(l.p).toLowerCase();
     const group = (lab, set, arrow, coral) => { if (!set.size) return; list.createDiv({ cls: "ivd-h ivd-lkg", text: `${lab.toUpperCase()} · ${set.size}` });
-      for (const p of [...set].sort((a, b) => ((sc.get(b) || {}).s || 0) - ((sc.get(a) || {}).s || 0))) this.row(list, p, arrow, coral ? "var(--ivd-coll)" : "var(--ivd-prop)", sc.has(p) && this.opt("rel") ? String(sc.get(p).s) : "").dataset.q = this.title(p).toLowerCase(); };
+      for (const p of [...set].sort(cmp)) this.row(list, p, arrow, coral ? "var(--ivd-coll)" : "var(--ivd-prop)", sc.has(p) && this.opt("rel") ? String(sc.get(p).s) : "").dataset.q = this.title(p).toLowerCase(); };
     for (const [k, set] of own) group(k, set, "→", ck.has(k)); for (const [k, set] of back) group(k, set, "←", false);
     const apply = () => { const q = this.q.trim().toLowerCase(); for (const r of list.querySelectorAll(".ivd-row")) r.toggleAttribute("hidden", !!q && !(r.dataset.q || "").includes(q));
       for (const g of list.querySelectorAll(".ivd-lkg")) { let n = g.nextElementSibling, any = false; while (n && !n.classList.contains("ivd-lkg")) { if (!n.hasAttribute("hidden")) any = true; n = n.nextElementSibling; } g.toggleAttribute("hidden", !!q && !any); } };
