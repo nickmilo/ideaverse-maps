@@ -2255,5 +2255,8 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .theme-dark .ivd-links .ivd-orb.lv2{--o0:hsla(151,54%,64%,.7);--o1:hsla(151,54%,64%,.7)}
 .ivd-links .ivd-orb.lv5{border-radius:2.5px;width:9px;height:9px;margin:0 .5px}
 .ivd-links .ivd-orb.lv4{border-radius:1.5px;width:7px;height:7px;margin:0 1.5px;transform:rotate(45deg)}   /* the Holodeck orb (0.9.67) */
+.ivd-links .ivd-here{display:flex;align-items:center;gap:6px;margin:8px 0 2px;padding:3px 8px;border:1px solid color-mix(in srgb,var(--ivd-acc) 60%,transparent);border-radius:12px;background:color-mix(in srgb,var(--ivd-acc) 10%,transparent);min-width:0}
+.ivd-links .ivd-here .ivd-ht{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:12.5px;color:var(--ivd-acc)}
+.ivd-links .ivd-here .ivd-hl{flex:none;font:600 9.5px var(--font-monospace);letter-spacing:.08em;color:color-mix(in srgb,var(--ivd-acc) 75%,var(--text-muted))}   /* the active note in Relative Emergence (0.9.75) */
 .ivd-links .ivd-e{flex:none;width:16px;text-align:center;font-size:12px;line-height:1}
 .ivd-links .ivd-row[hidden],.ivd-links .ivd-lkg[hidden]{display:none}
