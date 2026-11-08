@@ -1947,7 +1947,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivd-h2{margin-top:14px}
 .ivd .ivd-row{appearance:none;display:flex;align-items:center;gap:6px;width:100%;height:21px;min-height:0;padding:0 6px;border:0;border-radius:5px;background:none;box-shadow:none;font-size:12.5px;cursor:pointer;text-align:left;flex:none}
 .ivd .ivd-row:hover{background:var(--background-modifier-hover)}
-.ivd-a{font:500 11px var(--font-monospace);color:var(--text-muted);width:13px;flex:none}
+.ivd-a{font:400 11px var(--font-interface);color:var(--text-muted);width:14px;text-align:center;flex:none}   /* the HUD's arrows (.lka): interface font, not mono, which squeezed ↔ (0.9.63, Nick) */
 .ivd-t{color:var(--c);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ivd-n{font:600 10px var(--font-monospace);color:color-mix(in srgb,var(--ivd-acc) 75%,var(--text-muted));flex:none}
 .ivd-drawer{position:absolute;right:0;top:31px;bottom:0;width:min(220px,60%);box-sizing:border-box;padding:8px 6px;background:var(--background-secondary);border-left:1px solid var(--ivd-line);box-shadow:-12px 0 24px rgba(0,0,0,.25);z-index:5}
