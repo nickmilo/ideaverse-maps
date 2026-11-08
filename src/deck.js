@@ -89,10 +89,11 @@ export class DeckView extends ItemView {
   /* the map's own scan (shared with the map, read from its cache), for link colors and levels even when no map is open (0.9.3) */
   ensureGraph() { if (this.G || this.gLoading) return; this.gLoading = true;
     void this.plugin.getGraph().then(g => { const idx = new Map(), ek = new Map(); for (const nd of g.nodes) idx.set(nd.path, nd); const byId = new Map(g.nodes.map(nd => [nd.id, nd]));
-      for (const [a, b, k] of g.edges) { const A = byId.get(a), B = byId.get(b); if (A && B) ek.set(A.path + "\u0000" + B.path, k); }
-      const rk = new Map(); [...g.nodes].filter(nd => !nd.archived).sort((a, b) => (b.score || 0) - (a.score || 0)).forEach((nd, q) => rk.set(nd.path, q + 1)); this.G = { idx, ek, rk, w: (() => { const W = (g.settings && g.settings.weights) || {}, sv = this.plugin.store.get("iv-score"); const w0 = { in: W.body_in ?? 1, out: W.body_out ?? .6, up: W.up_in ?? .3, both: W.both ?? .8, coll: W.coll_in ?? 0 }; return sv && sv.w ? Object.assign(w0, sv.w) : w0; })() };   /* the weights the map scores with, your Scoring changes included */ this.gLoading = false; this.render(); }).catch(() => { this.gLoading = false; }); }
-  kindOf(from, to, o, i) { const G = this.G; if (!G) return ""; const k = G.ek.get(from + "\u0000" + to), kb = G.ek.get(to + "\u0000" + from);
-    if (k === 1) return "upp"; if (k === 4 || kb === 4) return "rel"; if (k === 5 || k === 3) return "prop"; if (kb === 1) return "down";
+      for (const [a, b, k] of g.edges) { const A = byId.get(a), B = byId.get(b); if (!A || !B) continue; const key = A.path + "\u0000" + B.path, o_ = ek.get(key); if (o_ == null || (k === 1 || k === 4 || k === 5) && !(o_ === 1 || o_ === 4)) ek.set(key, k); }   /* the map's EKIND rule: up, related or a property wins over a body link (0.9.65) */
+      const rk = new Map(); [...g.nodes].filter(nd => !nd.archived).sort((a, b) => (b.score || 0) - (a.score || 0)).forEach((nd, q) => rk.set(nd.path, q + 1)); this.G = { g, idx, ek, rk, w: (() => { const W = (g.settings && g.settings.weights) || {}, sv = this.plugin.store.get("iv-score"); const w0 = { in: W.body_in ?? 1, out: W.body_out ?? .6, up: W.up_in ?? .3, both: W.both ?? .8, coll: W.coll_in ?? 0 }; return sv && sv.w ? Object.assign(w0, sv.w) : w0; })() };   /* the weights the map scores with, your Scoring changes included */ this.gLoading = false; this.render(); }).catch(() => { this.gLoading = false; }); }
+  /* a link's kind as the map's linkKind sees it (0.9.65): up, related or a property only as the note itself wrote it; anything else above or below by level, then score */
+  kindOf(from, to) { const G = this.G; if (!G) return ""; const k = G.ek.get(from + "\u0000" + to);
+    if (k === 1) return "upp"; if (k === 4) return "rel"; if (k === 5 || k === 3) return "prop";
     const A = G.idx.get(from), B = G.idx.get(to); if (!A || !B) return ""; if (B.level !== A.level) return B.level > A.level ? "up" : "down"; return (B.score || 0) >= (A.score || 0) ? "up" : "down"; }
   nbrs(path) { const rl = this.app.metadataCache.resolvedLinks || {}, s_ = new Set(Object.keys(rl[path] || {})); for (const [k, m] of Object.entries(rl)) if (m && m[path]) s_.add(k); s_.delete(path); return s_; }
   linksOf(path) { const app = this.app, mc = app.metadataCache, out = new Map(), inn = new Set(), rl = mc.resolvedLinks || {}; this.ensureGraph();
@@ -286,6 +287,23 @@ export class LinksPaneView extends DeckView {
     this.registerDomEvent(D, "keyup", e => { if (e.key === "Meta" || e.key === "Control") this.hidePv(); });
     follow(); this.render(); }
   soon() { window.clearTimeout(this.soonT); this.soonT = window.setTimeout(() => this.render(), 400); }
+  /* relevance as the Links HUD scores it (0.9.65, Nick saw the two disagree): the map's relFrom, a walk from this note along weighted links that keeps coming home
+     (personalized PageRank, 24 rounds, 20% home), up and related weighted double, tempered by how linked a note is, then up ×3 and related ×1.6; 100 for the closest */
+  relFrom(path) { const G = this.G; if (!G || !G.g) return null; if (G.relP === path) return G.relV;
+    if (!G.R) { const ns = G.g.nodes, n = ns.length, ix = new Map(ns.map((d, q) => [d.id, q])), nb = Array.from({ length: n }, () => []), wt = Array.from({ length: n }, () => []), sw = new Float64Array(n), P_ = new Map();
+      const wOf = t => t === 1 || t === 4 ? 2 : t === 5 ? .6 : t === 2 ? .5 : 1;
+      for (const [a0, b0, t] of G.g.edges) { const a = ix.get(a0), b = ix.get(b0); if (a == null || b == null || t === 3 || a === b || ns[a].archived || ns[b].archived) continue; const lo = Math.min(a, b), hi = Math.max(a, b), k_ = lo * n + hi; let o = P_.get(k_); if (!o) P_.set(k_, o = { lo, hi, w: 0, f: 0 }); o.w += wOf(t); o.f |= a === lo ? 1 : 2; }
+      for (const o of P_.values()) { const w = o.w * (o.f === 3 ? 1.25 : 1); nb[o.lo].push(o.hi); wt[o.lo].push(w); nb[o.hi].push(o.lo); wt[o.hi].push(w); sw[o.lo] += w; sw[o.hi] += w; }
+      G.R = { n, nb, wt, sw, pix: new Map(ns.map((d, q) => [d.path, q])) }; }
+    const { n, nb, wt, sw, pix } = G.R, a = pix.get(path); if (a == null) return null; const al = .2; let x = new Float64Array(n), y = new Float64Array(n); x[a] = 1;
+    for (let it = 0; it < 24; it++) { y.fill(0); y[a] = al; for (let q = 0; q < n; q++) { const v = x[q]; if (!v || !sw[q]) continue; const f = (1 - al) * v / sw[q], L = nb[q], W = wt[q]; for (let z = 0; z < L.length; z++) y[L[z]] += f * W[z]; } [x, y] = [y, x]; }
+    const out = new Map(); for (let q = 0; q < n; q++) if (x[q]) out.set(q, x[q] / Math.pow(sw[q] + 1, .3));
+    /* as the map does it, once per link between the two (its loop runs over out[a] and inn[a], so a note linked both ways gets the boost twice) */
+    const ns = G.g.nodes, aid = ns[a].id, cnt = new Map(); for (const [a0, b0] of G.g.edges) { if (a0 === aid && b0 !== aid) cnt.set(b0, (cnt.get(b0) || 0) + 1); else if (b0 === aid && a0 !== aid) cnt.set(a0, (cnt.get(a0) || 0) + 1); }
+    for (const [q, v] of out) { const c_ = cnt.get(ns[q].id); if (!c_) continue; const p = ns[q].path, k1 = G.ek.get(path + "\u0000" + p), kk = k1 ?? G.ek.get(p + "\u0000" + path); if (kk === 1 && k1 === 1) out.set(q, v * Math.pow(3, c_)); else if (kk === 4) out.set(q, v * Math.pow(1.6, c_)); }
+    const byP = new Map(); for (const [q, v] of out) byP.set(ns[q].path, v); G.relP = path; G.relV = byP; return byP; }
+  linksOf(path) { const rows = super.linksOf(path), rv = this.relFrom(path); if (!rv) return rows; for (const x of rows) x.r = rv.get(x.p) || 0;
+    const mx = Math.max(1e-12, ...rows.map(x => x.r)); for (const x of rows) x.s = Math.round(100 * x.r / mx); return rows; }
   /* the pane's own Display (0.9.64, Nick): relevance scores, link colors, Idea Emergence headers, emojis, time since modified; shared by every Links pane */
   opt(k) { const v = this.plugin.store.get("iv-links-" + k); return v == null ? !(k === "lvh" || k === "emo") : v === true; }
   setLOpt(k, v) { this.plugin.store.set("iv-links-" + k, v); for (const l of this.app.workspace.getLeavesOfType(LINKS_TYPE)) if (l.view instanceof LinksPaneView) l.view.render(); }
@@ -307,9 +325,9 @@ export class LinksPaneView extends DeckView {
   render() { const box = this.contentEl; if (!box) return; box.empty(); const path = this.cur; if (this.leaf && typeof this.leaf.updateHeader === "function") this.leaf.updateHeader();
     if (!path || !this.file(path)) { box.createDiv({ cls: "ivd-empty", text: "Open a note to see its links." }); return; }
     const ls = this.linksOf(path), { own, back } = this.propGroups(path), inG = new Set([...[...own.values()].flatMap(x => [...x]), ...[...back.values()].flatMap(x => [...x])]);
-    const KR = { upp: 0, rel: 1 }, main = ls.filter(l => !inG.has(l.p) || KR[this.kindOf(path, l.p, l.a !== "←", l.a !== "→")] != null)
+    const KR = { upp: 0 }, KEEP = new Set(["upp", "rel"]), main = ls.filter(l => !inG.has(l.p) || KEEP.has(this.kindOf(path, l.p)))
       .sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || b.s - a.s);
-    const hd = box.createDiv({ cls: "ivd-lkhd" }); hd.createSpan({ cls: "ivd-h", text: `⇄ LINKS · ${ls.length}` }); hd.createSpan({ cls: "ivd-lksp" });
+    const hd = box.createDiv({ cls: "ivd-lkhd" }); const NL = this.G ? ls.filter(l => this.G.ek.has(path + "\u0000" + l.p) || this.G.ek.has(l.p + "\u0000" + path)).length : ls.length; hd.createSpan({ cls: "ivd-h", text: `⇄ LINKS · ${NL}` });   /* counted as the HUD counts: links on the map's graph, so collections (drawn, never counted) aren't (0.9.65) */ hd.createSpan({ cls: "ivd-lksp" });
     /* sort (0.9.61, Nick: relevance by default, Idea Emergence, and Obsidian's own six); up and related stay on top in every order */
     const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "rel", MOD = SO === "mnew" || SO === "mold";
     const sb = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Sort links", "aria-pressed": String(SO !== "rel") } }); setIcon(sb, "arrow-up-narrow-wide");
@@ -330,15 +348,17 @@ export class LinksPaneView extends DeckView {
     const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
     const AGE = MOD && this.opt("age"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
-    const right = p => AGE ? (fi(p) ? this.age(fi(p).stat.mtime) : "") : REL && sc.has(p) ? String(sc.get(p).s) : "";
+    const onG = p => !this.G || this.G.ek.has(path + "\u0000" + p) || this.G.ek.has(p + "\u0000" + path), right = p => AGE ? (fi(p) ? this.age(fi(p).stat.mtime) : "") : REL && sc.has(p) && onG(p) ? String(sc.get(p).s) : "";   /* no score for a collection: the map never counts it */
     const put = (p, a, c) => { const r = this.row(list, p, a, c, right(p)); r.dataset.q = this.title(p).toLowerCase();
       if (EMO) { const em = this.emoOf(p), t = r.querySelector(".ivd-t"), sp = createSpan({ cls: "ivd-e", text: em && !this.title(p).startsWith(em) ? em : "" }); if (t) t.before(sp); } return r; };
     /* Idea Emergence headers (0.9.64, Nick): the main list grouped by level, highest first, in the Holodeck's folder-header style; up and related lead each level */
     if (this.opt("lvh")) { const by = new Map(); for (const l of main) { const k = lv(l.p)[0]; if (!by.has(k)) by.set(k, []); by.get(k).push(l); }
       for (const k of [...by.keys()].sort((a, b) => b - a)) { const ar = by.get(k); list.createDiv({ cls: "ivd-lkg ivd-lvh", text: k ? `Level ${k} · ${ar.length}` : `Not on the map · ${ar.length}` }); for (const l of ar) put(l.p, l.a, l.c); } }
     else for (const l of main) put(l.p, l.a, l.c);
-    const group = (lab, set, arrow, coral) => { if (!set.size) return; list.createDiv({ cls: "ivd-h ivd-lkg", text: `${lab.toUpperCase()} · ${set.size}` });
-      for (const p of [...set].sort(cmp)) put(p, arrow, !COL ? "var(--ivd-link)" : coral ? "var(--ivd-coll)" : "var(--ivd-prop)"); };
+    /* a group's header takes its rows' color, as in the HUD (0.9.65, Nick): collections coral (with Display → Collection links in coral), other properties slate; plain with link colors off */
+    const CORAL = this.plugin.store.get("iv-colllinks") !== false;
+    const group = (lab, set, arrow, coral) => { if (!set.size) return; const c_ = !COL ? "" : coral && CORAL ? "var(--ivd-coll)" : "var(--ivd-prop)"; const h_ = list.createDiv({ cls: "ivd-h ivd-lkg", text: `${lab.toUpperCase()} · ${set.size}` }); if (c_) h_.style.setProperty("--c", c_); if (c_) h_.addClass("ivd-lkgc");
+      for (const p of [...set].sort(cmp)) put(p, arrow, c_ || "var(--ivd-link)"); };
     for (const [k, set] of own) group(k, set, "→", ck.has(k)); for (const [k, set] of back) group(k, set, "←", false);
     const apply = () => { const q = this.q.trim().toLowerCase(); for (const r of list.querySelectorAll(".ivd-row")) r.toggleAttribute("hidden", !!q && !(r.dataset.q || "").includes(q));
       for (const g of list.querySelectorAll(".ivd-lkg")) { let n = g.nextElementSibling, any = false; while (n && !n.classList.contains("ivd-lkg")) { if (!n.hasAttribute("hidden")) any = true; n = n.nextElementSibling; } g.toggleAttribute("hidden", !!q && !any); } };
