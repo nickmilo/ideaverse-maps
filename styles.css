@@ -2319,7 +2319,7 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-lvh,.ivd-links .ivd-lkg{font-size:10.5px}
 .ivd-links .ivd-gn{margin-left:7px;font-weight:500;opacity:.5}
 /* an emoji the note inherits (folder, base) sits softer than one in its own file name (0.9.102) */
-.ivd-links .ivd-e.ivd-e-inh{opacity:.6;filter:grayscale(.35)}
+.ivd-links .ivd-e.ivd-e-inh{opacity:1;filter:none}   /* inherited emojis at full color again (0.9.104, Nick: not "an inverse sacrifice") */
 /* group headers: 12px of air above, 2px below, so each header reads as belonging to the rows under it (0.9.103, Nick: "split the difference") */
 .ivd-links .ivd-lvh,.ivd-links .ivd-lkg{margin-top:12px;margin-bottom:2px}
 .ivd-links .ivd-lklist>.ivd-lvh:first-child,.ivd-links .ivd-lklist>.ivd-lkg:first-child{margin-top:0}
