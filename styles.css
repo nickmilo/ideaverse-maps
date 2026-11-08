@@ -2325,7 +2325,7 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-lklist>.ivd-lvh:first-child,.ivd-links .ivd-lklist>.ivd-lkg:first-child{margin-top:0}
 .ivd-links .ivd-lkdiv{margin-top:8px}
 /* Tuck rows under headers (0.9.103) */
-.ivd-links .ivd-tuck .ivd-row{padding-left:18px}
+.ivd-links .ivd-row.ivd-under{padding-left:18px}
 /* an emoji from the file name: a small gold dot at its corner; folder and base emojis stay as they are (0.9.105) */
 .ivd-links .ivd-e.ivd-e-own{position:relative}
 .ivd-links .ivd-e.ivd-e-own::after{content:"";position:absolute;right:-1px;bottom:0;width:5px;height:5px;border-radius:50%;background:var(--ivd-acc);box-shadow:0 0 0 1.5px var(--background-secondary,var(--background-primary))}
