@@ -564,15 +564,30 @@ const COORDK = (() => { const k = (D.settings && D.settings.coord_props) || ["x"
 const COORDV = i => { const v = N[i] && N[i].p && N[i].p.n; if (!v) return null; const x = v[COORDK[0]], y = v[COORDK[1]]; return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null; };
 let COORDN = -1; const coordCount = () => { if (COORDN < 0) { COORDN = 0; for (let i = 0; i < n; i++) if (COORDV(i)) COORDN++; } return COORDN; };
 let COORDS = pref("iv-sfcoord", false) === true; const coordOn = () => COORDS && coordCount() >= 20;
+/* where a group of points is thickest: the mean of the fullest cell on a grid an eighth of their spread wide. A ring (the Outer Rim) has no middle worth naming,
+   so a hub or a region's name goes where its notes actually gather */
+function denseAt(xy){ if (xy.length < 4) { let x = 0, y = 0; for (const [a, b] of xy) { x += a; y += b; } return [x / xy.length, y / xy.length]; }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [a, b] of xy) { x0 = Math.min(x0, a); x1 = Math.max(x1, a); y0 = Math.min(y0, b); y1 = Math.max(y1, b); }
+  const c = Math.max(x1 - x0, y1 - y0, 1e-9) / 8, m = new Map(); for (const [a, b] of xy) { const k = Math.floor((a - x0) / c) + "," + Math.floor((b - y0) / c), o = m.get(k) || m.set(k, [0, 0, 0]).get(k); o[0] += a; o[1] += b; o[2]++; }
+  let best = null; for (const o of m.values()) if (!best || o[2] > best[2]) best = o; return [best[0] / best[2], best[1] / best[2]]; }
 function coordPlace(B, web){
   const pts = []; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (let i = 0; i < n; i++) { const c = COORDV(i); if (!c) continue; pts.push(i); x0 = Math.min(x0, c[0]); x1 = Math.max(x1, c[0]); y0 = Math.min(y0, c[1]); y1 = Math.max(y1, c[1]); }
   const span = Math.max(x1 - x0, y1 - y0, 1e-9), S = 2600 / span, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, set = new Uint8Array(n);
   for (const i of pts) { const c = COORDV(i); SX[i] = UC.x + (c[0] - cx) * S; SY[i] = UC.y + (c[1] - cy) * S; set[i] = 1; }
-  for (let pass = 0; pass < 3; pass++) { const nx = []; for (let i = 0; i < n; i++) { if (set[i]) continue; let sx = 0, sy = 0, k = 0; for (const j of out[i].concat(inn[i])) if (set[j]) { sx += SX[j]; sy += SY[j]; k++; } if (k) nx.push([i, sx / k, sy / k]); }
+  for (let pass = 0; pass < 3; pass++) { const nx = []; for (let i = 0; i < n; i++) { if (set[i]) continue; let sx = 0, sy = 0, k = 0; const xy = []; for (const j of out[i].concat(inn[i])) if (set[j]) xy.push([SX[j], SY[j]]); if (xy.length) { const [x, y] = denseAt(xy); nx.push([i, x, y]); } }
     for (const [i, x, y] of nx) { const a = hash(N[i].path, 37) * 6.2832, r = 14 + hash(N[i].path, 38) * 22; SX[i] = x + Math.cos(a) * r; SY[i] = y + Math.sin(a) * r; set[i] = 1; } }
   for (let i = 0; i < n; i++) { BOD[i] = -1; if (set[i]) continue; const a = hash(N[i].path, 37) * 6.2832, r = 1500 + hash(N[i].path, 38) * 200; SX[i] = UC.x + Math.cos(a) * r; SY[i] = UC.y + Math.sin(a) * r; }
-  B.length = 0; web.length = 0; BOD.fill(-1); COREB.fill(-1); }
+  B.length = 0; web.length = 0; BOD.fill(-1); COREB.fill(-1);
+  /* regions: the placed notes grouped by folder, at the first depth that gives 3 to 40 groups (a galaxy's regions, a city's boroughs), each a tinted glow with its name.
+     The stars keep their coordinates (BOD stays -1); the bodies only light and name the regions */
+  const dirAt = (p, d) => { const parts = p.split("/").slice(0, -1); return parts.length >= d ? parts.slice(0, d).join("/") : null; };
+  let groups = null; for (let d = 1; d <= 4 && !groups; d++) { const m = new Map(); for (let i = 0; i < n; i++) { if (!set[i]) continue; const k = dirAt(N[i].path, d); if (k == null) continue; (m.get(k) || m.set(k, []).get(k)).push(i); }
+    const big = [...m.entries()].filter(([, v]) => v.length >= 5); if (big.length >= 3 && big.length <= 40) groups = big; }
+  const HUES = ["#8fa6ff", "#ffb36b", "#7fe0c4", "#ff8fb1", "#c9a2ff", "#ffe07a", "#6fd3ff", "#ff9e7d", "#a6e37a", "#e7a6ff", "#7aa8ff", "#ffc7a0"];
+  if (groups) groups.sort((p, q) => q[1].length - p[1].length).forEach(([k, mem], g) => { const [mx, my] = denseAt(mem.map(i => [SX[i], SY[i]]));
+    const ds = mem.map(i => Math.hypot(SX[i] - mx, SY[i] - my)).sort((p, q) => p - q), r = Math.max(60, Math.min(520, ds[Math.floor(ds.length * .5)] || 60));
+    const b = { kind: "neb", coord: true, name: k.split("/").pop(), members: mem, x: mx - UC.x, y: my - UC.y, r, hue: HUES[g % HUES.length], seed: "coord" + k, id: B.length }; B.push(b); }); }
 const UC = {x: WW/2, y: WH/2};
 const SADJ = Array.from({length:n}, () => []);
 for (const [a,b,t] of E) if ((t <= 1 || t === 4) && !ARCH[a] && !ARCH[b]) { SADJ[a].push(b); SADJ[b].push(a); }
@@ -839,7 +854,7 @@ function starLabels(){
     ctx.lineWidth = 4; ctx.strokeStyle = "rgba(3,4,10,.85)"; ctx.strokeText(nm.toUpperCase(), cx, y);
     ctx.fillStyle = b.kind === "gal" ? "rgba(236,240,255,.92)" : "rgba(200,208,235,.75)"; ctx.fillText(nm.toUpperCase(), cx, y);
     if (hasLS) ctx.letterSpacing = "0px"; ctx.font = `500 9.5px ${css.mono}`; ctx.fillStyle = b.hue;
-    const sub = b.kind === "neb" ? `${b.members.length.toLocaleString()} unlinked` : b.kind === "old" ? `${b.members.length.toLocaleString()} notes` : `${b.members.length.toLocaleString()} stars`;
+    const sub = b.coord ? `${b.members.length.toLocaleString()} notes` : b.kind === "neb" ? `${b.members.length.toLocaleString()} unlinked` : b.kind === "old" ? `${b.members.length.toLocaleString()} notes` : `${b.members.length.toLocaleString()} stars`;
     ctx.strokeText(sub, cx, y + 15); ctx.fillText(sub, cx, y + 15); }
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.globalAlpha = 1;
 }
@@ -2896,7 +2911,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
       const tw = g.measureText(nm).width + 8, box = [p0[0] - tw / 2, y - 2, tw, 30]; if (taken.some(q => box[0] < q[0] + q[2] && box[0] + box[2] > q[0] && box[1] < q[1] + q[3] && box[1] + box[3] > q[1])) { if (hasLS) g.letterSpacing = "0px"; continue; } taken.push(box);
       g.globalAlpha = Math.max(.25, Math.min(1, 14000 / d)) * (CK.c >= 0 ? .38 : 1); if (CK.noteBox && Math.abs(p0[0] - CK.noteBox[0]) < 140 && Math.abs(y - CK.noteBox[1]) < 50) g.globalAlpha *= .4; g.lineWidth = 4;   /* names step back while a note is the cockpit, as Starfield's do while a note is picked (0.8.126); fainter still beside the note */ g.strokeStyle = "rgba(3,4,10,.85)"; g.strokeText(nm, p0[0], y); g.fillStyle = b.kind === "gal" ? "rgba(236,240,255,.92)" : "rgba(200,208,235,.75)"; g.fillText(nm, p0[0], y);
       if (hasLS) g.letterSpacing = "0px"; g.font = `500 9.5px ${css.mono || font}`; g.fillStyle = b.hue || "#9fb0ff"; const m_ = (b.members || []).length;
-      const sub = b.kind === "neb" ? `${m_.toLocaleString()} unlinked` : b.kind === "old" ? `${m_.toLocaleString()} notes` : `${m_.toLocaleString()} stars`; g.strokeText(sub, p0[0], y + 15); g.fillText(sub, p0[0], y + 15); }
+      const sub = b.coord ? `${m_.toLocaleString()} notes` : b.kind === "neb" ? `${m_.toLocaleString()} unlinked` : b.kind === "old" ? `${m_.toLocaleString()} notes` : `${m_.toLocaleString()} stars`; g.strokeText(sub, p0[0], y + 15); g.fillText(sub, p0[0], y + 15); }
     g.textBaseline = "alphabetic"; }
   // twinkle (0.8.95), when it's on in Starfield: now and then one star glints and fades
   if (CKX.twinkle) { const now = win.performance.now(); CK.tw = (CK.tw || []).filter(q => now - q.t0 < 1400); if (!CK.twN || now > CK.twN) { CK.twN = now + 900 + Math.random() * 2600; const j = Math.floor(Math.random() * n); if (vis[j] && N[j].level >= 2) CK.tw.push({ i: j, t0: now }); }
@@ -4415,7 +4430,7 @@ function build3D(){
   SPAN3 = Math.max(UB.x1 - UB.x0, UB.y1 - UB.y0, 1);
   B3 = BODIES.map(b => { const nm = (b.name || "") + b.kind, h1 = hash(nm, 31), h2 = hash(nm, 32), h3 = hash(nm, 33);
     const flat = b.kind === "gal" || b.kind === "dwarf" || b.kind === "home";
-    const z = b.kind === "home" ? 0 : (h1 - .5)*SPAN3*.75, inc = b.kind === "home" ? .3 : (h2 - .5)*Math.PI*.9, phi = h3*2*Math.PI;
+    const z = b.kind === "home" || b.coord ? 0 : (h1 - .5)*SPAN3*.75, inc = b.kind === "home" ? .3 : (h2 - .5)*Math.PI*.9, phi = h3*2*Math.PI;
     // tilt the disk by inc around an axis lying in its plane at angle phi:  M = Rz(phi) · Rx(inc) · Rz(-phi)
     const cf = Math.cos(phi), sf = Math.sin(phi), ci = Math.cos(inc), si = Math.sin(inc);
     const Rz = (c, s) => [[c,-s,0],[s,c,0],[0,0,1]], Rx = [[1,0,0],[0,ci,-si],[0,si,ci]];
