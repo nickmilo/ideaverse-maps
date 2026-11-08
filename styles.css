@@ -2268,7 +2268,7 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 
 /* Links pane Display: a sample after each switch (0.9.82) */
 .ivd-mh{white-space:nowrap}
-.ivd-mhx{display:inline-flex;align-items:center;gap:5px;margin-left:8px;vertical-align:middle}
+.ivd-mhx{display:inline-flex;align-items:center;gap:5px;margin-left:2px;vertical-align:middle}
 .ivd-mhn{font:600 10px var(--font-monospace);color:#a87a05}
 .theme-dark .ivd-mhn{color:#f2d45c}
 .ivd-mha{font-size:11px;color:var(--text-muted);letter-spacing:.15em}
