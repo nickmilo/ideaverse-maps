@@ -2265,3 +2265,15 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-here .ivd-hl{flex:none;font:600 9.5px var(--font-monospace);letter-spacing:.08em;color:color-mix(in srgb,var(--ivd-acc) 75%,var(--text-muted))}   /* the active note in Relative Emergence (0.9.75) */
 .ivd-links .ivd-e{flex:none;width:16px;text-align:center;font-size:12px;line-height:1}
 .ivd-links .ivd-row[hidden],.ivd-links .ivd-lkg[hidden]{display:none}
+
+/* Links pane Display: a sample after each switch (0.9.82) */
+.ivd-mh{white-space:nowrap}
+.ivd-mhx{display:inline-flex;align-items:center;gap:5px;margin-left:8px;vertical-align:middle}
+.ivd-mhn{font:600 10px var(--font-monospace);color:#a87a05}
+.theme-dark .ivd-mhn{color:#f2d45c}
+.ivd-mhh{font:600 9px var(--font-monospace);letter-spacing:.1em;color:var(--text-muted)}
+.ivd-mc-upp{color:#b8860b}.ivd-mc-rel{color:#8a3ff0}.ivd-mc-up{color:#1f86c4}.ivd-mc-down{color:#1f8f6a}
+.theme-dark .ivd-mc-upp{color:#ffcf5a}.theme-dark .ivd-mc-rel{color:#c9a2ff}.theme-dark .ivd-mc-up{color:#6fbcff}.theme-dark .ivd-mc-down{color:#6fe08f}
+.ivd-mhx .ivd-orb{flex:none;width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--o0),var(--o1))}
+.ivd-mhx .ivd-orb.lv5{border-radius:2.5px;width:9px;height:9px}
+.ivd-mhx .ivd-orb.lv4{border-radius:1.5px;width:7px;height:7px;transform:rotate(45deg);margin:0 1px}

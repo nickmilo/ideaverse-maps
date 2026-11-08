@@ -351,10 +351,20 @@ export class LinksPaneView extends DeckView {
     sb.onclick = e => { const m = new Menu(); for (const x of LINKSORTS) { if (!x) { m.addSeparator(); continue; } m.addItem(it => it.setTitle(x[1]).setChecked(x[0] === SO).onClick(() => this.setLOpt("sort", x[0]))); } m.showAtMouseEvent(e); };
     /* Display, beside Sort (0.9.64); time since modified is offered only while sorted by modified time */
     const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal");
-    db.onclick = e => { const m = new Menu(), it_ = (k, t) => m.addItem(it => it.setTitle(t).setChecked(this.opt(k)).onClick(() => this.setLOpt(k, !this.opt(k))));
-      it_("rel", "Show relevance scores"); it_("col", "Show Idea Emergence link colors"); it_("orb", "Show Idea Emergence orbs"); it_("emo", "Show emojis");
+    /* each switch shows a sample of what it turns on (0.9.82, Nick: "ways to help the user understand what they're about to toggle on") */
+    db.onclick = e => { const m = new Menu(), D = this.contentEl.ownerDocument;
+      const it_ = (k, t, hint) => m.addItem(it => { const f = D.createDocumentFragment(), sp = D.createElement("span"); sp.className = "ivd-mh"; if (typeof t === "string") sp.append(t); else t(sp); if (hint) { const h = D.createElement("span"); h.className = "ivd-mhx"; hint(h); sp.append(h); } f.append(sp); it.setTitle(f).setChecked(this.opt(k)).onClick(() => this.setLOpt(k, !this.opt(k))); });
+      const tx = (h, s_, c) => { const x = D.createElement("span"); x.className = c || ""; x.textContent = s_; h.append(x); return x; };
+      const orbS = (h, L_) => { const o = D.createElement("span"); o.className = "ivd-orb lv" + L_; const g_ = LVGRAD[L_]; o.style.setProperty("--o0", g_[0]); o.style.setProperty("--o1", g_[1]); h.append(o); };
+      it_("rel", "Show relevance scores", h => tx(h, "82", "ivd-mhn"));
+      it_("col", sp => { sp.append("Show "); tx(sp, "Idea", "ivd-mc-upp"); sp.append(" "); tx(sp, "Emergence", "ivd-mc-rel"); sp.append(" "); tx(sp, "link", "ivd-mc-up"); sp.append(" "); tx(sp, "colors", "ivd-mc-down"); });
+      it_("orb", "Show Idea Emergence orbs", h => { orbS(h, 5); orbS(h, 4); orbS(h, 3); });
+      it_("emo", "Show emojis", h => tx(h, "✨"));
       /* a sort's own switch goes last, under a thin line, so it reads as new for this order (0.9.79, Nick); headers only while sorted by Idea Emergence (0.9.73) */
-      const EMG = SO === "lvl" || SO === "remg"; if (EMG || MOD || CRE) m.addSeparator(); if (SO === "lvl") it_("lvh", "Show Idea Emergence headers"); if (EMG) it_("lsc", "Show link score");   /* the score that sets each note's level, in place of relevance (0.9.80, Nick) */ if (MOD) it_("age", "Show time since modified"); if (CRE) it_("cage", "Show time since created");   /* each offered only while its sort is on (0.9.66, Nick) */ m.showAtMouseEvent(e); };
+      const EMG = SO === "lvl" || SO === "remg"; if (EMG || MOD || CRE) m.addSeparator();
+      if (SO === "lvl") it_("lvh", "Show Idea Emergence headers", h => tx(h, "LEVEL 5", "ivd-mhh"));
+      if (EMG) it_("lsc", "Show link score", h => tx(h, "9.9", "ivd-mhn"));   /* the score that sets each note's level, in place of relevance (0.9.80, Nick) */
+      if (MOD) it_("age", "Show time since modified", h => tx(h, "6d", "ivd-mhn")); if (CRE) it_("cage", "Show time since created", h => tx(h, "3y", "ivd-mhn"));   /* each offered only while its sort is on (0.9.66, Nick) */ m.showAtMouseEvent(e); };
     const G = this.G, fi = p => this.file(p), lv = p => { const n_ = G && G.idx.get(p); return n_ ? [n_.level || 0, n_.score || 0] : [0, 0]; }, sc0 = new Map(ls.map(l => [l.p, l.s]));
     const cmp = {
       rel: (a, b) => (sc0.get(b) || 0) - (sc0.get(a) || 0) || this.title(a).localeCompare(this.title(b)),
