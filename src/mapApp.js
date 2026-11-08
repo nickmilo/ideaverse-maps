@@ -582,8 +582,9 @@ function coordPlace(B, web){
   /* regions: the placed notes grouped by folder, at the first depth that gives 3 to 40 groups (a galaxy's regions, a city's boroughs), each a tinted glow with its name.
      The stars keep their coordinates (BOD stays -1); the bodies only light and name the regions */
   const dirAt = (p, d) => { const parts = p.split("/").slice(0, -1); return parts.length >= d ? parts.slice(0, d).join("/") : null; };
-  let groups = null; for (let d = 1; d <= 4 && !groups; d++) { const m = new Map(); for (let i = 0; i < n; i++) { if (!set[i]) continue; const k = dirAt(N[i].path, d); if (k == null) continue; (m.get(k) || m.set(k, []).get(k)).push(i); }
-    const big = [...m.entries()].filter(([, v]) => v.length >= 5); if (big.length >= 3 && big.length <= 40) groups = big; }
+  let groups = null, np = 0; for (let i = 0; i < n; i++) if (set[i]) np++; const minG = Math.max(5, Math.round(np * .02));   /* the depth with the most sizable folders (2% of the notes or more), 3 to 40 of them */
+  for (let d = 1; d <= 4; d++) { const m = new Map(); for (let i = 0; i < n; i++) { if (!set[i]) continue; const k = dirAt(N[i].path, d); if (k == null) continue; (m.get(k) || m.set(k, []).get(k)).push(i); }
+    const big = [...m.entries()].filter(([, v]) => v.length >= minG); if (big.length >= 3 && big.length <= 40 && (!groups || big.length > groups.length)) groups = big; }
   const HUES = ["#8fa6ff", "#ffb36b", "#7fe0c4", "#ff8fb1", "#c9a2ff", "#ffe07a", "#6fd3ff", "#ff9e7d", "#a6e37a", "#e7a6ff", "#7aa8ff", "#ffc7a0"];
   if (groups) groups.sort((p, q) => q[1].length - p[1].length).forEach(([k, mem], g) => { const [mx, my] = denseAt(mem.map(i => [SX[i], SY[i]]));
     const ds = mem.map(i => Math.hypot(SX[i] - mx, SY[i] - my)).sort((p, q) => p - q), r = Math.max(60, Math.min(520, ds[Math.floor(ds.length * .5)] || 60));
