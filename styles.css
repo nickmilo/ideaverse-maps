@@ -2406,3 +2406,5 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd.ivd-links .ivd-a{font-size:11.75px;width:15px}
 .ivd.ivd-links .ivd-here .ivd-ht{font-size:var(--font-ui-small,13px)}
 .ivd.ivd-links .ivd-row .ivd-n{font-size:10.75px}
+/* 0.9.129, Nick: the panes looked darker than Backlinks beside them in Soft Paper. .ivd (the Mini Deck) paints --background-secondary; a pane in Obsidian's sidebar shows whatever the theme gives its views */
+.ivd.ivd-links{background:transparent}
