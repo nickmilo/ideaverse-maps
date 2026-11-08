@@ -348,7 +348,7 @@ export class LinksPaneView extends DeckView {
     /* Display, beside Sort (0.9.64); time since modified is offered only while sorted by modified time */
     const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal");
     db.onclick = e => { const m = new Menu(), it_ = (k, t) => m.addItem(it => it.setTitle(t).setChecked(this.opt(k)).onClick(() => this.setLOpt(k, !this.opt(k))));
-      it_("rel", "Show relevance scores"); it_("col", "Color links by Idea Emergence"); it_("lvh", "Idea Emergence headers"); it_("orb", "Show Idea Emergence orbs"); it_("emo", "Show emojis"); if (MOD) it_("age", "Show time since modified"); if (CRE) it_("cage", "Show time since created");   /* each offered only while its sort is on (0.9.66, Nick) */ m.showAtMouseEvent(e); };
+      it_("rel", "Show relevance scores"); it_("col", "Show Idea Emergence link colors"); if (SO === "lvl") it_("lvh", "Show Idea Emergence headers");   /* headers only while sorted by Idea Emergence: they are that order (0.9.73, Nick) */ it_("orb", "Show Idea Emergence orbs"); it_("emo", "Show emojis"); if (MOD) it_("age", "Show time since modified"); if (CRE) it_("cage", "Show time since created");   /* each offered only while its sort is on (0.9.66, Nick) */ m.showAtMouseEvent(e); };
     const qr = box.createDiv({ cls: "ivd-lkqr" }), qi = qr.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); qi.value = this.q;
     const G = this.G, fi = p => this.file(p), lv = p => { const n_ = G && G.idx.get(p); return n_ ? [n_.level || 0, n_.score || 0] : [0, 0]; }, sc0 = new Map(ls.map(l => [l.p, l.s]));
     const cmp = {
@@ -368,7 +368,7 @@ export class LinksPaneView extends DeckView {
       if (ORB) { const L_ = lv(p)[0], t0 = r.querySelector(".ivd-t"), o_ = createSpan({ cls: "ivd-orb lv" + L_ }), g_ = LVGRAD[L_]; if (g_) { o_.style.setProperty("--o0", g_[0]); o_.style.setProperty("--o1", g_[1]); } if (t0) t0.before(o_); }
       if (EMO) { const em = this.emoOf(p), t = r.querySelector(".ivd-t"), sp = createSpan({ cls: "ivd-e", text: em && !this.title(p).startsWith(em) ? em : "" }); if (t) t.before(sp); } return r; };
     /* Idea Emergence headers (0.9.64, Nick): the main list grouped by level, highest first, in the Holodeck's folder-header style; up and related lead each level */
-    if (this.opt("lvh")) { const by = new Map(); for (const l of main) { const k = lv(l.p)[0]; if (!by.has(k)) by.set(k, []); by.get(k).push(l); }
+    if (SO === "lvl" && this.opt("lvh")) { const by = new Map(); for (const l of main) { const k = lv(l.p)[0]; if (!by.has(k)) by.set(k, []); by.get(k).push(l); }
       for (const k of [...by.keys()].sort((a, b) => b - a)) { const ar = by.get(k); list.createDiv({ cls: "ivd-lkg ivd-lvh", text: k ? `Level ${k} · ${ar.length}` : `Not on the map · ${ar.length}` }); for (const l of ar) put(l.p, l.a, l.c); } }
     else for (const l of main) put(l.p, l.a, l.c);
     /* a group's header takes its rows' color, as in the HUD (0.9.65, Nick): collections coral (with Display → Collection links in coral), other properties slate; plain with link colors off */

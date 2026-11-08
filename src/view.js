@@ -309,6 +309,10 @@ export async function mountInto(owner, el, opts) {
     /* what's being dragged in from Obsidian (0.9.54): a tab, a file (file list, search results), several files, or a link; markdown notes only */
     /* a place on this map where a dragged tab should land with us, not split Obsidian's layout (0.9.57) */
     registerDropZone: fn => { if (!plugin.dropBlocks) plugin.dropBlocks = new Set(); plugin.dropBlocks.add(fn); events.register(() => { plugin.dropBlocks.delete(fn); }); },
+    /* a HUD row dragged as Obsidian drags a file from its list (0.9.73, Nick): onto the Holodeck's tabs, the primary or support note, or anywhere Obsidian takes a file */
+    dragNote: (e, path) => { const f = app.vault.getAbstractFileByPath(path), dm = app.dragManager; if (!(f instanceof TFile) || !dm || typeof dm.dragFile !== "function") return false; const d = dm.dragFile(e, f); if (!d) return false; if (dm.draggable && typeof dm.onDragEnd === "function") { try { dm.onDragEnd(e); } catch (_) { /* a stale drag */ } } dm.onDragStart(e, d);
+      /* the HUD redraws during a drag, so its row can leave the page; dragend then never reaches Obsidian's window listener and the drag ghost sticks. Hand it over ourselves */
+      const el = e.target; if (el instanceof HTMLElement) el.addEventListener("dragend", ev => { if (dm.draggable && typeof dm.onDragEnd === "function") { try { dm.onDragEnd(ev); } catch (_) { /* already clean */ } } }, { once: true }); return true; },
     dragSource: () => { const md = f => f instanceof TFile && f.extension === "md";
       const lf = plugin.dragLeaf; if (lf && lf.view && md(lf.view.file) && !lf.ivmCard) return { paths: [lf.view.file.path], leaf: lf };
       const dm = app.dragManager, d = dm && dm.draggable; if (!d) return null; const out = [];

@@ -5387,6 +5387,8 @@ const ago = ms => { const s_ = Math.max(0, (Date.now() - ms) / 1000); return s_ 
 function recList(){ const key = RECV + ":" + VISV + ":" + RECN; if (RECC.v === key) return RECC.list; const L = []; for (let i = 0; i < n; i++) if (vis[i] && N[i].mt > 0 && !ARCH[i]) L.push(i);
   L.sort((a, b) => N[b].mt - N[a].mt); RECC = { v: key, list: L.slice(0, RECN) }; return RECC.list; }
 const recEmoji = i => { if (!RECEMO || !EMOI || !EMOI[i]) return ""; return /^\p{Extended_Pictographic}/u.test(N[i].title) ? "" : EMOI[i]; };
+/* Recents and Links rows drag like files from Obsidian's list (0.9.73, Nick): onto the Holodeck's tabs, the primary or the support note */
+function hudDrag(r, j){ if (!host.dragNote || !N[j]) return; r.draggable = true; r.addEventListener("dragstart", e => { e.stopPropagation(); if (!host.dragNote(e, N[j].path)) e.preventDefault(); RECHV = -1; RECHVEL = null; try { recPv(); } catch (_) { /* no preview */ } }); }
 function recBuild(){ if (RECEL) return; const st = e => e.stopPropagation();
   RECTAB = $("#main").createEl("button", { cls: "dtab rectab", attr: { type: "button" } }); RECTAB.hidden = true; RECTAB.addEventListener("pointerdown", st); RECTAB.onclick = e => { e.stopPropagation(); recSetOpen(!recIsOpen()); RECKEY = ""; recSync(); };
   RECEL = $("#main").createDiv({ cls: "ivm-recents" }); RECEL.hidden = true;
@@ -5448,7 +5450,7 @@ function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.cla
     const mark = () => { if (em) r.createSpan({ cls: "rce", text: em }); else { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1 }); } };
     if (RECEFRONT) { mark(); r.createSpan({ cls: "rcn", text: N[j].title }); if (RECAGE) r.createSpan({ cls: "rca", text: ago(N[j].mt) }); }
     else { r.createSpan({ cls: "rca", text: ago(N[j].mt) }); r.createSpan({ cls: "rcn", text: N[j].title }); mark(); }
-    r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); RECKEY = ""; };
+    r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); RECKEY = ""; }; hudDrag(r, j);
     /* hold ⌘ over a row for its mini preview, as on Links (0.8.244, Nick); with "Automatically see mini-preview on hover" on, it shows on hover alone */
     r.addEventListener("pointerenter", () => { RECHV = j; RECHVEL = r; recPv(); }); r.addEventListener("pointerleave", () => { if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } }); }); }
   /* Links, the second section (0.8.284): each linked note once (← in, → out, ↔ both), up links first, then by relevance. A row is the arrow, the name in its level's color
@@ -5486,7 +5488,7 @@ function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.cla
     for (const [g_, js] of rowsFor) { if (g_) { const fo = LKFOLD[g_] === true, gh = lbox.createEl("button", { cls: "lkg", attr: { type: "button" } }); gh.setCssProps({ "--lgc": g_ === GCOLL_ && COLLON ? collCoral() : css.prop }); gh.createSpan({ text: `${g_.slice(2).toUpperCase()} · ${js.length}  ${fo ? "▸" : "▾"}` });   /* the name first, its fold arrow after; each row carries its own → or ← (0.8.307, Nick) */
         gh.onclick = e => { e.stopPropagation(); if (LKFOLD[g_]) delete LKFOLD[g_]; else LKFOLD[g_] = true; save("iv-lkfold", LKFOLD); RECKEY = ""; recSync(); }; if (fo && !LKQ.trim()) continue; }   /* a property's group folds, remembered (0.8.297) */
     for (const j of js) { if (!N[j]) continue; const dimJ = D_.ck && CK.only ? !(CK.only === "in" ? D_.inS.has(j) : D_.outS.has(j)) : false;   /* the Starship's F / R scopes dim the other side */
-      const r = lbox.createEl("button", { cls: "rcr lkr" + (D_.ck && j === D_.lock ? " on" : "") + (dimJ ? " dim" : ""), attr: { type: "button", "data-q": N[j].title.toLowerCase() } });
+      const r = lbox.createEl("button", { cls: "rcr lkr" + (D_.ck && j === D_.lock ? " on" : "") + (dimJ ? " dim" : ""), attr: { type: "button", "data-q": N[j].title.toLowerCase() } }); if (!D_.ck) hudDrag(r, j);
       /* each name in the color of its line, map or Starship: up gold, related purple, above blue, below green (0.8.301, Nick: Forgetting curve was blue here, green on the map) */
       const col = (D_.ck ? (SL[CK.kind.get(j) || "prop"] || (CK.SL || {})[CK.kind.get(j) || "prop"]) : (() => { try { return edgeColor(D_.i, j, upOf(D_.i, j)); } catch (_) { return ""; } })()) || ink;
       if (!HUDTC) { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": col }); }
