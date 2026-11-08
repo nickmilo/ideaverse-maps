@@ -294,6 +294,9 @@ export class LinksPaneView extends DeckView {
     const f = this.file(p); if (!f) return 0; const fm = (this.app.metadataCache.getFileCache(f) || {}).frontmatter || {}, low = {}; for (const [k, v] of Object.entries(fm)) low[k.toLowerCase()] = v;
     for (const k of dateKeys(this.plugin.settings || {})) { const d = parseDay(low[String(k).toLowerCase()]); if (d) return Date.parse(d); }
     const m = /(\d{4}-\d{2}-\d{2})/.exec(f.basename); return m ? Date.parse(m[1]) : f.stat.ctime; }
+  /* the Sort and Display menus open below their button, right edges together, so the button stays clear: a second click on it closes the menu (0.9.91, Nick) */
+  menuUnder(m, btn) { const r = btn.getBoundingClientRect(); m.onHide(() => { this.menuShut = { btn, t: Date.now() }; btn.removeClass("is-active"); }); btn.addClass("is-active"); m.showAtPosition({ x: r.right, y: r.bottom + 4, left: true }, btn.ownerDocument); }
+  menuJust(btn) { const z = this.menuShut; return !!(z && z.btn === btn && Date.now() - z.t < 350); }
   soon() { window.clearTimeout(this.soonT); this.soonT = window.setTimeout(() => this.render(), 400); }
   /* relevance as the Links HUD scores it (0.9.65, Nick saw the two disagree): the map's relFrom, a walk from this note along weighted links that keeps coming home
      (personalized PageRank, 24 rounds, 20% home), up and related weighted double, tempered by how linked a note is, then up ×3 and related ×1.6; 100 for the closest */
@@ -348,11 +351,11 @@ export class LinksPaneView extends DeckView {
     /* sort (0.9.61, Nick: relevance by default, Idea Emergence, and Obsidian's own six); up and related stay on top in every order */
     const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "rel", MOD = SO === "mnew" || SO === "mold", CRE = SO === "cnew" || SO === "cold";
     const sb = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Sort links", "aria-pressed": String(SO !== "rel") } }); setIcon(sb, "arrow-up-narrow-wide");
-    sb.onclick = e => { const m = new Menu(); for (const x of LINKSORTS) { if (!x) { m.addSeparator(); continue; } m.addItem(it => it.setTitle(x[1]).setChecked(x[0] === SO).onClick(() => this.setLOpt("sort", x[0]))); } m.showAtMouseEvent(e); };
+    sb.onclick = () => { if (this.menuJust(sb)) return; const m = new Menu(); for (const x of LINKSORTS) { if (!x) { m.addSeparator(); continue; } m.addItem(it => it.setTitle(x[1]).setChecked(x[0] === SO).onClick(() => this.setLOpt("sort", x[0]))); } this.menuUnder(m, sb); };
     /* Display, beside Sort (0.9.64); time since modified is offered only while sorted by modified time */
     const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal");
     /* each switch shows a sample of what it turns on (0.9.82, Nick: "ways to help the user understand what they're about to toggle on") */
-    db.onclick = e => { const m = new Menu(), D = this.contentEl.ownerDocument; if (typeof m.setUseNativeMenu === "function") m.setUseNativeMenu(false);   /* macOS draws native menus as plain text by default (Settings → Appearance → Native menus): the samples and headers need Obsidian's own menu, as Canvas does for its rich menus (0.9.90) */
+    db.onclick = () => { if (this.menuJust(db)) return; const m = new Menu(), D = this.contentEl.ownerDocument; if (typeof m.setUseNativeMenu === "function") m.setUseNativeMenu(false);   /* macOS draws native menus as plain text by default (Settings → Appearance → Native menus): the samples and headers need Obsidian's own menu, as Canvas does for its rich menus (0.9.90) */
       const it_ = (k, t, hint, dis) => m.addItem(it => { const f = D.createDocumentFragment(), sp = D.createElement("span"); sp.className = "ivd-mh"; if (typeof t === "string") sp.append(t); else t(sp); if (hint) { const h = D.createElement("span"); h.className = "ivd-mhx"; hint(h); sp.append("\u2002", h); }   /* an en space too, so the sample never touches the words even where the menu's styles differ */ f.append(sp); it.setTitle(f).setChecked(dis ? false : this.opt(k)); if (dis) it.setDisabled(true); else it.onClick(() => this.setLOpt(k, !this.opt(k))); });
       const tx = (h, s_, c) => { const x = D.createElement("span"); x.className = c || ""; x.textContent = s_; h.append(x); return x; };
       const orbS = (h, L_) => { const o = D.createElement("span"); o.className = "ivd-orb lv" + L_; const g_ = LVGRAD[L_]; o.style.setProperty("--o0", g_[0]); o.style.setProperty("--o1", g_[1]); h.append(o); };
@@ -374,7 +377,7 @@ export class LinksPaneView extends DeckView {
       if (EMG) it_("lsc", "Show link score", h => tx(h, "9.9", "ivd-mhn"));   /* the score that sets each note's level, in place of relevance (0.9.80, Nick) */
       if (MOD) it_("age", "Show time since modified", h => tx(h, "6d", "ivd-mhn")); if (CRE) it_("cage", "Show time since created", h => tx(h, "3y", "ivd-mhn"));   /* each offered only while its sort is on (0.9.66) */
 
-      m.showAtMouseEvent(e); };
+      this.menuUnder(m, db); };
     const G = this.G, fi = p => this.file(p), lv = p => { const n_ = G && G.idx.get(p); return n_ ? [n_.level || 0, n_.score || 0] : [0, 0]; }, sc0 = new Map(ls.map(l => [l.p, l.s]));
     const cmp = {
       rel: (a, b) => (sc0.get(b) || 0) - (sc0.get(a) || 0) || this.title(a).localeCompare(this.title(b)),
