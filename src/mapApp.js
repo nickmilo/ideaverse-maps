@@ -4563,7 +4563,10 @@ function fitTarget0(){ const pad = 56;
 function fit(anim){ const t = fitTarget(); if (anim) animateTo(t); else { k = t.k; tx = t.tx; ty = t.ty; draw(); } }
 const sx = x => x*k + tx, sy = y => y*k + ty, wx = x => (x - tx)/k, wy = y => (y - ty)/k;
 
-let raf = 0; function draw(){ if (!raf) raf = RAF(render); }
+/* the map behind the Holodeck can hold still (0.9.56, Nick: "a version that could disable or pull the background graph… to improve performance").
+   Measured on a 15,700-note vault: idle and typing it costs nothing either way; a note switch did ~175ms of work with the map live, ~110ms paused, ~117ms in plain Obsidian */
+let HOLOPAUSE = pref("iv-holopause", false) === true;
+let raf = 0; function draw(){ if (HOLOPAUSE && typeof holoOn === "function" && holoOn()) return; if (!raf) raf = RAF(render); }
 function animateTo(t){ const k0=k, x0=tx, y0=ty, t0=performance.now(), dur=420, mid = morphId;
   const step = now => { if (camBusy && camBusy !== mid) return; const p = Math.min(1,(now-t0)/dur), e = 1-Math.pow(1-p,3);
     k = k0 + (t.k-k0)*e; tx = x0 + (t.tx-x0)*e; ty = y0 + (t.ty-y0)*e; render(); if (p<1) RAF(step); };
@@ -5349,7 +5352,8 @@ function lkGroups(i, list){ if (LKG.i === i && LKG.n === list.length && LKG.rj =
 let HUDI = -1;
 const hsel = () => HUDI >= 0 && N[HUDI] ? HUDI : sel;
 function hudFollow(i){ const pI = EDS && EDS.left && EDS.left.path ? PIDX.get(EDS.left.path) : null, v = i == null || i === pI ? -1 : i; if (v === HUDI) return; HUDI = v;
-  if (focus >= 0) focusQuiet(v >= 0 ? v : (pI != null ? pI : sel));
+  if (HOLOPAUSE && holoOn()) { /* the map holds still: it catches up when the pause ends */ }
+  else if (focus >= 0) focusQuiet(v >= 0 ? v : (pI != null ? pI : sel));
   else { const t_ = v >= 0 ? v : pI; if (t_ != null && t_ >= 0 && vis[t_] && t_ !== sel) { const h_ = HUDI; LIVEQ = true; try { select(t_, true); } finally { LIVEQ = false; } HUDI = h_; if (!holoOn() && typeof nudgeTo === "function") nudgeTo(t_); } }   /* outside Focus the map picks the active note quietly: its links light, the editors and tabs stay (0.9.37, Nick) */
   RECKEY = ""; try { recSync(); } catch (_) { /* not built yet */ } draw(); }
 /* in Focus, the focus follows the active note too (0.9.26, Nick: "I would like the background graph to show the support note's locally focused links"):
@@ -5744,7 +5748,7 @@ function holoStart(){ const m = EDS.left; if (m.col && m.path) m.collapse(false)
   if (i < 0) { new Notice("Open a note first: the Holodeck brings your notes forward."); return; }
   select(i); win.setTimeout(() => { if (!dead) holoSet(true); }, 400); }
 win.setTimeout(() => { if (!dead) try { holoSync(); } catch (_) { /* not ready yet */ } }, 0);
-function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); holoOpBuild(); holoOp.el.hidden = !on; holoTag(on);
+function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); root.classList.toggle("holopause", HOLOPAUSE); holoOpBuild(); holoOp.el.hidden = !on; holoTag(on);
   /* the primary note always has its tab in the column, lit (Nick, Nov 7: its tab was missing after a click away) */
   if (on && EDS.left.path && !TABS[TCUR]) { const ex = TABS.findIndex(t => t.path === EDS.left.path); if (ex >= 0) TCUR = ex; else { TABS.splice(0, 0, { path: EDS.left.path }); TCUR = 0; } tabsSave(); }
   if (on) { root.setCssProps({ "--holov": Math.round(4 + CARDOP / 100 * 76) + "%" }); holoOp.sl.value = String(100 - CARDOP); holoOp.ov.setText((100 - CARDOP) + "%"); try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoOp.el.setCssProps({ "--hol": Math.round(c.left - m.left) + "px", "--hob": Math.round(m.bottom - c.bottom + 52) + "px", "--how": (HOLOTW - 14) + "px" }); } catch (_) { /* not laid out yet */ } }
@@ -5753,7 +5757,10 @@ function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); hol
   holoVeil.hidden = !on;
   try { if (orbBar) syncOrbs(); } catch (_) { /* the orbs aren't built yet */ }
   if (EDS && EDS.left) { const hb = EDS.left.el.querySelector(".cardholo"); if (hb) { hb.setAttribute("aria-pressed", String(HOLO)); hb.setAttribute("aria-description", HOLO ? "Turn off Holodeck" : "Turn on Holodeck"); } } }
-function holoSet(v){ HOLO = v; save("iv-holo", v); orbKey = ""; holoSync(); edFree(); syncOrbs(); draw(); }
+/* catch the map up with the note you're in: after a pause, or on leaving the Holodeck */
+function holoCatchUp(){ const h_ = HUDI; HUDI = -2; hudFollow(h_ >= 0 ? h_ : null); draw(); }
+function holoPause(v){ HOLOPAUSE = v; save("iv-holopause", v); root.classList.toggle("holopause", v); if (!v) holoCatchUp(); }
+function holoSet(v){ const was = holoOn(); HOLO = v; save("iv-holo", v); if (was && !v && HOLOPAUSE) win.setTimeout(() => { if (!dead) holoCatchUp(); }, 0); orbKey = ""; holoSync(); edFree(); syncOrbs(); draw(); }
 /* where the HUD starts on the right, so the support note stops short of it */
 function holoRight(vw){ let r = vw - 10; try { const c = cv.getBoundingClientRect(); for (const P of [RECEL, LKEL]) if (P && !P.hidden) { const q = P.getBoundingClientRect(); if (q.width) r = Math.min(r, q.left - c.left - 10); } } catch (_) { /* not laid out yet */ } return Math.max(HOLOTW + 400, r); }   // every map since 0.8.68 (Nick); maps you turn keep their camera (edCam)
 const edCam = () => !(S3D_ON() || sphOn() || domeOn() || geo3On() || csphOn() || (typeof globeOn === "function" && globeOn()));
@@ -8227,6 +8234,8 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
   /* Edit mode, back as a switch (0.9.18, Nick: "a general option to turn off edit mode in case people just don't want that"): off, picking a note opens it in an Obsidian tab beside the map, as before Edit mode; the map rebuilds itself to match */
   if (!host.embed) { const l = DI.p.createEl("label", { cls: "pmaps drow" }), cb = l.createEl("input", { type: "checkbox" }); cb.checked = EDITM; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Edit mode" });
     cb.onchange = () => { save("iv-editm", cb.checked); if (host.remount) host.remount(); }; }
+  if (!host.embed) { const l = DI.p.createEl("label", { cls: "pmaps drow" }), cb = l.createEl("input", { type: "checkbox" }); cb.checked = HOLOPAUSE; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Pause the map behind the Holodeck" });
+    cb.onchange = () => { holoPause(cb.checked); }; }
   { const g = DI.p;
     const tr = g.createDiv({ cls: "drow eorow tchoice" }); tr.createSpan({ cls: "eol", text: "Editor theme" }); const seg = tr.createDiv({ cls: "seg" });
     for (const [v, t] of [["obsidian", "Obsidian"], ["map", "MOTI"], ["starfield", "Starfield"]]) { const b = seg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDTH === v) } });
@@ -8385,6 +8394,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
         "Links HUD": "The picked note's links in a panel on the right.", "Show relevance scores": RELHELP || "How close each linked note is, 100 for the closest.", "Colored names": "Each link's name in its line's color.", "Group property links": "Links that come only from properties go under a header per property.",
         "Automatically see mini-preview on hover": "Hovering a row shows its note's preview without holding ⌘.", "Recents HUD": "The notes you changed most lately, in a panel on the right.", "Emojis": "Each note's emoji before its name.", "Show time since modified": "How long ago each note changed.",
         "See-through tabs": "The tucked Recents and Links tabs follow the HUD's opacity, down to just an outline.", "Show orb tab names": "Each orb tab's note name under it.", "Contrails": "Your jumps from note to note, as fading vapor trails.",
+        "Pause the map behind the Holodeck": "On: in the Holodeck the map behind your notes holds still. It stops redrawing and stops following the note you're in, and the veil loses its blur, so switching notes costs about what it does in plain Obsidian. The Links HUD still follows your notes. Off (or leaving the Holodeck), the map catches up at once.",
         "Edit mode": "On: a note you pick opens in the map's own editors (the primary note on the left, the support note on the right, orb tabs on top). Off: the map is just the map; a picked note opens in an Obsidian tab beside it.", "Show the way home": "From the note you're on, the fewest links back to Home (or a note you choose).", "Show area and projects selector": "A panel to pick areas and projects; each one picked lights up its notes." };
       const order = [find("Show all links"), H("Link colors"), find("Starfield link colors"), find("Collection links in coral"), find("Color all links by Idea Emergence"),
         H("Heads Up Display"), find("Recents HUD"), find("Show30") || kids.find(c => c.querySelector && c.querySelector('input[type="range"][min="5"]')), find("Emojis"), find("Show time since modified"), find("Links HUD"), find("Show relevance scores"), find("Colored names"), find("Group property links"), find("Automatically see mini-preview"), op, tcl,

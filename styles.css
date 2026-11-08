@@ -2218,3 +2218,5 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivm .ivm-orbs.holo .ivm-orb.dropa{box-shadow:inset 0 -2px 0 var(--accent)}
 .ivm .ivm-orbs:not(.holo) .ivm-orb.dropb{box-shadow:-3px 0 0 var(--accent)}
 .ivm .ivm-orbs:not(.holo) .ivm-orb.dropa{box-shadow:3px 0 0 var(--accent)}
+/* the map behind the Holodeck, paused (0.9.56): no blur on the veil, the still map shows through as it was */
+.ivm.holo.holopause .ivm-holoveil{backdrop-filter:none}
