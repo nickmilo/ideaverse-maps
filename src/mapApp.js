@@ -4504,8 +4504,12 @@ let k = 1, tx = 0, ty = 0, W = 0, H = 0, dpr = 1;
 let hover = -1, sel = -1, showAll = false;
 // hold ⌘ (Ctrl on Windows and Linux) over a note for a mini preview, as Obsidian does for links (0.8.159, Nick)
 let CMDK = false, CMDPT = null;
-const cmdPvSync = () => { if (view === "cockpit") return; if (typeof RECHV !== "undefined" && RECHV >= 0) { recPv(); return; } if (HUDHOV >= 0) { if (!CMDK && !HUDPV) hudPv(-1); draw(); return; } if (!CMDK || hover < 0 || !vis[hover] || isPhone()) { if (!(HUDHOV >= 0 && HUDPV)) hudPv(-1); return; }
+const cmdPvSync = () => { if (view === "cockpit") { shipPvSync(); return; } if (typeof RECHV !== "undefined" && RECHV >= 0) { recPv(); return; } if (HUDHOV >= 0) { if (!CMDK && !HUDPV) hudPv(-1); draw(); return; } if (!CMDK || hover < 0 || !vis[hover] || isPhone()) { if (!(HUDHOV >= 0 && HUDPV)) hudPv(-1); return; }
   const x = sx(X[hover]), y = sy(Y[hover]), pw = 230; hudPv(hover, x + 18 + pw + 14 <= W - 8 ? x + 18 + pw + 14 : x - 18, y, true); try { tip.hidden = true; } catch (_) { /* no tip yet */ } };   /* the preview takes the hover label's place */
+/* the Starship: ⌘ pressed or let go while a Links row is under the pointer shows or hides its spot preview at once, not only on the next hover (0.9.136, Nick); window capture, since flight keys may stop the key before the document */
+const shipPvSync = () => { if (typeof CK === "undefined" || !CK) return; if (CMDK && CK.hovEl && CK.hovEl.isConnected && CK.hovS >= 0) { if (!SHIPPV || RECHV !== CK.hovS) { SHIPPV = true; RECHV = CK.hovS; RECHVEL = CK.hovEl; recPv(); } } else if (SHIPPV && !CMDK) { SHIPPV = false; RECHV = -1; RECHVEL = null; hudPv(-1); } };
+on(win, "keydown", e => { if ((e.key === "Meta" || e.key === "Control") && view === "cockpit" && host.isActive()) { CMDK = true; shipPvSync(); } }, { capture: true });
+on(win, "keyup", e => { if ((e.key === "Meta" || e.key === "Control") && view === "cockpit") { CMDK = false; shipPvSync(); } }, { capture: true });
 on(doc, "keydown", e => { if ((e.key === "Meta" || e.key === "Control") && !CMDK && host.isActive()) { CMDK = true; cmdPvSync(); } });
 on(doc, "keyup", e => { if (e.key === "Meta" || e.key === "Control") { CMDK = false; cmdPvSync(); } });
 on(win, "blur", () => { CMDK = false; cmdPvSync(); });
