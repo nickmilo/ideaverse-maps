@@ -2229,3 +2229,13 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivm .hoicons .hoib:hover{color:var(--ink)}
 .ivm .hoicons .hoib[aria-pressed="true"]{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 55%,transparent)}
 .ivm .hoicons .hoib:focus,.ivm .hoicons .hoib:focus-visible{box-shadow:none;outline:none}
+/* the Links pane (0.9.59): the map's Links HUD, straight, for the note you're reading */
+.ivd.ivd-links{padding:10px 12px;display:flex;flex-direction:column;gap:6px;--ivd-coll:#e8826b}
+.theme-dark .ivd.ivd-links{--ivd-coll:#ff9a7f}
+.ivd-links .ivd-lkhd{display:flex;align-items:baseline;gap:8px;min-width:0}
+.ivd-links .ivd-lkhd .ivd-h{flex:none}
+.ivd-links .ivd-lkn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);font-size:12px}
+.ivd-links .ivd-lkq{width:100%;height:24px;padding:0 8px;border:1px solid var(--background-modifier-border);border-radius:12px;background:transparent;font-size:12px}
+.ivd-links .ivd-lklist{display:flex;flex-direction:column;overflow-y:auto;min-height:0;flex:1}
+.ivd-links .ivd-lkg{margin-top:10px}
+.ivd-links .ivd-row[hidden],.ivd-links .ivd-lkg[hidden]{display:none}

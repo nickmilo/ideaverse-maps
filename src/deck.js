@@ -263,8 +263,62 @@ export class DeckView extends ItemView {
     window.setTimeout(() => this.onResize(), 50); }
 }
 
+/* The Links pane (0.9.59, Nick: "replace the default Obsidian … pane that normally goes on the bottom right … use that instead"): the map's Links HUD
+   for the note you're reading anywhere in Obsidian, straight, in a tab or the sidebar. It sorts links the HUD's way: up and related first, then by relevance,
+   with ← → ↔ and level colors; then this note's own properties, one group each (collections in coral); then other notes' properties pointing back */
+export const LINKS_TYPE = "ideaverse-links";
+export class LinksPaneView extends DeckView {
+  constructor(leaf, plugin) { super(leaf, plugin); this.cur = null; this.q = ""; }
+  getViewType() { return LINKS_TYPE; }
+  getDisplayText() { return "Links"; }
+  getIcon() { return "waypoints"; }
+  getState() { return {}; }
+  async setState(state, result) { await ItemView.prototype.setState.call(this, state, result); this.render(); }
+  async onOpen() { this.contentEl.empty(); this.contentEl.addClass("ivd", "ivd-links");
+    const follow = () => { const f = this.app.workspace.getActiveFile(); if (f && f.extension === "md" && f.path !== this.cur) { this.cur = f.path; this.render(); } };
+    this.registerEvent(this.app.workspace.on("file-open", follow)); this.registerEvent(this.app.workspace.on("active-leaf-change", follow));
+    this.registerEvent(this.app.metadataCache.on("resolved", () => this.soon()));
+    this.registerEvent(this.app.vault.on("rename", (f, old) => { if (this.cur === old) { this.cur = f.path; this.render(); } }));
+    const D = this.contentEl.ownerDocument;
+    this.registerDomEvent(D, "keydown", e => { if ((e.key === "Meta" || e.key === "Control") && this.hovPath) this.showPv(this.hovPath, this.hovEl); });
+    this.registerDomEvent(D, "keyup", e => { if (e.key === "Meta" || e.key === "Control") this.hidePv(); });
+    follow(); this.render(); }
+  soon() { window.clearTimeout(this.soonT); this.soonT = window.setTimeout(() => this.render(), 400); }
+  /* a click opens the note where you're reading; ⌘-click in a new tab */
+  openPrimary(path) { if (path) void this.app.workspace.openLinkText(path, "", false); }
+  openSupport(path) { if (path) void this.app.workspace.openLinkText(path, "", "tab"); }
+  propGroups(path) { const mc = this.app.metadataCache, own = new Map(), back = new Map(), skip = new Set(["up", "related"]);
+    const keyOf = k => String(k || "").split(".")[0];
+    const fc = mc.getFileCache(this.file(path) || { path }); for (const L of (fc && fc.frontmatterLinks) || []) { const k = keyOf(L.key); if (skip.has(k)) continue; const t = mc.getFirstLinkpathDest(L.link.split("#")[0].split("|")[0], path);
+      if (t && t.extension === "md" && t.path !== path) { if (!own.has(k)) own.set(k, new Set()); own.get(k).add(t.path); } }
+    const rl = mc.resolvedLinks || {}; for (const [src, m] of Object.entries(rl)) { if (src === path || !m || !m[path]) continue; const c = mc.getFileCache(this.file(src) || { path: src });
+      for (const L of (c && c.frontmatterLinks) || []) { const k = keyOf(L.key); if (skip.has(k)) continue; const t = mc.getFirstLinkpathDest(L.link.split("#")[0].split("|")[0], src); if (t && t.path === path) { if (!back.has(k)) back.set(k, new Set()); back.get(k).add(src); } } }
+    return { own, back }; }
+  render() { const box = this.contentEl; if (!box) return; box.empty(); const path = this.cur;
+    if (!path || !this.file(path)) { box.createDiv({ cls: "ivd-empty", text: "Open a note to see its links." }); return; }
+    const ls = this.linksOf(path), { own, back } = this.propGroups(path), inG = new Set([...[...own.values()].flatMap(x => [...x]), ...[...back.values()].flatMap(x => [...x])]);
+    const KR = { upp: 0, rel: 1 }, main = ls.filter(l => !inG.has(l.p) || KR[this.kindOf(path, l.p, l.a !== "←", l.a !== "→")] != null)
+      .sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || b.s - a.s);
+    const hd = box.createDiv({ cls: "ivd-lkhd" }); hd.createSpan({ cls: "ivd-h", text: `⇄ LINKS · ${ls.length}` }); hd.createSpan({ cls: "ivd-lkn", text: this.title(path) });
+    const qi = box.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); qi.value = this.q;
+    const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
+    const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
+    for (const l of main) this.row(list, l.p, l.a, l.c, this.opt("rel") ? String(l.s) : "").dataset.q = this.title(l.p).toLowerCase();
+    const group = (lab, set, arrow, coral) => { if (!set.size) return; list.createDiv({ cls: "ivd-h ivd-lkg", text: `${lab.toUpperCase()} · ${set.size}` });
+      for (const p of [...set].sort((a, b) => ((sc.get(b) || {}).s || 0) - ((sc.get(a) || {}).s || 0))) this.row(list, p, arrow, coral ? "var(--ivd-coll)" : "var(--ivd-prop)", sc.has(p) && this.opt("rel") ? String(sc.get(p).s) : "").dataset.q = this.title(p).toLowerCase(); };
+    for (const [k, set] of own) group(k, set, "→", ck.has(k)); for (const [k, set] of back) group(k, set, "←", false);
+    const apply = () => { const q = this.q.trim().toLowerCase(); for (const r of list.querySelectorAll(".ivd-row")) r.toggleAttribute("hidden", !!q && !(r.dataset.q || "").includes(q));
+      for (const g of list.querySelectorAll(".ivd-lkg")) { let n = g.nextElementSibling, any = false; while (n && !n.classList.contains("ivd-lkg")) { if (!n.hasAttribute("hidden")) any = true; n = n.nextElementSibling; } g.toggleAttribute("hidden", !!q && !any); } };
+    qi.addEventListener("input", () => { this.q = qi.value; apply(); }); qi.addEventListener("keydown", e => { if (e.key === "Escape") { this.q = ""; qi.value = ""; apply(); } });
+    apply(); }
+}
 export function registerDeck(plugin) {
   plugin.registerView(DECK_TYPE, leaf => new DeckView(leaf, plugin));
+  plugin.registerView(LINKS_TYPE, leaf => new LinksPaneView(leaf, plugin));
+  /* the Links pane: in the right sidebar, where Obsidian's backlinks sit, or anywhere you drag it */
+  plugin.addCommand({ id: "open-links-pane", name: "Open the Links pane", callback: async () => { const W = plugin.app.workspace, ex = W.getLeavesOfType(LINKS_TYPE)[0];
+    if (ex) { await W.revealLeaf(ex); return; } const lf = W.getRightLeaf(false); if (!lf) return; await lf.setViewState({ type: LINKS_TYPE, active: true }); await W.revealLeaf(lf); } });
+  plugin.addCommand({ id: "open-links-pane-tab", name: "Open the Links pane in a new tab", callback: async () => { const W = plugin.app.workspace, lf = W.getLeaf("tab"); await lf.setViewState({ type: LINKS_TYPE, active: true }); } });
   const active = () => { const f = plugin.app.workspace.getActiveFile(); return f && f.extension === "md" ? f.path : null; };
   /* on mobile there are no pop-out windows: the Mini Deck opens as a tab (0.9.46, Nick: "a quick way between recent notes… as opposed to all these panes you swipe left and right for");
      "Mini Deck", not "Deck Mini": the Holodeck is the main one, the Mini Deck the tiny one (0.9.48, Nick) */
