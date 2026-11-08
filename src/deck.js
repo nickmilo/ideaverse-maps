@@ -366,13 +366,14 @@ export class LinksPaneView extends DeckView {
       it_("emo", "Show emojis", h => tx(h, "✨"));
       m.addSeparator(); hd_("Middle");
       it_("col", sp => { sp.append("Show "); tx(sp, "Idea", "ivd-mc-upp"); sp.append(" "); tx(sp, "Emergence", "ivd-mc-rel"); sp.append(" "); tx(sp, "link", "ivd-mc-up"); sp.append(" "); tx(sp, "colors", "ivd-mc-down"); });
+      if (SO === "lvl") it_("lvh", "Show Idea Emergence headers", h => tx(h, "LEVEL 5", "ivd-mhh"));   /* only while sorted by Idea Emergence (0.9.73); in Middle (0.9.89, Nick) */
       m.addSeparator(); hd_("Right");
       /* the score column holds one thing: while link score or a time fills it, relevance shows unchecked and greyed, its own setting kept (0.9.87, Nick) */
       it_("rel", "Show relevance scores", h => tx(h, "82", "ivd-mhn"), TAKEN);
       const EMG = SO === "lvl" || SO === "remg";
       if (EMG) it_("lsc", "Show link score", h => tx(h, "9.9", "ivd-mhn"));   /* the score that sets each note's level, in place of relevance (0.9.80, Nick) */
       if (MOD) it_("age", "Show time since modified", h => tx(h, "6d", "ivd-mhn")); if (CRE) it_("cage", "Show time since created", h => tx(h, "3y", "ivd-mhn"));   /* each offered only while its sort is on (0.9.66) */
-      if (SO === "lvl") { m.addSeparator(); hd_("List"); it_("lvh", "Show Idea Emergence headers", h => tx(h, "LEVEL 5", "ivd-mhh")); }   /* only while sorted by Idea Emergence (0.9.73) */
+
       m.showAtMouseEvent(e); };
     const G = this.G, fi = p => this.file(p), lv = p => { const n_ = G && G.idx.get(p); return n_ ? [n_.level || 0, n_.score || 0] : [0, 0]; }, sc0 = new Map(ls.map(l => [l.p, l.s]));
     const cmp = {
