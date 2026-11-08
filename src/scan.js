@@ -39,7 +39,7 @@ function extractArchive(t, isMd){
 export const DEFAULTS = {
   exclude: [],            // folders left off the map entirely
   archive: "",            // an archive folder: on the map as its own layer; its links never lift notes outside it
-  packs: "",              // a folder on the map but off by default, never scored against the rest (Nick's learning packs)
+  packs: "",              // a folder on the map but off by default, never scored against the rest
   privateFolders: [],     // only big maps (Level 3+) from these folders appear
   homeNotes: [],          // always Level 5
   axisProps: ["year"],
@@ -204,7 +204,7 @@ export async function scanVault(adapter, settings, onProgress) {
     for (const q of outs) { if (!(p < q) || !get(bodyOut, q).has(p) || dirname(p) !== dirname(q)) continue;
       const sq = new Set([...get(bodyOut, q), q]); let inter = 0; for (const x of sp) if (sq.has(x)) inter++;
       if (inter / (sp.size + sq.size - inter) >= C.navJaccard) { nav.add(NK(p, q)); nav.add(NK(q, p)); } } }
-  // links in and out count every link (0.8.6, Nick): in the text, in up and related, and in any other property; a note that links
+  // links in and out count every link (0.8.6): in the text, in up and related, and in any other property; a note that links
   // another both ways (text and up, say) counts once. Collections keep their own weight. A series' shared nav block still doesn't count.
   const allIn = p => new Set([...get(bodyIn, p), ...get(upIn, p), ...get(propIn, p)]), allOut = p => new Set([...get(bodyOut, p), ...get(upOut, p), ...get(propOut, p)]);
   const effIn = new Map(), effOut = new Map(), series = new Map();

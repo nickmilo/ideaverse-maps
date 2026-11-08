@@ -31,19 +31,19 @@ export default class IdeaverseMapsPlugin extends Plugin {
     this.addSettingTab(new MapsSettingTab(this.app, this));
     registerBases(this);   // the map as a view inside any base (Obsidian 1.10+)
     registerLinkColors(this);   // every link in every note colored by Idea Emergence, when Display asks (0.8.234)
-    /* the dev layout (⌘⌥⌃K) is retired (0.8.351, Nick): its saved menu layout is cleared, so the maps menu is the default for everyone: Emergence, Ideaverse, Starfield, Calendar */
+    /* the dev layout (⌘⌥⌃K) is retired (0.8.351): its saved menu layout is cleared, so the maps menu is the default for everyone: Emergence, Ideaverse, Starfield, Calendar */
     for (const k of ["iv-devlayout", "iv-devon"]) if (this.store.get(k) != null) this.store.set(k, undefined);
     /* on a phone Obsidian shows only the active pane: our editors live in splits of their own, so if one became the active pane the screen went blank
-       (0.9.49, Nick: "clicking on the text editing area creates a blank window"). The tab that holds it, the Mini Deck or the map, stays the active one */
+       (0.9.49). The tab that holds it, the Mini Deck or the map, stays the active one */
     if (Platform.isMobile) { const W = this.app.workspace, origSAL = W.setActiveLeaf;
       W.setActiveLeaf = function (leaf, ...rest) { if (leaf && leaf.ivmCard) { const own = leaf.ivmOwner; if (!own || own === this.activeLeaf) return; leaf = own; } return origSAL.call(this, leaf, ...rest); };
       this.register(() => { W.setActiveLeaf = origSAL; }); }
-    /* which tab is being dragged (0.9.54, Nick: drag a note's tab onto the Holodeck): Obsidian drags tabs on a track of its own, so the map is told here */
+    /* which tab is being dragged (0.9.54): Obsidian drags tabs on a track of its own, so the map is told here */
     { const W = this.app.workspace, oDL = W.onDragLeaf;
       if (typeof oDL === "function") { W.onDragLeaf = (e, leaf, ...rest) => { this.dragLeaf = leaf; const end = () => { window.setTimeout(() => { this.dragLeaf = null; }, 50); }; document.addEventListener("dragend", end, { once: true, capture: true }); return oDL.call(W, e, leaf, ...rest); };
         this.register(() => { W.onDragLeaf = oDL; }); }
       /* while a tab is dragged over the map's drop zones (all of the Holodeck; elsewhere its tabs and notes), Obsidian doesn't offer to split there:
-         its split preview covered the Holodeck's tabs and made the drop flicker (0.9.57, Nick: "the drop zone… is wonky") */
+         its split preview covered the Holodeck's tabs and made the drop flicker (0.9.57) */
       const oGDL = W.getDropLocation;
       if (typeof oGDL === "function") { W.getDropLocation = (e, ...rest) => { if (this.dragLeaf && this.dropBlocks && e && typeof e.clientX === "number") for (const f of this.dropBlocks) { try { if (f(e.clientX, e.clientY)) return null; } catch (_) { /* a map mid-teardown */ } }
           return oGDL.call(W, e, ...rest); };

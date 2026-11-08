@@ -63,7 +63,7 @@ export class MapView extends ItemView {
 
   async onOpen() { await this.reload(); this.keepNotesIn(); }
 
-  /* Stay in the map (0.8.218, Nick: ⌘D opened the daily note in a new Obsidian tab when the map's toolbar had focus): while the map is the active tab,
+  /* Stay in the map (0.8.218): while the map is the active tab,
      a note that a command opens in a brand-new tab (⌘D for today's note, the quick switcher, a template…) opens as the primary note instead, and the new tab goes.
      Tabs that already existed, notes the map itself opens, and the map's own editors are left alone; a note the map doesn't have yet opens as usual */
   keepNotesIn() { const app = this.app; let prev = null, known = new WeakSet();
@@ -76,13 +76,13 @@ export class MapView extends ItemView {
         if (Date.now() - f.stat.ctime < 8000) for (let t = 0; t < 30; t++) { await new Promise(r => window.setTimeout(r, 100)); const it = this.contentEl.ownerDocument.querySelector(".ivm-card-left:not([hidden]) .inline-title");
           if (it instanceof HTMLElement) { it.focus(); const sel = window.getSelection(), rg = document.createRange(); rg.selectNodeContents(it); if (sel) { sel.removeAllRanges(); sel.addRange(rg); } break; } } });
       return true; };
-    /* only a command does this (0.8.259, Nick: clicking an ordinary Obsidian tab got taken over): a command run while the map is in front (⌘N, ⌘D, ⌘O, a template…)
+    /* only a command does this (0.8.259): a command run while the map is in front (⌘N, ⌘D, ⌘O, a template…)
        arms it for a minute, and one note is caught; clicking tabs, or anything else, never is */
     const intent = () => !!this.plugin.cmdIntent && Date.now() - this.plugin.cmdIntent < 60000;
     if (!this.plugin.cmdPatched) { const C = /** @type {any} */ (app).commands, plugin = this.plugin; if (C && typeof C.executeCommand === "function") { plugin.cmdPatched = true; const oc = C.executeCommand;
       C.executeCommand = function (cmd, ...rest) {
         /* "Delete current file" aimed at a note open in the map (its primary or support note, or the map in front) always asks first, by name, even with Obsidian's
-           confirmation off (0.8.298, Nick lost "Ursula K. Le Guin" to a stray ⌘⌥⌫ while it was the primary note) */
+           confirmation off (0.8.298) */
         try { if (cmd && cmd.id === "app:delete-file") { const f = app.workspace.getActiveFile(), W = app.workspace; let inMap = !!W.getActiveViewOfType(MapView);
             if (f && !inMap) W.iterateAllLeaves(l => { if (l.ivmCard && l.view && l.view.file && l.view.file.path === f.path) inMap = true; });
             if (f instanceof TFile && inMap) { new DeleteGuard(app, f).open(); return true; } } } catch { /* never in the way */ }
@@ -90,7 +90,7 @@ export class MapView extends ItemView {
       plugin.register(() => { C.executeCommand = oc; plugin.cmdPatched = false; }); } }
     const wants = (leaf, f) => intent() && !!f && !leaf.ivmCard && f instanceof TFile && f.extension === "md" && !!this.map && !!this.map.openPrimary && !known.has(leaf) && app.workspace.getActiveViewOfType(MapView) === this
       && !(this.plugin.ownOpenT && Date.now() - this.plugin.ownOpenT < 1500) && !(leaf.view && leaf.view.containerEl && this.contentEl.contains(leaf.view.containerEl));
-    /* no tug-of-war (0.8.226, Nick: ⌘N "bounces out of the app for a moment"): a brand-new tab about to open a note while the map is in front is caught before it opens,
+    /* no tug-of-war (0.8.226): a brand-new tab about to open a note while the map is in front is caught before it opens,
        so Obsidian never switches to it; the note goes to the map instead and the empty tab goes. Patched once, for every map */
     const P = Object.getPrototypeOf(this.leaf); if (P && !this.plugin.openPatched && typeof P.openFile === "function") { this.plugin.openPatched = true; const orig = P.openFile, plugin = this.plugin;
       P.openFile = function (file, st) { for (const l of plugin.app.workspace.getLeavesOfType(VIEW_TYPE)) { const mv = l.view; if (mv instanceof MapView && mv.catchOpen && mv.catchOpen(this, file)) return Promise.resolve(); } return orig.call(this, file, st); };
@@ -213,7 +213,7 @@ export async function mountInto(owner, el, opts) {
       if (!path) { const f = app.vault.getFiles().find(x => x.extension === "base" && x.basename.toLowerCase() === "recents"); path = f ? f.path : ""; }
       if (!path) return { err: "Pick a base for emoji labels in Settings" };
       try { const r = await q.column(path, st.emojiCol || ""); return r.err ? { err: r.err, path } : { map: r.map, path, col: r.col }; } catch (e) { return { err: String(e && e.message || e), path }; } },
-    // the views file's folder is a plugin setting, which another device may not have (plugin settings sync separately from files, Nick's phone 0.8.1):
+    // the views file's folder is a plugin setting, which another device may not have:
     // with no folder set, adopt the folder of a views file already in the vault (the newest, if there are several)
     savedFolder: () => { const st = plugin.settings; if (!st.viewsFolder) { const fs = app.vault.getFiles().filter(f => f.name === SAVED_NAME).sort((a, b) => b.stat.mtime - a.stat.mtime);
         if (fs.length) { st.viewsFolder = fs[0].parent && fs[0].parent.path !== "/" ? fs[0].parent.path : "/"; void plugin.saveSettings(); } }
@@ -258,7 +258,7 @@ export async function mountInto(owner, el, opts) {
         plugin.register(() => { W0.openLinkText = orig; }); }
       split.containerEl.addEventListener("pointerdown", e => { if (cardLinkCb) plugin.cardDown = { t: performance.now(), el: split.containerEl, cb: cardLinkCb, shift: e.shiftKey }; }, true);
       /* the editor you're typing in is the active one, so editor hotkeys (move line, indent…) reach it: Obsidian alone finds only the map's tab under the pointer
-         (0.9.50, Nick: hotkeys in the support note were "a 50/50 coin flip"). A click on the map hands it back to the map, as before */
+         (0.9.50). A click on the map hands it back to the map, as before */
       let aeInfo = null;   /* Obsidian's active editor, the way Canvas sets it for its cards (a file info, not a view: our leaf has no tab group, so it can't be the active leaf) */
       split.containerEl.addEventListener("focusin", () => { if (Platform.isMobile) return; window.setTimeout(() => { const v = leaf && leaf.view; if (!v || !v.editor || !split.containerEl.contains(document.activeElement)) return;
         aeInfo = new Proxy(v, { getPrototypeOf: () => Object.prototype, get: (t, k) => { const x = Reflect.get(t, k, t); return typeof x === "function" ? x.bind(t) : x; } });   /* the note's own view (Find, ⌘F, needs its methods), dressed so the setter takes it: it refuses a MarkdownView */ app.workspace.activeEditor = aeInfo; }, 0); });
@@ -286,7 +286,7 @@ export async function mountInto(owner, el, opts) {
       if (kind === "bullet" || kind === "head") { const lt = app.metadataCache.fileToLinktext(l, t.path, true), link = `[[${lt}]]`; let dup = false;   // in the note's text (0.8.189): top (after the properties), top as a bullet, or bottom
         await app.vault.process(t, txt => { const m = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(txt), head = m ? m[0] : "", body = txt.slice(head.length);
           if (body.includes(`[[${lt}]]`) || body.includes(`[[${lt}|`)) { dup = true; return txt; }
-          if (kind === "head") { const H = "###### Links added via Maps of the Ideaverse", at = body.search(/^###### Links added via Maps of the Ideaverse[ \t]*$/m);   // one small heading at the top, the newest link first under it (0.8.195, Nick)
+          if (kind === "head") { const H = "###### Links added via Maps of the Ideaverse", at = body.search(/^###### Links added via Maps of the Ideaverse[ \t]*$/m);   // one small heading at the top, the newest link first under it (0.8.195)
             if (at >= 0) { const e_ = body.indexOf("\n", at); return head + (e_ < 0 ? body + "\n- " + link : body.slice(0, e_ + 1) + `- ${link}\n` + body.slice(e_ + 1)); }
             const b = body.replace(/^\n+/, ""); return head + `${H}\n- ${link}\n` + (b ? "\n" + b : ""); }
           const line = `- ${link}`, b = body.replace(/^\n+/, ""), joinB = /^- /.test(b) ? "\n" : "\n\n";
@@ -295,13 +295,13 @@ export async function mountInto(owner, el, opts) {
       const link = `[[${app.metadataCache.fileToLinktext(l, t.path, true)}]]`, base = s_ => String(s_).replace(/^\[\[|\]\]$/g, "").split("|")[0].trim();
       let dup = false; await app.fileManager.processFrontMatter(t, fm => { const k = Object.keys(fm).find(x => x.toLowerCase() === key.toLowerCase()) || key; const cur = fm[k] == null || fm[k] === "" ? [] : Array.isArray(fm[k]) ? fm[k] : [fm[k]];
         if (cur.some(x => base(x) === base(link))) { dup = true; return; } fm[k] = [...cur, link]; }); return dup ? "dup" : true; },
-    // the folder in the editor strip, clicked (0.8.188, Nick): move the note to another folder, the way Obsidian's "Move file to…" does
+    // the folder in the editor strip, clicked (0.8.188): move the note to another folder, the way Obsidian's "Move file to…" does
     moveNote: async path => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return false;
       const dir = await new Promise(res => new FolderPicker(app, res, `Move "${f.basename}" to…`, true).open()); if (!dir) return false;
       const d = dir === "/" ? "" : normalizePath(dir); if (d && !app.vault.getAbstractFileByPath(d)) await app.vault.createFolder(d);
       const to = normalizePath(d ? `${d}/${f.name}` : f.name); if (to === f.path) return false; if (app.vault.getAbstractFileByPath(to)) { new Notice(`There's already a ${f.name} in ${d || "the vault root"}.`); return false; }
       await app.fileManager.renameFile(f, to); return true; },
-    // Obsidian's own Close tab and Toggle pin commands, answered by the map while its editor has a note (0.8.196, Nick: ⌘W closes the note and its orb, not the map)
+    // Obsidian's own Close tab and Toggle pin commands, answered by the map while its editor has a note (0.8.196)
     onTabCmd: cb => { const W = /** @type {any} */ (app).commands; if (!W || !W.commands) return; plugin.tabCmds ||= new Set(); plugin.tabCmds.add(cb); events.register(() => plugin.tabCmds.delete(cb));
       if (plugin.tabCmdPatched) return; plugin.tabCmdPatched = true;
       for (const [id, what] of [["workspace:close", "close"], ["workspace:toggle-pin", "pin"], ["workspace:undo-close-pane", "reopen"], ["workspace:new-tab", "new"], ["workspace:close-others", "others"]]) { const c = W.commands[id]; if (!c) continue; const oc = c.checkCallback, ob = c.callback;
@@ -312,7 +312,7 @@ export async function mountInto(owner, el, opts) {
     /* what's being dragged in from Obsidian (0.9.54): a tab, a file (file list, search results), several files, or a link; markdown notes only */
     /* a place on this map where a dragged tab should land with us, not split Obsidian's layout (0.9.57) */
     registerDropZone: fn => { if (!plugin.dropBlocks) plugin.dropBlocks = new Set(); plugin.dropBlocks.add(fn); events.register(() => { plugin.dropBlocks.delete(fn); }); },
-    /* a HUD row dragged as Obsidian drags a file from its list (0.9.73, Nick): onto the Holodeck's tabs, the primary or support note, or anywhere Obsidian takes a file */
+    /* a HUD row dragged as Obsidian drags a file from its list (0.9.73): onto the Holodeck's tabs, the primary or support note, or anywhere Obsidian takes a file */
     dragNote: (e, path) => { const f = app.vault.getAbstractFileByPath(path), dm = app.dragManager; if (!(f instanceof TFile) || !dm || typeof dm.dragFile !== "function") return false; const d = dm.dragFile(e, f); if (!d) return false; if (dm.draggable && typeof dm.onDragEnd === "function") { try { dm.onDragEnd(e); } catch (_) { /* a stale drag */ } } dm.onDragStart(e, d);
       /* the HUD redraws during a drag, so its row can leave the page; dragend then never reaches Obsidian's window listener and the drag ghost sticks. Hand it over ourselves */
       const el = e.target; if (el instanceof HTMLElement) el.addEventListener("dragend", ev => { if (dm.draggable && typeof dm.onDragEnd === "function") { try { dm.onDragEnd(ev); } catch (_) { /* already clean */ } } }, { once: true }); return true; },

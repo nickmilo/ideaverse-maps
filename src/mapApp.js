@@ -46,7 +46,7 @@ const REL = new Set(); for (const [a,b,t] of E) if (t === 4) { REL.add(a*n + b);
 const EKIND = new Map(); for (const [a,b,t] of E) { const key = a*n + b, o = EKIND.get(key); if (o == null || (t === 1 || t === 4 || t === 5) && !(o === 1 || o === 4)) EKIND.set(key, t); }
 // Link colors: the up property yellow, related purple, other properties slate; links in the body go above (up) or below (down) by level
 function edgeColor(a, b, upward){ const k = EKIND.get(a*n + b);
-  if (k == null && a === sel && collSet(a).has(b)) return COLLON ? collCoral() : css.prop;   /* a collection always draws; coral with the switch, else the other properties' slate (0.8.352, Nick) */   /* one of the picked note's collections (0.8.296) */
+  if (k == null && a === sel && collSet(a).has(b)) return COLLON ? collCoral() : css.prop;   /* a collection always draws; coral with the switch, else the other properties' slate (0.8.352) */   /* one of the picked note's collections (0.8.296) */
   // k is the kind as the active note (a) wrote it: 1 up, 4 related, 5 any other property
   if (k === 1) return css.upp; if (k === 4) return css.rel; if (k === 5) return css.prop;
   return upward ? css.up : css.down; }
@@ -74,12 +74,12 @@ const TV = new Float64Array(n);
 // a note's date: its Date property (Created by default), or, with Filter → Years → Organize by most recently modified, the day its file was last changed
 let BYMT = host.store.get("iv-mtime") === true;
 // with Organize by most recently modified on, a window back from right now: the last day, week, month or year (or all); Emergence and Space-Time stretch it across the timeline
-/* the window's stops (0.8.194, Nick: a slider for "what's been going on with me for the past quarter"): 1 day … 1 year, year to date, all */
+/* the window's stops (0.8.194): 1 day … 1 year, year to date, all */
 const WSTOPS = [["day", "1 day"], ["week", "1 week"], ["w2", "2 weeks"], ["w3", "3 weeks"], ["month", "1 month"], ["w5", "5 weeks"], ["w6", "6 weeks"], ["w7", "7 weeks"], ["w8", "8 weeks"], ["m3", "3 months"], ["m4", "4 months"], ["m7", "7 months"], ["year", "1 year"], ["ytd", "Year to date"], ["all", "All"]];
 const MTW = { day: DAY, week: 7*DAY, w2: 14*DAY, w3: 21*DAY, month: 30.44*DAY, w5: 35*DAY, w6: 42*DAY, w7: 49*DAY, w8: 56*DAY, m3: 3*30.44*DAY, m4: 4*30.44*DAY, m7: 7*30.44*DAY, year: YEAR, ytd: 1, fix: 1 };   /* fix: a fixed span of dates (0.9.15) */   /* ytd: worked out from Jan 1 */ let MTWIN = host.store.get("iv-mtwin") || "all"; if (!MTW[MTWIN]) MTWIN = "all";
-/* the same window by the Date property too (0.8.191, Nick: "I wish I had that same ability for By Date Created"): its own choice, so each switch keeps its own */
+/* the same window by the Date property too (0.8.191): its own choice, so each switch keeps its own */
 let CTWIN = host.store.get("iv-ctwin") || "all"; if (!MTW[CTWIN]) CTWIN = "all";
-/* fixed dates (0.9.15, Nick: "a view for my London trip that will never change over time"): from one day to another, both included, never moving with today */
+/* fixed dates (0.9.15): from one day to another, both included, never moving with today */
 let FIXD = (() => { const o = host.store.get("iv-fixd"); return o && /^\d{4}-\d{2}-\d{2}$/.test(o.a || "") && /^\d{4}-\d{2}-\d{2}$/.test(o.b || "") ? { a: o.a, b: o.b } : null; })(); if ((CTWIN === "fix" || MTWIN === "fix") && !FIXD) { CTWIN = CTWIN === "fix" ? "all" : CTWIN; MTWIN = MTWIN === "fix" ? "all" : MTWIN; }
 const fixMs = (ymd, local) => { const [y, m, d] = ymd.split("-").map(Number); return local ? new Date(y, m - 1, d).getTime() : Date.UTC(y, m - 1, d); };
 const fixLabel = () => { if (!FIXD) return ""; const f = ymd => { const [y, m, d] = ymd.split("-").map(Number); return { y, t: new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" }) }; }, a = f(FIXD.a), b = f(FIXD.b);
@@ -90,7 +90,7 @@ const winEnd = () => WINV() === "fix" && FIXD ? fixMs(FIXD.b, BYMT) + DAY : BYMT
 const fillTV = () => N.forEach((d,i) => TV[i] = BYMT ? (d.mt || NaN) : /^\d{4}-\d{2}-\d{2}$/.test(d.date||"") ? Date.parse(d.date) : NaN); fillTV();
 const ARCH = Uint8Array.from(N, d => d.archive ? 1 : 0), hasArch = ARCH.some(v => v);
 // the years always come from the Date property, even when the map opened with Organize by most recently modified on (0.7.58: opened that way,
-// the slider took its years from the files' modified times, 2024–2026, and kept them after the switch went off; Nick)
+// the slider took its years from the files' modified times, 2024–2026, and kept them after the switch went off)
 const TVD = Float64Array.from(N, d => /^\d{4}-\d{2}-\d{2}$/.test(d.date||"") ? Date.parse(d.date) : NaN);
 let minYear = NOW_Y; for (let i=0;i<n;i++) if (!isNaN(TVD[i])) minYear = Math.min(minYear, new Date(TVD[i]).getUTCFullYear());
 // the sliders start at the first year with a real body of notes (10+), so a stray 1984 note doesn't waste most of the track; older notes sit in "Before"
@@ -111,7 +111,7 @@ const emoAny = () => Object.keys(EMON).some(k_ => EMON[k_] === true);
 // and only a note with none falls back to the base column (Settings → Emoji labels)
 let EMOF = (() => { const o = pref("iv-emofold", null); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; })();
 let EMOI = null;   // note index → its emoji
-/* collection links on the map (0.8.296, Nick: "what if Collection property links showed up as Coral on the graph?"): a picked note's collections (Concepts, Things…) draw as coral links,
+/* collection links on the map (0.8.296): a picked note's collections (Concepts, Things…) draw as coral links,
    as the editors color them; Display → Collection links. They're drawn only, never counted: scores, levels and layouts don't change */
 let COLLON = pref("iv-colllinks", true) !== false;
 const CIDX = new Map(); N.forEach((d, i) => { if (d.archive) return; const k_ = String(d.title).toLowerCase(); if (!CIDX.has(k_)) CIDX.set(k_, i); });
@@ -119,17 +119,17 @@ const collOf = (i, any) => { if (!(COLLON || any) || i < 0) return []; const r_ 
 let COLLS = { i: -2, s: new Set() }; const collSet = i => { if (COLLS.i !== i) COLLS = { i, s: new Set(collOf(i, true)) }; return COLLS.s; };
 let VISV = 0, RECCK = true;   // bumps whenever what shows changes (Recent caches by it)
 const emoBuild = () => { const has = Object.keys(EMOF).length > 0;
-  EMOI = N.map(d => { const m0 = LEAD_EMO.exec(String(d.title || "")); if (m0) return m0[1];   /* an emoji leading the file name wins (0.9.102, Nick) */ if (has) { let q = d.path; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (EMOF[q]) return EMOF[q]; } } return EMO ? EMO.get(d.path) : undefined; }); };
+  EMOI = N.map(d => { const m0 = LEAD_EMO.exec(String(d.title || "")); if (m0) return m0[1];   /* an emoji leading the file name wins (0.9.102) */ if (has) { let q = d.path; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (EMOF[q]) return EMOF[q]; } } return EMO ? EMO.get(d.path) : undefined; }); };
 emoBuild();
 const loadEmo = async () => { if (!host.emojis) return Object.keys(EMOF).length ? "" : "Emoji labels need a newer Obsidian"; if (emoBusy) return emoBusy; emoBusy = (async () => { const r = await host.emojis(); emoBusy = null;
   if (r.err) { EMO = null; emoBuild(); return Object.keys(EMOF).length ? "" : `Couldn't read emojis: ${r.err}`; } EMO = new Map(Object.entries(r.map)); emoBuild(); return ""; })(); return emoBusy; };
-// Linear Calendar with Show emojis: a note's emoji takes the place of its dot, bigger the higher its level (Nick); notes with no emoji keep their dot
+// Linear Calendar with Show emojis: a note's emoji takes the place of its dot, bigger the higher its level; notes with no emoji keep their dot
 // where emojis replace dots: Linear Calendar (its own switch) and Emergence with Space-Time (theirs, 0.7.56)
 const emoOK = () => EMOK.has(view) && !(view === "chord" && CSPH === "out") && !DOME[view];
 const emoView = () => !!EMOI && emoOK() && emoOn(view);   // not in Planetarium
 const emoAt = i => emoView() ? EMOI[i] : undefined;
 const EMOSZ = [0, .85, 1, 1.3, 1.65, 2];
-const emoSize = i => view === "lincal" ? Math.max(8.1, Math.min(16.2, LC.C * k * .324)) * EMOSZ[N[i].level]   // 10% smaller than 0.7.39 (Nick)
+const emoSize = i => view === "lincal" ? Math.max(8.1, Math.min(16.2, LC.C * k * .324)) * EMOSZ[N[i].level]   // 10% smaller than 0.7.39
   : Math.max(8.1, Math.min(16.2, 7 * Math.pow(k, .45))) * EMOSZ[N[i].level];   // Emergence: grows gently with the zoom, bigger by level
 let showArch = !!pref("iv-arch", true), fromY = +pref("iv-from", 2016);
 { // Full scale from was retired (Oct 11). If one was set, start the timeline there instead: same recent years, older ones in "Before".
@@ -146,7 +146,7 @@ fromY = fullY = YR0;
 const YRV = new Set(["emergence", "spacetime", "gravity", "stars", "sense", "graph", "ideaverse", "chord", "treemap", "mosaic", "tree", "shelf", "skyline", "planet", "quincunx", "arc"]);
 // "Show notes outside the date range": off by default, so these maps show only the years picked, and no undated notes;
 // on, notes with no date sit in the No date strip, older ones in a Before strip, newer ones in an After strip
-let YRALL = pref("iv-yrall", true) !== false;   // on by default (Nick, Oct 24)
+let YRALL = pref("iv-yrall", true) !== false;   // on by default
 // (the first layout runs before the map's view is set up, so it reads the saved one)
 const curV = () => { try { return view; } catch (e) { return pref("iv-view", "emergence"); } };
 const yrEnd = () => YRV.has(curV()) ? YR1 : NOW_Y;
@@ -224,7 +224,7 @@ function computeVis(){ VISV++; const fs = new Set(folders);
   // tags switched off (Treemap, Bookshelf and Chord by tags) leave the map
   if (tagHide.on()) for (let i=0;i<n;i++) if (vis[i] && tagHide.hid(i)) vis[i] = 0;
   if (YRV.has(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
-  if (winSpan() && YRV.has(curV()) && !YRALL) { const w0 = winStart(), w1 = winEnd(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0 && TV[i] < w1)) vis[i] = 0; }   /* both ends: fixed dates end before today (0.9.17, Nick) */
+  if (winSpan() && YRV.has(curV()) && !YRALL) { const w0 = winStart(), w1 = winEnd(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0 && TV[i] < w1)) vis[i] = 0; }   /* both ends: fixed dates end before today (0.9.17) */
   if (BYMT) capDays();
   try { tlFilter(); } catch (_) { /* Base Builder not set up yet */ }
   if (focus >= 0) vis[focus] = 1;
@@ -367,7 +367,7 @@ let TF = 0, TS = 0, UT = 1;
 const units = v => v < TS ? (v - TF)/YEAR*COMP : (TS - TF)/YEAR*COMP + (v - TS)/YEAR;
 const xTime = v => X0T + units(v)/UT * (WW - X0T - AFW);
 const dayFull = () => (WW - X0T - AFW)/UT/365.2425;   // world width of one day at full scale
-// Organize by most recently modified: at most 30 notes a day (Nick: one edit to a map can touch 50 or 1,000 linked notes, and that's one change, not 1,000).
+// Organize by most recently modified: at most 30 notes a day.
 // Notes changed within two minutes of each other, eight or more in a row, are a burst (a ripple from one edit): a burst keeps only its biggest note (level, then links).
 // Then the day keeps its 30 most recent. CAPHID: per local day (its start), how many notes the cap let go, for the "+N more" marks.
 const CAP_DAY = 30, BURST_GAP = 120e3, BURST_MIN = 8; let CAPHID = new Map();
@@ -404,7 +404,7 @@ const AXES = {
   "p:kb":  {name:"Size (KB)", get:d => d.p && d.p.kb, kind:"log", jit:.006},
   "links": {name:"Links (in + out)", get:d => d.body_in + d.body_out, kind:"log", jit:.01},
   "upin":  {name:"Uplinks (notes that link up to it)", get:d => d.up_in, kind:"log", jit:.01},
-  "score": {name:"Link score", get:d => d.score, kind:"log", jit:.01}};   // the score that sets each note's level (Display → How notes are scored); Nick, for Gravity (0.7.58)
+  "score": {name:"Link score", get:d => d.score, kind:"log", jit:.01}};   // the score that sets each note's level (Display → How notes are scored), for Gravity (0.7.58)
 // the number properties named in Settings → By → More… (year by default): each becomes an axis, scaled to its values.
 // Year-like ones that reach back centuries or millennia squeeze the far past, as Time's "Before" strip does.
 for (const key of (D.settings && D.settings.axis_props) || []) { const vals = N.map(d => d.p && d.p.n && d.p.n[key]).filter(v => v != null && isFinite(v)); if (!vals.length) continue;
@@ -481,7 +481,7 @@ function buildGrid(){ grid = new Map(); for (let i=0;i<n;i++) { if (!vis[i]) con
 let mode = "time"; { const m = pref("iv-x", "time"); if (m === "ace" || m === "time" || (AXES[m] && axisHas(m))) mode = m; }
 computeVis(); layoutACE(); layoutTime(); layoutProp();
 // ---------- Gravity view: emergence as rings (Level 5 at the center), Time or ACE goes around ----------
-let view = pref("iv-view", "emergence"); if (view === "posters" || view === "people") view = "builder"; if (!VIEWS_ON.includes(view)) view = "emergence";   /* Posters and People are gone from the menu; Base Builder does their work (0.8.319, Nick) */
+let view = pref("iv-view", "emergence"); if (view === "posters" || view === "people") view = "builder"; if (!VIEWS_ON.includes(view)) view = "emergence";   /* Posters and People are gone from the menu; Base Builder does their work (0.8.319) */
 let modeKeep = null;   // Space-Time is always by time: the Emergence axis you had comes back when you leave it
 if (view === "spacetime" && mode !== "time") { modeKeep = mode; mode = "time"; }
 const GC = {x: WW/2, y: WH/2}, GR = 880;
@@ -735,7 +735,7 @@ const BGS = (() => { let a = 1234567; const r = () => { a |= 0; a = a + 0x6D2B79
   return [{p:.05, T:640, n:230}, {p:.14, T:900, n:150}].map(L => ({...L, pts: Array.from({length:L.n}, () => [r()*L.T, r()*L.T, .4 + r()*r()*1.3, .15 + r()*.6, r() < .12])})); })();
 // Starfield's galaxy glow: Soft by default, so the stars (your notes) read over it; Normal and Bright for the full nebula look
 let sGlow = ["clear", "soft", "normal", "bright"].includes(pref("iv-sglow", "soft")) ? pref("iv-sglow", "soft") : "soft";
-// Clear (0.8.4, Nick: the galaxy light gets in the way of seeing the notes): galaxies become faint tinted regions, with no light of their own,
+// Clear (0.8.4): galaxies become faint tinted regions, with no light of their own,
 // the faraway stars fade back, and every note is a crisp dot, so the only stars you see are your notes
 const CLEAR = () => sGlow === "clear";
 // Turning galaxies (an option): each galaxy slowly turns in its own plane, the big ones slower; flat Starfield only
@@ -772,7 +772,7 @@ function starsBg(){
   if (chx("gas")) chartGas(bgDim);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; galNames();
 }
-// Starfield: galaxy names sit behind everything but the Linking Your Thinking mark (0.8.19, Nick): drawn with the sky, before links, stars and note names
+// Starfield: galaxy names sit behind everything but the Linking Your Thinking mark (0.8.19): drawn with the sky, before links, stars and note names
 const galNames = () => { if (view !== "stars" || expOn() || domeOn()) return; LH = []; ctx.save(); starLabels(); ctx.restore(); };
 function starsNotes(lit, dim){
   const vx0 = -30, vx1 = W+30, vy0 = -30, vy1 = H+30, bins = new Map(), bright = [];
@@ -824,7 +824,7 @@ function starLabels(){
     ctx.strokeText(sub, cx, y + 15); ctx.fillText(sub, cx, y + 15); }
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.globalAlpha = 1;
 }
-// Starfield's link colors (0.8.6, Nick: the legend and the panel disagreed): the theme's own link colors, so above, below, up, related and other
+// Starfield's link colors (0.8.6): the theme's own link colors, so above, below, up, related and other
 // properties read the same as in the note panel and on every other map; on a light theme they're lifted toward white to show on the dark sky
 let LIFTC = null; const liftHex = (c, f) => { LIFTC ||= doc.createElement("canvas").getContext("2d"); LIFTC.fillStyle = "#000"; LIFTC.fillStyle = c; const h = LIFTC.fillStyle;
   if (!/^#[0-9a-f]{6}$/i.test(h)) return c; const v = [1, 3, 5].map(o => parseInt(h.slice(o, o + 2), 16)), m = v.map(x => Math.round(x + (255 - x) * f)); return `rgb(${m.join(",")})`; };
@@ -916,7 +916,7 @@ const shownAt = i => view === "sense" ? inYears(i) && born(i) : born(i);   // sc
 const EHID = new Uint8Array(n);   // notes an experimental map leaves out (Linear: other years, no date)
 const VV = i => vis[i] && shownAt(i) && !(EHID[i] && expOn()) && (!(domeOn() || sphOn()) || DFR[i] === 1);
 let senseTrail = [];                              // (kept empty: the averaged trail was replaced by popcorn)
-const SPEEDS = {xslow: [12, 6000/1100], slow: [6, 4000/1100], normal: [2.6, 1.6], fast: [1, 1]};   // shifted one notch slower (Nick, Oct 11)   // [step ×, flight ×]: slow spaces the arrivals out more than it slows each flight, so fewer overlap and more names show
+const SPEEDS = {xslow: [12, 6000/1100], slow: [6, 4000/1100], normal: [2.6, 1.6], fast: [1, 1]};   // shifted one notch slower   // [step ×, flight ×]: slow spaces the arrivals out more than it slows each flight, so fewer overlap and more names show
 let senseSpeed = SPEEDS[pref("iv-sspeed", "normal")] ? pref("iv-sspeed", "normal") : "normal";
 const POP = new Float64Array(n), popMs = () => 1100*SPEEDS[senseSpeed][1], stepMs = () => (senseStep === "week" ? 240 : 520)*SPEEDS[senseSpeed][0];   // when each note pops (performance.now ms); 0 = no pop
 let popNow = 0, popEnd = 0, popping = false, popFrozen = false, frozenAt = 0;
@@ -955,7 +955,7 @@ function senseLabels(){
 // The centre each note flies from is the middle of the 2×2, or in Starfield its own galaxy's core.
 // the date behind the map while the timeline runs: the year huge, the month under it, and the week when stepping by week
 let senseStepStart = null;
-/* the date watermark shows only while the Timelapse plays; once it stops, it stays 7 s and then fades out over 1.5 s (0.8.358, Nick) */
+/* the date watermark shows only while the Timelapse plays; once it stops, it stays 7 s and then fades out over 1.5 s (0.8.358) */
 let TLSTOP = 0;
 function tlWmA(){ if (sensePlaying) return 1; if (!TLSTOP) return 0; const t = performance.now() - TLSTOP; return t < 7000 ? 1 : Math.max(0, 1 - (t - 7000) / 1500); }
 function drawWatermark(cx, cy, size, col, alpha){ alpha *= tlWmA(); if (alpha <= 0) return;
@@ -1108,7 +1108,7 @@ function placePlaybar(){ const pb = $("#playbar"), tb = $("#timebar");   // Sens
   const db = $("#driftbar"); db.hidden = false;   // Orbit runs on every map (Earth, a fixed tilt, shows only on 3D maps)
   db.style.top = !docked && !isPhone() && pb.style.top ? (pb.offsetTop + pb.offsetHeight + 8) + "px" : ""; syncTB(); }
 on(win, "resize", () => { placePlaybar(); placeAnitab(); });
-/* Starfield (Star Chart and the Starship) keeps its own Timelapse effect, Swirl in to start (0.8.361, Nick); the other maps keep theirs */
+/* Starfield (Star Chart and the Starship) keeps its own Timelapse effect, Swirl in to start (0.8.361); the other maps keep theirs */
 function SFV(){ return view === "stars" || view === "cockpit"; }
 function sfxSync(){ const ok = ["comet", "rain", "swirl", "swirlin"]; if (SFV()) { const v = pref("iv-sfx-sf", "swirlin"); senseFx = ok.includes(v) ? v : "swirlin"; } else { const v = pref("iv-sfx", "comet"); senseFx = ok.includes(v) ? v : "comet"; } }
 function syncTimebar(){ sfxSync(); const on = true; win.setTimeout(placePlaybar, 0);
@@ -1147,7 +1147,7 @@ function morph(animate, cam){
   RAF(step);
 }
 let camBusy = 0;
-function setView(v){ if (v === "posters" || v === "people") v = "builder"; if (v === "cockpit" && view !== "cockpit") RECCK = true;   /* Recents arrives open in the Starship now that it shares the HUD (0.8.292, Nick; tucked on arrival since 0.8.273) */ win.setTimeout(() => { ckView(); if (typeof sfSwSync === "function") sfSwSync(); try { RECKEY = ""; recSync(); } catch (_) { /* not built yet */ } if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
+function setView(v){ if (v === "posters" || v === "people") v = "builder"; if (v === "cockpit" && view !== "cockpit") RECCK = true;   /* Recents arrives open in the Starship now that it shares the HUD (0.8.292) */ win.setTimeout(() => { ckView(); if (typeof sfSwSync === "function") sfSwSync(); try { RECKEY = ""; recSync(); } catch (_) { /* not built yet */ } if (typeof syncFZ === "function") syncFZ(); if (typeof syncArBtn === "function") syncArBtn(); if (EDS) { void openMain(sel); syncOrbs(); } }, 0);
   if (v === view) return;
   if (view === "chord") { chPin = -1; chArc = -1; tip.hidden = true; tip.classList.remove("arc"); }
   if (senseT != null && !((v === "cockpit" && view === "stars") || (v === "stars" && view === "cockpit"))) { senseStop(); unfreeze(false); senseT = null; POP.fill(0); popEnd = 0; $("#tldate").textContent = "All time"; }   /* Ship ⇄ Chart keeps the Timelapse going (0.8.348) */
@@ -1913,13 +1913,13 @@ const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oc
 // so the weeks line up down the page (the Year Map). The notes made that day fill its box.
 // Linear Calendar: the years shown (a range; both ends on one year shows one year) and the shape: Whole months (a row each, weeks lined up) or Half months (two rows each: the 1st to the 15th, then the 16th on, for a narrow pane)
 let LCUIOK = false, LCR0 = +pref("iv-lcr0", 0) || 0, LCR1 = +pref("iv-lcr1", 0) || 0, LCHALF = pref("iv-lchalf", true) !== false, LC = {years: [], C: 44};
-/* two more shapes (0.8.172, Nick): Life in weeks (a row per year, 52 week boxes; with a birth year, the 90 years from it) and Years stacked (a row per year, Jan to Dec on one line) */
-let LCSHAPE = pref("iv-lcshape", "") === "stack" ? "weeks" : ["weeks", "days"].includes(pref("iv-lcshape", "")) ? pref("iv-lcshape", "") : "months",   /* Years stacked is gone (0.8.182, Nick: "Life in weeks is superior"); it becomes Life in weeks */ LCBORN = +pref("iv-lcborn", 0) || 0;
-/* Last 30 days (0.8.181, Nick: "a rolling 30-day view… so we can really zoom in"): as one line, two rows of 15, or weeks (Monday to Sunday, the old standard) */
-let LC30OFF = 0, LC30ACC = 0, LC30T = 0;   /* weeks back from today (0.8.183, Nick: "scroll up and it would go backwards week by week") */
+/* two more shapes (0.8.172): Life in weeks (a row per year, 52 week boxes; with a birth year, the 90 years from it) and Years stacked (a row per year, Jan to Dec on one line) */
+let LCSHAPE = pref("iv-lcshape", "") === "stack" ? "weeks" : ["weeks", "days"].includes(pref("iv-lcshape", "")) ? pref("iv-lcshape", "") : "months",   /* Years stacked is gone (0.8.182); it becomes Life in weeks */ LCBORN = +pref("iv-lcborn", 0) || 0;
+/* Last 30 days (0.8.181): as one line, two rows of 15, or weeks (Monday to Sunday, the old standard) */
+let LC30OFF = 0, LC30ACC = 0, LC30T = 0;   /* weeks back from today (0.8.183) */
 let LC30 = ["line", "half", "weeks"].includes(pref("iv-lc30", "")) ? pref("iv-lc30", "") : "weeks";
 const lcGrid = () => LCSHAPE === "weeks" || LCSHAPE === "stack" || LCSHAPE === "days";
-/* how many names Linear Calendar shows (0.8.180, Nick): Natural, More, Many. Names still never overlap; More and Many let lower levels in sooner and take more of them */
+/* how many names Linear Calendar shows (0.8.180): Natural, More, Many. Names still never overlap; More and Many let lower levels in sooner and take more of them */
 let LCNAMES = ["more", "many"].includes(pref("iv-lcnames", "")) ? pref("iv-lcnames", "") : "natural";
 { const y_ = +pref("iv-lcyear", 0) || 0; if (!LCR0 && y_) { LCR0 = LCR1 = y_; } if (pref("iv-lcall", false) === true && !+pref("iv-lcr0", 0)) { LCR0 = 1; LCR1 = 9999; } }
 const LC_GAP = 150;
@@ -1942,8 +1942,7 @@ function layoutLincal(){
   const last = years.length - 1; expBox = {x0: -90, y0: last*H1 - 70, x1: (half ? 16 : 37)*C + 20, y1: last*H1 + 12*MH + 20}; if (LCUIOK) syncLC(); }   // fit to the latest year; the wheel scrolls back through the rest
 // keep the years inside the years that have notes (first time: this year, or the latest year with notes)
 function lcClamp(){ const [y0, y1] = datedYears(); if (!LCR0 || !LCR1) { LCR0 = LCR1 = Math.min(y1, NOW_Y); } LCR0 = Math.max(y0, Math.min(y1, LCR0)); LCR1 = Math.max(y0, Math.min(y1, LCR1)); if (LCR0 > LCR1) [LCR0, LCR1] = [LCR1, LCR0]; return [y0, y1]; }   // fit to the latest year; the wheel scrolls back through the rest
-/* Linear Calendar's year layer (0.8.170, Nick: an annual review on the map, "less difficult to recollect what happened, much easier to zoom out, identify patterns
-   and discover what themes of the year start to emerge"). Built on three notes: the year note (titled "2026"), its Preview note (in the same folder) and the reviews beside them.
+/* Linear Calendar's year layer (0.8.170). Built on three notes: the year note (titled "2026"), its Preview note (in the same folder) and the reviews beside them.
    Recall (left): emoji-first counts; hover one and its days light up, click to keep them lit. Reflect (right): the theme, the reviews in order, and an Extra fold.
    Notes that point up to the year note glow: the ones you marked as meaningful. */
 let LCYCARDS = [];   /* the year panels' boxes, so names keep clear of them (0.8.180) */
@@ -2031,11 +2030,11 @@ const lcDoy = (y, m, d) => Math.round((Date.UTC(y, m, d) - Date.UTC(y, 0, 1)) / 
 function lcGridYears(){ const [ya, y1] = lcClamp(); let y0 = ya;
   { const cnt = new Map(); let tot = 0; for (let i = 0; i < n; i++) if (vis[i] && !isNaN(TV[i])) { const y = yOf(TV[i]); cnt.set(y, (cnt.get(y) || 0) + 1); tot++; }   /* skip the stray early years (a note dated 1984 shouldn't add 25 empty rows): start at the first year with a real share of notes */
     const min = Math.max(3, tot * .004); while (y0 < y1 && (cnt.get(y0) || 0) < min) y0++; }
-  if (LCSHAPE === "weeks" && LCR0 >= LCR1) { if (LCBORN > 1000) return Array.from({length: 90}, (_, j) => LCBORN + j); return Array.from({length: y1 - y0 + 1}, (_, j) => y0 + j); }   /* the Years range filters the rows (0.8.173, Nick: "I cannot filter the weeks"); set to one year, it's the whole life (or every year) */
+  if (LCSHAPE === "weeks" && LCR0 >= LCR1) { if (LCBORN > 1000) return Array.from({length: 90}, (_, j) => LCBORN + j); return Array.from({length: y1 - y0 + 1}, (_, j) => y0 + j); }   /* the Years range filters the rows (0.8.173); set to one year, it's the whole life (or every year) */
   const a = LCR0 < LCR1 ? LCR0 : y0, b = LCR0 < LCR1 ? LCR1 : y1; return Array.from({length: b - a + 1}, (_, j) => a + j); }   /* Years stacked: the Years range, or every year when it's set to one */
 const DAY_MS = 864e5;
 function lc30Step(d){ const nv = Math.max(0, LC30OFF + d); if (nv === LC30OFF) return; LC30OFF = nv; morph(true, () => ({ k, tx, ty })); }   /* the boxes stay put; the notes slide a row */
-function lc30Wheel(dy){ const now = performance.now(), fresh = now - LC30T > 350; LC30T = now; if (fresh && Math.abs(dy) > 2) lc30Step(dy < 0 ? 1 : -1); }   /* one week per scroll, however hard (0.8.184, Nick: "too sensitive or not sensitive enough"): a new step needs a pause */
+function lc30Wheel(dy){ const now = performance.now(), fresh = now - LC30T > 350; LC30T = now; if (fresh && Math.abs(dy) > 2) lc30Step(dy < 0 ? 1 : -1); }   /* one week per scroll, however hard (0.8.184): a new step needs a pause */
 let LC30H = [];   /* the Earlier / Later / Today buttons above the grid */
 dbg.__lc30 = () => [LC30OFF, LC30H.map(q => [q[0] + q[2] / 2, q[1] + q[3] / 2, q[4]])];
 cv.addEventListener("pointerdown", e => { if (view !== "lincal" || LCSHAPE !== "days" || e.button !== 0) return; const h = LC30H.find(q => e.offsetX >= q[0] && e.offsetX <= q[0] + q[2] && e.offsetY >= q[1] && e.offsetY <= q[1] + q[3]); if (!h) return;
@@ -2168,17 +2167,17 @@ EXP.lifeline = {
   legend: "Lifeline: your whole ideaverse on one line, left to right. Each note stands on it like a mark on a seismograph: the higher its level, the taller its stem (hubs tallest). Unlinked notes hang just below the line. The gold dot is today.",
 };
 
-// ---------- Compass (0.8.32, Nick): a local map around one note ----------
+// ---------- Compass (0.8.32): a local map around one note ----------
 // The note in the primary note (the pinned one, or the one you picked) sits at the centre. What it links up to sits above it, the notes
 // that link up to it below; otherwise the higher level goes above and the lower below. Time runs left (earlier) to right (later), on a
 // log scale so last week and ten years ago both have room. Relevance (in the gear) pulls the notes most related to the centre toward it,
 // like radar, keeping each one's direction: relevance is a walk from the centre note along links that keeps coming home (personalized
 // PageRank), with up and related links weighted double, tempered so hubs don't win just for being big.
-let CMPREL = pref("iv-cmprel", false) === true, CMPPUSH = pref("iv-cmppush", false) === true; /* 0.8.51: push less related linked notes out (Nick, to try) */ const CMP = { c: -1, ids: [], pv: [], rel: null, R: 0 };
+let CMPREL = pref("iv-cmprel", false) === true, CMPPUSH = pref("iv-cmppush", false) === true; /* 0.8.51: push less related linked notes out */ const CMP = { c: -1, ids: [], pv: [], rel: null, R: 0 };
 let RADJ = null;
 function radj(){ if (RADJ) return RADJ; const nb = Array.from({length:n}, () => []), wt = Array.from({length:n}, () => []), sw = new Float64Array(n);
   const wOf = t => t === 1 || t === 4 ? 2 : t === 5 ? .6 : t === 2 ? .5 : 1;
-  /* one weight per pair of notes (0.8.120): every link between them added up, in either direction, and ×1.25 more when they link both ways (Nick: "a very clear signal") */
+  /* one weight per pair of notes (0.8.120): every link between them added up, in either direction, and ×1.25 more when they link both ways */
   const P_ = new Map(); for (const [a, b, t] of E) { if (t === 3 || ARCH[a] || ARCH[b] || a === b) continue; const lo = Math.min(a, b), hi = Math.max(a, b), k_ = lo * n + hi; let o = P_.get(k_); if (!o) P_.set(k_, o = { lo, hi, w: 0, f: 0 }); o.w += wOf(t); o.f |= a === lo ? 1 : 2; }
   for (const o of P_.values()) { const w = o.w * (o.f === 3 ? 1.25 : 1); nb[o.lo].push(o.hi); wt[o.lo].push(w); nb[o.hi].push(o.lo); wt[o.hi].push(w); sw[o.lo] += w; sw[o.hi] += w; }
   return (RADJ = { nb, wt, sw }); }
@@ -2186,13 +2185,13 @@ function relFrom(a){ const { nb, wt, sw } = radj(), al = .2; let x = new Float64
   for (let it = 0; it < 24; it++) { y.fill(0); y[a] = al;
     for (let i = 0; i < n; i++) { const v = x[i]; if (!v || !sw[i]) continue; const f = (1 - al) * v / sw[i], L = nb[i], Wt = wt[i]; for (let q = 0; q < L.length; q++) y[L[q]] += f * Wt[q]; }
     [x, y] = [y, x]; }
-  /* tempered by how linked a note is, gently (0.8.122, Nick: the √ markdown "feels fairly steep"): ÷ (1 + link weight)^0.3 */
+  /* tempered by how linked a note is, gently (0.8.122): ÷ (1 + link weight)^0.3 */
   for (let i = 0; i < n; i++) x[i] = x[i] / Math.pow(sw[i] + 1, .3);
   /* what you declared counts most: a note it links up to (up) ×3, a related note ×1.6 */
   for (const j of [...out[a], ...inn[a]]) { const kk = EKIND.get(a * n + j) ?? EKIND.get(j * n + a); if (kk === 1 && EKIND.get(a * n + j) === 1) x[j] *= 3; else if (kk === 4) x[j] *= 1.6; }
   return x; }
 // the centre: the pinned main-editor note, else the picked note, else the top-scored note. The map's first layout runs before the tabs and
-// the picked note exist (Nick's blank map on 0.8.33, opening on Compass), so those are read carefully
+// the picked note exist, so those are read carefully
 function cmpCenter(){ let t = null, ed = false, sl = -1; try { t = TABS[TCUR]; ed = edOn(); sl = sel; } catch (_) { /* not ready yet */ }
   if (ed && t && t.pin && PIDX.has(t.path) && vis[PIDX.get(t.path)]) return PIDX.get(t.path);
   if (sl >= 0 && vis[sl]) return sl; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
@@ -2225,7 +2224,7 @@ function layoutCompass(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[
   let x0 = -200, x1 = 200, y0 = -200, y1 = 200;
   ids.forEach((j, q) => { EHID[j] = 0; EX[j] = P[q*2]; EY[j] = P[q*2+1]; x0 = Math.min(x0, EX[j]); x1 = Math.max(x1, EX[j]); y0 = Math.min(y0, EY[j]); y1 = Math.max(y1, EY[j]); });
   CMP.R = Math.max(-x0, x1, -y0, y1); expBox = { x0: x0 - 90, y0: y0 - 70, x1: x1 + 160, y1: y1 + 60 };
-  // previews go to the most related notes first, Relevance on or off (Nick: "especially the most relevant ones need to be displayed")
+  // previews go to the most related notes first, Relevance on or off
   { const rv = rel || relFrom(a); CMP.pv = [...ids].sort((p, q) => rv[q] - rv[p]).slice(0, 80); } }
 function cmpSync(){ if (view !== "compass" || dead) return; if (cmpCenter() !== CMP.c) morph(true, () => fitTarget()); }
 EXP.compass = {
@@ -2246,7 +2245,7 @@ EXP.compass = {
   legend: "Compass: one note at the centre (the one in the editor; pin it to keep it there). What it links up to sits above it, the notes that link up to it below; otherwise higher levels above and lower below. Time runs left to right, earlier to later. ⚙ → Relevance pulls the notes most related to the centre toward it, like radar, each keeping its direction; the closest get small previews in Edit mode.",
 };
 
-// ---------- Arena (0.8.41, Nick): a ring of slots you fill with notes, a workspace of your own ----------
+// ---------- Arena (0.8.41): a ring of slots you fill with notes, a workspace of your own ----------
 // 8 to 20 slots round a circle (⚙). Click an empty slot to put a note in it; Option-click (Alt-click) a slot to empty it. The links between
 // the ring's notes cross the middle as curves, as in Chord. The note pinned in the editor sits at the centre. The ring is saved; it starts
 // from your tabs (the orbs) the first time.
@@ -2255,7 +2254,7 @@ const ARR = 900, ARC0 = { c: -1 };
 function arenaSlots(){ if (!ARENA) { ARENA = []; try { for (const t of TABS) if (t && t.path) ARENA.push(t.path); } catch (_) { /* tabs not ready yet */ } }
   while (ARENA.length < ARN) ARENA.push(null); if (ARENA.length > ARN) { const kept = ARENA.filter(Boolean); ARENA = ARENA.slice(0, ARN); for (const p_ of kept) if (!ARENA.includes(p_)) { const k_ = ARENA.indexOf(null); if (k_ >= 0) ARENA[k_] = p_; } }
   return ARENA; }
-// Board (0.8.61, experimental; after a shaped-canvas painting Nick saw): the same slots as framed squares on a shaped board, wired like a circuit
+// Board (0.8.61): the same slots as framed squares on a shaped board, wired like a circuit
 let ARSTY = (s_ => s_ === "board" || s_ === "henge" || s_ === "plan" ? s_ : "ring")(pref("iv-arsty", "ring"));
 const BCOLS = () => Math.ceil(Math.sqrt(ARN * 1.4)), BCW = 560, BCH = 480;
 const boardAt = q => { const cols = BCOLS(), rows = Math.ceil(ARN / cols), r = Math.floor(q / cols), c = q % cols, h = hash("slot" + q, 3), h2 = hash("slot" + q, 5);
@@ -2339,7 +2338,7 @@ function boardNotes(lit){ const B = boardInk(), sl = arenaSlots(), lw = Math.max
   ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 function boardPick(x, y){ let best = -1, bd = 1e9; for (const p_ of arenaSlots().concat(ARC0.c >= 0 ? [N[ARC0.c].path] : [])) { const i = p_ != null ? PIDX.get(p_) : null; if (i == null || !VV(i)) continue;
     const h = bSide(i) / 2 + 50, d = Math.max(Math.abs(x - EX[i]), Math.abs(y - EY[i])); if (d < h && d < bd) { bd = d; best = i; } } return best; }
-// Stonehenge (0.8.81, Nick: "an epic three-quarter view from above of a stone circle"): the same slots as standing stones, seen from above and in front.
+// Stonehenge (0.8.81): the same slots as standing stones, seen from above and in front.
 // A stone's height is its level, its width (mass) its score; two neighbours that link carry a lintel across their tops; links across the circle are worn paths on the grass.
 // The centre note lies flat in the middle as the altar stone. Sarsens (warm grey) are maps and hubs (Level 3+); bluestones (blue-grey) are the rest.
 const HGY = .5;   /* how flat the circle looks: the ground seen from about 25° up */
@@ -2409,15 +2408,15 @@ function hengeNotes(lit){ const P = hgInk(), on = hgOn(); HGHIT.length = 0; ctx.
     let t = N[i].title; const mw = Math.max(80, (alt ? 360 : hgW(i) + 90) * k); while (t.length > 4 && ctx.measureText(t).width > mw) t = t.slice(0, -2); if (t !== N[i].title) t += "…"; ctx.fillText(t, sx(X[i]), sy(Y[i]) + 6); }
   ctx.globalAlpha = 1; ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
 function hengePick(x, y){ const px = sx(x), py = sy(y); for (let q = HGHIT.length - 1; q >= 0; q--) { const [hx, hy, hw, hh, i] = HGHIT[q]; if (px >= hx && px <= hx + hw && py >= hy && py <= hy + hh + 8) return i; } return -1; }
-// Stonehenge as a memory palace (0.8.82; Nick: "I want the exact actual shapes of each actual Stonehenge to always be the same. That's the point.
-// It's a memory palace … which the user can assign meaning (notes)"). The monument as it stood, from the usual reconstruction: every stone always the same
+// Stonehenge as a memory palace (0.8.82): the stones never change, only the meanings the user assigns to them (notes).
+// The monument as it stood, from the usual reconstruction: every stone always the same
 // shape in the same place; a note only lights a stone (a glow in its level's colour) and names it. Petrie's numbers where they're settled:
 // sarsens 1–30, trilithon uprights 51–60, the Altar Stone 80, Station Stones 91–94, the Slaughter Stone 95, the Heel Stone 96.
 // Metres from the centre; +y runs out along the axis toward the Heel Stone (the midsummer sunrise), which faces you.
 const STN_SC = 40, STN_HV = .85;
 const STLINT = [];   /* lintels still up: drawn across their two stones, not places of their own */
 const STONES = (() => { const S = [], j = (id, s) => hash(id, s), D = Math.PI / 180;
-  // as it stands today (0.8.84; Nick: "the current 2026 version, not the complete ancient version"): 17 sarsens standing, 8 fallen, 6 lintels up;
+  // as it stands today (0.8.84): 17 sarsens standing, 8 fallen, 6 lintels up;
   // three trilithons whole, the Great Trilithon and the north one each down to one upright; the bluestones that show above the turf; two Station Stones.
   // Each stone keeps its Petrie number and its place; fallen stones lie where they fell, and every one of them can hold a note.
   const pos = (a, r) => [Math.sin(a) * r, Math.cos(a) * r];
@@ -2535,13 +2534,13 @@ EXP.arena = {
 };
 const ARENA_LEG = "Arena: a ring of slots you fill with notes, a workspace of your own. Click an empty slot (+) to put a note in it; Option-click (Alt-click) a slot to empty it. The links between the ring's notes cross the middle, as in Chord. Pin a note in the editor to set it at the centre. ⚙ sets how many slots (8 to 20).";
 
-// ---------- Kandinsky (0.8.62, Nick): one note and its links as a painting, after Composition VIII (1923) ----------
+// ---------- Kandinsky (0.8.62): one note and its links as a painting, after Composition VIII (1923) ----------
 // (0.8.62's Squares, after "Squares with Concentric Circles", was retired in 0.8.76)
 const KD = { c: -1 };
 // Composition (0.8.63, after Composition VIII, 1923): one map note and its links as a painting of circles, triangles, arcs, checkerboards and lines
-// 0.8.76 (Nick): Squares is gone; Kandinsky is the Composition. It paints every link, unless the cap is on (busy notes: 24 shapes)
+// 0.8.76: Squares is gone; Kandinsky is the Composition. It paints every link, unless the cap is on (busy notes: 24 shapes)
 let KCAP = pref("iv-kcap", false) === true;
-let KFOCUS = -1, KSTY = "comp", KNAMES = pref("iv-knames", false) === true; /* KNAMES: every shape named (0.8.64, Nick) */ const KC = { c: -1, ids: [], sz: new Map(), kind: new Map() };
+let KFOCUS = -1, KSTY = "comp", KNAMES = pref("iv-knames", false) === true; /* KNAMES: every shape named (0.8.64) */ const KC = { c: -1, ids: [], sz: new Map(), kind: new Map() };
 function layoutComp(){ for (let i = 0; i < n; i++) { EHID[i] = 1; RW[i] = RH[i] = 0; }
   let c = -1; try { c = KFOCUS >= 0 && vis[KFOCUS] ? KFOCUS : sel; } catch (_) { /* not ready */ } if (c < 0 || !vis[c]) { c = -1; for (let i = 0; i < n; i++) if (vis[i] && !ARCH[i] && N[i].is_map && (c < 0 || N[i].score > N[c].score)) c = i; }
   KC.c = c; KC.ids = []; KC.sz.clear(); KC.kind.clear(); if (c < 0) { expBox = { x0: -800, y0: -500, x1: 800, y1: 500 }; return; }
@@ -2607,7 +2606,7 @@ function compDraw(lit){ const KX = i => EX[i] + (kOff(i) ? kOff(i).x : 0), KY = 
     if (KNAMES && !big && i !== sel && taken.some(q => bx_[0] < q[0] + q[2] && bx_[0] + bx_[2] > q[0] && bx_[1] < q[1] + q[3] && bx_[1] + bx_[3] > q[1])) continue; taken.push(bx_);   // names never sit on each other
     ctx.lineWidth = 3; ctx.strokeStyle = "rgba(239,230,207,.85)"; ctx.strokeText(t, sx(KX(i)), ty); ctx.fillStyle = P.ink; ctx.fillText(t, sx(KX(i)), ty); }
   ctx.restore(); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; }
-// Composition's key (0.8.65, Nick): a small drawing of each mark, then what it is
+// Composition's key (0.8.65): a small drawing of each mark, then what it is
 function kLegend(host_){ const P = KCP, box = host_.createDiv({ cls: "lghi kleg" }); box.createDiv({ text: "Composition key", attr: { style: "color:var(--ink)" } });
   const row = (label, draw) => { const r = box.createDiv({ cls: "klrow" }), cv_ = r.createEl("canvas", { cls: "klic" }), dpr = win.devicePixelRatio || 1; cv_.width = 30 * dpr; cv_.height = 20 * dpr;
     const g = cv_.getContext("2d"); g.scale(dpr, dpr); g.fillStyle = P.paper; g.fillRect(0, 0, 30, 20); g.lineCap = "round"; draw(g); r.createSpan({ text: label }); };
@@ -2639,15 +2638,15 @@ EXP.kandinsky = {
 };
 
 // ---------- Cockpit (0.8.78): one note as a cockpit; its links hang ahead as panels and you fly into one to make it the cockpit ----------
-// After Nick's X-Wing (1993) mockup: "actually fly through our notes… almost like a game, but not a game", built no further than needed.
+// After an X-Wing (1993) style cockpit: flying through notes, not a game, built no further than needed.
 // Space: links in on the left, links out on the right, two-way links ahead; what the note links up to above the horizon, what sits below it beneath;
-// the strongest links (relevance from this note) nearest. F shows only links in, R only links out (Nick's swap). No S·T·I·R gauges yet (Nick: don't calculate them yet).
+// the strongest links (relevance from this note) nearest. F shows only links in, R only links out. No S·T·I·R gauges yet.
 const CK = { scHov: -1, scDots: [], hovS: -1, hv: new Map(), inL: [], outL: [], side: [], on: false, c: -1, items: [], lock: -1, sug: -1, P: [0, 0, 0], yaw: 0, pitch: 0, v: 0, keys: new Set(), only: "", t0: 0, warp: 0, auto: false, roll: 0, el: null, cv: null, g: null, w: 0, h: 0, stars: [], last: 0, drag: null, msg: "" };
-let CKAUTO = pref("iv-ckauto", true) !== false, CKFRAME = pref("iv-ckframe", false) === true, CKINV = pref("iv-ckinv", false) === true;   /* CKINV: drag the other way (0.8.153, Nick) */
-// World (0.8.90, Nick's "big kahuna"): "links" builds a scene from one note's links; "sf" flies through Starfield itself,
+let CKAUTO = pref("iv-ckauto", true) !== false, CKFRAME = pref("iv-ckframe", false) === true, CKINV = pref("iv-ckinv", false) === true;   /* CKINV: drag the other way (0.8.153) */
+// World (0.8.90): "links" builds a scene from one note's links; "sf" flies through Starfield itself,
 // every note at its place in 3D Starfield, the galaxies as glowing disks and clouds in their own colours, the links as panels where those notes really are.
-let CKW = "sf";   /* the Starship always flies Starfield; "One note's links" is retired (0.8.302, Nick) */
-/* Starfield, one place with two vantage points (0.8.218, an experiment, Nick: "see what it would look like to move between Starfield > Chart and Starfield > Starship"):
+let CKW = "sf";   /* the Starship always flies Starfield; "One note's links" is retired (0.8.302) */
+/* Starfield, one place with two vantage points (0.8.218):
    from Starfield's Chart you board the Starship among the same galaxies, and Chart brings you back to the star you were at. Starship on its own (the maps menu)
    is left exactly as it is: its world is borrowed for the trip (not saved) and handed back. 3D Starfield steps aside for the trial (SFMERGE = false brings it back) */
 const SFMERGE = true; let SFSHIP = null, SFJUMP = false, SFNP = false;
@@ -2665,7 +2664,7 @@ function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), tu
   CKSF.ver = starVer; CKSF.P = P; CKSF.sc = sc;
   if (turn && CKW === "sf") for (const it of CK.items) { it.x = P[3 * it.i]; it.y = P[3 * it.i + 1]; it.z = P[3 * it.i + 2]; }   /* the panels ride along with their stars */
   return CKSF; }
-// the Starfield world's layers, each a mini switch in the Cockpit's ⚙ (0.8.96, Nick: "add as mini-toggles for me to play with")
+// the Starfield world's layers, each a mini switch in the Cockpit's ⚙ (0.8.96)
 const CKX_DEF = { pv: true, mirror: false, rear: false, card: false, gasp: false, rel: true, haze: false, names: true, gas: true, rings: true, orb: true, read: true, lines: true, mini: true, twinkle: true, posts: true, dial: true, turn: false, emo: false };
 let CKX = (() => { const o = pref("iv-ckx", null); return Object.assign({}, CKX_DEF, o && typeof o === "object" ? o : {}); })();
 const chxSF = k_ => !!CKX[k_];
@@ -2675,7 +2674,7 @@ const ckCol = lv => lv >= 3 ? GRAD[lv][0] : lv === 2 ? "#9fc0d8" : "#7a8494";
 function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let i = 0; i < n; i++) if (vis[i] && (b < 0 || N[i].score > N[b].score)) b = i; return b; }
 function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 0; CK.auto = false; CK.trav = 0; CK.t0 = win.performance.now();
   const sf = CKW === "sf" ? ckSF() : null;
-  let gl = null; if (!sf) { CK.glide = null; if ((CK.arrV || 0) > 150) { ckUpright(); const v = Math.min(CK.arrV, 1500), dur = 1.8, s_ = v * dur / 3, fw = ckFwd(); gl = { P0: CK.P.slice(), fw, s: s_, dur, t0: win.performance.now() }; } else { CK.P = [0, 0, 0]; CK.yaw = 0; CK.pitch = 0; } CK.arrV = 0; }   /* 0.8.169 (Nick: "apply to the rest of regular Cockpit… autopilot arrivals"): a flown arrival in Links no longer snaps the ship home; it glides on and the new links gather ahead */
+  let gl = null; if (!sf) { CK.glide = null; if ((CK.arrV || 0) > 150) { ckUpright(); const v = Math.min(CK.arrV, 1500), dur = 1.8, s_ = v * dur / 3, fw = ckFwd(); gl = { P0: CK.P.slice(), fw, s: s_, dur, t0: win.performance.now() }; } else { CK.P = [0, 0, 0]; CK.yaw = 0; CK.pitch = 0; } CK.arrV = 0; }   /* 0.8.169: a flown arrival in Links no longer snaps the ship home; it glides on and the new links gather ahead */
   else if (c >= 0) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]];   /* in Starfield the ship stays where it is, unless the note is far off: then it jumps to just outside it, facing it */
     if (!CK.sfIn || Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) > 1600) { const bi = BOD[c], G = bi >= 0 ? sf.B[bi] : { x: 0, y: 0, z: 0 }; let d = [T[0] - G.x, T[1] - G.y, T[2] - G.z]; let l = Math.hypot(...d); if (l < 1) { d = [0, 0, -1]; l = 1; }
       let nn = [0, -1, 0]; if (bi >= 0 && G.u) { const u = G.u, v = G.v; nn = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]; if (nn[1] > 0) nn = nn.map(q => -q); }   /* from above its galaxy's disk, a little outside, so the disk opens up */
@@ -2699,12 +2698,12 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
     const ty = up_ ? -(.1 + .26 * jb) : dn ? (.1 + .26 * jb) : (jb - .5) * .16;
     const z = 430 + q * 105 + ja * 40, real = sf ? [sf.P[3 * j], sf.P[3 * j + 1], sf.P[3 * j + 2]] : null;
     CK.items.push({ i: j, x: real ? real[0] : tx * z, y: real ? real[1] : ty * z, z: real ? real[2] : z, side, inn: inn_, out: out_, up: ups.has(j), rel: rels.has(j), none: !inn_ && !out_, sx: 0, sy: 0, sw: 0, sh: 0, zc: 0 }); });
-  CK.lock = CKAUTO ? CK.items.findIndex(it => it.i === CK.sug) : -1; if (CKAUTO && CK.lock < 0 && CK.items.length) CK.lock = 0;   /* the auto-lock can be switched off (0.8.161, Nick) */
-  /* arriving in Starfield (0.8.105, Nick: "it should settle on a view that looks at it"): the ship eases back from the note and turns to face it, far enough that its links fit round it */
+  CK.lock = CKAUTO ? CK.items.findIndex(it => it.i === CK.sug) : -1; if (CKAUTO && CK.lock < 0 && CK.items.length) CK.lock = 0;   /* the auto-lock can be switched off (0.8.161) */
+  /* arriving in Starfield (0.8.105): the ship eases back from the note and turns to face it, far enough that its links fit round it */
   if (gl) { const O = [0, 1, 2].map(q => gl.P0[q] + gl.fw[q] * gl.s), cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);   /* the new layout is built round where the ship will come to rest, turned to its heading */
     for (const it of CK.items) { const z1 = -sp * it.y + cp * it.z, dy = cp * it.y + sp * it.z, dx = cy * it.x + sy_ * z1, dz = -sy_ * it.x + cy * z1; it.x = O[0] + dx; it.y = O[1] + dy; it.z = O[2] + dz; } CK.glide = gl; }
   if (sf) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]], ds = CK.items.filter(it => !it.none).map(it => Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2])).sort((a, b) => a - b);
-    const d75 = ds.length ? ds[Math.min(ds.length - 1, Math.floor(ds.length * .75))] : 600, hubF = Math.min(1, ds.length / 120), d25 = ds.length ? ds[Math.floor(ds.length * .25)] : 500, D = Math.max(350, Math.min(2400 + 2800 * hubF, d25 * (1.3 + .7 * hubF))), fw = ckFwd();   /* closer still (0.8.107, Nick): framed on its nearest links (1.3× the distance a quarter of its links lie within, at most 2,400), since links in far galaxies would push the view out to the whole sky; the biggest hubs ease back out */
+    const d75 = ds.length ? ds[Math.min(ds.length - 1, Math.floor(ds.length * .75))] : 600, hubF = Math.min(1, ds.length / 120), d25 = ds.length ? ds[Math.floor(ds.length * .25)] : 500, D = Math.max(350, Math.min(2400 + 2800 * hubF, d25 * (1.3 + .7 * hubF))), fw = ckFwd();   /* closer still (0.8.107): framed on its nearest links (1.3× the distance a quarter of its links lie within, at most 2,400), since links in far galaxies would push the view out to the whole sky; the biggest hubs ease back out */
     /* stand on the far side of the note from its nearer links, so the note and its links are both ahead */
     const nearL = CK.items.filter(it => !it.none && Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2]) <= d75); let C = [0, 0, 0]; for (const it of nearL) { C[0] += it.x; C[1] += it.y; C[2] += it.z; } if (nearL.length) C = C.map(v => v / nearL.length);
     const away = nearL.length ? [T[0] - C[0], T[1] - C[1], T[2] - C[2]] : [-fw[0], -fw[1], -fw[2]], la = Math.hypot(...away) || 1;
@@ -2713,7 +2712,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
   CK.kind = new Map(); for (const [k_, key] of [["above", "up"], ["below", "down"], ["up", "upp"], ["related", "rel"]]) for (const j of L[k_]) CK.kind.set(j, key);
   try { CK.SL = SPACELINK(); } catch (_) { CK.SL = { up: "#6fbcff", down: "#ff7a6b", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }; }
   CK.sOff = [0, 0]; CK.upL = L.up.filter(j => vis[j]); if (view === "cockpit") win.setTimeout(() => { if (!dead && view === "cockpit") legend(); }, 0);
-  const upS = new Set(L.up), ord = (a, b) => (upS.has(b) ? 1 : 0) - (upS.has(a) ? 1 : 0) || rv(b) - rv(a) || N[b].score - N[a].score;   /* up links always first (0.8.122, Nick) */
+  const upS = new Set(L.up), ord = (a, b) => (upS.has(b) ? 1 : 0) - (upS.has(a) ? 1 : 0) || rv(b) - rv(a) || N[b].score - N[a].score;   /* up links always first (0.8.122) */
   CK.inL = [...L.in].sort(ord); CK.outL = [...L.out].sort(ord);
   CK.msg = CK.sug >= 0 ? `Closest relative not in its up or related: ${N[CK.sug].title}${CK.items.find(it => it.i === CK.sug && it.none) ? " (no link yet)" : ""}. Locked on. Space flies you there.` : "Every close relative is already up or related.";
 }
@@ -2722,7 +2721,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
 const CKBF = { t: null, m: new Map() };
 function ckBornFrac(b){ if (senseT == null) return 1; if (CKBF.t !== senseT) { CKBF.t = senseT; CKBF.m.clear(); } let f = CKBF.m.get(b); if (f != null) return f;
   const ms = b.members || []; let k_ = 0, t_ = 0; for (const i of ms) { if (!vis[i]) continue; t_++; if (TV[i] <= senseT) k_++; } f = t_ ? Math.sqrt(k_ / t_) : 1; CKBF.m.set(b, f); return f; }
-/* distance in light-years on a declared scale (0.8.351, Nick): the whole Ideaverse is 100 ly across (the sky spans about 40,000 of the Starship's units) */
+/* distance in light-years on a declared scale (0.8.351): the whole Ideaverse is 100 ly across (the sky spans about 40,000 of the Starship's units) */
 const ckLy = d => { const ly = d / 400; return (ly < 10 ? ly.toFixed(1) : String(Math.round(ly))) + " ly"; };
 function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devicePixelRatio || 1, P = sf.P;
   g.save(); g.beginPath(); g.rect(0, 0, W, VH); g.clip(); g.globalCompositeOperation = "lighter";
@@ -2742,11 +2741,11 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   // the notes as stars: batched by colour, nearer ones bigger; maps and hubs with a glow
   const bins = new Map(), bright = [], ck = CK.c, lk = new Set(CK.items.map(it => it.i));
   const cyw = Math.cos(CK.yaw), syw = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch), [X0, Y0, Z0] = CK.P;
-  /* the star under the pointer (0.8.98, Nick): only when the pointer has rested, the ship isn't racing and nothing else is under it; within 9 px */
+  /* the star under the pointer (0.8.98): only when the pointer has rested, the ship isn't racing and nothing else is under it; within 9 px */
   const hm = CK.mouse && !CK.drag && !CK.auto && Math.abs(CK.v) < 500 && win.performance.now() - CK.mouseT > 140 && CK.hovS < 0 && !CK.mouseOnPanel ? CK.mouse : null; let hb = 81, hi = -1, hp = null;
   /* emojis (0.8.102): a note with an emoji (Display → Assign emojis, or the base column) shows it in place of its star once it's near enough to read */
   const emoL = CKX.emo && EMOI ? [] : null;
-  const TLp = senseT != null, tnow = performance.now(), flash = [];   /* the Timelapse in the Starship (0.8.348, Nick): only the notes made by the date show; each new one flares as it's born */
+  const TLp = senseT != null, tnow = performance.now(), flash = [];   /* the Timelapse in the Starship (0.8.348): only the notes made by the date show; each new one flares as it's born */
   for (let i = 0; i < n; i++) { if (!vis[i] || (TLp && !born(i) && i !== ck)) continue; const dx = P[3 * i] - X0, dy = P[3 * i + 1] - Y0, dz = P[3 * i + 2] - Z0, xc = cyw * dx - syw * dz, z1 = syw * dx + cyw * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1;
     if (zc < 6) continue; const px = cx + F * xc / zc, py = cy + F * yc / zc; if (px < -20 || px > W + 20 || py < -20 || py > VH + 20) continue;
     if (TLp && POP[i] && tnow - POP[i] < 1800 && tnow >= POP[i]) { const fp_ = (tnow - POP[i]) / 1800; flash.push([i, px, py, fp_, zc]); if (fp_ < .62 && i !== ck) continue; }   /* still on its way in: no dot yet */
@@ -2754,7 +2753,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     const lv = N[i].level, r = Math.max(.5, Math.min(lv >= 4 ? 9 : 5, (lv >= 5 ? 26 : lv === 4 ? 18 : lv === 3 ? 12 : lv === 2 ? 7 : 5) * F / zc / 9));
     if (emoL && EMOI[i] && zc < 1500) { emoL.push([i, px, py, Math.max(11, Math.min(30, 9000 / zc)), zc, r]); continue; }
     if (lv >= 3 || i === ck || lk.has(i)) { bright.push([i, px, py, r, zc]); continue; } const key = SC[i]; (bins.get(key) || bins.set(key, []).get(key)).push(px, py, r); }
-  /* star haze (0.8.107, Nick: "the cool light diffusion… which makes the original Starfield look so much cooler"): every star also lights a small,
+  /* star haze (0.8.107): every star also lights a small,
      low-resolution glow buffer, which is blurred and laid over the sky, so dense parts of a galaxy glow as one soft light, as on the map */
   if (CKX.haze !== false) { const q4 = 4, GW = Math.ceil(W / q4), GH = Math.ceil(VH / q4); CK.hz ||= doc.createElement("canvas"); const hz = CK.hz; if (hz.width !== GW || hz.height !== GH) { hz.width = GW; hz.height = GH; }
     const h_ = hz.getContext("2d"); h_.globalCompositeOperation = "source-over"; h_.clearRect(0, 0, GW, GH); h_.globalCompositeOperation = "lighter";
@@ -2767,13 +2766,13 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     g.filter = "none"; g.restore(); }
   for (const [key, a] of bins) { g.fillStyle = SPAL[key]; g.globalAlpha = .8; g.beginPath(); for (let q = 0; q < a.length; q += 3) { const r = a[q + 2]; if (r < 1.2) g.rect(a[q] - r, a[q + 1] - r, 2 * r, 2 * r); else { g.moveTo(a[q] + r, a[q + 1]); g.arc(a[q], a[q + 1], r, 0, 6.2832); } } g.fill(); }
   for (const [i, px, py, r] of bright) { const col = SPAL[SC[i]], s = r * 6; g.globalAlpha = .45; g.drawImage(sprite(col), px - s / 2, py - s / 2, s, s); g.globalAlpha = 1; g.fillStyle = i === ck ? "#ffffff" : col; g.beginPath(); g.arc(px, py, Math.max(1, r * .7), 0, 6.2832); g.fill(); }
-  /* Show all links in the Starship (0.8.355, Nick: it didn't reach Starfield): every link between stars in front of the ship, drawn faintly, the nearest first, up to 6,000 */
+  /* Show all links in the Starship (0.8.355): every link between stars in front of the ship, drawn faintly, the nearest first, up to 6,000 */
   if (showAll) { const sp_ = new Map(); for (let i = 0; i < n; i++) { if (!vis[i] || (TLp && !born(i))) continue; const p_ = pr(P[3 * i], P[3 * i + 1], P[3 * i + 2]); if (p_ && p_[0] > -200 && p_[0] < W + 200 && p_[1] > -200 && p_[1] < VH + 200) sp_.set(i, p_); }
     const es = []; for (const [i, a] of sp_) for (const j of out[i]) { if (j === i) continue; const b = sp_.get(j); if (b) es.push([a, b, Math.min(a[2], b[2])]); }
     es.sort((x, y) => x[2] - y[2]); g.save(); g.globalCompositeOperation = "lighter"; g.strokeStyle = "rgba(170,185,220,1)"; g.lineWidth = .8; g.globalAlpha = .07; g.beginPath();
     for (const [a, b] of es.slice(0, 6000)) { g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } g.stroke(); g.restore(); }
   g.globalCompositeOperation = "source-over";
-  if (TLp) { /* each new star arrives the way Timelapse's effect says (0.8.353; quieter 0.8.358, Nick: "they all suck"): a short, thin, tapered streak that glows,
+  if (TLp) { /* each new star arrives the way Timelapse's effect says (0.8.353): a short, thin, tapered streak that glows,
        sized by distance, only for the nearest 70 births; farther ones simply fade in; then a soft bloom, no rings. Rain is a Comet here (no "down" in space) */
     const ctr = CK.cPos || [cx, cy], ease = t => 1 - Math.pow(1 - t, 3), fx = senseFx === "rain" ? "comet" : senseFx;
     flash.sort((a, b) => a[4] - b[4]); g.save(); g.globalCompositeOperation = "lighter"; g.lineCap = "round";
@@ -2842,12 +2841,12 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
     /* links as Starfield draws them: gentle curves in their link colours (above, below, up, related, other) */
     g.lineWidth = 1.5; for (const it of CK.items) { if (it.none || (senseT != null && !born(it.i))) continue; const pi = pr(it.x, it.y, it.z); if (!pi || !pc) continue; const mx = (pc[0] + pi[0]) / 2, my = (pc[1] + pi[1]) / 2, dx = pi[0] - pc[0], dy = pi[1] - pc[1];
       const sh_ = ckShows(it), lk_ = it.i === (CK.items[CK.lock] || {}).i, cx_ = mx - dy * .14, cy_ = my + dx * .14;
-      /* a thin dark casing under each line, so its color reads true over a bright nebula (0.8.308, Nick: a blue link looked green over the orange sky) */
-      if (sh_) { g.globalAlpha = .3; g.strokeStyle = "rgba(4,5,12,.9)"; g.lineWidth = 2.6;   /* subtler (0.8.348, Nick: dark strokes crossing bright stars) */ g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(cx_, cy_, pi[0], pi[1]); g.stroke(); g.lineWidth = 1.5; }
+      /* a thin dark casing under each line, so its color reads true over a bright nebula (0.8.308) */
+      if (sh_) { g.globalAlpha = .3; g.strokeStyle = "rgba(4,5,12,.9)"; g.lineWidth = 2.6;   /* subtler (0.8.348) */ g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(cx_, cy_, pi[0], pi[1]); g.stroke(); g.lineWidth = 1.5; }
       g.globalAlpha = sh_ ? (lk_ ? 1 : .9) : .08; g.strokeStyle = kc(it.i); g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(cx_, cy_, pi[0], pi[1]); g.stroke(); }
-    /* Show the way home in the Starship (0.8.328, Nick): the fewest links from the note you're at back to Home (or the note you chose), drawn through the stars in the accent color, each stop named, the count under the end */
+    /* Show the way home in the Starship (0.8.328): the fewest links from the note you're at back to Home (or the note you chose), drawn through the stars in the accent color, each stop named, the count under the end */
     if (BACON && CK.c >= 0) { try { const bp = baconPath(CK.c), b_ = baconPar(); if (bp && bp.length > 1) { const pts = bp.map(q => pr(P[3 * q], P[3 * q + 1], P[3 * q + 2])), cam = bp.map(q => ckCam(P[3 * q], P[3 * q + 1], P[3 * q + 2])), acc = css.accent || "#f5d76e";
-        /* a step with one end behind the ship is cut where it passes the ship, not dropped (0.8.335, Nick: "buggy in certain rotations") */
+        /* a step with one end behind the ship is cut where it passes the ship, not dropped (0.8.335) */
         const seg_ = (a, b) => { let A = cam[a], B = cam[b]; const Z0 = 12; if (A[2] < Z0 && B[2] < Z0) return null; const cut = (U, V) => { const t = (Z0 - U[2]) / (V[2] - U[2]); return [U[0] + (V[0] - U[0]) * t, U[1] + (V[1] - U[1]) * t, Z0]; };
           if (A[2] < Z0) A = cut(A, B); else if (B[2] < Z0) B = cut(B, A); return [cx + F * A[0] / A[2], cy + F * A[1] / A[2], cx + F * B[0] / B[2], cy + F * B[1] / B[2]]; };
         g.save(); g.globalCompositeOperation = "source-over"; g.lineCap = g.lineJoin = "round";
@@ -2858,7 +2857,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
           if (end) { const st = bp.length - 1, tt = `${st} ${st === 1 ? "step" : "steps"} away`; g.font = `600 11px ${css.mono || "monospace"}`; g.textAlign = "center"; g.strokeText(tt, p_[0], p_[1] + 16); g.fillStyle = acc; g.fillText(tt, p_[0], p_[1] + 16); g.textAlign = "left"; } });
         const le_ = pts[pts.length - 1]; if ((!le_ || le_[0] < 0 || le_[0] > W || le_[1] < 0 || le_[1] > VH) && pc) { const st = bp.length - 1, tt = `${N[bp[st]].title} · ${st} ${st === 1 ? "step" : "steps"} away`; g.font = `600 11px ${css.mono || "monospace"}`; g.textAlign = "center"; g.strokeStyle = "rgba(4,5,12,.95)"; g.strokeText(tt, pc[0], pc[1] + 40); g.fillStyle = acc; g.fillText(tt, pc[0], pc[1] + 40); g.textAlign = "left"; }   /* the end out of sight: say where the line goes */
         g.restore(); } else if (!bp && b_.to >= 0 && pc) { g.save(); g.globalCompositeOperation = "source-over"; g.font = `600 11px ${css.mono || "monospace"}`; g.textAlign = "center"; g.fillStyle = css.accent || "#f5d76e"; g.fillText(`No way to ${N[b_.to].title} from here`, pc[0], pc[1] + 40); g.restore(); } } catch (_) { /* the way home waits for the map's data */ } }
-    /* Collection links (coral) in the Starship too (0.8.343, Nick: the Link colors switches didn't reach Starfield): the note's collections, as coral lines with the same casing */
+    /* Collection links (coral) in the Starship too (0.8.343): the note's collections, as coral lines with the same casing */
     if (pc && CK.c >= 0) { try { const cc_ = COLLON ? collCoral() : ((CK.SL || {}).prop || "#a9b4c8"); g.save(); g.globalCompositeOperation = "source-over"; g.lineWidth = 1.5; for (const j of collOf(CK.c, true)) { if (j === CK.c || !vis[j]) continue; const pj = pr(P[3 * j], P[3 * j + 1], P[3 * j + 2]); if (!pj) continue;
         const mx = (pc[0] + pj[0]) / 2, my = (pc[1] + pj[1]) / 2, dx = pj[0] - pc[0], dy = pj[1] - pc[1], qx = mx - dy * .14, qy = my + dx * .14;
         g.globalAlpha = .3; g.strokeStyle = "rgba(4,5,12,.9)"; g.lineWidth = 2.6; g.beginPath(); g.moveTo(pc[0], pc[1]); g.quadraticCurveTo(qx, qy, pj[0], pj[1]); g.stroke();
@@ -2886,7 +2885,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
       g.globalAlpha = a_ * .9; g.strokeStyle = "#ffffff"; g.lineWidth = 1; g.beginPath(); g.moveTo(p_[0] - L_, p_[1]); g.lineTo(p_[0] + L_, p_[1]); g.moveTo(p_[0], p_[1] - L_); g.lineTo(p_[0], p_[1] + L_); g.stroke();
       g.fillStyle = "#ffffff"; g.beginPath(); g.arc(p_[0], p_[1], 1.6 * a_ + .4, 0, 6.2832); g.fill(); } g.globalAlpha = 1; }
   // the overview map (0.8.94), when it's on in Starfield: the whole sky seen from above, where you are and which way you're heading
-  if (CKX.mini) { const nar = W < 700 || VH < 520, bw = nar ? 104 : 140, bh = nar ? 74 : 100, bx = W - bw - 12, by = nar ? (VH < 520 && W >= 700 ? VH - bh - 8 : 50) : VH - bh - 12;   /* a narrow pane or phone: top right, clear of the scopes (0.8.140) */   /* bottom right (0.8.131, Nick) */   /* under the Back button */ let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  if (CKX.mini) { const nar = W < 700 || VH < 520, bw = nar ? 104 : 140, bh = nar ? 74 : 100, bx = W - bw - 12, by = nar ? (VH < 520 && W >= 700 ? VH - bh - 8 : 50) : VH - bh - 12;   /* a narrow pane or phone: top right, clear of the scopes (0.8.140) */   /* bottom right (0.8.131) */   /* under the Back button */ let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (const B of sf.B) { x0 = Math.min(x0, B.x - B.r); x1 = Math.max(x1, B.x + B.r); y0 = Math.min(y0, B.y - B.r); y1 = Math.max(y1, B.y + B.r); }
     const s_ = Math.min((bw - 12) / Math.max(1, x1 - x0), (bh - 12) / Math.max(1, y1 - y0)), mx = x => bx + 6 + (x - x0) * s_ + ((bw - 12) - (x1 - x0) * s_) / 2, my = y => by + 6 + (y - y0) * s_ + ((bh - 12) - (y1 - y0) * s_) / 2;
     g.globalAlpha = 1; g.fillStyle = "rgba(4,5,12,.82)"; g.strokeStyle = "rgba(160,180,255,.28)"; g.beginPath(); g.roundRect(bx, by, bw, bh, 10); g.fill(); g.stroke();
@@ -2926,24 +2925,24 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
   c_.addEventListener("pointerdown", e => { if (CK.edit) { ckEditClose(); return; } if (e.button !== 0) return; CK.drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false, star: CK.starHov };   /* the star under the pointer as you press: it stops being "hovered" the moment a press starts (0.8.109 fix) */ c_.setPointerCapture(e.pointerId); });
   c_.addEventListener("pointermove", e => { const d = CK.drag; if (!d) { const h_ = ckHit(e.offsetX, e.offsetY); CK.hovS = ckSideHit(e.offsetX, e.offsetY); { let b_ = -1, bd = 64; for (const [px, py, j] of CK.scDots || []) { const dd = (px - e.offsetX) ** 2 + (py - e.offsetY) ** 2; if (dd < bd) { bd = dd; b_ = j; } } CK.scHov = b_; } CK.mouseOnPanel = h_ >= 0; CK.mouse = [e.offsetX, e.offsetY]; CK.mouseT = win.performance.now(); c_.classList.toggle("hot", h_ >= 0 || CK.hovS >= 0 || CK.hovS <= -10 || CK.scHov >= 0 || (CK.starHov || -1) >= 0); return; }
     const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) > 4) d.moved = true; d.x = e.clientX; d.y = e.clientY;
-    if (d.moved) { const iv = CKINV ? -1 : 1, up = ckUp(); CK.auto = false; CK.settle = null; CK.yaw += iv * dx * .0032 * up; CK.pitch += iv * dy * .0032; CK.roll += iv * dx * .004; } });   /* both axes follow the screen, upright or upside down after an orbit over the top (0.8.160). The pitch never flips with "up" (0.8.227, Nick: dragging got stuck): the camera turns about its own side axis, so up and down are the same on screen either way, and flipping it at the pole trapped the drag there */
+    if (d.moved) { const iv = CKINV ? -1 : 1, up = ckUp(); CK.auto = false; CK.settle = null; CK.yaw += iv * dx * .0032 * up; CK.pitch += iv * dy * .0032; CK.roll += iv * dx * .004; } });   /* both axes follow the screen, upright or upside down after an orbit over the top (0.8.160). The pitch never flips with "up" (0.8.227): the camera turns about its own side axis, so up and down are the same on screen either way, and flipping it at the pole trapped the drag there */
   c_.addEventListener("pointerleave", () => { CK.hovS = -1; CK.scHov = -1; CK.mouse = null; CK.starHov = -1; });
   c_.addEventListener("pointerup", e => { const d = CK.drag; CK.drag = null; if (!d || d.moved) return;
-    /* Shift-click any note (a star, a name, a scope dot, a signpost, a panel) opens it in a new orb, as on the map (0.8.146, Nick) */
+    /* Shift-click any note (a star, a name, a scope dot, a signpost, a panel) opens it in a new orb, as on the map (0.8.146) */
     if (openKind(e)) { let sj = CK.scHov >= 0 ? CK.scHov : ckSideHit(e.offsetX, e.offsetY); if (!(sj >= 0)) { const p_ = (CK.posts || []).find(q => Math.hypot(q[0] - e.offsetX, q[1] - e.offsetY) < 12); if (p_) sj = p_[2]; }
       if (!(sj >= 0)) { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) sj = CK.items[h_].i; } if (!(sj >= 0) && (d.star ?? -1) >= 0) sj = d.star;
       if (sj >= 0 && vis[sj]) { openAs(sj, openKind(e)); return; } } { const mj = ckSideHit(e.offsetX, e.offsetY); if (mj === -20) { hudCol(true); return; } if (mj <= -10) { const sk = -10 - mj, L_ = (CK.sideLists || [])[sk] || (sk ? CK.outL : CK.inL), cap = (CK.sideCap || [])[sk] || 20; CK.sOff[sk] = (CK.sOff[sk] || 0) + cap >= L_.length - cap + cap && (CK.sOff[sk] || 0) >= L_.length - cap ? 0 : (CK.sOff[sk] || 0) + cap; return; } } if (CK.scHov >= 0) { const sj = CK.scHov, was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } { const sj = ckSideHit(e.offsetX, e.offsetY); if (sj >= 0) { const was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; return; } } const h_ = ckHit(e.offsetX, e.offsetY);
     if (h_ < 0 && CKW === "sf") { const p_ = (CK.posts || []).find(q => Math.hypot(q[0] - e.offsetX, q[1] - e.offsetY) < 12); if (p_) { const was = (CK.items[CK.lock] || {}).i === p_[2]; ckLockNote(p_[2]); if (was) CK.auto = true; return; } }
     if (h_ < 0) { if (CKW === "sf" && (d.star ?? -1) >= 0) { const sj = d.star, was = (CK.items[CK.lock] || {}).i === sj; ckLockNote(sj); if (was) CK.auto = true; } return; } if (h_ === CK.lock) { CK.auto = true; return; } CK.lock = h_; CK.auto = false; });
   c_.addEventListener("dblclick", e => { const h_ = ckHit(e.offsetX, e.offsetY); if (h_ >= 0) { CK.lock = h_; CK.auto = true; } });
-  /* trackpad (Nick): two fingers steer, a pinch flies; a mouse wheel (no sideways scroll) still flies */
+  /* trackpad: two fingers steer, a pinch flies; a mouse wheel (no sideways scroll) still flies */
   c_.addEventListener("wheel", e => { e.preventDefault(); { const sc = (CK.sideCol || []).findIndex(b => b && e.offsetX >= b[0] && e.offsetX <= b[0] + b[2] && e.offsetY >= b[1] && e.offsetY <= b[1] + b[3]); if (sc >= 0) { CK.sOff[sc] = (CK.sOff[sc] || 0) + e.deltaY / 18; return; } } CK.auto = false; if (CK.wd) ckWanderStop(); const mouse = e.deltaMode === 1 || (!e.deltaX && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
     if (e.ctrlKey || mouse) CK.v = Math.max(-500, Math.min(1500, CK.v - e.deltaY * (e.ctrlKey ? 9 : 2.2)));
     else { CK.yaw += e.deltaX * .0024 * ckUp(); CK.pitch += e.deltaY * .0024; CK.roll += e.deltaX * .002; } }, { passive: false });
   on(doc, "keydown", e => { if (!CK.on || dead || !host.isActive()) return; const a = doc.activeElement; if (a && a !== doc.body && (a.closest && (a.closest(".ivm-card") || a.closest("input,textarea,[contenteditable]")) || /INPUT|TEXTAREA/.test(a.tagName))) return; if (a && a !== doc.body && !root.contains(a)) return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; let used = true;
-    /* keys (0.8.154, Nick): E forward, D back, S F turn, W R look up and down, A G orbit round the note; I O only links in or out */
-    if (["e", "d", "s", "f", "r", "t", "w", "x", "v", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(k)) { CK.keys.add(k); if (CK.wd) ckWanderStop(); CK.auto = false; }   /* keys (0.8.157, Nick): R forward, W back, X V pan, S F orbit left and right, E D orbit over and under */
+    /* keys (0.8.154): E forward, D back, S F turn, W R look up and down, A G orbit round the note; I O only links in or out */
+    if (["e", "d", "s", "f", "r", "t", "w", "x", "v", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(k)) { CK.keys.add(k); if (CK.wd) ckWanderStop(); CK.auto = false; }   /* keys (0.8.157): R forward, W back, X V pan, S F orbit left and right, E D orbit over and under */
     else if (k === "i") CK.only = CK.only === "in" ? "" : "in";
     else if (k === "o") CK.only = CK.only === "out" ? "" : "out";
     else if (k === " " || k === "Enter") { if (CK.lock >= 0) CK.auto = true; }
@@ -2951,7 +2950,7 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
     else if (k === "b" || k === "Backspace") ckBack();
     else if (k === "Escape") { CK.auto = false; CK.v = 0; if (CK.wd) ckWanderStop(); }
     else if (CKG && (k === "1" || k === "2")) ckGameAnswer(k === "1");
-    else if (k === "g") { drifting ? driftStop() : driftStart(); }   /* G: Orbit on or off (0.8.326, Nick: "Would love if it could be a hotkey") */
+    else if (k === "g") { drifting ? driftStop() : driftStart(); }   /* G: Orbit on or off (0.8.326) */
     else if (k === "p") { if (typeof setPlaying === "function") setPlaying(!playing); else ckWander(!CK.wd); }
     else used = false;
     if (used) { e.preventDefault(); e.stopImmediatePropagation(); } }, { capture: true });
@@ -2963,9 +2962,9 @@ function ckShows(it){ return !CK.only || (CK.only === "in" ? it.inn : it.out); }
 function ckBack(){ if (!trail.length) return; const p = trail.pop(); if (p != null && p >= 0) select(p, true); }
 function ckLeftEd(){ try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) { const r = edRect("left"); return r.x + r.w + 8; } } catch (_) { /* no editors */ } return 0; }
 // Previews: Off | One | Fewer | Natural | Max (0.8.135, as Compass's): One is the hovered or locked note; the others also preview the most relevant links in view
-/* the Starship's mini-previews follow Display → Note mini-previews (0.8.302, Nick: "the display menu should be the global way to control many previews") */
+/* the Starship's mini-previews follow Display → Note mini-previews (0.8.302) */
 const ckPV = () => { try { return PVLV; } catch (_) { return "natural"; } };
-// a preview becomes a live editor where it is (0.8.136, Nick: "can these mini-previews be editable?"): click to edit, Esc or × to finish; Shift-click opens it as the support note
+// a preview becomes a live editor where it is (0.8.136): click to edit, Esc or × to finish; Shift-click opens it as the support note
 function ckPvMake(p, title){ const e = CK.el.createDiv({ cls: "ivm-card ivm-pv ckpv" }); e.createDiv({ cls: "pvt", text: title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ }
   e.dataset.hint = (Platform.isMacOS ? "click to edit · ⌘ new orb · ⌘⌥ support note" : "click to edit · Ctrl new orb · Ctrl+Alt support note");   /* our own small hint on hover, not the system tooltip (0.8.145) */
   e.addEventListener("pointerenter", () => { CK.pvOver = p; }); e.addEventListener("pointerleave", () => { if (CK.pvOver === p) CK.pvOver = null; });
@@ -2998,7 +2997,7 @@ function ckPvMany(W, VH, prim){ const cap = { one: 1, fewer: 5, natural: 10, max
   for (const [p, e] of CK.pvM) if (!want.has(p)) { e.remove(); CK.pvM.delete(p); } }
 function ckPreview(W, VH){ if (!CK.pvOver) CK.pvLead = null; if (CK.pvOver && CK.pvEl && !CK.pvEl.hidden && CK.pvP === CK.pvOver) return;   /* the pointer is on the preview: it holds still, so you can click it */
   const busy = (ckPV() === "off" && !CMDK) || !host.preview || CK.auto || CK.wd || CK.gj;   /* holding ⌘ previews even with Previews off */
-  /* whatever you're hovering previews first (0.8.134, Nick): a side name, a scope dot or a star; with nothing under the pointer, the locked note's preview stays */
+  /* whatever you're hovering previews first (0.8.134): a side name, a scope dot or a star; with nothing under the pointer, the locked note's preview stays */
   let hj = -1, ax = 0, ay = 0, side = 0;
   if (!busy && CK.hovS >= 0) { const e = CK.side.find(q => q[4] === CK.hovS); if (e) { hj = CK.hovS; const left = e[0] < W / 2; ax = left ? e[0] + e[2] : e[0]; ay = e[1] + e[3] / 2; side = left ? 1 : -1; } }
   else if (!busy && CK.scHov >= 0 && CK.scHovAt) { hj = CK.scHov; [ax, ay] = CK.scHovAt; side = ax < W / 2 ? 1 : -1; ay -= 90; }
@@ -3010,7 +3009,7 @@ function ckPreview(W, VH){ if (!CK.pvOver) CK.pvLead = null; if (CK.pvOver && CK
   const p = N[tj].path; if (!CK.pvEl || CK.pvP !== p) { if (CK.pvEl) CK.pvEl.remove(); const e = ckPvMake(p, N[tj].title); CK.pvEl = e; CK.pvP = p; }
   const pw = 230, ph = Math.min(140, VH - 24); let x, y;
   if (side) { x = side > 0 ? Math.min(W - pw - 8, px + 64) : Math.max(8, px - 64 - pw); y = Math.max(8, Math.min(VH - ph - 8, py - ph / 2)); }
-  else { /* smarter (0.8.158, Nick: it covered the note's own name): try spots round the star, past its name, left, above, below; take the first that covers no name, the cockpit note or the lists, else the least covered */
+  else { /* smarter (0.8.158): try spots round the star, past its name, left, above, below; take the first that covers no name, the cockpit note or the lists, else the least covered */
     const hit = (a, b) => Math.max(0, Math.min(a[0] + a[2], b[0] + b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1]));
     const it_ = CK.items.find(o => o.i === tj), nameW = it_ && it_.tt ? it_.sw : 0, avoid = [...(CK.lbl || []), ...CK.side.map(q => [q[0], q[1], q[2], q[3]]), ...(CK.cPos ? [[CK.cPos[0] - 34, CK.cPos[1] - 34, 68, 68]] : []), [0, VH - 130, W, 130]];
     /* search outward: rings 40–420 px from the star in 16 directions; each spot scores what it covers (names, lists, the note, the star's own name) plus a little for distance, so it settles in the nearest open space (0.8.158) */
@@ -3022,7 +3021,7 @@ function ckPreview(W, VH){ if (!CK.pvOver) CK.pvLead = null; if (CK.pvOver && CK
     CK.pvLead = [px, py, best[1]];
     [x, y] = best[1]; }
   CK.pvEl.hidden = false; CK.pvEl.setCssProps({ "--pvx": Math.round(x) + "px", "--pvy": Math.round(y) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); CK.pvEl.addClass("ckpv1"); ckPvMany(W, VH, [x, y, pw, ph, tj]); }
-// look around by moving the phone (0.8.141, Nick): turning the phone turns the ship, tilting it looks up and down; each motion is added to the stick, so dragging still works
+// look around by moving the phone (0.8.141): turning the phone turns the ship, tilting it looks up and down; each motion is added to the stick, so dragging still works
 let CKTILT = pref("iv-cktilt", false) === true, ckTiltLast = null, ckTiltOn = false;
 function ckTiltEv(e){ if (!CKTILT || !CK.on || e.alpha == null || e.beta == null) { ckTiltLast = null; return; } const ang = (win.screen && win.screen.orientation && win.screen.orientation.angle) || 0, a = e.alpha * Math.PI / 180, b = (ang === 90 ? -e.gamma : ang === 270 || ang === -90 ? e.gamma : e.beta) * Math.PI / 180;   /* on its side the phone tilts up and down round its other axis */
   if (ckTiltLast && !CK.auto && !CK.wd && !CK.gj && !CK.settle && !CK.edit) { const da = Math.atan2(Math.sin(a - ckTiltLast[0]), Math.cos(a - ckTiltLast[0])), db = b - ckTiltLast[1];
@@ -3043,7 +3042,7 @@ function ckHit(x, y){ let b = -1, bz = 1e9; CK.items.forEach((it, q) => { if (it
 win.setTimeout(() => { if (!dead) ckView(); }, 0);
 function ckView(){ ckEl(); if (view !== "cockpit" && SFSHIP) { CKW = "sf"; SFSHIP = null; } if (view === "cockpit" && !SFSHIP && CKW === "sf") SFSHIP = { ckw: CKW, cam: null };   /* the Starship reached any other way (a reload, Back, a saved view) is Starfield's too, with its Starship | Chart switch (0.8.342) */ if (view !== "cockpit") ckEditClose(); if (view !== "cockpit" && CK.wd) ckWander(false); if (CKX.emo && !EMOI) void loadEmo(); const want = view === "cockpit"; if (want === CK.on) { if (want) ckSync(); return; } CK.on = want; CK.el.hidden = !want; CK.keys.clear();
   if (want) { CK.c = -2; ckSync(); CK.last = win.performance.now(); RAF(ckTick); } }
-// Wander Mode in the Cockpit (0.8.103, Nick: "bounce around to pointing at different notes, flying around, then jumping to the next note"):
+// Wander Mode in the Cockpit (0.8.103):
 //   Links: turn toward a linked note, fly there on autopilot, linger, then the next link (a trail that backtracks at dead ends)
 //   Jumps: turn toward a note anywhere, then a hyperspace jump straight to it
 //   Drift: cruise slowly, the lock passing from link to link as you look at each, then fly to the last one
@@ -3057,19 +3056,19 @@ function ckWanderPick(){ const W_ = CK.wd, c = CK.c; if (c < 0) return -1;
   if (nb.length) { W_.stack.push(c); return nb[Math.floor(Math.pow(Math.random(), 1.6) * Math.min(nb.length, 12))]; }   /* nearer the top (most relevant) more often */
   while (W_.stack.length) { const b = W_.stack.pop(); if (b !== c && vis[b]) return b; }
   for (let k_ = 0; k_ < 60; k_++) { const j = Math.floor(Math.random() * n); if (vis[j] && N[j].level >= 3 && !W_.seen.has(j)) return j; } return -1; }
-function ckWanderTick(dt){ const W_ = CK.wd, now = win.performance.now(), el = (now - W_.t0) / 1000, lsec = Math.max(4, Math.min(30, (typeof playSec === "number" ? playSec : 6) * 1.5));   /* calmer (0.8.163, Nick: "too fast, causes anxiety"): 9 s with each note at the default */
+function ckWanderTick(dt){ const W_ = CK.wd, now = win.performance.now(), el = (now - W_.t0) / 1000, lsec = Math.max(4, Math.min(30, (typeof playSec === "number" ? playSec : 6) * 1.5));   /* calmer (0.8.163): 9 s with each note at the default */
   const steer = (rate) => { const it = CK.items[CK.lock]; if (!it) return 0; const [xc, yc, zc] = ckCam(it.x, it.y, it.z), ay = Math.atan2(xc, zc), ap = Math.atan2(yc, Math.hypot(xc, zc)), s_ = Math.min(1, dt * rate); ckUpright(); CK.yaw += ay * s_; CK.pitch += ap * s_; CK.roll += ay * s_ * .6; return Math.abs(ay) + Math.abs(ap); };
-  if (CK.settle) { W_.t0 = now; return; }   /* the arrival swing first, then the lingering starts (0.8.165, Nick: it "cuts" to a different view) */
+  if (CK.settle) { W_.t0 = now; return; }   /* the arrival swing first, then the lingering starts (0.8.165) */
   if (W_.phase === "linger") { CK.auto = false; CK.v += (40 - CK.v) * Math.min(1, dt * .5); CK.yaw += .015 * dt;
-    if (CKWM === "drift") { CK.v += (160 - CK.v) * Math.min(1, dt * .4); if (CK.items.length && el > W_.cyc * Math.max(4, lsec * 1.6)) {   /* slower (0.8.162, Nick): a new look every ~5 s, a slower cruise */ W_.cyc++; const L0 = ckOrder(), L_ = L0.filter(q => !W_.seen.has(CK.items[q].i)), LL = L_.length ? L_ : L0; if (LL.length) CK.lock = LL[Math.floor(Math.random() * LL.length)]; }   /* notes not yet visited first */ steer(.6); if (el < lsec * 3) return; }
+    if (CKWM === "drift") { CK.v += (160 - CK.v) * Math.min(1, dt * .4); if (CK.items.length && el > W_.cyc * Math.max(4, lsec * 1.6)) {   /* slower (0.8.162): a new look every ~5 s, a slower cruise */ W_.cyc++; const L0 = ckOrder(), L_ = L0.filter(q => !W_.seen.has(CK.items[q].i)), LL = L_.length ? L_ : L0; if (LL.length) CK.lock = LL[Math.floor(Math.random() * LL.length)]; }   /* notes not yet visited first */ steer(.6); if (el < lsec * 3) return; }
     else if (el < lsec) return;
-    let j = CKWM === "drift" && CK.items[CK.lock] ? CK.items[CK.lock].i : ckWanderPick(); if (j >= 0 && W_.seen.has(j)) { const alt = ckWanderPick(); if (alt >= 0) j = alt; } if (j < 0) return;   /* never back to a note already visited while a new one is in reach (0.8.173, Nick: Works ↔ Works in Progress, over and over) */ W_.tgt = j; ckLockNote(j); W_.phase = "look"; W_.t0 = now; CK.wmsg = `Wander · next: ${N[j].title}`; return; }
+    let j = CKWM === "drift" && CK.items[CK.lock] ? CK.items[CK.lock].i : ckWanderPick(); if (j >= 0 && W_.seen.has(j)) { const alt = ckWanderPick(); if (alt >= 0) j = alt; } if (j < 0) return;   /* never back to a note already visited while a new one is in reach (0.8.173) */ W_.tgt = j; ckLockNote(j); W_.phase = "look"; W_.t0 = now; CK.wmsg = `Wander · next: ${N[j].title}`; return; }
   if (W_.phase === "look") { CK.v += (0 - CK.v) * Math.min(1, dt * 2); const off = steer(1.1); if (el > 5 || (el > 2 && off < .03)) { W_.t0 = now; if (CKWM === "jumps" || (CKW === "sf" && ckDist(W_.tgt) > 9000)) W_.phase = "jump"; else { W_.phase = "fly"; CK.auto = true; } } return; }
-  if (W_.phase === "jump") { W_.phase = "fly"; W_.hyp = true; W_.t0 = now; CK.auto = true; return; }   /* a jump is a real flight now (0.8.163, Nick: "let the hyperspeed travel play out"): autopilot at full speed, streaks and all, all the way */
+  if (W_.phase === "jump") { W_.phase = "fly"; W_.hyp = true; W_.t0 = now; CK.auto = true; return; }   /* a jump is a real flight now (0.8.163): autopilot at full speed, streaks and all, all the way */
   if (W_.phase === "fly") { if (CK.c === W_.tgt || sel === W_.tgt) {   /* arrived (sel moves first; the cockpit rebuilds a moment later) */ W_.hyp = false; W_.seen.add(W_.tgt); W_.phase = "linger"; W_.t0 = now; W_.cyc = 1; CK.wmsg = `Wander · ${N[W_.tgt].title}`; return; } if (el > 90) { const j = W_.tgt; W_.hyp = false; W_.seen.add(j); W_.cyc = 1; W_.phase = "linger"; W_.t0 = now; CK.sfIn = false; if (vis[j]) select(j); win.setTimeout(ckSync, 0); } else if (!CK.auto) { /* only ever fly on to the chosen note: never to whatever got auto-locked (0.8.165: the non-stop jumping) */ if ((CK.items[CK.lock] || {}).i !== W_.tgt) ckLockNote(W_.tgt); if ((CK.items[CK.lock] || {}).i === W_.tgt) CK.auto = true; else { W_.phase = "linger"; W_.t0 = now; } } } }   /* only a flight that never lands is cut short */
 const ckWanderStop = () => { if (typeof setPlaying === "function" && playing) setPlaying(false); else ckWander(false); };
 const ckDist = j => { const it = CK.items.find(o => o.i === j); return it ? Math.hypot(it.x - CK.P[0], it.y - CK.P[1], it.z - CK.P[2]) : 0; };
-// True or false (0.8.104, Nick: "a game, true/false which results in a hyperspace jump"): a statement about the note you're on and another note;
+// True or false (0.8.104): a statement about the note you're on and another note;
 // get it right and you jump to that note; wrong, and the ship shudders and shows the truth. Keys 1 (true) and 2 (false). The streak and your best are kept.
 let CKG = pref("iv-ckgame", false) === true, CKBEST = +pref("iv-ckbest", 0) || 0;
 const ckFolder = i => { const p = N[i].path; return p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : ""; };
@@ -3078,7 +3077,7 @@ function ckGameNew(){ const c = CK.c, G = CK.gEl; if (!G) return; if (!CKG || c 
   const pool = CK.items.map(it => it.i).filter(j => j !== c), near = []; for (let k_ = 0; k_ < 400 && near.length < 30; k_++) { const j = Math.floor(Math.random() * n); if (vis[j] && j !== c && N[j].level >= 2) near.push(j); }
   const tries = []; for (let k_ = 0; k_ < 30; k_++) { const L_ = Math.random() < .5 && pool.length ? pool : near.length ? near : pool, j = L_[Math.floor(Math.random() * L_.length)]; if (j == null) continue;
     const A = N[c].title, B = N[j].title, types = [
-      [`“${A}” and “${B}” are linked.`, out[c].includes(j) || out[j].includes(c)],   /* either direction counts (0.8.110, Nick: "if a note is linked, it still should work") */
+      [`“${A}” and “${B}” are linked.`, out[c].includes(j) || out[j].includes(c)],   /* either direction counts (0.8.110) */
       [`“${B}” is a higher level than “${A}”.`, N[j].level > N[c].level], [`“${B}” lives in the same folder as “${A}”.`, ckFolder(j) === ckFolder(c)] ];
     if (TVD[j] > 0 && TVD[c] > 0 && Math.abs(TVD[j] - TVD[c]) > 864e5 * 20) types.push([`“${B}” was written before “${A}”.`, TVD[j] < TVD[c]]);
     const [s_, v_] = types[Math.floor(Math.random() * types.length)]; tries.push({ j, s: s_, v: !!v_ }); }
@@ -3087,33 +3086,32 @@ function ckGameNew(){ const c = CK.c, G = CK.gEl; if (!G) return; if (!CKG || c 
 function ckGameAnswer(v){ const q = CK.gq, G = CK.gEl; if (!q || !G || G.bt.disabled) return; G.bt.disabled = G.bf.disabled = true;
   if (v === q.v) { CK.gs = (CK.gs || 0) + 1; if (CK.gs > CKBEST) { CKBEST = CK.gs; save("iv-ckbest", CKBEST); } G.gc.addClass("ok"); G.hd.setText(`Correct · streak ${CK.gs} · flying to ${N[q.j].title}`); ckLockNote(q.j); CK.gj = { j: q.j, t0: win.performance.now(), phase: "look" }; }
   else { CK.gs = 0; G.gc.addClass("no"); G.hd.setText(`Not quite: it's ${q.v ? "true" : "false"}`); CK.shake = 1; win.setTimeout(() => { if (!dead && CKG) ckGameNew(); }, 2200); } }
-/* Orbit in the Starship (0.8.322, Nick: "orbit around the selected note"): Lateral swings level round the note you're at; Dynamic mostly goes left or right,
+/* Orbit in the Starship (0.8.322): Lateral swings level round the note you're at; Dynamic mostly goes left or right,
    now and then tilting its circle about 30° so the ship climbs or dives as it goes, and turns back toward level before it gets too high or low */
 const CKO = { phi: 0, phiT: 0, dir: 1, dirT: 1, next: 0 };
-/* Ideaverse Orbit (0.8.349, Nick: "a zoomed-out view or universal ability to orbit itself"): the ship pulls back until the whole sky fits, and circles its centre with the same Dynamic climbs and dives */
+/* Ideaverse Orbit (0.8.349): the ship pulls back until the whole sky fits, and circles its centre with the same Dynamic climbs and dives */
 let CKOSC = pref("iv-ckosc", "idea") === "verse" ? "verse" : "idea"; const CKU = { v: -1, c: [0, 0, 0], r: 1 };
 function ckUniverse(){ const sf = ckSF(); if (CKU.v === starVer) return CKU; const P = sf.P; let sx_ = 0, sy_ = 0, sz_ = 0, k_ = 0; for (let i = 0; i < n; i++) { if (!vis[i]) continue; sx_ += P[3 * i]; sy_ += P[3 * i + 1]; sz_ += P[3 * i + 2]; k_++; }
   if (!k_) return CKU; const c = [sx_ / k_, sy_ / k_, sz_ / k_], ds = []; for (let i = 0; i < n; i++) if (vis[i]) ds.push(Math.hypot(P[3 * i] - c[0], P[3 * i + 1] - c[1], P[3 * i + 2] - c[2])); ds.sort((a, b) => a - b);
   CKU.v = starVer; CKU.c = c; CKU.r = Math.max(2000, ds[Math.floor(ds.length * .92)] || 2000) * 1.6; return CKU; }
-function ckOrbit(dt){ if (!drifting || view !== "cockpit" || (CK.wd && CK.wd.phase !== "linger") || CK.keys.size || CK.drag || CK.auto || CKSW || CK.warp || CK.hyper || CK.glide) return;   /* a fly or a jump (a second click) goes ahead; Orbit picks up again round the note you arrive at (0.8.337, Nick) */
-  let T = null, rT = 0; if (CKOSC === "verse" && CKW === "sf") { const U = ckUniverse(); T = U.c; rT = U.r * .8;   /* 2× closer (0.8.359, Nick: "you don't have to get everything in the frame") */ } else if (CKW === "sf" && CK.c >= 0) { const P = ckSF().P; T = [P[3 * CK.c], P[3 * CK.c + 1], P[3 * CK.c + 2]]; } else { const it = CK.items[CK.lock]; if (it) T = [it.x, it.y, it.z]; } if (!T) return;
+function ckOrbit(dt){ if (!drifting || view !== "cockpit" || (CK.wd && CK.wd.phase !== "linger") || CK.keys.size || CK.drag || CK.auto || CKSW || CK.warp || CK.hyper || CK.glide) return;   /* a fly or a jump (a second click) goes ahead; Orbit picks up again round the note you arrive at (0.8.337) */
+  let T = null, rT = 0; if (CKOSC === "verse" && CKW === "sf") { const U = ckUniverse(); T = U.c; rT = U.r * .8;   /* 2× closer (0.8.359) */ } else if (CKW === "sf" && CK.c >= 0) { const P = ckSF().P; T = [P[3 * CK.c], P[3 * CK.c + 1], P[3 * CK.c + 2]]; } else { const it = CK.items[CK.lock]; if (it) T = [it.x, it.y, it.z]; } if (!T) return;
   CK.auto = false; CK.settle = null; CK.v *= Math.pow(.05, dt);
   if (rT) { const d_ = [CK.P[0] - T[0], CK.P[1] - T[1], CK.P[2] - T[2]], r0 = Math.hypot(d_[0], d_[1], d_[2]) || 1, r1 = r0 + (rT - r0) * Math.min(1, dt * .7); for (let q = 0; q < 3; q++) CK.P[q] = T[q] + d_[q] * r1 / r0; }   /* Ideaverse: pull out to see the whole sky, then circle it */
   const v = [CK.P[0] - T[0], CK.P[1] - T[1], CK.P[2] - T[2]], r = Math.hypot(v[0], v[1], v[2]) || 1, el = Math.asin(Math.max(-1, Math.min(1, v[1] / r))), now = win.performance.now() / 1000;
   if (CKORB === "dyn") { if (now > CKO.next) { CKO.next = now + 9 + Math.random() * 8; const q = Math.random();
-      CKO.phiT = (Math.random() < .5 ? 1 : -1) * (q < .45 ? (1 + Math.random() * 5) * Math.PI / 180 : Math.PI / 6);   /* never dead level: at least a degree of climb or dive (0.8.327, Nick) */ if (Math.random() < .3) CKO.dirT = -CKO.dirT; }
+      CKO.phiT = (Math.random() < .5 ? 1 : -1) * (q < .45 ? (1 + Math.random() * 5) * Math.PI / 180 : Math.PI / 6);   /* never dead level: at least a degree of climb or dive (0.8.327) */ if (Math.random() < .3) CKO.dirT = -CKO.dirT; }
     if (Math.abs(el) > .6 && Math.sign(CKO.phiT) * Math.sign(el) * CKO.dir > 0) CKO.phiT = -CKO.phiT;   /* heading further from level: tilt the other way */
     CKO.phi += (CKO.phiT - CKO.phi) * Math.min(1, dt * .5); CKO.dir += (CKO.dirT - CKO.dir) * Math.min(1, dt * .6); }
   else { CKO.phi += (0 - CKO.phi) * Math.min(1, dt * .8); CKO.dir += (1 - CKO.dir) * Math.min(1, dt * .8); CKO.phiT = 0; CKO.dirT = 1; }
-  const D1 = Math.PI / 180, phU = Math.abs(CKO.phi) < D1 ? (CKO.phi < 0 ? -D1 : D1) : CKO.phi; const sp = ({ calm: .08, slow: .16, lively: .34 })[DSF] || .16, th = sp * (rT ? .45 : 1) * CKO.dir * dt,   /* the speeds the other maps use (0.8.327, Nick) */ side = [Math.cos(CK.yaw), 0, -Math.sin(CK.yaw)], cf = Math.cos(phU), sf_ = Math.sin(phU), a = [side[0] * sf_, cf, side[2] * sf_], an = Math.hypot(a[0], a[1], a[2]); a[0] /= an; a[1] /= an; a[2] /= an;
+  const D1 = Math.PI / 180, phU = Math.abs(CKO.phi) < D1 ? (CKO.phi < 0 ? -D1 : D1) : CKO.phi; const sp = ({ calm: .08, slow: .16, lively: .34 })[DSF] || .16, th = sp * (rT ? .45 : 1) * CKO.dir * dt,   /* the speeds the other maps use (0.8.327) */ side = [Math.cos(CK.yaw), 0, -Math.sin(CK.yaw)], cf = Math.cos(phU), sf_ = Math.sin(phU), a = [side[0] * sf_, cf, side[2] * sf_], an = Math.hypot(a[0], a[1], a[2]); a[0] /= an; a[1] /= an; a[2] /= an;
   const c_ = Math.cos(th), s_ = Math.sin(th), ad = a[0] * v[0] + a[1] * v[1] + a[2] * v[2], cr = [a[1] * v[2] - a[2] * v[1], a[2] * v[0] - a[0] * v[2], a[0] * v[1] - a[1] * v[0]];
   for (let q = 0; q < 3; q++) CK.P[q] = T[q] + v[q] * c_ + cr[q] * s_ + a[q] * ad * (1 - c_);
   const [ty_, tp_] = ckLook(CK.P, T); ckUpright(); CK.yaw += Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)) * Math.min(1, dt * 6); CK.pitch += (tp_ - CK.pitch) * Math.min(1, dt * 6); CK.roll *= Math.pow(.2, dt); }
-/* a link picked in the Links HUD swings into view (0.8.324, Nick: "the starship orbits around the currently active note, so that whatever linked note was selected
-   essentially rolls or orbits into frame"): the ship circles the note it's at, same distance and height, until the picked note sits just beside it, not behind it */
+/* a link picked in the Links HUD swings into view (0.8.324): the ship circles the note it's at, same distance and height, until the picked note sits just beside it, not behind it */
 let CKSW = null;
 function ckSwingTo(j){ if (CKW !== "sf" || CK.c < 0 || j === CK.c) return; const P = ckSF().P, T = [P[3 * CK.c], P[3 * CK.c + 1], P[3 * CK.c + 2]], L = [P[3 * j], P[3 * j + 1], P[3 * j + 2]];
-  /* where to rest (0.8.327; 0.8.333 Nick: "orbit above the accretion disk just slightly… a 30° angle likely"): the note's links lie roughly in a disk round it; the ship rises
+  /* where to rest (0.8.327): the note's links lie roughly in a disk round it; the ship rises
      to about 30° above that disk, then tries the whole circle and keeps the spot where the pick lands about a third of the way out, near the note's height, for the least swing */
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], nrm = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }, crs = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   const r = Math.hypot(CK.P[0] - T[0], CK.P[1] - T[1], CK.P[2] - T[2]) || 1, d0 = nrm([CK.P[0] - T[0], CK.P[1] - T[1], CK.P[2] - T[2]]);
@@ -3139,7 +3137,7 @@ function ckSwingTick(){ if (!CKSW) return; if (view !== "cockpit" || CK.keys.siz
   const [ty_, tp_] = ckLook(CK.P, T); ckUpright(); CK.yaw += Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)) * (p >= 1 ? 1 : .5); CK.pitch += (tp_ - CK.pitch) * (p >= 1 ? 1 : .5); CK.roll *= .9;
   if (p >= 1) CKSW = null; }
 function ckGameTick(dt){ if (CK.shake > 0) { CK.shake = Math.max(0, CK.shake - dt * 2.2); CK.roll += (Math.random() - .5) * .18 * CK.shake; CK.yaw += (Math.random() - .5) * .012 * CK.shake; }
-  /* a right answer flies the whole way (0.8.110, Nick: "don't truncate the jump"): turn toward the note, then autopilot all the way, with the hyperspace streaks, as Wander's Drift does */
+  /* a right answer flies the whole way (0.8.110): turn toward the note, then autopilot all the way, with the hyperspace streaks, as Wander's Drift does */
   const gj = CK.gj; if (!gj) return; const now = win.performance.now(), el = (now - gj.t0) / 1000;
   if (CK.c === gj.j) { CK.gj = null; CK.hyper = 0; win.setTimeout(() => { if (!dead && CKG && !CK.gj) ckGameNew(); }, 1500); return; }   /* arrived: the next question once the view settles */
   if (gj.phase === "look") { const q_ = CK.items.findIndex(o => o.i === gj.j); if (q_ >= 0) CK.lock = q_; const it = CK.items[CK.lock]; CK.v += (0 - CK.v) * Math.min(1, dt * 2);
@@ -3158,33 +3156,33 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   /* A and G orbit: the ship swings round the note it's on (or the one locked, in the links world), keeping its distance and its eyes on it */
   if (K.has("s") || K.has("f") || K.has("e") || K.has("d")) { CK.auto = false; CK.settle = null; let T = null; if (CKW === "sf" && CK.c >= 0) { const P = ckSF().P; T = [P[3 * CK.c], P[3 * CK.c + 1], P[3 * CK.c + 2]]; } else { const it = CK.items[CK.lock]; if (it) T = [it.x, it.y, it.z]; }
     if (T && (K.has("s") || K.has("f"))) { const da = (K.has("s") ? -1 : 1) * .9 * dt, dx = CK.P[0] - T[0], dz = CK.P[2] - T[2], ca = Math.cos(da), sa = Math.sin(da); CK.P[0] = T[0] + dx * ca - dz * sa; CK.P[2] = T[2] + dx * sa + dz * ca; }
-    /* Q and Z orbit over and under (0.8.155, Nick): round the note's side axis, right over the top or under the bottom and on round */
+    /* Q and Z orbit over and under (0.8.155): round the note's side axis, right over the top or under the bottom and on round */
     if (T && (K.has("e") || K.has("d"))) { const v = [CK.P[0] - T[0], CK.P[1] - T[1], CK.P[2] - T[2]], ax = [Math.cos(CK.yaw), 0, -Math.sin(CK.yaw)];   /* the side axis from the heading alone, so it never flips over the top (0.8.156: the spin) */
       const th = (K.has("e") ? -1 : 1) * .9 * dt, c_ = Math.cos(th), s_ = Math.sin(th), dt_ = ax[0] * v[0] + ax[1] * v[1] + ax[2] * v[2], cr = [ax[1] * v[2] - ax[2] * v[1], ax[2] * v[0] - ax[0] * v[2], ax[0] * v[1] - ax[1] * v[0]];
       for (let q_ = 0; q_ < 3; q_++) CK.P[q_] = T[q_] + v[q_] * c_ + cr[q_] * s_ + ax[q_] * dt_ * (1 - c_);
       /* keep the heading, and turn only the pitch to face the note: right over the top it simply carries on (no flip, no spin) */
       const d = [T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]], h = d[0] * Math.sin(CK.yaw) + d[2] * Math.cos(CK.yaw), want = Math.atan2(d[1], h); CK.pitch += Math.atan2(Math.sin(want - CK.pitch), Math.cos(want - CK.pitch)); CK.roll *= .9; }
     if (T && !K.has("e") && !K.has("d")) {
-      const [ty_, tp_] = ckLook(CK.P, T); if (!K.has("e") && !K.has("d")) ckUpright(); CK.yaw += Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)) * Math.min(1, dt * 8); CK.pitch += (tp_ - CK.pitch) * Math.min(1, dt * 8); } }   /* 360° (0.8.97, Nick): no limit on looking up or down; loop right over */
-  const VMAX = CKW === "sf" ? 3200 : 1100; if (K.has("r") || K.has("ArrowUp")) CK.v = Math.min(VMAX, CK.v + (CKW === "sf" ? 1600 : 800) * dt);   /* back to the speed before 0.8.149 (0.8.152, Nick) */   /* full speed back for the open space between galaxies (0.8.151, Nick); gentle near them */   /* gentler by hand (0.8.150, Nick: "speeds by too fast") */
-  else if (K.has("t")) { const IMP = CKW === "sf" ? 360 : 140; CK.v += (IMP - CK.v) * (1 - Math.pow(.15, dt)); }   /* T: impulse (0.8.217, Nick: a Star Trek nod): a slow, steady cruise to take the Ideaverse in; from warp it eases down to it */
+      const [ty_, tp_] = ckLook(CK.P, T); if (!K.has("e") && !K.has("d")) ckUpright(); CK.yaw += Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)) * Math.min(1, dt * 8); CK.pitch += (tp_ - CK.pitch) * Math.min(1, dt * 8); } }   /* 360° (0.8.97): no limit on looking up or down; loop right over */
+  const VMAX = CKW === "sf" ? 3200 : 1100; if (K.has("r") || K.has("ArrowUp")) CK.v = Math.min(VMAX, CK.v + (CKW === "sf" ? 1600 : 800) * dt);   /* back to the speed before 0.8.149 (0.8.152) */   /* full speed back for the open space between galaxies (0.8.151); gentle near them */   /* gentler by hand (0.8.150) */
+  else if (K.has("t")) { const IMP = CKW === "sf" ? 360 : 140; CK.v += (IMP - CK.v) * (1 - Math.pow(.15, dt)); }   /* T: impulse (0.8.217): a slow, steady cruise to take the Ideaverse in; from warp it eases down to it */
   else if (K.has("w") || K.has("ArrowDown")) CK.v = Math.max(-400, CK.v - 800 * dt);
   else if (!CK.auto) CK.v *= Math.pow(.06, dt);   /* off the gas, the ship slows sooner (0.8.150) */
   CK.roll *= Math.pow(.08, dt);
   if (CK.settle && (K.size || CK.drag || CK.auto)) CK.settle = null;
   if (CK.glide) { const G_ = CK.glide, f = Math.min(1, (win.performance.now() - G_.t0) / 1000 / G_.dur), h = G_.s * (1 - Math.pow(1 - f, 3)); if (K.size || CK.drag || CK.auto || CKW === "sf") ckRebase(); else { CK.P = [0, 1, 2].map(q => G_.P0[q] + G_.fw[q] * h); CK.v = 0; CK.roll *= .9; if (f >= 1) ckRebase(); } }   /* Links: the flown arrival eases to a stop, then the view quietly becomes the usual one */   /* Wander lets the arrival swing play out (0.8.165) */
-  /* the settle (0.8.133, Nick: "a nice, smooth arcing orbit… instead of a corkscrew"): the ship swings round the note on an arc (never through it),
+  /* the settle (0.8.133): the ship swings round the note on an arc (never through it),
      always upright, its gaze easing from where it looked onto the note; no roll */
   if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / (S_.flow ? 3 : 2.4)), e = S_.flow ? 1 - Math.pow(1 - f, 3) : f < .5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2, T = S_.T;
     if (!S_.u0) { const v0 = [0, 1, 2].map(q => S_.P0[q] - T[q]), r0 = Math.hypot(...v0) || 1, v1 = [0, 1, 2].map(q => S_.P1[q] - T[q]), r1 = Math.hypot(...v1) || 1; S_.u0 = v0.map(v => v / r0); S_.u1 = v1.map(v => v / r1); S_.r0 = r0; S_.r1 = r1; S_.f0 = ckFwd();
-      if (S_.flow && S_.aF) { const dur = 3, vr = Math.max(0, S_.vin * -(S_.aF[0] * S_.u0[0] + S_.aF[1] * S_.u0[1] + S_.aF[2] * S_.u0[2])), floor = .55 * Math.min(r0, r1); let m = -vr * dur;   /* 0.8.168 (Nick: "it still jumps upon arrival"): the ship doesn't stop dead and back away; it carries its speed in, swings round and eases out */
+      if (S_.flow && S_.aF) { const dur = 3, vr = Math.max(0, S_.vin * -(S_.aF[0] * S_.u0[0] + S_.aF[1] * S_.u0[1] + S_.aF[2] * S_.u0[2])), floor = .55 * Math.min(r0, r1); let m = -vr * dur;   /* 0.8.168: the ship doesn't stop dead and back away; it carries its speed in, swings round and eases out */
         const rr = (q, m_) => (2 * q * q * q - 3 * q * q + 1) * r0 + (q * q * q - 2 * q * q + q) * m_ + (-2 * q * q * q + 3 * q * q) * r1;
         for (let n = 0; n < 12; n++) { let lo = Infinity; for (let q = 0; q <= 1; q += .05) lo = Math.min(lo, rr(q, m)); if (lo >= floor) break; m *= .7; } S_.m = m; S_.rr = rr; } }
     const slerp = (a, b, w) => { const d = Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])), th = Math.acos(d); if (th < 1e-4) return b.slice(); if (th > 3.1) { const o = Math.abs(a[1]) < .9 ? [0, 1, 0] : [1, 0, 0]; const m_ = [a[1] * o[2] - a[2] * o[1], a[2] * o[0] - a[0] * o[2], a[0] * o[1] - a[1] * o[0]], l = Math.hypot(...m_); const mid = m_.map(v => v / l); return w < .5 ? slerp(a, mid, w * 2) : slerp(mid, b, w * 2 - 1); }
       const s = Math.sin(th), ka = Math.sin((1 - w) * th) / s, kb = Math.sin(w * th) / s; return [0, 1, 2].map(q => a[q] * ka + b[q] * kb); };
     const ea = S_.rr ? f * f * (3 - 2 * f) : e, u = slerp(S_.u0, S_.u1, ea), r = S_.rr ? S_.rr(f, S_.m) : S_.r0 + (S_.r1 - S_.r0) * e; CK.P = [0, 1, 2].map(q => T[q] + u[q] * r); CK.v = 0;
     const toT = [0, 1, 2].map(q => T[q] - CK.P[q]), lt = Math.hypot(...toT) || 1, fT = toT.map(v => v / lt), wf = Math.min(1, el / .9), wfe = wf * wf * (3 - 2 * wf);
-    if (!S_.o0) S_.o0 = [0, 1, 2].map(q => S_.f0[q] - fT[q]);   /* the gaze keeps the note where it was on screen and eases it to the centre; it no longer holds still while the ship swings, which swept the note out of view (0.8.168, Nick's clip) */
+    if (!S_.o0) S_.o0 = [0, 1, 2].map(q => S_.f0[q] - fT[q]);   /* the gaze keeps the note where it was on screen and eases it to the centre; it no longer holds still while the ship swings, which swept the note out of view (0.8.168) */
     const fw = [0, 1, 2].map(q => fT[q] + S_.o0[q] * (1 - wfe)), lf = Math.hypot(...fw) || 1;
     CK.yaw = Math.atan2(fw[0] / lf, fw[2] / lf); CK.pitch = Math.asin(Math.max(-1, Math.min(1, fw[1] / lf))); CK.roll *= .9; if (f >= 1) CK.settle = null; }
   if (CK.lookT && !CK.auto && !K.size && !CK.drag && win.performance.now() - CK.lookT0 < 1600) { const [ty_, tp_] = ckLook(CK.P, CK.lookT), dy_ = Math.atan2(Math.sin(ty_ - CK.yaw), Math.cos(ty_ - CK.yaw)), s_ = Math.min(1, dt * 3); CK.yaw += dy_ * s_; CK.pitch += (tp_ - CK.pitch) * s_; CK.roll += dy_ * s_ * .5; }   /* arriving in Starfield, the ship turns to face the new note's links */
@@ -3193,7 +3191,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   if (CK.auto && it) { const [xc, yc, zc] = ckCam(it.x, it.y, it.z), ay = Math.atan2(xc, zc), ap = Math.atan2(yc, Math.hypot(xc, zc)), s_ = Math.min(1, dt * (CK.wd && !CK.wd.hyp ? 1.3 : 3.2));
     CK.yaw += ay * s_; CK.pitch += ap * s_; CK.roll += ay * s_ * .8;
     const dist = Math.hypot(xc, yc, zc); const calm = CK.wd && !CK.wd.hyp; CK.v += (Math.min(calm ? (CKW === "sf" ? 1500 : 600) : CKW === "sf" ? 4200 : 1500, (calm ? 100 : 160) + dist * (calm ? .7 : 1.4)) - CK.v) * Math.min(1, dt * (calm ? 1 : 2.5)); }   /* while wandering, autopilot glides */
-  /* near a galaxy the ship eases off (0.8.149, Nick): flying by hand, top speed falls from full out in open space to a cruise inside a galaxy, so you can see where you are */
+  /* near a galaxy the ship eases off (0.8.149): flying by hand, top speed falls from full out in open space to a cruise inside a galaxy, so you can see where you are */
   /* only right inside a galaxy's disk does the ship ease off, and not much: open space and the clouds are full speed (0.8.152) */
   if (CKW === "sf" && !CK.auto && CK.v > 1400) { for (const B of ckSF().B) { if (B.b.kind !== "gal" && B.b.kind !== "dwarf") continue; if (Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]) < B.r) { CK.v += (1400 - CK.v) * Math.min(1, dt * 2); break; } } }
   const f = ckFwd(); CK.P[0] += f[0] * CK.v * dt; CK.P[1] += f[1] * CK.v * dt; CK.P[2] += f[2] * CK.v * dt; CK.trav = (CK.trav || 0) + Math.abs(CK.v) * dt;
@@ -3204,7 +3202,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
 function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect(), dpr = win.devicePixelRatio || 1, W = Math.max(1, r.width), H = Math.max(1, r.height);
   if (CK.w !== W || CK.h !== H) { CK.w = W; CK.h = H; c_.width = W * dpr; c_.height = H * dpr; }
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = "#04060d"; g.fillRect(0, 0, W, H);
-  const cons = CKFRAME ? Math.min(150, H * .26) : 0, VH = H - cons,   /* no frame: the view runs to the bottom and the instruments float over it */ LXd = ckLeftEd(), cx = W / 2 + (CK.cxo = (CK.cxo || 0) + ((LXd ? Math.min(90, LXd * .2) : 0) - (CK.cxo || 0)) * .08), cy = VH / 2;   /* the view eases a little to the right when the primary note opens (0.8.117, Nick) */
+  const cons = CKFRAME ? Math.min(150, H * .26) : 0, VH = H - cons,   /* no frame: the view runs to the bottom and the instruments float over it */ LXd = ckLeftEd(), cx = W / 2 + (CK.cxo = (CK.cxo || 0) + ((LXd ? Math.min(90, LXd * .2) : 0) - (CK.cxo || 0)) * .08), cy = VH / 2;   /* the view eases a little to the right when the primary note opens (0.8.117) */
   if (CK.bl !== LXd) { CK.bl = LXd; CK.el.setCssProps({ "--ckl": (LXd ? LXd + 6 : 34) + "px" }); }   /* Back sits top left, moving over beside the editor */
   const F = Math.min(W, VH) * .95, font = css.body || "sans-serif";
   /* stars: wrap round the ship; streaks when moving */
@@ -3254,21 +3252,21 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
     for (const s_ of [-1, 1]) { const x0 = W / 2 + s_ * W * .2, x1 = W / 2 + s_ * W * .48, y1 = VH * .02, gr = g.createLinearGradient(x0 - sw_, 0, x0 + sw_, 0);
       gr.addColorStop(0, "#5c6474"); gr.addColorStop(.5, "#c9ced8"); gr.addColorStop(1, "#5c6474"); g.strokeStyle = gr; g.lineWidth = sw_; g.lineCap = "butt"; g.beginPath(); g.moveTo(x0, VH); g.lineTo(x1, y1); g.stroke();
       g.strokeStyle = "rgba(0,0,0,.35)"; g.lineWidth = 1; g.beginPath(); g.moveTo(x0 + s_ * sw_ / 2, VH); g.lineTo(x1 + s_ * sw_ / 2, y1); g.stroke(); } }
-  /* links in down the left, links out down the right: a dim arc of names, centred (Nick, from the mockup) */
+  /* links in down the left, links out down the right: a dim arc of names, centred */
   CK.side = []; CK.sideCol = [null, null]; CK.sideCap = [20, 20]; CK.sOff ||= [0, 0]; const lockI = (CK.items[CK.lock] || {}).i;
-  /* with the primary note open it would cover the links in, so every link goes down the right as one list (0.8.118, Nick): each note once, marked ← links in, → links out, ↔ both, most relevant first */
+  /* with the primary note open it would cover the links in, so every link goes down the right as one list (0.8.118): each note once, marked ← links in, → links out, ↔ both, most relevant first */
   const LX = ckLeftEd(), inS = new Set(CK.inL), outS = new Set(CK.outL);
-  /* one list down the right, always (0.8.139, Nick): each note once, ← in, → out, ↔ both; up links first, then by relevance */
+  /* one list down the right, always (0.8.139): each note once, ← in, → out, ↔ both; up links first, then by relevance */
   const merged = (() => { const all = [...new Set([...CK.inL, ...CK.outL])], upS2 = new Set(CK.upL || []), rs = CK.relS || new Map(); return all.sort((a, b) => (upS2.has(b) ? 1 : 0) - (upS2.has(a) ? 1 : 0) || (rs.get(b) || 0) - (rs.get(a) || 0) || N[b].score - N[a].score); })();
   CK.sideLists = merged ? [null, merged] : [CK.inL, CK.outL]; CK.merged = merged;
   hudTab(HUDCOL ? merged.length : 0);
   if (!HUDCOL && isPhone()) for (const [s, list0, lab] of merged ? [[1, merged, "LINKS"]] : [[-1, CK.inL, "IN"], [1, CK.outL, "OUT"]]) { const n_ = list0.length; if (!n_) continue; const shortV = VH < 520, maxR = shortV ? Math.max(3, Math.floor((VH - 70) / 12)) : Math.max(12, Math.floor((VH - (W < 700 ? 250 : 300)) / (W < 700 ? 12 : 13)))   /* a short view (a phone on its side) keeps names 12 px apart and shows fewer (0.8.142) */   /* clear of the scopes and overview map below */, cap = n_ <= maxR ? n_ : maxR - 1, sk = s < 0 ? 0 : 1; CK.sideCap[sk] = cap; const off = Math.round(CK.sOff[sk] = Math.max(0, Math.min(n_ - cap, CK.sOff[sk] || 0))), list = list0.slice(off, off + cap), below = n_ - off - cap, rows = cap + (n_ > cap ? 1 : 0),   /* scrolls (0.8.115): wheel over the names, or click the last line */ Rx = W * .5, Ry = VH * (.62 + .9 * Math.min(1, Math.max(0, (rows - 14) / 26))), lh = shortV ? 12 : Math.min(W < 700 ? 13 : 15.5, (VH - 90) / (rows + 1));   /* a busy note's list curves less, so more names fit (0.8.139) */
     const dim = CK.only && CK.only !== (s < 0 ? "in" : "out"); g.save(); g.font = `500 ${W < 700 ? 9.5 : 11}px ${font}`; g.textBaseline = "middle";
     const at = r => { const y = cy + (r - (rows - 1) / 2) * lh, u = (y - cy) / Ry; return [W / 2 + s * Rx * Math.sqrt(Math.max(0, 1 - u * u)) - s * 34, y, Math.asin(Math.max(-1, Math.min(1, u))) * .3]; };
-    /* hover (Nick: "a dynamic feel"): the name under the pointer eases in toward the middle and grows, its neighbours make way, and a tether runs to its panel */
+    /* hover: the name under the pointer eases in toward the middle and grows, its neighbours make way, and a tether runs to its panel */
     const rH = CK.hovS >= 0 ? list.indexOf(CK.hovS) : -1, tH = rH >= 0 && rH < cap ? (CK.hv.get(CK.hovS) || 0) : 0;
     for (let r = 0; r < rows; r++) { const [x0_, y, tl] = at(r), more = r === cap, j = more ? -1 : list[r];
-      let tv = 0; if (j >= 0) { const tgt = j === CK.hovS ? 1 : 0; tv = (CK.hv.get(j) || 0); tv += (tgt - tv) * .32;   /* about 40% quicker (0.8.130, Nick) */ if (tv < .01 && !tgt) CK.hv.delete(j); else CK.hv.set(j, tv); }
+      let tv = 0; if (j >= 0) { const tgt = j === CK.hovS ? 1 : 0; tv = (CK.hv.get(j) || 0); tv += (tgt - tv) * .32;   /* about 40% quicker (0.8.130) */ if (tv < .01 && !tgt) CK.hv.delete(j); else CK.hv.set(j, tv); }
       const nb = rH >= 0 && r !== rH ? Math.max(0, 1 - Math.abs(r - rH) / 3) * tH : 0, x = x0_ - s * (12 * tv + 3.75 * nb), ym = y + (rH >= 0 && r !== rH ? Math.sign(r - rH) * nb * 2.25 : 0);
       g.save(); g.translate(x, ym); g.rotate((s < 0 ? -tl : tl) * (1 - tv)); g.scale(1 + .204 * tv, 1 + .204 * tv); g.textAlign = s < 0 ? "left" : "right";
       const dimJ = merged && j >= 0 && CK.only ? !(CK.only === "in" ? inS.has(j) : outS.has(j)) : dim; g.globalAlpha = Math.min(1, (dimJ ? .18 : .62 + .38 * tv) * (j >= 0 && j === lockI ? 1.5 : 1));
@@ -3291,7 +3289,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
         g.beginPath(); g.moveTo(x0, y0); g.lineTo(it.sx + it.sw / 2, it.sy); g.stroke(); g.restore(); } }
     const sig = CK.c + ":" + merged.length + ":" + lockI + ":" + (CK.only || "") + ":" + HUDCOL; if (sig !== CK.lkSig) { CK.lkSig = sig; try { recSync(); } catch (_) { /* panels not built */ } } }
   g.textAlign = "left";
-  /* up links at the top of the HUD (0.8.116, Nick: "an uplink should be at the top"), just under the orbs: a gentle arc of ▲ names in the up colour; click to lock, again to fly */
+  /* up links at the top of the HUD (0.8.116), just under the orbs: a gentle arc of ▲ names in the up colour; click to lock, again to fly */
   if (CK.upL && CK.upL.length && CK.c >= 0) { const SLc = (CK.SL && CK.SL.upp) || "#ffcf6e", ups = CK.upL.slice(0, 5), y0 = 66; g.save(); g.font = `600 11.5px ${font}`; g.textBaseline = "middle";
     const ws = ups.map(j => { let tt = N[j].title; while (tt.length > 4 && g.measureText(tt).width > 190) tt = tt.slice(0, -2); return [j, tt === N[j].title ? tt : tt + "…"]; }), gap = 26, tot = ws.reduce((a, [, tt]) => a + g.measureText(tt).width + 16, 0) + gap * (ws.length - 1);
     let x = cx - tot / 2; g.globalAlpha = .55; g.font = `600 9.5px ${font}`; g.fillStyle = SLc; g.textAlign = "center"; g.fillText(`UP · ${CK.upL.length}`, cx, y0 - 16); g.textAlign = "left"; g.font = `600 11.5px ${font}`;
@@ -3299,7 +3297,7 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
       g.globalAlpha = hv || lk ? 1 : .8; g.fillStyle = SLc; g.beginPath(); g.moveTo(x + 4, y + 4); g.lineTo(x + 8.5, y - 4); g.lineTo(x + 13, y + 4); g.closePath(); g.fill();
       g.lineWidth = 3.5; g.strokeStyle = "rgba(3,4,10,.85)"; g.strokeText(tt, x + 16, y); g.fillStyle = lk ? "#ffcf5a" : hv ? "#ffffff" : "rgba(255,240,200,.92)"; g.fillText(tt, x + 16, y); CK.side.push([x, y - 9, w_, 18, j]); x += w_ + gap; }
     g.restore(); }
-  /* a preview of the locked note (0.8.132, Nick: "that mini preview… for the selected note"), beside it, as Compass shows them */
+  /* a preview of the locked note (0.8.132), beside it, as Compass shows them */
   ckPreview(W, VH);
   if (CK.pvLead && CK.pvEl && !CK.pvEl.hidden) { const [lx, ly, b] = CK.pvLead, ex = Math.max(b[0], Math.min(b[0] + b[2], lx)), ey = Math.max(b[1], Math.min(b[1] + b[3], ly)); if (Math.hypot(ex - lx, ey - ly) > 30) { g.save(); g.globalAlpha = .45; g.strokeStyle = "#cfe0ff"; g.setLineDash([2, 4]); g.lineWidth = 1; g.beginPath(); g.moveTo(lx, ly); g.lineTo(ex, ey); g.stroke(); g.restore(); } }   /* a faint leader when the preview sits away from its star */
   /* reticle on the locked panel, or an arrow at the edge pointing to it */
@@ -3324,10 +3322,10 @@ function ckDraw(){ const c_ = CK.cv, g = CK.g, r = CK.el.getBoundingClientRect()
     let m = CK.msg; while (m.length > 10 && g.measureText(m).width > tw - 20) m = m.slice(0, -2); if (m !== CK.msg) m += "…"; g.fillText(m, cx, my + 6); g.textAlign = "left"; }
   CK.msg = msg0;
   ckConsole(g, W, H, VH, cons, font); }
-// X-Wing's two scopes (0.8.87, Nick): the front one shows every panel ahead of the ship, the rear one every panel behind it.
+// X-Wing's two scopes (0.8.87): the front one shows every panel ahead of the ship, the rear one every panel behind it.
 // A dot's distance from the middle is how far it lies off the nose (or the tail): the middle is dead ahead (or dead behind), the rim is square to your side.
 const ckEjectSync = () => { if (CK.ej) { let pin = false; try { pin = !!(TABS[TCUR] && TABS[TCUR].pin); } catch (_) { pin = false; } CK.ej.hidden = !pin; } };
-// the rear-view mirror (0.8.129, Nick: "I'd be interested if it was a rearview mirror"): what lies behind the ship, flipped left to right as a mirror shows it:
+// the rear-view mirror (0.8.129): what lies behind the ship, flipped left to right as a mirror shows it:
 // galaxies as soft glows, maps and hubs as stars, the cockpit note's links as dots in their link colours with the nearest named
 function ckMirror(g, bx, by, bw, bh, font){ const y0 = CK.yaw, p0 = CK.pitch; CK.yaw = y0 + Math.PI; CK.pitch = -p0; const mcx = bx + bw / 2, mcy = by + bh / 2, F2 = bh * 1.15;
   const pr = (x, y, z) => { const [xc, yc, zc] = ckCam(x, y, z); return zc > 12 ? [mcx - F2 * xc / zc, mcy + F2 * yc / zc, zc] : null; };
@@ -3375,8 +3373,8 @@ function ckConsole(g, W, H, VH, cons, font){ const c = CK.c, fl = !CKFRAME; if (
   if (c < 0) return; const d = N[c], L = stripLists(c), R = Math.min(cons * .36, 54), sy_ = VH + cons * .44;
   CK.scDots = []; CK.scHovAt = null;
   { const L0 = ckLeftEd(), span = W - L0, m_ = W < 700 ? R + 12 : Math.max(R + 18, span * .16, CKW === "sf" && CKX.mini ? 140 + 24 + R : 0);   /* clear of the overview map in the corner */   /* both scopes and the card centred on the free space (0.8.127) */
-    ckScope3(g, L0 + m_, sy_, R, true, font); if (CKX.rear) ckScope3(g, W - m_, sy_, R, false, font); }   /* the rear scope is a switch, off to start (0.8.355, Nick) */
-  /* a scope dot under the pointer names itself (0.8.112, Nick): click to lock, again to fly */
+    ckScope3(g, L0 + m_, sy_, R, true, font); if (CKX.rear) ckScope3(g, W - m_, sy_, R, false, font); }   /* the rear scope is a switch, off to start (0.8.355) */
+  /* a scope dot under the pointer names itself (0.8.112): click to lock, again to fly */
   if (CK.scHovAt && CK.scHov >= 0) { const dN = N[CK.scHov], [hx, hy] = CK.scHovAt; let tt = dN.title; g.font = `600 11px ${font}`; while (tt.length > 4 && g.measureText(tt).width > 230) tt = tt.slice(0, -2); if (tt !== dN.title) tt += "…";
     const tw = g.measureText(tt).width + 24, bx = Math.max(6, Math.min(W - tw - 6, hx - tw / 2)), by = hy - 34; g.globalAlpha = 1; g.fillStyle = "rgba(4,6,14,.92)"; g.beginPath(); g.roundRect(bx, by, tw, 22, 11); g.fill();
     g.fillStyle = ckCol(dN.level); g.beginPath(); g.arc(bx + 11, by + 11, 3, 0, 6.2832); g.fill(); g.fillStyle = "#eef3ff"; g.textBaseline = "middle"; g.fillText(tt, bx + 18, by + 11.5); g.textBaseline = "alphabetic"; }
@@ -3415,7 +3413,7 @@ EXP.cockpit = {
       "I shows only the links in, O only the links out (press again for both); the names down each side list them. The two scopes, as in X-Wing: the left one shows every panel ahead of you, the right one every panel behind you; the middle is dead ahead (or dead behind), the rim is square to your side.",
       "The message line names the closest relative it doesn't yet link up or related to; it starts locked on. The centre display: level, rank, score, links, and what the next level takes. The left dial is links made this year, the right one its age. Eject unpins the editor."
     ]; },
-  get legend(){ return "Starship: fly through a note's links. Fly into a panel (or a named star) to make it the cockpit." + (CK.sug >= 0 && N[CK.sug] ? ` Suggestion: the closest relative not yet in its up or related is “${N[CK.sug].title}”${CK.items.find(it => it.i === CK.sug && it.none) ? " (no link yet)" : ""}. It starts locked on: Space flies you there.` : ""); },   /* the suggestion lives in the legend now (0.8.119, Nick) */
+  get legend(){ return "Starship: fly through a note's links. Fly into a panel (or a named star) to make it the cockpit." + (CK.sug >= 0 && N[CK.sug] ? ` Suggestion: the closest relative not yet in its up or related is “${N[CK.sug].title}”${CK.items.find(it => it.i === CK.sug && it.none) ? " (no link yet)" : ""}. It starts locked on: Space flies you there.` : ""); },   /* the suggestion lives in the legend now (0.8.119) */
 };
 
 // ---------- Posters: a targeted dataset (a base's view, a filter) laid out by its own properties ----------
@@ -3448,8 +3446,7 @@ const YPART = "(?:c\\.?|ca\\.?|circa|~)?\\s*(\\d{1,4})\\s*(BCE|BC|CE|AD)?", YSPA
 // a span of years, like a lifespan ("1949 -", "1879 – 1955", "c. 563 BCE – 483 BCE"): [start, end] (end null while ongoing)
 function yspan(v){ if (typeof v !== "string") return null; const m = YSPAN.exec(v); if (!m) return null; const y = (d, e) => d == null ? null : (/^BC/i.test(e || "") ? -+d : +d); const a = y(m[1], m[2]), b = y(m[3], m[4] || (m[2] && /^BC/i.test(m[2]) && m[3] ? m[2] : "")); return a == null || (b != null && b < a) ? null : [a, b]; }
 const DATEK = new Set(["created","createdat","created_at","created on","date created","datecreated","creation date","creation_date","date"]);
-/* Base Builder · Timeline by any date-ish property (0.8.325, Nick: "Give me the choice to select one of the properties that is date-oriented, like year or lifespan, and only notes
-   that have that property are automatically filtered"): a span of years (1929 - 2018) is a bar; a lone year or date is a one-year bar */
+/* Base Builder · Timeline by any date-ish property (0.8.325): a span of years (1929 - 2018) is a bar; a lone year or date is a one-year bar */
 const tlVal = v => { const f = Array.isArray(v) ? v[0] : v; if (f == null || f === "" || (typeof f === "string" && f.includes("[["))) return null;   /* a link (prev, next) is a note, not a date */ const sp = yspan(f); if (sp) return sp; const x = asNum(f); if (x != null && Number.isInteger(x) && x >= 1000 && x <= 2200) return [x, x];
   if (typeof f === "string") { const d = parseDay(f); if (d) { const y = +d.slice(0, 4); if (y) return [y, y]; } } return null; };
 let TLC = null, tlUI = () => {}, QHELP = null;   /* QHELP: qHelp, reachable from blocks built before it */
@@ -3487,7 +3484,7 @@ function postersDetect(){
     if (o.img >= o.n * .5) { if (!img) img = k_; continue; }
     const d = o.vals.size; if ((o.cat + o.link) >= o.n * .6 && d >= 2 && d <= Math.max(60, sampled * .5)) lanes.push({ id: k_, name: k_, vals: o.vals, people: o.link > o.cat }); }
   if (view === "builder" && PSTB.tl && PSTB.tlp) { const k_ = PSTB.tlp; if (!across.some(a => a.id === k_)) across.push({ id: k_, name: k_ + " (start)", kind: "year" }); if (!across.some(a => a.id === k_ + "@end")) across.push({ id: k_ + "@end", name: k_ + " (end)", kind: "year" }); }
-  across.push({ id: "@score", name: "Link score", kind: "num" });   /* always a second number, so Scatter always works (0.8.325, Nick) */
+  across.push({ id: "@score", name: "Link score", kind: "num" });   /* always a second number, so Scatter always works (0.8.325) */
   const want = BASEINFO && BASEINFO.sort; const rk0 = a => a.id === "@score" ? 6 : a.id === want ? 0 : a.kind === "year" ? 1 : a.id === "@created" ? 4 : a.kind === "date" ? 2 : 3;
   // Base Builder: the base's own columns come first, in the order the base shows them
   const cols = view === "builder" && BASEINFO && Array.isArray(BASEINFO.cols) ? BASEINFO.cols : null, ci = id => cols ? cols.indexOf(id) : -1;
@@ -3509,7 +3506,7 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
     { const cb_ = box.querySelector('#pmode button[data-pm="constellation"]'); if (cb_) { cb_.hidden = view !== "builder"; const has = peopleDetect().length > 0; cb_.disabled = !has; cb_.title = has ? "" : "No property here lists people (director, cast, author…)"; } }
     box.classList.toggle("pcon", !!con); box.classList.toggle("ptl", tl); tlUI();
     { const tb_ = box.querySelector('#pmode button[data-pm="timeline"]'); if (tb_) { tb_.hidden = view !== "builder"; const has = o.across.some(a => a.id.endsWith("@end")) || tlCands().length > 0; tb_.disabled = !has; tb_.title = has ? "" : "No property here holds a span of years (a lifespan like 1879 – 1955)"; } }
-    /* Scatter needs a second number besides left to right; without one it was a dead button (0.8.318, Nick: "I can't seem to select it"): dimmed like Timeline and Constellation */
+    /* Scatter needs a second number besides left to right; without one it was a dead button (0.8.318): dimmed like Timeline and Constellation */
     { const sb_ = box.querySelector('#pmode button[data-pm="scatter"]'); if (sb_) { const cu_ = PSC().cur || {}, has = o.across.some(a => a.id !== cu_.acrossId && a.id !== "@created" && !a.id.endsWith("@end")); sb_.disabled = !has && !PSC().height; sb_.title = sb_.disabled ? "Scatter needs a second number property (a rank, a rating, a year)" : ""; } }
     { const bc = box.querySelector(".bcon"); if (bc) { bc.hidden = !con; if (con) builderConUI(bc); } }
     const ar = box.querySelector('.prow[data-k="across"] > span'), ah = box.querySelector('.phint[data-k="across"]');
@@ -3587,7 +3584,7 @@ function layoutPosters(){
   for (let t = Math.ceil(v0 / tk) * tk; t <= v1 + 1e-9; t += tk) ticks.push({ x: xOf(ac.kind === "year" || ac.kind === "date" ? t : t), t: ac.kind === "year" || ac.kind === "date" ? String(Math.round(t)) : String(+t.toFixed(2)) });
   PSC().lanesOut = lanesOut; PSC().ticks = ticks; PSC().WD = WD; PSC().H = y; PSC().img = o.img; PSC().hasNo = ids.some(i => isNaN(V[i]));
   expBox = { x0: (PSC().hasNo ? NOV - 40 : -40) - 150, y0: -60, x1: WD + 40, y1: y + 20 }; postersOptsUI(); }
-/* where a pinned axis may draw (0.8.345, Nick): below the orb tabs and the counts at the top, right of the tucked primary note tab on the left */
+/* where a pinned axis may draw (0.8.345): below the orb tabs and the counts at the top, right of the tucked primary note tab on the left */
 function axisPads(){ let top = 22, left = 0; try { const cb = cv.getBoundingClientRect(); if (orbBar && !orbBar.hidden && orbBar.childElementCount) { const ob = orbBar.getBoundingClientRect(); if (ob.height) top = Math.max(top, Math.round(ob.bottom - cb.top + 18)); }
     const st = root.querySelector(".mapstats"); if (st && st.offsetParent) { const q = st.getBoundingClientRect(); if (q.height) top = Math.max(top, Math.round(q.bottom - cb.top + 14)); }
     const et = root.querySelector(".edtab-left"); if (et && !et.hidden && et.offsetParent) { const q = et.getBoundingClientRect(); if (q.width) left = Math.max(left, Math.round(q.right - cb.left + 4)); } } catch (_) { /* not built yet */ } return { top, left }; }
@@ -3744,7 +3741,7 @@ EXP.posters = {
       ctx.globalAlpha = gd; ctx.font = `600 11px ${css.mono}`; ctx.fillStyle = css.ink; const lx = Math.max(12, sx(expBox.x0 + 10)), ly = Math.max(y0 + 14, Math.min(y1 - 22, 70));
       ctx.lineWidth = 4; ctx.strokeStyle = css.bg; const t = String(L_.name).toUpperCase(); ctx.strokeText(t, lx, y0 + 16); ctx.fillText(t, lx, y0 + 16); ctx.font = `400 10.5px ${css.mono}`; ctx.fillStyle = css.muted; ctx.strokeText(L_.n.toLocaleString(), lx, y0 + 30); ctx.fillText(L_.n.toLocaleString(), lx, y0 + 30); ctx.lineWidth = 1; }
     ctx.textAlign = "center"; ctx.font = `400 15px ${css.display}`;
-    /* the years stick to the top as you scroll, but below the orb tabs and the counts, not under them (0.8.345, Nick: "the years… and the Orb Tabs overlap") */
+    /* the years stick to the top as you scroll, but below the orb tabs and the counts, not under them (0.8.345) */
     const top_ = axisPads().top;
     for (const t of PSC().ticks) { const x = sx(t.x); if (x < -40 || x > W + 40) continue; ctx.strokeStyle = css.line; ctx.globalAlpha = .45 * gd; ctx.beginPath(); ctx.moveTo(x, Math.max(sy(0), top_ + 18)); ctx.lineTo(x, sy(PSC().H)); ctx.stroke(); ctx.globalAlpha = gd; ctx.fillStyle = css.ink; ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.strokeText(t.t, x, Math.max(sy(-28), top_)); ctx.fillText(t.t, x, Math.max(sy(-28), top_)); ctx.lineWidth = 1; }
     if (PSC().hasNo) { ctx.fillStyle = css.muted; ctx.font = `500 10.5px ${css.mono}`; ctx.fillText("NO VALUE", sx(-90), Math.max(sy(-28), top_)); }
@@ -3932,9 +3929,9 @@ EXP.people = {
 // unlinked notes at the edge. Within a frame, notes of a folder sit together, so folders show as patches of one color.
 // Scattered: the same tiles, set in no order at all. A tile's size comes from its link score; color from its level
 // (maps and hubs wear the level colors) or its folder.
-// Ranked (0.8.25, Nick's idea): every note in rank order, read like a page turned upside down: from the bottom left, left to right,
+// Ranked (0.8.25): every note in rank order, read like a page turned upside down: from the bottom left, left to right,
 // row by row up to #1 at the top right. A row is as tall as its notes are big, so the top rows (the hubs) are the tallest.
-// Color by folder (0.8.28, Nick): Mosaic and Treemap can paint every note in its folder's color, maps and hubs too (off by default)
+// Color by folder (0.8.28): Mosaic and Treemap can paint every note in its folder's color, maps and hubs too (off by default)
 let FOLDC = (() => { const o = pref("iv-foldc", null); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; })();
 const FCOL = () => FOLDC[view] === true;
 let MOS = ["scatter", "rank"].includes(pref("iv-mos", "emergence")) ? pref("iv-mos", "emergence") : "emergence"; const MOSF = [], MOSR = [];
@@ -4024,7 +4021,7 @@ function layoutGraph(){
 // d3-force style: many-body (Barnes–Hut) + links + centering, velocity Verlet with alpha cooling
 // the forces, as in Obsidian's graph settings: Gravity (the pull to the middle), Repel (every note pushing the others away), Link length
 const GFRD = (key, d) => { const g = pref(key, null) || {}; return { grav: isFinite(g.grav) ? +g.grav : d.grav, rep: isFinite(g.rep) ? +g.rep : d.rep, ld: isFinite(g.ld) ? +g.ld : d.ld }; };
-/* Focus has its own forces (0.8.300, Nick: "when Focus is turned on, shift the default Repel level to 200, and the default Link length to 60"): a focused handful of notes
+/* Focus has its own forces (0.8.300): a focused handful of notes
    reads better spread out. The sliders and Reset work on whichever set is in use; each is kept */
 const GFD = { grav: .1, rep: 30, ld: 30 }, GFDF = { grav: .1, rep: 200, ld: 60 }, GFN = GFRD("iv-gforce", GFD), GFF = GFRD("iv-gforcef", GFDF), gfAct = () => focus >= 0 ? GFF : GFN, gfKey = () => focus >= 0 ? "iv-gforcef" : "iv-gforce";
 const GF = { get grav(){ return gfAct().grav; }, set grav(v){ gfAct().grav = v; }, get rep(){ return gfAct().rep; }, set rep(v){ gfAct().rep = v; }, get ld(){ return gfAct().ld; }, set ld(v){ gfAct().ld = v; } };
@@ -4089,7 +4086,7 @@ function graphSim(ids, key){
   lk.forEach((j, q) => { if (!z) { const r = 10 * Math.sqrt(.5 + q), a = q * Math.PI * (3 - Math.sqrt(5)); x[j] = r * Math.cos(a); y[j] = r * Math.sin(a); return; }
     const r = 14 * Math.cbrt(.5 + q), u = 1 - 2 * ((q * .618034) % 1), a = q * Math.PI * (3 - Math.sqrt(5)), w = Math.sqrt(1 - u * u); x[j] = r * w * Math.cos(a); y[j] = r * u; z[j] = r * w * Math.sin(a); });
   /* flat graph: a new set of notes (Focus in or out) starts from where its notes already are, so the forces bloom them out from there instead of a tiny spiral the camera then
-     snaps to (0.8.308, Nick: Obsidian's Focus "gets really tiny before it expands"); a note with no place yet keeps its spiral spot */
+     snaps to (0.8.308); a note with no place yet keeps its spiral spot */
   if (!z && GPH.x && GPH.x.length === n && GPH.prev2d) { let had = 0; for (const j of lk) { const i = ids[j], px = GPH.x[i], py = GPH.y[i]; if (px || py) { x[j] = px; y[j] = py; had++; } } if (had < 2) lk.forEach((j, q) => { const r = 10 * Math.sqrt(.5 + q), a = q * Math.PI * (3 - Math.sqrt(5)); x[j] = r * Math.cos(a); y[j] = r * Math.sin(a); }); }
   GPH.prev2d = !z;
   const F = graphForce(m, Int32Array.from(ea), Int32Array.from(eb), x, y, Int32Array.from(lk), z);
@@ -4502,11 +4499,11 @@ buildGrid();
 // ---------- view ----------
 let k = 1, tx = 0, ty = 0, W = 0, H = 0, dpr = 1;
 let hover = -1, sel = -1, showAll = false;
-// hold ⌘ (Ctrl on Windows and Linux) over a note for a mini preview, as Obsidian does for links (0.8.159, Nick)
+// hold ⌘ (Ctrl on Windows and Linux) over a note for a mini preview, as Obsidian does for links (0.8.159)
 let CMDK = false, CMDPT = null;
 const cmdPvSync = () => { if (view === "cockpit") { shipPvSync(); return; } if (typeof RECHV !== "undefined" && RECHV >= 0) { recPv(); return; } if (HUDHOV >= 0) { if (!CMDK && !HUDPV) hudPv(-1); draw(); return; } if (!CMDK || hover < 0 || !vis[hover] || isPhone()) { if (!(HUDHOV >= 0 && HUDPV)) hudPv(-1); return; }
   const x = sx(X[hover]), y = sy(Y[hover]), pw = 230; hudPv(hover, x + 18 + pw + 14 <= W - 8 ? x + 18 + pw + 14 : x - 18, y, true); try { tip.hidden = true; } catch (_) { /* no tip yet */ } };   /* the preview takes the hover label's place */
-/* the Starship: ⌘ pressed or let go while a Links row is under the pointer shows or hides its spot preview at once, not only on the next hover (0.9.136, Nick); window capture, since flight keys may stop the key before the document */
+/* the Starship: ⌘ pressed or let go while a Links row is under the pointer shows or hides its spot preview at once, not only on the next hover (0.9.136); window capture, since flight keys may stop the key before the document */
 const shipPvSync = () => { if (typeof CK === "undefined" || !CK) return; if (CMDK && CK.hovEl && CK.hovEl.isConnected && CK.hovS >= 0) { if (!SHIPPV || RECHV !== CK.hovS) { SHIPPV = true; RECHV = CK.hovS; RECHVEL = CK.hovEl; recPv(); } } else if (SHIPPV && !CMDK) { SHIPPV = false; RECHV = -1; RECHVEL = null; hudPv(-1); } };
 on(win, "keydown", e => { if ((e.key === "Meta" || e.key === "Control") && view === "cockpit" && host.isActive()) { CMDK = true; shipPvSync(); } }, { capture: true });
 on(win, "keyup", e => { if ((e.key === "Meta" || e.key === "Control") && view === "cockpit") { CMDK = false; shipPvSync(); } }, { capture: true });
@@ -4516,9 +4513,9 @@ on(win, "blur", () => { CMDK = false; cmdPvSync(); });
 const css = {};
 const COLORS = ["bg","panel","line","ink","muted","accent","accent-soft","up","down","band-a","band-b","l2","l1","sl2","sl1","rel","upp","prop","edge-faint"];
 let probe = null;   // colors go through the browser once, so the canvas gets plain rgb() even when a theme writes color-mix() or Obsidian's own variables
-// Display → Starfield link colors (0.8.7, Nick): blue above, red below (since 0.8.208), gold up, lilac related, slate other, on every map and in the note panel
+// Display → Starfield link colors (0.8.7): blue above, red below (since 0.8.208), gold up, lilac related, slate other, on every map and in the note panel
 let SFLINKS = pref("iv-sflinks", false) === true;
-const SFDARK = { up: "#6fbcff", down: "#ff6f61", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }, SFLIGHT = { up: "#1f86c4", down: "#d0453f", rel: "#8a3ff0", upp: "#b8860b", prop: "#6b7c93" };   // blue above, red below (swapped in 0.8.208, Nick: blue above is a nod to the Architect's blue); up is gold, clear of both
+const SFDARK = { up: "#6fbcff", down: "#ff6f61", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }, SFLIGHT = { up: "#1f86c4", down: "#d0453f", rel: "#8a3ff0", upp: "#b8860b", prop: "#6b7c93" };   // blue above, red below; up is gold, clear of both
 function applySfLinks(){ const th = root.dataset.theme, dark = th === "lyt" || th === "dark" || th === "starfield" || (th === "obsidian" && doc.body.classList.contains("theme-dark"));
   const P = dark ? SFDARK : SFLIGHT; for (const kk of Object.keys(P)) { if (SFLINKS) root.style.setProperty("--" + kk, P[kk]); else root.style.removeProperty("--" + kk); }
   let t = null; try { t = tip; } catch { t = null; } if (t) for (const kk of Object.keys(P)) { if (SFLINKS) t.style.setProperty("--" + kk, P[kk]); else t.style.removeProperty("--" + kk); } }
@@ -4568,11 +4565,11 @@ function fitTarget0(){ const pad = 56;
 function fit(anim){ const t = fitTarget(); if (anim) animateTo(t); else { k = t.k; tx = t.tx; ty = t.ty; draw(); } }
 const sx = x => x*k + tx, sy = y => y*k + ty, wx = x => (x - tx)/k, wy = y => (y - ty)/k;
 
-/* the map behind the Holodeck can hold still (0.9.56, Nick: "a version that could disable or pull the background graph… to improve performance").
+/* the map behind the Holodeck can hold still (0.9.56).
    Measured on a 15,700-note vault: idle and typing it costs nothing either way; a note switch did ~175ms of work with the map live, ~110ms paused, ~117ms in plain Obsidian */
 let HOLOPAUSE = pref("iv-holopause", false) === true;
-/* the Holodeck's icon, picked in Display → Editors (0.9.58, Nick); rectangle goggles by default */
-const HOLOICON = "glasses";   /* the Holodeck's icon (0.9.98, Nick: glasses, and the picker is gone) */
+/* the Holodeck's icon, picked in Display → Editors (0.9.58); rectangle goggles by default */
+const HOLOICON = "glasses";   /* the Holodeck's icon (0.9.98) */
 let raf = 0; function draw(){ if (HOLOPAUSE && typeof holoOn === "function" && holoOn()) return; if (!raf) raf = RAF(render); }
 function animateTo(t){ const k0=k, x0=tx, y0=ty, t0=performance.now(), dur=420, mid = morphId;
   const step = now => { if (camBusy && camBusy !== mid) return; const p = Math.min(1,(now-t0)/dur), e = 1-Math.pow(1-p,3);
@@ -4586,7 +4583,7 @@ function sphFace(i){   // a globe turns the note to face you instead of zooming 
     csProject(); X.set(DX); Y.set(DY); if (globeOn()) { EX.set(DX); EY.set(DY); } render(); if (t < 1) RAF(step); else { sphTurning = false; buildGrid(); csKeep(); draw(); } };
   sphTurning = true; RAF(step); }
 // a click on a flat map: the note drifts a little of the way toward the middle (no zoom), once the note panel has made its room
-// the free stretch of the map, left to right: clear of the primary note, the support note and the note panel (0.8.79; Nick: the note didn't centre beside the primary note)
+// the free stretch of the map, left to right: clear of the primary note, the support note and the note panel (0.8.79)
 let FLYT = 0;
 function freeLR(){ let L = 0, R = W - (isPhone() ? 0 : sideW()); if (isPhone()) return [L, R];
   try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) L = edRect("left").x + edRect("left").w + 8; if (EDS && !EDS.right.el.hidden && !EDS.right.col) R = Math.min(R, edRect("right").x - 8); } catch (_) { /* editors not made yet */ }
@@ -5092,7 +5089,7 @@ function labels(lit){ let PICKDRAW = null;   // the picked note's name is drawn 
     if (!place) for (const [px0] of sides) for (const oy of [-dy, dy]) if (!place && fits(px0-2, y+oy-h/2, w+4, h) && y+oy > 8 && y+oy < H-8) place = { lx: px0, ly: y + oy };
     if (!place) { if (!(i === sel || i === hover)) continue; place = { lx: first, ly: y }; }
     ctx.lineWidth = 4; ctx.strokeStyle = css.bg; ctx.lineJoin = "round"; ctx.fillStyle = css.ink;
-    // the note you're on stands out: its links' names step back to 70%, and its own name is larger, in the accent color (0.8.15, Nick: "it's hard to tell")
+    // the note you're on stands out: its links' names step back to 70%, and its own name is larger, in the accent color (0.8.15)
     const pick_ = (sel >= 0 && i === sel) || (sel < 0 && i === hover && view === "stars"), linkOf = sel >= 0 && i !== sel && i !== hover; ctx.globalAlpha = linkOf ? .7 : 1;
     if (pick_) { ctx.fillStyle = view === "stars" ? "hsl(58,86%,66%)" : css.accent || css.ink; /* Starfield: LYT Mode's yellow */ ctx.lineWidth = 5; }
     if (place.a != null) { const { piv, a, right, bx } = place; for (const b_ of bx) taken.push(b_);
@@ -5225,7 +5222,7 @@ function pick(px, py){
 // ---------- interaction ----------
 const tip = $("#tip"); tip.addClass("ivm-tip"); doc.body.appendChild(tip);
 let drag = null, moved = false; const pts = new Map();
-// Kandinsky: drag a tile or shape and let go, and it springs back to its place; its linked neighbours lean after it a little (0.8.68, Nick)
+// Kandinsky: drag a tile or shape and let go, and it springs back to its place; its linked neighbours lean after it a little (0.8.68)
 const KOFF = new Map(); let KDRAG = null, kRaf = 0;
 // double-click a shape or tile: it becomes the centre of Kandinsky (Composition, and Squares' Picked + links); a single click opens it in the editor
 cv.addEventListener("dblclick", e => { if (view !== "kandinsky") return; const i = EXP.kandinsky.pick(wx(e.offsetX), wy(e.offsetY)); if (i < 0) return; e.preventDefault(); e.stopPropagation();
@@ -5319,11 +5316,11 @@ cv.addEventListener("wheel", e => { e.preventDefault(); driftStop();
     tx -= dx * (e.deltaMode === 1 ? 16 : 1); tip.hidden = true; draw(); return; }
   const f = Math.min(1.35, Math.max(.74, Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0018)))); zoomAt(e.offsetX, e.offsetY, f); }, {passive:false});
 cv.addEventListener("dblclick", e => zoomAt(e.offsetX, e.offsetY, 2));
-// ---------- HUD links (0.8.143, Nick): the Cockpit's list of the picked note's links, down the right of any map ----------
+// ---------- HUD links (0.8.143): the Cockpit's list of the picked note's links, down the right of any map ----------
 // each linked note once (← links in, → links out, ↔ both), up links first, then by relevance; hover lights a name and draws a line to its note; click goes there.
 // Display → HUD links, with Relevance scores beneath it
 let HUDCOL = pref("iv-hudcol", false) === true, HUDPV = pref("iv-hudpv", false) === true, HUDBOX = null, HUDTAB = null, HUDPVE = null, HUDPVP = null;
-// the list tucks away to a tab on the right edge (0.8.145, Nick: "like we've done with the Legend"): a click on its header tucks it, the tab brings it back; the Cockpit's list too
+// the list tucks away to a tab on the right edge (0.8.145): a click on its header tucks it, the tab brings it back; the Cockpit's list too
 function hudTab(nLinks){ if (!HUDTAB) { HUDTAB = $("#main").createEl("button", { cls: "dtab hudtab", attr: { type: "button", "aria-label": "Show the links", title: "Show the links" } }); HUDTAB.hidden = true;
     HUDTAB.addEventListener("pointerdown", e => e.stopPropagation()); HUDTAB.onclick = e => { e.stopPropagation(); hudCol(false); }; }
   const on_ = HUDCOL && nLinks > 0; HUDTAB.hidden = !on_; if (on_) { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); HUDTAB.setCssProps({ "--hr": Math.max(0, Math.round(mr.right - c.right + (view === "cockpit" ? 0 : sideW()))) + "px" }); }   /* at the map's right edge, beside the note panel */ if (on_) { const t_ = `‹  Links · ${nLinks}`; if (HUDTAB.textContent !== t_) HUDTAB.setText(t_); } }
@@ -5336,19 +5333,19 @@ function hudPv(j, x, y, force){ if (j < 0 && typeof RECHV !== "undefined" && REC
   if (!HUDPVE || HUDPVP !== key) { if (HUDPVE) HUDPVE.remove(); const e = $("#main").createDiv({ cls: "ivm-card ivm-pv hudpv" + (ctx ? " hudspot" : "") }); e.createDiv({ cls: "pvt", text: N[j].title }); const sub_ = ctx ? e.createDiv({ cls: "ivd-pvsub" }) : null; const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); if (ctx && host.spot) void host.spot(p, ctx, sub_, b_); else void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } HUDPVE = e; HUDPVP = key; }
   const c = cv.getBoundingClientRect(), pr = $("#main").getBoundingClientRect(), pw = ctx ? 300 : 230, ph = ctx ? 220 : 140; HUDPVE.hidden = false;
   HUDPVE.setCssProps({ "--pvx": Math.round(c.left - pr.left + Math.max(8, x - pw - 14)) + "px", "--pvy": Math.round(c.top - pr.top + Math.max(8, Math.min(H - ph - 8, y - ph / 2))) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); }
-/* from the Links pane (0.9.115, Nick: port what helps, keep the HUD's look): the order of the Links rows, and four Show switches; each in Display → Heads Up Display */
-let HUDSORT = (v => ["rel", "lvl", "remg"].includes(v) ? v : "remg")(pref("iv-hudsort", "remg")),   /* Relative Emergence by default, as in the Links pane (0.9.119, Nick) */
+/* from the Links pane (0.9.115): the order of the Links rows, and four Show switches; each in Display → Heads Up Display */
+let HUDSORT = (v => ["rel", "lvl", "remg"].includes(v) ? v : "remg")(pref("iv-hudsort", "remg")),   /* Relative Emergence by default, as in the Links pane (0.9.119) */
     HUDORB = pref("iv-hudorb", false) === true, HUDEMO = pref("iv-hudemo", false) === true, HUDLSC = pref("iv-hudlsc", false) === true, HUDUNQ = pref("iv-hudunq", false) === true, HUDARR = pref("iv-hudarr", true) !== false, HUDEMOL = false;
 let HUDL = pref("iv-hudl", false) === true, HUDR = pref("iv-hudr", true) !== false, HUDHOV = -1, HUDC = { i: -2, list: [], rel: null };
 function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && HUDC.vv === VISV) return HUDC;   /* cached until the relevance graph or what shows changes; it used to recompute (and rebuild the HUD) on every redraw while RADJ was empty (0.8.290) */ const L = stripLists(i), inS = new Set(L.in), outS = new Set(L.out), upS = new Set(L.up); let rel = null; try { rel = relFrom(i); } catch (_) { rel = null; }
   const all = [...new Set([...L.in, ...L.out])].filter(j => j !== i && N[j] && vis[j]), rv = j => rel ? rel[j] : N[j].score / 1e3; let mx = 0; for (const j of all) mx = Math.max(mx, rv(j));
   all.sort((a, b) => (upS.has(b) ? 1 : 0) - (upS.has(a) ? 1 : 0) || rv(b) - rv(a) || N[b].score - N[a].score);
   return (HUDC = { i, rj: RADJ, vv: VISV, v: (HUDC.v || 0) + 1, list: all, inS, outS, upS, sc: new Map(all.map(j => [j, mx > 0 ? Math.round(100 * rv(j) / mx) : 0])) }); }
-/* Links lives in the Recents panel now (0.8.284, Nick: "do opt 2, but each needs to work independently"): one background, one curve, two sections; each tucks to its own
+/* Links lives in the Recents panel now (0.8.284): one background, one curve, two sections; each tucks to its own
    edge tab. The map only draws the dashed line from a hovered row to its note, and keeps HUDBOX (the panel, in map pixels) for maps that leave it room */
-/* a search in the Links HUD (0.9.51, Nick: "I just want to search for one keyword" in LYT Book Home's links): a faint magnifier after the count opens a field that narrows the rows as you type */
+/* a search in the Links HUD (0.9.51): a faint magnifier after the count opens a field that narrows the rows as you type */
 let LKQ = "", LKQOPEN = false, RECLKQF = false;   /* RECLKQF: the field had the focus when the HUD redrew, so it keeps it */
-let LKHV = null, HUDTC = pref("iv-hudtc", true) !== false, HUDGRP = true,   /* always grouped now; the switch is gone (0.8.316, Nick: "make that the default") */ LKFOLD = (() => { const o = pref("iv-lkfold", null); return o && typeof o === "object" ? o : {}; })();   /* HUDGRP: property links grouped under their property (0.8.297, Nick: option H2); LKFOLD: which groups are folded */
+let LKHV = null, HUDTC = pref("iv-hudtc", true) !== false, HUDGRP = true,   /* always grouped now; the switch is gone (0.8.316) */ LKFOLD = (() => { const o = pref("iv-lkfold", null); return o && typeof o === "object" ? o : {}; })();   /* HUDGRP: property links grouped under their property (0.8.297); LKFOLD: which groups are folded */
 /* which property each of note i's property-only links sits in (0.8.297): written links (text, up, related, either way) stay ungrouped; the rest go under "→ KEY" (this note's
    property) or "← KEY" (the other note's property pointing here). Cached per note */
 const WRIT = k => k != null && k !== 5;   /* a link someone wrote: in the text (0), up (1), nav (2), archive (3), related (4); 5 is another property */
@@ -5359,57 +5356,57 @@ function lkGroups(i, list){ if (LKG.i === i && LKG.n === list.length && LKG.rj =
     if (a === 5 && outK.has(j)) { m.set(j, "→ " + outK.get(j)); continue; }
     let k2 = ""; try { for (const [k_, p_] of host.propLinks(N[j].path)) if (p_ === N[i].path) { k2 = k_; break; } } catch (_) { k2 = ""; }
     m.set(j, (a === 5 ? "→ " : "← ") + (k2 || (a === 5 ? outK.get(j) : "") || "other")); }
-  LKG = { i, n: list.length, rj: RADJ, m }; return m; }   /* LKHV: the Links row under the pointer; HUDTC: names in their level's color instead of a dot (0.8.284, Nick) */
-/* the Links HUD follows whichever editor you're in (0.9.23, Nick: "If I click on the support note, the HUD should update. If I click on the primary note, it should update"):
+  LKG = { i, n: list.length, rj: RADJ, m }; return m; }   /* LKHV: the Links row under the pointer; HUDTC: names in their level's color instead of a dot (0.8.284) */
+/* the Links HUD follows whichever editor you're in (0.9.23):
    HUDI is the support note's note while it's the active one; -1 follows the pick (the primary note) */
 let HUDI = -1;
 const hsel = () => HUDI >= 0 && N[HUDI] ? HUDI : sel;
 function hudFollow(i){ const pI = EDS && EDS.left && EDS.left.path ? PIDX.get(EDS.left.path) : null, v = i == null || i === pI ? -1 : i; if (v === HUDI) return; HUDI = v;
   if (HOLOPAUSE && holoOn()) { /* the map holds still: it catches up when the pause ends */ }
   else if (focus >= 0) focusQuiet(v >= 0 ? v : (pI != null ? pI : sel));
-  else { const t_ = v >= 0 ? v : pI; if (t_ != null && t_ >= 0 && vis[t_] && t_ !== sel) { const h_ = HUDI; LIVEQ = true; try { select(t_, true); } finally { LIVEQ = false; } HUDI = h_; if (!holoOn() && typeof nudgeTo === "function") nudgeTo(t_); } }   /* outside Focus the map picks the active note quietly: its links light, the editors and tabs stay (0.9.37, Nick) */
+  else { const t_ = v >= 0 ? v : pI; if (t_ != null && t_ >= 0 && vis[t_] && t_ !== sel) { const h_ = HUDI; LIVEQ = true; try { select(t_, true); } finally { LIVEQ = false; } HUDI = h_; if (!holoOn() && typeof nudgeTo === "function") nudgeTo(t_); } }   /* outside Focus the map picks the active note quietly: its links light, the editors and tabs stay (0.9.37) */
   RECKEY = ""; try { recSync(); } catch (_) { /* not built yet */ } draw(); }
-/* in Focus, the focus follows the active note too (0.9.26, Nick: "I would like the background graph to show the support note's locally focused links"):
+/* in Focus, the focus follows the active note too (0.9.26):
    the graph regroups round it, and the primary note stays where it is */
 function focusQuiet(i, force){ if (i < 0 || focus < 0 || (focus === i && !force) || !N[i] || !visNoFocus(i)) return; focus = i; computeFocus(); const prev = sel; sel = i;
   relayout(true, false, (xs, ys) => (FZC && fzOn() ? closeTarget(xs, ys, i) : visTarget(xs, ys))); sel = prev; renderFocusBar(); syncFZ(); syncOrbs(); }
 const lkOn = () => { try { if (isPhone()) return false; if (view === "cockpit") return CK.c >= 0 && (CK.merged || []).length > 0;   /* the Starship's own list, always (0.8.289) */
   const h_ = hsel(); return HUDL && h_ >= 0 && (h_ !== sel || !!vis[sel]) && hudData(h_).list.length > 0; } catch (_) { return false; } };
-/* what the Links panel lists: the picked note's links on a map, or in the Starship the note you're at (0.8.289, Nick: "Starship map can integrate the new Recents/Links HUD") */
+/* what the Links panel lists: the picked note's links on a map, or in the Starship the note you're at (0.8.289) */
 const lkData = () => { if (view !== "cockpit") return hudData(hsel()); const lockI = (CK.items[CK.lock] || {}).i;
   return { ck: true, i: CK.c, v: (CK.merged || []).length + "/" + lockI + "/" + (CK.only || ""), list: CK.merged || [], inS: new Set(CK.inL), outS: new Set(CK.outL), upS: new Set(CK.upL || []), sc: CK.relS || new Map(), lock: lockI }; };
 function drawHudLinks(){ HUDBOX = null; if (view === "cockpit") { hudPv(-1); return; } const h_ = hsel(); if (!HUDL || h_ < 0 || (h_ === sel && !vis[sel]) || isPhone()) { hudTab(0); hudPv(-1); return; } const D_ = hudData(h_), n_ = D_.list.length; hudTab(n_); if (!n_ || HUDCOL) { hudPv(-1); return; }
   const c = cv.getBoundingClientRect(); if (LKEL && !LKEL.hidden) { const r = LKEL.getBoundingClientRect(); HUDBOX = [r.left - c.left, r.top - c.top, r.width, r.height]; }
   if (HUDHOV >= 0 && LKHV && LKHV.isConnected && vis[HUDHOV]) { const q = LKHV.getBoundingClientRect(); ctx.save(); ctx.globalAlpha = .6; ctx.strokeStyle = css.accent || css.ink || "#ddd"; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(q.left - c.left + 2, q.top + q.height / 2 - c.top); ctx.lineTo(sx(X[HUDHOV]), sy(Y[HUDHOV])); ctx.stroke(); ctx.restore(); } }
-/* ---------- Recent (0.8.235, Nick: "my absolute favorite base… the recent space"): the notes changed most lately, newest first, in the upper right,
+/* ---------- Recent (0.8.235): the notes changed most lately, newest first, in the upper right,
    in the HUD's own style (the same gentle arc, a hairline border round it). About ten show; the wheel scrolls on to thirty. A note's emoji (Display → Assign emojis,
    or the base column) leads its row, its age trails it. Click to open it as the primary note; the header tucks it away. Above the Links HUD when both are on */
-/* ---------- Recents (0.8.237, Nick: "my absolute favorite base… the recent space"; rethought so Links stays as it was): the notes changed most lately,
+/* ---------- Recents (0.8.237): the notes changed most lately,
    newest first, behind a tab on the map's right edge, above the Links tab. It opens a small panel (a hairline border, its own scroll): each row its emoji
    (a mini switch, on by default), its name and its age. Click a row to open it as the primary note (⌘ a new orb, Shift links it in); the panel stays open. */
 let TABCLR = pref("iv-tabclr", true) !== false;   /* the tucked HUD tabs follow the HUD's opacity (0.8.304; a Display switch since 0.8.309) */
 let RECN = Math.max(5, Math.min(50, +pref("iv-recn", 30) || 30)), RECHV = -1, RECHVEL = null;   /* how many Recents show (Display, 5–50, 0.8.244); the row under the pointer, for ⌘ previews */
-let RECW = +pref("iv-recw", 0) || 0, RECLAY = null, RECLT = 0;   /* RECLAY: lays the rows on the curve and draws the shape; re-run live while the edge is dragged (0.8.260) */   /* Recents width, dragged at its left edge (0.8.257, Nick); 0 = as wide as its names */
-const RECEFRONT = true, RECLEFT = true; let RECAGE = pref("iv-recage", true) !== false, RECOP = (() => { const v = +pref("iv-recop", 0); return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;   /* new users start at 0% (0.8.329, Nick) */ })();   /* down to 0% (0.8.283, Nick) */   /* RECOP: Recents' background opacity, % (Display, 0.8.269) */   /* RECAGE: show how long ago each was changed (Display, 0.8.266) */   /* emoji first, titles left-aligned: the way Recents reads now (0.8.263, Nick); the switches are gone */   /* RECLEFT: titles left-aligned, so the emojis line up (still on the curve) (0.8.255, Nick) */   /* Recents: the emoji before the name and the age at the end (0.8.246, Nick, to try) */
-let RECON = pref("iv-recent", true) !== false, RECOPEN = pref("iv-recopen", false) === true, RECEMO = pref("iv-recemo", true) !== false, RECV = 0, RECC = { v: "", list: [] }, RECEL = null, LKEL = null, RECPH = 0, RECPOS = "", RECROWS = Math.max(5, Math.min(20, +pref("iv-recrows", 10) || 10)),   /* how many Recents show above Links: 10 to start, 5 to 20 (0.8.290, Nick; 10 by default since 0.8.291) */ RECTAB = null, RECKEY = "";
+let RECW = +pref("iv-recw", 0) || 0, RECLAY = null, RECLT = 0;   /* RECLAY: lays the rows on the curve and draws the shape; re-run live while the edge is dragged (0.8.260) */   /* Recents width, dragged at its left edge (0.8.257); 0 = as wide as its names */
+const RECEFRONT = true, RECLEFT = true; let RECAGE = pref("iv-recage", true) !== false, RECOP = (() => { const v = +pref("iv-recop", 0); return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;   /* new users start at 0% (0.8.329) */ })();   /* down to 0% (0.8.283) */   /* RECOP: Recents' background opacity, % (Display, 0.8.269) */   /* RECAGE: show how long ago each was changed (Display, 0.8.266) */   /* emoji first, titles left-aligned: the way Recents reads now (0.8.263); the switches are gone */   /* RECLEFT: titles left-aligned, so the emojis line up (still on the curve) (0.8.255) */   /* Recents: the emoji before the name and the age at the end (0.8.246) */
+let RECON = pref("iv-recent", true) !== false, RECOPEN = pref("iv-recopen", false) === true, RECEMO = pref("iv-recemo", true) !== false, RECV = 0, RECC = { v: "", list: [] }, RECEL = null, LKEL = null, RECPH = 0, RECPOS = "", RECROWS = Math.max(5, Math.min(20, +pref("iv-recrows", 10) || 10)),   /* how many Recents show above Links: 10 to start, 5 to 20 (0.8.290) */ RECTAB = null, RECKEY = "";
 const ago = ms => { const s_ = Math.max(0, (Date.now() - ms) / 1000); return s_ < 60 ? "now" : s_ < 3600 ? Math.floor(s_ / 60) + "m" : s_ < 86400 ? Math.floor(s_ / 3600) + "h" : s_ < 86400 * 30 ? Math.floor(s_ / 86400) + "d" : s_ < 86400 * 365 ? Math.floor(s_ / 86400 / 30) + "mo" : Math.floor(s_ / 86400 / 365) + "y"; };
 function recList(){ const key = RECV + ":" + VISV + ":" + RECN; if (RECC.v === key) return RECC.list; const L = []; for (let i = 0; i < n; i++) if (vis[i] && N[i].mt > 0 && !ARCH[i]) L.push(i);
   L.sort((a, b) => N[b].mt - N[a].mt); RECC = { v: key, list: L.slice(0, RECN) }; return RECC.list; }
 const recEmoji = i => { if (!RECEMO || !EMOI || !EMOI[i]) return ""; return EMOI[i]; };   /* a leading emoji in the name is the emoji now, shown once (0.9.102) */
 const recName = (i, em) => { const m_ = em ? LEAD_EMO.exec(N[i].title) : null; return m_ ? N[i].title.slice(m_[0].length) : N[i].title; };
-/* Recents and Links rows drag like files from Obsidian's list (0.9.73, Nick): onto the Holodeck's tabs, the primary or the support note */
+/* Recents and Links rows drag like files from Obsidian's list (0.9.73): onto the Holodeck's tabs, the primary or the support note */
 function hudDrag(r, j){ if (!host.dragNote || !N[j]) return; r.draggable = true; r.addEventListener("dragstart", e => { e.stopPropagation(); if (!host.dragNote(e, N[j].path)) e.preventDefault(); RECHV = -1; RECHVEL = null; try { recPv(); } catch (_) { /* no preview */ } }); }
 function recBuild(){ if (RECEL) return; const st = e => e.stopPropagation();
   RECTAB = $("#main").createEl("button", { cls: "dtab rectab", attr: { type: "button" } }); RECTAB.hidden = true; RECTAB.addEventListener("pointerdown", st); RECTAB.onclick = e => { e.stopPropagation(); recSetOpen(!recIsOpen()); RECKEY = ""; recSync(); };
   RECEL = $("#main").createDiv({ cls: "ivm-recents" }); RECEL.hidden = true;
-  /* Links is its own panel since 0.8.287 (Nick: "I wouldn't mind if Recents and Links were not physically connected, but if Links just followed the same arc and stayed a little lower"):
+  /* Links is its own panel since 0.8.287:
      two panels on one arc down the right edge, the same width and right edge, Links always in its own slot below Recents */
   LKEL = $("#main").createDiv({ cls: "ivm-recents ivm-lkhud" }); LKEL.hidden = true;
   for (const P of [RECEL, LKEL]) { for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) P.addEventListener(ty, st);
-    /* a click anywhere on a panel that isn't a note, a switch or the edge grip tucks that panel away, as a click on an editor's header does (0.8.258, Nick) */
+    /* a click anywhere on a panel that isn't a note, a switch or the edge grip tucks that panel away, as a click on an editor's header does (0.8.258) */
     P.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest(".rcr, label, input, button, .rcgrip, .rcvgrip")) return; e.stopPropagation(); if (P === LKEL) hudCol(true); else recSetOpen(false); RECKEY = ""; recSync(); }, true); } }
-/* a hidden grip along Recents' bottom edge while Links is below it (0.8.290, Nick: "a hidden grab point to expand the recents HUD downward… only double the vertical length at max"):
+/* a hidden grip along Recents' bottom edge while Links is below it (0.8.290):
    drag down for more notes (7 to 14), Links slides down to keep its place under it; double-click for 7 again */
 function recVGrip(){ const gr = RECEL.createDiv({ cls: "rcvgrip" }); let d_ = null;
   gr.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); gr.setPointerCapture(e.pointerId); d_ = { y: e.clientY, n: RECROWS }; RECEL.classList.add("resizing"); });
@@ -5417,7 +5414,7 @@ function recVGrip(){ const gr = RECEL.createDiv({ cls: "rcvgrip" }); let d_ = nu
   const up = () => { if (!d_) return; d_ = null; RECEL.classList.remove("resizing"); save("iv-recrows", RECROWS); };
   gr.addEventListener("pointerup", up); gr.addEventListener("pointercancel", up);
   gr.addEventListener("dblclick", e => { e.stopPropagation(); RECROWS = 10; save("iv-recrows", 10); RECEL.setCssProps({ "--rcrows": "10" }); if (RECLAY) RECLAY(); }); }
-/* the left-edge grip: drag to widen or narrow Recents (0.8.257, Nick); double-click for its own width again */
+/* the left-edge grip: drag to widen or narrow Recents (0.8.257); double-click for its own width again */
 function recGrip(P){ const gr = P.createDiv({ cls: "rcgrip" }); let d_ = null;
   gr.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); gr.setPointerCapture(e.pointerId); d_ = { x: e.clientX, w: P.getBoundingClientRect().width }; P.classList.add("resizing"); });
   gr.addEventListener("pointermove", e => { if (!d_) return; RECW = Math.round(Math.max(180, Math.min(640, d_.w + (d_.x - e.clientX)))); for (const Q of [RECEL, LKEL]) { Q.setCssProps({ "--rcw": RECW + "px" }); Q.classList.add("sized"); Q.classList.toggle("narrow", RECW < 250); } if (!RECLT) RECLT = win.requestAnimationFrame(() => { RECLT = 0; if (RECLAY) RECLAY(); }); });   /* the shape and the rows follow the edge as you drag, not after */
@@ -5426,15 +5423,15 @@ function recGrip(P){ const gr = P.createDiv({ cls: "rcgrip" }); let d_ = null;
   gr.addEventListener("dblclick", e => { e.stopPropagation(); RECW = 0; save("iv-recw", 0); for (const Q of [RECEL, LKEL]) Q.classList.remove("sized"); RECKEY = ""; recSync(); }); }
 function recPv(){ if (RECHV < 0 || !RECHVEL || !(CMDK || HUDPV || SHIPPV)) { if (!(HUDHOV >= 0) && !(CMDK && hover >= 0)) hudPv(-1); return; } const c = cv.getBoundingClientRect(), r = RECHVEL.getBoundingClientRect(), pe = (RECHVEL.closest(".ivm-recents") || RECEL).getBoundingClientRect();
   hudPv(RECHV, pe.left - c.left - 6, r.top + r.height / 2 - c.top, true); }
-/* in the Starship it's its own: always starts tucked away, and opening it there doesn't change the map's (0.8.273, Nick) */
+/* in the Starship it's its own: always starts tucked away, and opening it there doesn't change the map's (0.8.273) */
 const recIsOpen = () => view === "cockpit" ? RECCK : RECOPEN, recSetOpen = v => { if (view === "cockpit") RECCK = v; else { RECOPEN = v; save("iv-recopen", v); } };
 function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.classList && ae_.classList.contains("lkq")); } recBuild(); const on = RECON && !isPhone() && (view === "cockpit" || edOn()); let R_ = 0; try { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); R_ = Math.max(0, Math.round(mr.right - c.right + sideW())); } catch (_) { /* not laid out yet */ }
-  /* two panels on one arc (0.8.287, Nick): Recents, and Links below it in its own slot; either tucks to its own tab and the other stays where it is */
+  /* two panels on one arc (0.8.287): Recents, and Links below it in its own slot; either tucks to its own tab and the other stays where it is */
   const recShow = on && recIsOpen(), lkShow = lkOn() && !HUDCOL, both = recShow && lkShow;
   RECTAB.hidden = !on || recIsOpen(); RECEL.hidden = !recShow; LKEL.hidden = !lkShow;
   for (const P of [RECTAB, RECEL, LKEL]) P.setCssProps({ "--hr": R_ + "px" }); root.setCssProps({ "--rcop": RECOP + "%" }); root.classList.toggle("tabclr", TABCLR);   /* the HUD tabs share the panels' opacity (0.8.304), when See-through tabs is on */
-  /* where they sit: Recents alone near the top (as Nick liked it); with Links, a little lower, out of the corner. Links always in the same slot, just under where Recents
-     ends when it's showing 7 notes, so it never moves when Recents tucks away (0.8.286/0.8.287, Nick: "the links are always going to be a little bit lower on the right-hand side") */
+  /* where they sit: Recents alone near the top; with Links, a little lower, out of the corner. Links always in the same slot, just under where Recents
+     ends when it's showing 7 notes, so it never moves when Recents tucks away (0.8.286/0.8.287) */
   const Hm = $("#main").clientHeight || 800, rTop = both ? Math.max(44, Math.round(Hm * .075)) : 50, lTop = Math.max(44, Math.round(Hm * .075)) + (RECPH || 190) + 4;
   RECEL.classList.toggle("paired", both); RECEL.setCssProps({ "--rct": rTop + "px" }); LKEL.setCssProps({ "--lkt": lTop + "px" });
   if (on && !recIsOpen()) { const t_ = `‹  Recents`; if (RECTAB.textContent !== t_) RECTAB.setText(t_); }
@@ -5447,27 +5444,27 @@ function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.cla
   let hd = null, box = null; const LH = 17.5;
   if (recShow) {
   hd = RECEL.createDiv({ cls: "rch cardhd-tuck" }); hd.createSpan({ cls: "rct", text: `RECENTS · ${L.length}` });
-  /* tucks away as the editors do (0.8.242, Nick: "we already have specs"): a click on its header (not on the switch) or on ›, and it waits as a tab on the edge */
+  /* tucks away as the editors do (0.8.242): a click on its header (not on the switch) or on ›, and it waits as a tab on the edge */
   hd.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest("label, input, button")) return; e.stopPropagation(); recSetOpen(false); RECKEY = ""; recSync(); });
-  /* the Emojis switch lives in Display now (0.8.270, Nick) */
+  /* the Emojis switch lives in Display now (0.8.270) */
   const x = hd.createEl("button", { cls: "rcx", text: "›", attr: { type: "button", "aria-description": "Tuck Recents away" } }); x.onclick = e => { e.stopPropagation(); recSetOpen(false); RECKEY = ""; recSync(); };
   box = RECEL.createDiv({ cls: "rcl rcrec" + (RECLEFT ? " rcleft" : "") });
   { let sr = 0; box.addEventListener("scroll", () => { if (!sr) sr = win.requestAnimationFrame(() => { sr = 0; if (RECLAY) RECLAY(); }); }, { passive: true }); }   /* scrolled rows re-take the curve */
-  /* laid out as Links is (0.8.239, Nick): 11px names on 14.5px rows, right-aligned, the age where Links shows its score, the emoji (or dot) at the end,
+  /* laid out as Links is (0.8.239): 11px names on 14.5px rows, right-aligned, the age where Links shows its score, the emoji (or dot) at the end,
      and the rows bowed along the same gentle arc, tilting a little toward the top and bottom */
-  const nR = L.length, RY = Math.max(420, nR * LH * .9),   /* the arc opens up as the list grows, so more notes never crowd it (0.8.247) */ mid = (Math.min(nR, 24) - 1) / 2;   /* gentler (0.8.241, Nick: "a little bit less curve, not as tight"): Links' own radius rule, a little wider still */
+  const nR = L.length, RY = Math.max(420, nR * LH * .9),   /* the arc opens up as the list grows, so more notes never crowd it (0.8.247) */ mid = (Math.min(nR, 24) - 1) / 2;   /* gentler (0.8.241): Links' own radius rule, a little wider still */
   L.forEach((j, r_) => { const r = box.createEl("button", { cls: "rcr" + (j === sel ? " on" : ""), attr: { type: "button" } }), em = recEmoji(j);
     const u = Math.max(-1, Math.min(1, (r_ - mid) * LH / RY)); r.setCssProps({ "--rx": (-60 * (1 - Math.sqrt(1 - u * u))).toFixed(1) + "px", "--rr": (Math.asin(u) * .25).toFixed(4) + "rad" });
     const mark = () => { if (em) r.createSpan({ cls: "rce", text: em }); else { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": N[j].level >= 3 ? GRAD[N[j].level][0] : N[j].level === 2 ? css.l2 : css.l1 }); } };
     if (RECEFRONT) { mark(); r.createSpan({ cls: "rcn", text: recName(j, em) }); if (RECAGE) r.createSpan({ cls: "rca", text: ago(N[j].mt) }); }
     else { r.createSpan({ cls: "rca", text: ago(N[j].mt) }); r.createSpan({ cls: "rcn", text: recName(j, em) }); mark(); }
     r.onclick = e => { e.stopPropagation(); if (shiftLink(j, e)) return; if (openKind(e)) { openAs(j, openKind(e)); return; } navTo(j); toEditor(j); RECKEY = ""; }; hudDrag(r, j);
-    /* hold ⌘ over a row for its mini preview, as on Links (0.8.244, Nick); with "Automatically see mini-preview on hover" on, it shows on hover alone */
+    /* hold ⌘ over a row for its mini preview, as on Links (0.8.244); with "Automatically see mini-preview on hover" on, it shows on hover alone */
     r.addEventListener("pointerenter", () => { RECHV = j; RECHVEL = r; recPv(); }); r.addEventListener("pointerleave", () => { if (RECHV === j) { RECHV = -1; RECHVEL = null; recPv(); } }); }); }
   /* Links, the second section (0.8.284): each linked note once (← in, → out, ↔ both), up links first, then by relevance. A row is the arrow, the name in its level's color
      (or a dot, Display → HUD links → Colored names) and its relevance score where Recents shows the age. Hover draws a line to its note; click goes there (⌘ support note, Shift a new orb) */
   let lhd = null, lbox = null;
-  if (lkShow) { const n_ = D_.list.length + (D_.i >= 0 ? collOf(D_.i, true).filter(j => !D_.list.includes(j) && vis[j]).length : 0),   /* collections count too (0.9.70, Nick): every row in the panel is a link */ SL = (() => { try { return SPACELINK(); } catch (_) { return {}; } })(), ink = css.ink || "#ddd";
+  if (lkShow) { const n_ = D_.list.length + (D_.i >= 0 ? collOf(D_.i, true).filter(j => !D_.list.includes(j) && vis[j]).length : 0),   /* collections count too (0.9.70): every row in the panel is a link */ SL = (() => { try { return SPACELINK(); } catch (_) { return {}; } })(), ink = css.ink || "#ddd";
     lhd = LKEL.createDiv({ cls: "rch lkh cardhd-tuck" }); const lct = lhd.createSpan({ cls: "rct", text: `LINKS · ${n_}` });
     const lsb = lhd.createEl("button", { cls: "lksb", attr: { type: "button", "aria-description": "Search these links" } }); setIcon(lsb, "search"); lsb.toggleClass("on", LKQOPEN);
     let lqi = null; if (LKQOPEN) { lqi = lhd.createEl("input", { cls: "lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); lqi.value = LKQ; } else lhd.createDiv({ cls: "lksp" });
@@ -5490,10 +5487,10 @@ function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.cla
     { let sr = 0; lbox.addEventListener("scroll", () => { if (!sr) sr = win.requestAnimationFrame(() => { sr = 0; if (RECLAY) RECLAY(); }); }, { passive: true }); }
     const G_ = HUDGRP ? lkGroups(D_.i, D_.list) : new Map(), order = [...D_.list.filter(j => !G_.has(j))], groups = new Map();
     for (const j of D_.list) if (G_.has(j)) { const g_ = G_.get(j); if (!groups.has(g_)) groups.set(g_, []); groups.get(g_).push(j); }
-    /* this note's own collections, as the first coral group (0.8.299, Nick: Sources belongs in Groundhog Day's Links); a collection that's also a written link stays there */
+    /* this note's own collections, as the first coral group (0.8.299); a collection that's also a written link stays there */
     { const cI = D_.i, ck_ = (host.collectionKeys ? host.collectionKeys()[0] : "") || "collections", ex = cI >= 0 ? collOf(cI, true).filter(j => !D_.list.includes(j) && vis[j]) : [];
       if (ex.length) { const g0 = "→ " + ck_, rest = [...groups]; groups.clear(); groups.set(g0, ex); for (const [k_, v_] of rest) groups.set(k_, v_); } }
-    /* this note's own property links (→) above other notes' properties pointing back (←), each side in its usual order (0.8.316, Nick: groupPeople above by) */
+    /* this note's own property links (→) above other notes' properties pointing back (←), each side in its usual order (0.8.316) */
     /* the order (0.9.115): Relevance as before; Idea Emergence highest level first, then link score, the picked note in its place; Relative Emergence in UP, RELATED, ABOVE, BELOW with the picked note between */
     const GCOLL0 = "→ " + ((host.collectionKeys ? host.collectionKeys()[0] : "") || "collections");
     const pI = D_.i, lvS = j => [N[j] ? N[j].level || 0 : 0, N[j] ? N[j].score || 0 : 0], segs = [];
@@ -5502,7 +5499,7 @@ function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.cla
     else { const kd = j => { const a = EKIND.get(pI * n + j); if (a === 1) return "upp"; if (a === 4) return "rel"; try { return upOf(pI, j) ? "up" : "down"; } catch (_) { return "down"; } };
       for (const [k, lab] of [["upp", "UP"], ["rel", "RELATED"], ["up", "ABOVE"]]) { const js = order.filter(j => kd(j) === k); if (js.length) segs.push(["@h:" + lab, js]); }
       segs.push(["@here", []]); { const js = order.filter(j => kd(j) === "down"); if (js.length) segs.push(["@h:BELOW", js]); } }
-    /* Emergence is one clean list: property groups and collections join it (0.9.116, Nick; the pane does the same) */
+    /* Emergence is one clean list: property groups and collections join it (0.9.116) */
     const collJ = new Set(); if (HUDSORT === "lvl" && pI >= 0) { const extra = []; for (const [g_, js] of groups) for (const j of js) if (!extra.includes(j)) { extra.push(j); if (g_ === GCOLL0) collJ.add(j); } groups.clear();
       const all = [...segs[0][1], ...segs[2][1], ...extra].sort((a, b) => { const A = lvS(a), B = lvS(b); return B[0] - A[0] || B[1] - A[1]; }), me = lvS(pI), k = all.findIndex(j => { const A = lvS(j); return A[0] < me[0] || (A[0] === me[0] && A[1] < me[1]); }), cut = k < 0 ? all.length : k; segs[0][1] = all.slice(0, cut); segs[2][1] = all.slice(cut); }
     const rowsFor = [...segs, ...[...groups].filter(([g_]) => g_[0] === "→"), ...[...groups].filter(([g_]) => g_[0] !== "→")];
@@ -5511,18 +5508,18 @@ function recSync(){ { const ae_ = doc.activeElement; RECLKQF = !!(ae_ && ae_.cla
     for (const [g0_, js] of rowsFor) { let g_ = g0_;
       if (g_ === "@here") { const h_ = lbox.createDiv({ cls: "lkg lkhere" }); h_.createSpan({ cls: "lkht", text: N[pI].title }); if (HUDLSC) { const v = +(N[pI].score || 0); h_.createSpan({ cls: "lks", text: v.toFixed(v < 10 ? 1 : 0) }); } continue; }   /* the picked note itself, in its own pill */
       if (g_ && g_.startsWith("@h:")) { const h_ = lbox.createDiv({ cls: "lkg lkgh" }); h_.createSpan({ text: g_.slice(3) }); h_.createSpan({ cls: "lkgn", text: String(js.length) }); g_ = null; }   /* a Relative Emergence header, the quiet number after it */
-      if (g_) { const fo = LKFOLD[g_] === true, gh = lbox.createEl("button", { cls: "lkg", attr: { type: "button" } }); gh.setCssProps({ "--lgc": g_ === GCOLL_ && COLLON ? collCoral() : css.prop }); gh.createSpan({ text: `${g_.slice(2).toUpperCase()} · ${js.length}  ${fo ? "▸" : "▾"}` });   /* the name first, its fold arrow after; each row carries its own → or ← (0.8.307, Nick) */
+      if (g_) { const fo = LKFOLD[g_] === true, gh = lbox.createEl("button", { cls: "lkg", attr: { type: "button" } }); gh.setCssProps({ "--lgc": g_ === GCOLL_ && COLLON ? collCoral() : css.prop }); gh.createSpan({ text: `${g_.slice(2).toUpperCase()} · ${js.length}  ${fo ? "▸" : "▾"}` });   /* the name first, its fold arrow after; each row carries its own → or ← (0.8.307) */
         gh.onclick = e => { e.stopPropagation(); if (LKFOLD[g_]) delete LKFOLD[g_]; else LKFOLD[g_] = true; save("iv-lkfold", LKFOLD); RECKEY = ""; recSync(); }; if (fo && !LKQ.trim()) continue; }   /* a property's group folds, remembered (0.8.297) */
     for (const j of js) { if (!N[j]) continue; const dimJ = D_.ck && CK.only ? !(CK.only === "in" ? D_.inS.has(j) : D_.outS.has(j)) : false;   /* the Starship's F / R scopes dim the other side */
       const r = lbox.createEl("button", { cls: "rcr lkr" + (D_.ck && j === D_.lock ? " on" : "") + (dimJ ? " dim" : ""), attr: { type: "button", "data-q": N[j].title.toLowerCase() } }); hudDrag(r, j);
-      /* each name in the color of its line, map or Starship: up gold, related purple, above blue, below green (0.8.301, Nick: Forgetting curve was blue here, green on the map) */
+      /* each name in the color of its line, map or Starship: up gold, related purple, above blue, below green (0.8.301) */
       const col = (D_.ck ? (SL[CK.kind.get(j) || "prop"] || (CK.SL || {})[CK.kind.get(j) || "prop"]) : (() => { try { return edgeColor(D_.i, j, upOf(D_.i, j)); } catch (_) { return ""; } })()) || ink;
       if (HUDORB) { const L_ = N[j].level || 1, o_ = r.createSpan({ cls: "lkorb lv" + L_ }), g2 = LVGRAD[L_]; o_.setCssProps({ "--o0": g2 ? g2[0] : L_ === 2 ? css.l2 : css.l1, "--o1": g2 ? g2[1] : L_ === 2 ? css.l2 : css.l1 }); }   /* the Holodeck tab's orb in place of the dot (0.9.115) */
       else if (!HUDTC) { const d_ = r.createSpan({ cls: "rcd" }); d_.setCssProps({ "--dc": col }); }
       if (HUDUNQ && !(D_.inS.has(j) && !D_.outS.has(j))) r.classList.add("unqdim");   /* Show unrequited notes: the rest step back (0.9.115) */
       if (HUDARR) r.createSpan({ cls: "lka", text: g_ ? g_[0] : D_.inS.has(j) && D_.outS.has(j) ? "↔" : D_.inS.has(j) ? "←" : "→" });
       let emL = null; if (HUDEMO && EMOI && EMOI[j]) { emL = LEAD_EMO.exec(N[j].title); const e_ = r.createSpan({ cls: "rce" + (emL ? " rceown" : ""), text: EMOI[j] }); void e_; }   /* emojis on Links rows, the file name's own with a dot (0.9.115) */
-      const nm = r.createSpan({ cls: "rcn" + (HUDTC || g_ || collJ.has(j) ? " lkc" : ""), text: emL ? N[j].title.slice(emL[0].length) : N[j].title }); if (g_) nm.setCssProps({ "--lc": g_ === GCOLL_ && COLLON ? collCoral() : css.prop });   /* other properties in slate, as on the map; collections coral only with the switch (0.8.354, Nick) */ else if (collJ.has(j)) nm.setCssProps({ "--lc": COLLON ? collCoral() : css.prop }); else if (HUDTC) nm.setCssProps({ "--lc": col });
+      const nm = r.createSpan({ cls: "rcn" + (HUDTC || g_ || collJ.has(j) ? " lkc" : ""), text: emL ? N[j].title.slice(emL[0].length) : N[j].title }); if (g_) nm.setCssProps({ "--lc": g_ === GCOLL_ && COLLON ? collCoral() : css.prop });   /* other properties in slate, as on the map; collections coral only with the switch (0.8.354) */ else if (collJ.has(j)) nm.setCssProps({ "--lc": COLLON ? collCoral() : css.prop }); else if (HUDTC) nm.setCssProps({ "--lc": col });
       if (HUDLSC && HUDSORT !== "rel") { const v = +(N[j].score || 0); r.createSpan({ cls: "rca lks", text: v.toFixed(v < 10 ? 1 : 0) }); }   /* link score in place of relevance (0.9.115) */
       else if (HUDR && D_.sc.has(j)) r.createSpan({ cls: "rca lks", text: String(D_.sc.get(j)) });
       /* in the Starship a click locks onto that note's panel, a second click flies there, as its own list did */
@@ -5567,12 +5564,12 @@ function layPanel(P, hd, box, LH){ if (!P || P.hidden) return; const w = P.clien
   hd.setCssProps({ "--rx": "0px", "--rpl": (xl(yTL) + 10).toFixed(1) + "px", "--rpr": Math.max(0, w - xrr(yTR) - 4).toFixed(1) + "px", "--rh": aT.toFixed(4) + "rad" }); }
 if (RECON && RECEMO && !EMOI) void loadEmo().then(() => { RECKEY = ""; if (!dead) recSync(); });
 /* Links' rows are buttons in the Recents panel now (0.8.284): the map's own pointer and wheel handlers for them are gone */
-// ---------- Contrails (0.8.56, Nick): a breadcrumb trail you can see, subtle ----------
+// ---------- Contrails (0.8.56): a breadcrumb trail you can see, subtle ----------
 // Each jump from one note to the next draws itself along a gentle arc (a small rocket can fly it: Display → Contrails → Rocket), leaving a vapor trail: a bright thin core inside a soft
 // cloud that widens, breaks into puffs and fades a step with each jump after it. The last 10 jumps stay. Display → Contrails.
-let CTRON = pref("iv-ctr", false) === true, CTRSHIP = ["rocket", "star", "none"].includes(pref("iv-ctrship", "")) ? pref("iv-ctrship", "") : pref("iv-ctrrk", false) === true ? "rocket" : "none";   /* what flies each leg: nothing, the rocket, or the starship (0.8.198) */ const CTR = [], CTR_FLY = 1300;   // CTRRK: a small rocket flies each new leg (Nick: a mini-mini switch, off)
+let CTRON = pref("iv-ctr", false) === true, CTRSHIP = ["rocket", "star", "none"].includes(pref("iv-ctrship", "")) ? pref("iv-ctrship", "") : pref("iv-ctrrk", false) === true ? "rocket" : "none";   /* what flies each leg: nothing, the rocket, or the starship (0.8.198) */ const CTR = [], CTR_FLY = 1300;   // CTRRK: a small rocket flies each new leg
 function ctrHop(a, b){ if (!CTRON || a === b) return; CTR.push({ a, b, t: performance.now(), s: hash(N[a].path + N[b].path, 7) }); if (CTR.length > 10) CTR.shift(); draw(); }
-/* an original starship (0.8.198; this first draft restored in 0.8.201, Nick liked it better): a long dart of a hull, two engine pods on short struts with blue glows, a bridge light and blinking running lights */
+/* an original starship (0.8.198): a long dart of a hull, two engine pods on short struts with blue glows, a bridge light and blinking running lights */
 function drawStarship(px, py, ang, alpha, dark){ const t = performance.now() / 1000; ctx.save(); ctx.translate(px, py); ctx.rotate(ang); ctx.scale(1.25, 1.25); ctx.globalAlpha = alpha;
   for (const sy_ of [-3.6, 3.6]) { const g = ctx.createRadialGradient(-8, sy_, 0, -8, sy_, 6 + Math.sin(t * 20 + sy_) * .6); g.addColorStop(0, "rgba(140,220,255,.95)"); g.addColorStop(1, "rgba(80,160,255,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(-8, sy_, 7, 0, 6.2832); ctx.fill(); }   /* engine glow */
   const hull = dark ? "#e9edf8" : "#3b4160", trim = dark ? "#9aa6c4" : "#6b7396";
@@ -5592,7 +5589,7 @@ function drawContrails(){ if (!CTRON || !CTR.length) return; const now = perform
     const x1 = sx(X[a]), y1 = sy(Y[a]), x2 = sx(X[b]), y2 = sy(Y[b]), dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy); if (len < 4) return;
     const bend = (c.s - .5) * .5 + .18, cx = (x1 + x2) / 2 - dy * bend, cy = (y1 + y2) / 2 + dx * bend;   // a gentle arc, its own for each hop
     const pt = u => { const m = 1 - u; return [m*m*x1 + 2*m*u*cx + u*u*x2, m*m*y1 + 2*m*u*cy + u*u*y2]; };
-    // each jump since fades it a step further and spreads its cloud (0.8.59, Nick: per jump, not over time)
+    // each jump since fades it a step further and spreads its cloud (0.8.59)
     const back = CTR.length - 1 - q, fly = Math.min(1, age / CTR_FLY), e = 1 - Math.pow(1 - fly, 3), fade = Math.pow(.68, back);
     if (fly < 1) busy = true;
     const steps = Math.max(8, Math.round(len / 6)), upto = Math.max(1, Math.round(steps * e));
@@ -5615,7 +5612,7 @@ function drawContrails(){ if (!CTRON || !CTR.length) return; const now = perform
       ctx.restore(); } });
   ctx.restore(); if (busy) draw(); }
 
-// Hover labels (0.8.50, Nick: match the orbs' small label, not Obsidian's tooltip). Obsidian draws its own tooltip for anything with an
+// Hover labels (0.8.50). Obsidian draws its own tooltip for anything with an
 // aria-label, so the toolbar's and zoom buttons' labels move to data-tip (and a hidden span, for screen readers) and one small label of ours shows
 // on hover. To go back to Obsidian's tooltips, set HTIP to false.
 const HTIP = true;
@@ -5635,7 +5632,7 @@ if (HTIP) { const tipEl = root.createDiv({ cls: "ivm-htip" }); tipEl.hidden = tr
       tipEl.style.left = Math.round(below ? x : r.left - rr.left - w - 8) + "px"; tipEl.style.top = Math.round(y) + "px"; }, 380); });
   root.addEventListener("pointerout", e => { const t = e.target instanceof Element ? e.target.closest("[data-tip]") : null; if (t && !(e.relatedTarget instanceof Node && t.contains(e.relatedTarget))) hide(); });
   root.addEventListener("pointerdown", hide, true); }
-// Arena (0.8.44, Nick: "it's so nice, I think we need a special button for it"): put the note at the centre on the ring, in the next empty slot
+// Arena (0.8.44): put the note at the centre on the ring, in the next empty slot
 { const b = doc.createElement("button"); b.id = "arbtn"; b.type = "button"; b.className = "arbtn"; b.hidden = true; b.setAttribute("aria-label", "Put the centre note on the ring"); $("#zfit").after(b);
   b.onclick = e => { e.stopPropagation(); arenaRing(); }; }
 { const b = doc.createElement("button"); b.id = "fzbtn"; b.type = "button"; b.className = "fzbtn"; b.hidden = true; $("#zfit").after(b); b.onclick = e => { e.stopPropagation(); setFZ(!FZC); }; }
@@ -5654,7 +5651,7 @@ $("#alllinks").onclick = e => { showAll = !showAll; e.currentTarget.setAttribute
 // ---------- drawer ----------
 const drawer = $("#drawer");
 // the note panel can tuck away to a tab on the right edge (like the legend); the note stays selected
-/* the note panel is retired on a computer (0.8.238, Nick: "I'm eager to get rid of the note panel"): the primary note's strip and score list hold what it held,
+/* the note panel is retired on a computer (0.8.238): the primary note's strip and score list hold what it held,
    and Focus moved to the strip. It stays on phones, where the primary note editor doesn't open */
 const NOPANEL = () => !isPhone();
 let drawerCollapsed = NOPANEL() || pref("iv-dcol", false) === true;
@@ -5686,7 +5683,7 @@ function addTrailGrip(el){
   const stop = () => { if (!on) return; on = false; g.classList.remove("on"); save("iv-tpad", trailPad); };
   g.addEventListener("pointerup", stop); g.addEventListener("pointercancel", stop);
   g.addEventListener("dblclick", () => { setTrailPad(0); save("iv-tpad", 0); }); }
-/* the trail tucks away like the top bar (0.8.305, Nick): a chevron left of "Trail" tucks it, and a small tab in that same spot brings it back; your zoom and place stay */
+/* the trail tucks away like the top bar (0.8.305): a chevron left of "Trail" tucks it, and a small tab in that same spot brings it back; your zoom and place stay */
 let TRCOL = pref("iv-trcol", false) === true, TRTAB = null;
 function trailCol(c){ const t0 = cv.getBoundingClientRect().top, l0 = cv.getBoundingClientRect().left, tx0 = tx, ty0 = ty; TRCOL = c; save("iv-trcol", c); renderTrail();
   win.setTimeout(() => { resize(); const r = cv.getBoundingClientRect(); tx = tx0 + (l0 - r.left); ty = ty0 + (t0 - r.top); draw(); }, 30); }
@@ -5716,19 +5713,19 @@ function renderTrail(){
 // ---------- Edit mode (experimental, the road to 1.0): edit notes right on the map ----------
 // Two editors, each a real Obsidian editor (host.editCard): the main one on the left side (the centre card is gone since 0.8.195);
 // and a support note on the right for any note you ⌘-click. One theme and one opacity for all three. Starfield first, Emergence as the stress test.
-let EDITM = !host.embed && pref("iv-editm", true) !== false,   /* Display → Edit mode turns it off for anyone who just wants the maps (0.9.18, Nick) */   /* Edit mode is how the map works now (0.8.214, Nick): always on, the switch is gone; an embed keeps its editors closed */ HUBPV = pref("iv-hubpv", false) === true;
-// how many mini previews: Starfield's biggest hubs and Compass's closest notes. 0.8.48 (Nick): Fewer, Natural or Max, never a free number,
+let EDITM = !host.embed && pref("iv-editm", true) !== false,   /* Display → Edit mode turns it off for anyone who just wants the maps (0.9.18) */   /* Edit mode is how the map works now (0.8.214): always on, the switch is gone; an embed keeps its editors closed */ HUBPV = pref("iv-hubpv", false) === true;
+// how many mini previews: Starfield's biggest hubs and Compass's closest notes. 0.8.48: Fewer, Natural or Max, never a free number,
 // and one governor for both maps: a preview only shows where it covers no other preview, the note you're on, the orbs, the editors or the edges
-const PVL = { off: 0, one: 1, fewer: 3, natural: 6, max: 12 }, PVL_C = { off: 0, one: 1, fewer: 5, natural: 10, max: 18 };   /* One (0.8.355, Nick): a single preview, the biggest hub in view */   // Compass shows more: previews are its point (Nick, 0.8.57)
-let PVLV = (() => { const v = pref("iv-pvl", null); if (v && v in PVL) return v; const o = pref("iv-pvn", null); if (o == null) return "off";   /* new users start with no mini-previews (0.8.355, Nick) */ return o <= 0 ? "off" : o <= 3 ? "fewer" : o <= 7 ? "natural" : "max"; })();
+const PVL = { off: 0, one: 1, fewer: 3, natural: 6, max: 12 }, PVL_C = { off: 0, one: 1, fewer: 5, natural: 10, max: 18 };   /* One (0.8.355): a single preview, the biggest hub in view */   // Compass shows more: previews are its point
+let PVLV = (() => { const v = pref("iv-pvl", null); if (v && v in PVL) return v; const o = pref("iv-pvn", null); if (o == null) return "off";   /* new users start with no mini-previews (0.8.355) */ return o <= 0 ? "off" : o <= 3 ? "fewer" : o <= 7 ? "natural" : "max"; })();
 const PVN_ = () => PVL[PVLV];
 const CARDMAPS = new Set(["stars", "emergence", "spacetime", "compass", "arena"]);
 const edOn = () => EDITM && !!host.editCard && !isPhone();
-/* Holodeck (0.9.19, Nick: "transforms the space… still keeps us in map view"): the notes come forward and the map stays behind, quiet, still updating, not clickable.
+/* Holodeck (0.9.19): the notes come forward and the map stays behind, quiet, still updating, not clickable.
    The orb tabs become a column of tabs on the far left, and a tab you click opens just to the right of the primary note */
 let HOLO = pref("iv-holo", false) === true;
 const holoOn = () => HOLO && edOn() && view !== "cockpit" && !!EDS && !!EDS.left && !EDS.left.el.hidden;
-let HOLOTW = Math.max(130, Math.min(340, +pref("iv-holotw", 168) || 168));   /* the tab column's width, its gap included; dragged at its right edge (0.9.41, Nick) */
+let HOLOTW = Math.max(130, Math.min(340, +pref("iv-holotw", 168) || 168));   /* the tab column's width, its gap included; dragged at its right edge (0.9.41) */
 let holoGrip = null;
 function holoGripBuild(){ if (holoGrip) return; const g = $("#main").createDiv({ cls: "ivm-hologrip" }); g.hidden = true; let d_ = null;
   g.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); g.setPointerCapture(e.pointerId); d_ = { x: e.clientX, w: HOLOTW }; g.classList.add("on"); });
@@ -5738,13 +5735,13 @@ function holoGripBuild(){ if (holoGrip) return; const g = $("#main").createDiv({
   g.addEventListener("dblclick", e => { e.stopPropagation(); HOLOTW = 168; save("iv-holotw", 168); orbKey = ""; edFree(); });
   for (const ty of ["click", "wheel"]) g.addEventListener(ty, e => e.stopPropagation()); holoGrip = g; }
 let holoVeil = null, holoOp = null, CARDOPSL = null;
-/* Editor see-through (stored as the editors' opacity, CARDOP) has two handles (0.9.21, Nick: "a quick peek behind the Holodeck"): Display's slider and one at the foot of the Holodeck's tab column, always in step.
+/* Editor see-through (stored as the editors' opacity, CARDOP) has two handles (0.9.21): Display's slider and one at the foot of the Holodeck's tab column, always in step.
    In the Holodeck the veil over the map thins as the notes get more see-through, so the peek shows the map */
 function cardOpSet(v, from){ CARDOP = Math.max(0, Math.min(100, Math.round(v))); for (const o of Object.values(EDS)) edLook(o.el); try { for (const e_ of HPV.values()) edLook(e_); } catch (_) { /* no previews yet */ }
   root.setCssProps({ "--holov": Math.round(4 + CARDOP / 100 * 76) + "%" });
   for (const S_ of [CARDOPSL, holoOp]) if (S_ && S_.sl !== from && S_.sl.isConnected) { S_.sl.value = String(100 - CARDOP); S_.ov.setText((100 - CARDOP) + "%"); } }
-/* sort the tabs once, then drag as before (0.9.30, Nick: "sometimes the tabs can get unruly"): by level, highest on top; or by top folder (Atlas, Calendar, Efforts…), each by level */
-/* the tab sorts are modes (0.9.36, Nick): Level or Folder stays lit and keeps new tabs in place; turning the lit one off brings back the order you had by hand.
+/* sort the tabs once, then drag as before (0.9.30): by level, highest on top; or by top folder (Atlas, Calendar, Efforts…), each by level */
+/* the tab sorts are modes (0.9.36): Level or Folder stays lit and keeps new tabs in place; turning the lit one off brings back the order you had by hand.
    A drag by hand ends the sort and becomes the new hand order */
 let TSORT = (v => v === "folder" || v === "level" ? v : "")(pref("iv-tabsort", "")), TMAN = (v => Array.isArray(v) ? v.filter(x => typeof x === "string") : [])(pref("iv-tabman", []));
 function sortApply(){ if (!TSORT) return false; const cur = TABS[TCUR], lv = t => { const i = PIDX.get(t.path); return i == null ? [-1, 0] : [N[i].level, N[i].score]; }, top = t => t.path.includes("/") ? t.path.split("/")[0].toLowerCase() : "\uffff";
@@ -5769,8 +5766,8 @@ function holoOpBuild(){ if (holoOp) return; const box = $("#main").createDiv({ c
   const sl = w.createEl("input", { type: "range", attr: { min: "0", max: "100", step: "1", "aria-description": "Editor see-through: raise it to see the map behind" } }); sl.value = String(100 - CARDOP); const ov = w.createSpan({ cls: "hov", text: (100 - CARDOP) + "%" });
   sl.oninput = () => { cardOpSet(100 - +sl.value, sl); ov.setText((100 - CARDOP) + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP);
   for (const ty of ["pointerdown", "wheel", "click", "dblclick"]) box.addEventListener(ty, e => e.stopPropagation()); holoOp = { el: box, sl, ov }; }
-/* a thin "Holodeck" tag in the toolbar while it's on (0.9.34, Nick); a click turns it off */
-/* off, it's the Holodeck's icon in the toolbar, like its neighbors; a click turns it on and it becomes the tag (0.9.44, Nick: "people can just use the header menu to turn on Holodeck") */
+/* a thin "Holodeck" tag in the toolbar while it's on (0.9.34); a click turns it off */
+/* off, it's the Holodeck's icon in the toolbar, like its neighbors; a click turns it on and it becomes the tag (0.9.44) */
 function holoTag(on){ let t = root.querySelector("#holotag"); if (!t) { const d = root.querySelector("#dispms"); if (!d || !d.parentElement) return; t = doc.createElement("button"); t.id = "holotag"; t.type = "button";
     t.onclick = e => { e.stopPropagation(); if (holoOn()) { holoSet(false); return; } holoStart(); }; d.after(t); }
   const can = edOn() && view !== "cockpit"; t.hidden = !can; if (!can) return;
@@ -5784,7 +5781,7 @@ function holoStart(){ const m = EDS.left; if (m.col && m.path) m.collapse(false)
   select(i); win.setTimeout(() => { if (!dead) holoSet(true); }, 400); }
 win.setTimeout(() => { if (!dead) try { holoSync(); } catch (_) { /* not ready yet */ } }, 0);
 function holoSync(){ const on = holoOn(); root.classList.toggle("holo", on); root.classList.toggle("holopause", HOLOPAUSE); holoOpBuild(); holoOp.el.hidden = !on; holoTag(on);
-  /* the primary note always has its tab in the column, lit (Nick, Nov 7: its tab was missing after a click away) */
+  /* the primary note always has its tab in the column, lit */
   if (on && EDS.left.path && !TABS[TCUR]) { const ex = TABS.findIndex(t => t.path === EDS.left.path); if (ex >= 0) TCUR = ex; else { TABS.splice(0, 0, { path: EDS.left.path }); TCUR = 0; } tabsSave(); }
   if (on) { root.setCssProps({ "--holov": Math.round(4 + CARDOP / 100 * 76) + "%" }); holoOp.sl.value = String(100 - CARDOP); holoOp.ov.setText((100 - CARDOP) + "%"); try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoOp.el.setCssProps({ "--hol": Math.round(c.left - m.left) + "px", "--hob": Math.round(m.bottom - c.bottom + 52) + "px", "--how": (HOLOTW - 14) + "px" }); } catch (_) { /* not laid out yet */ } }
   holoGripBuild(); holoGrip.hidden = !on || !TABS.length; if (!holoGrip.hidden) { try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); holoGrip.setCssProps({ "--hgl": Math.round(c.left - m.left + HOLOTW - 13) + "px", "--hgt": Math.round(c.top - m.top + 8) + "px", "--hgb": Math.round(m.bottom - c.bottom + 52) + "px" }); } catch (_) { /* not laid out yet */ } }
@@ -5797,10 +5794,10 @@ function holoCatchUp(){ const h_ = HUDI; HUDI = -2; hudFollow(h_ >= 0 ? h_ : nul
 function holoPause(v){ HOLOPAUSE = v; save("iv-holopause", v); root.classList.toggle("holopause", v); if (!v) holoCatchUp(); }
 function holoSet(v){ const was = holoOn(); HOLO = v; save("iv-holo", v); if (was && !v && HOLOPAUSE) win.setTimeout(() => { if (!dead) holoCatchUp(); }, 0); orbKey = ""; holoSync(); edFree(); syncOrbs(); draw(); }
 /* where the HUD starts on the right, so the support note stops short of it */
-function holoRight(vw){ let r = vw - 10; try { const c = cv.getBoundingClientRect(); for (const P of [RECEL, LKEL]) if (P && !P.hidden) { const q = P.getBoundingClientRect(); if (q.width) r = Math.min(r, q.left - c.left - 10); } } catch (_) { /* not laid out yet */ } return Math.max(HOLOTW + 400, r); }   // every map since 0.8.68 (Nick); maps you turn keep their camera (edCam)
+function holoRight(vw){ let r = vw - 10; try { const c = cv.getBoundingClientRect(); for (const P of [RECEL, LKEL]) if (P && !P.hidden) { const q = P.getBoundingClientRect(); if (q.width) r = Math.min(r, q.left - c.left - 10); } } catch (_) { /* not laid out yet */ } return Math.max(HOLOTW + 400, r); }   // every map since 0.8.68; maps you turn keep their camera (edCam)
 const edCam = () => !(S3D_ON() || sphOn() || domeOn() || geo3On() || csphOn() || (typeof globeOn === "function" && globeOn()));
 let CARDMODE = ["light", "dark"].includes(pref("iv-cardmode", "")) ? pref("iv-cardmode", "") : "auto";
-let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = (v => Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 84)(+pref("iv-cardop", 84)),   /* 0 is allowed (100% see-through, 0.9.32) */ CARDFS = Math.max(70, Math.min(120, +pref("iv-cardfs", 100) || 100));   /* CARDFS: the editors' text size, % of Obsidian's (0.8.229, Nick) */   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
+let CARDTH = pref("iv-cardth", "obsidian"), CARDOP = (v => Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 84)(+pref("iv-cardop", 84)),   /* 0 is allowed (100% see-through, 0.9.32) */ CARDFS = Math.max(70, Math.min(120, +pref("iv-cardfs", 100) || 100));   /* CARDFS: the editors' text size, % of Obsidian's (0.8.229) */   // the editors' theme: Obsidian's, or the map's (dark or light); their opacity, %
 // Editor theme → Map: Obsidian works out its colors once, on the page body (--background-primary: var(--color-base-00)…), so a dark or light
 // class alone changes nothing; each editor re-declares those body colors itself, so they resolve with its own dark or light base colors
 let BODYV = null;
@@ -5808,7 +5805,7 @@ const bodyVars = () => { if (BODYV) return BODYV; BODYV = {}; for (const sh of [
     for (const r of [...rs]) { if (!r.style || !/^(body|\.theme-light, ?\.theme-dark|\.theme-dark, ?\.theme-light)$/.test(r.selectorText || "")) continue;
       for (const nm of [...r.style]) if (nm.startsWith("--")) { const v = r.style.getPropertyValue(nm).trim(); if (v.includes("var(")) BODYV[nm] = v; } } }
   return BODYV; };
-/* the editors' look (0.8.210, Nick: "some weird combination of the Obsidian themes… 24 different options"): two looks, each whole.
+/* the editors' look (0.8.210): two looks, each whole.
    Obsidian: the editor is your Obsidian, as it is. MOTI: the editor wears the map's own theme: its background, ink, lines and accent stand in
    for Obsidian's colors inside the card (headings, links, properties, pills), so every map theme gives one look, whatever Obsidian is set to.
    The cards sit beside the map, not inside it, so the map's colors are read off it and handed over */
@@ -5823,19 +5820,19 @@ const EDV = (bg, panel, ink, muted, line, acc, accS) => { const faint = `color-m
     "--code-background": panel, "--code-normal": ink, "--blockquote-border-color": acc, "--hr-color": line, "--checkbox-color": acc, "--checkbox-border-color": muted, "--list-marker-color": muted,
     "--tag-color": acc, "--tag-background": accS, "--tag-color-hover": acc, "--tag-background-hover": accS, "--pill-color": muted, "--pill-border-color": line, "--metadata-label-text-color": muted, "--metadata-input-text-color": ink,
     "--table-border-color": line, "--table-header-background": panel, "--callout-border-opacity": ".25", "--scrollbar-thumb-bg": `color-mix(in srgb,${muted} 35%,transparent)` }; };
-/* Editor theme → Starfield (0.8.232, Nick): the Starfield look in the editors whatever the map wears; its palette, as on .ivm[data-theme="starfield"] */
+/* Editor theme → Starfield (0.8.232): the Starfield look in the editors whatever the map wears; its palette, as on .ivm[data-theme="starfield"] */
 const SFPAL = { "--bg": "#06070f", "--panel": "#0e0c1d", "--ink": "#e4e2f5", "--muted": "#a59fc4", "--line": "#231f3d", "--accent": "#ff8fc0", "--accent-soft": "rgba(255,143,192,.14)", "--upp": "#ffcf5a", "--rel": "#c9a2ff", "--up": "#6fbcff", "--down": "#6fe08f", "--prop": "#a9b4c8" };
 function edLook(el){ const SFE = CARDTH === "starfield", th = SFE ? "starfield" : root.dataset.theme, dark = th === "lyt" || th === "dark" || th === "starfield" || (th === "obsidian" && doc.body.classList.contains("theme-dark")), m = SFE || (CARDTH === "map" && th !== "obsidian");
-  /* Editor mode (0.8.271, Nick): with the Obsidian theme, Light or Dark forces that side of your Obsidian theme in the editors, whatever Obsidian itself is set to */
+  /* Editor mode (0.8.271): with the Obsidian theme, Light or Dark forces that side of your Obsidian theme in the editors, whatever Obsidian itself is set to */
   const fm = !m && CARDMODE !== "auto", fd = CARDMODE === "dark";
   el.classList.toggle("theme-dark", (m && dark) || (fm && fd)); el.classList.toggle("theme-light", (m && !dark) || (fm && !fd));
   const bv = bodyVars(); el.setCssProps(Object.fromEntries(Object.keys(bv).map(nm => [nm, m || fm ? bv[nm] : ""])));
   const cs = win.getComputedStyle(root), g = nm => SFE ? SFPAL[nm] || "" : cs.getPropertyValue(nm).trim(), V = EDV(g("--bg"), g("--panel"), g("--ink"), g("--muted"), g("--line"), g("--accent"), g("--accent-soft"));
   el.setCssProps(Object.fromEntries(Object.keys(V).map(nm => [nm, m ? V[nm] : fm && bv[nm] ? bv[nm] : ""])));   /* a forced mode keeps Obsidian's own variables, re-read on the card */
   { const bs = parseFloat(win.getComputedStyle(doc.body).getPropertyValue("--font-text-size")) || 16; el.setCssProps({ "--font-text-size": CARDFS === 100 ? "" : (bs * CARDFS / 100).toFixed(1) + "px" }); }
-  { const rs = SFLINKS ? win.getComputedStyle(root) : null, lc = nm => rs && rs.getPropertyValue(nm).trim() || g(nm);   /* Starfield link colors on: the editors use the map's link colors too, below red (0.8.294, Nick) */
+  { const rs = SFLINKS ? win.getComputedStyle(root) : null, lc = nm => rs && rs.getPropertyValue(nm).trim() || g(nm);   /* Starfield link colors on: the editors use the map's link colors too, below red (0.8.294) */
     el.setCssProps({ "--cardop": CARDOP + "%", "--upp": lc("--upp"), "--rel": lc("--rel"), "--up": lc("--up"), "--down": lc("--down"), "--prop": g("--prop") }); }
-  /* the Starfield theme's editor (0.8.224, from Nick's Nebula mockup): pink for the chrome (no link line uses it), headings in nebula colors, H6 as small capitals,
+  /* the Starfield theme's editor (0.8.224): pink for the chrome (no link line uses it), headings in nebula colors, H6 as small capitals,
      properties in a dark panel with mono labels, and every link in its relation's color (edTint) */
   const sf = m && th === "starfield"; el.classList.toggle("sf-th", sf); if (sf && SFLINKS) { const rs = win.getComputedStyle(root); for (const nm of ["--upp", "--rel", "--up", "--down"]) { const v_ = rs.getPropertyValue(nm).trim(); if (v_) el.setCssProps({ [nm]: v_ }); } }
   const H = { "--h1-color": "#fff4ec", "--inline-title-color": "#fff4ec", "--h2-color": "#ff8fc0", "--h3-color": "#c9b8ff", "--h4-color": "#ffd9ea", "--h5-color": "#c9b8ff", "--h6-color": "#8fc3ff",
@@ -5843,9 +5840,9 @@ function edLook(el){ const SFE = CARDTH === "starfield", th = SFE ? "starfield" 
     "--link-color": "#f0e6ff", "--link-color-hover": "#ffffff", "--link-unresolved-color": "#a59fc4", "--text-selection": "rgba(255,143,192,.28)", "--interactive-accent": "#ff8fc0", "--interactive-accent-hover": "#ffa8cf", "--checkbox-color": "#ff8fc0", "--caret-color": "#ff8fc0" };
   if (sf) el.setCssProps(H); else if (m) { const V2 = V; el.setCssProps(Object.fromEntries(Object.keys(H).map(nm => [nm, V2[nm] || ""]))); } else el.setCssProps(Object.fromEntries(Object.keys(H).map(nm => [nm, fm && bv[nm] ? bv[nm] : ""])));
   win.setTimeout(() => { try { for (const o of Object.values(EDS)) if (o && o.el === el) edTint(o); } catch (_) { /* editors not made yet */ } }, 0); }
-/* a link's color in the editor says how the note it points to relates to this one (0.8.224, Nick: "what if every single link is colored based on whether it's an up, related, above, or below link?"):
+/* a link's color in the editor says how the note it points to relates to this one (0.8.224):
    up property gold, related purple, above blue, below green, any other property slate. Starfield theme for now (the rule lives on .sf-th) */
-/* a link to a note that isn't there yet (or to itself, or one the map doesn't hold) is a placeholder: "none", a dashed outline, no fill (0.8.280, Nick) */
+/* a link to a note that isn't there yet (or to itself, or one the map doesn't hold) is a placeholder: "none", a dashed outline, no fill (0.8.280) */
 const ISLINK = "a.internal-link, .cm-hmd-internal-link, .internal-link";
 function edTint(o){ if (!o || !o.el || o.el.hidden) return;
   if (!o.path || !host.linkTargets) return; const sf = o.el.classList.contains("sf-th"), i = PIDX.get(o.path);
@@ -5856,20 +5853,20 @@ function edTint(o){ if (!o || !o.el || o.el.hidden) return;
   const CK_ = new Set(host.collectionKeys ? host.collectionKeys() : ["collections"]);
   for (const e of els) { const key = String(e.getAttribute("data-href") || e.textContent || "").trim().toLowerCase(); if (!key) continue;
     { const mp = e.closest(".metadata-property"); if (mp && CK_.has(String(mp.getAttribute("data-property-key") || "").toLowerCase())) { if (e.dataset.ivk !== "prop") e.dataset.ivk = "prop"; continue; } }   /* a collection is a property link: slate (0.8.277) */
-    const p = M.get(key) || M.get(key.split("|")[0].split("#")[0].trim()) || M.get(key.split("|").pop().trim()); const kd = p ? kindOf(p) : (e.matches(ISLINK) ? "none" : "");   /* only a link with no note behind it is a placeholder; a note that exists (itself, or one off the map) keeps the plain link look (0.8.347, Nick) */ if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } }   /* the link colors always come along (the up/related pills) */
+    const p = M.get(key) || M.get(key.split("|")[0].split("#")[0].trim()) || M.get(key.split("|").pop().trim()); const kd = p ? kindOf(p) : (e.matches(ISLINK) ? "none" : "");   /* only a link with no note behind it is a placeholder; a note that exists (itself, or one off the map) keeps the plain link look (0.8.347) */ if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } }   /* the link colors always come along (the up/related pills) */
 const clampN = (v, a, b) => Math.round(Math.max(a, Math.min(b, v)));
 // the side editors' widths can be dragged at their inner edge (0.8.31); otherwise a share of the map
 const EDW = (() => { const o = pref("iv-edw", null); return o && typeof o === "object" ? o : {}; })();
 const edW = (kind, def, lo, hi, vw) => clampN(EDW[kind] > 0 ? EDW[kind] : clampN(vw*def, lo, hi), 260, Math.max(260, vw*.7));
 function edRect(kind){ const vw = W - sideW();
   if (holoOn()) { const x0 = TABS.length ? HOLOTW : 8, R = holoRight(vw), av = R - x0, two = !EDS.right.el.hidden || kind === "right";
-    const hw = EDW.holo > 0 ? EDW.holo : 0;   /* the primary note's width, dragged at either inner edge (0.9.28, Nick: the grip showed but didn't drag) */
+    const hw = EDW.holo > 0 ? EDW.holo : 0;   /* the primary note's width, dragged at either inner edge (0.9.28) */
     const lw = two ? Math.round(Math.max(340, Math.min(av - 12 - 300, hw || Math.min(760, (av - 12) * .54)))) : Math.round(Math.max(340, Math.min(av, hw || 820)));
     if (kind === "left") return { x: x0, y: 8, w: lw, h: H - 16 };
     const rx = x0 + lw + 12; return { x: rx, y: 8, w: Math.max(260, R - rx), h: H - 16 }; }
   if (kind === "left") { const w = edW("left", .34, 340, 560, vw); return { x: 8, y: 8, w, h: H - 16 }; }
   const w = edW("right", .3, 320, 520, vw); return { x: vw - w - 8, y: 8, w, h: H - 16 }; }
-// the editors remember whether you folded the properties (0.8.166, Nick: "i collapsed but then in the next note it was open again")
+// the editors remember whether you folded the properties (0.8.166)
 let PROPCOL = pref("iv-propcol", false) === true;
 function propKeep(el){ const go = (k_) => { const mc = el.querySelector(".metadata-container"); if (!mc) { if (k_ < 8) win.setTimeout(() => go(k_ + 1), 60); return; }
     if (!mc.dataset.ivw) { mc.dataset.ivw = "1"; const hd = mc.querySelector(".metadata-properties-heading"); if (hd) hd.addEventListener("click", () => win.setTimeout(() => { PROPCOL = mc.classList.contains("is-collapsed"); save("iv-propcol", PROPCOL); }, 30)); }
@@ -5878,10 +5875,10 @@ function propKeep(el){ const go = (k_) => { const mc = el.querySelector(".metada
 function makeEd(kind){
   const el = doc.createElement("div"); el.className = "ivm-card ivm-card-" + kind; el.hidden = true; root.after(el);
   const hd = el.createDiv({ cls: "cardhd" }), t = hd.createSpan({ cls: "cardt" }), ob = hd.createEl("button", { cls: "cardbtn cardopen", attr: { type: "button", "aria-label": "Open in editor" } }), xb = hd.createEl("button", { cls: "cardbtn cardx", text: "×", attr: { type: "button", "aria-description": "Close" } });
-  // the strip under the name (0.8.38, Nick): level, score, links in and out, then what sits above and below it and its up and related links;
+  // the strip under the name (0.8.38): level, score, links in and out, then what sits above and below it and its up and related links;
   // a click on one opens its list in place, and a note in the list opens like a click on the map
   const strip = el.createDiv({ cls: "cardstrip" }), drop = el.createDiv({ cls: "carddrop" }); drop.hidden = true;
-  setIcon(ob, "square-arrow-out-up-right");   // an icon since 0.8.51 (Nick: less weight, more room for the name)
+  setIcon(ob, "square-arrow-out-up-right");   // an icon since 0.8.51
   const body = el.createDiv({ cls: "cardbody" });
   { let tt = 0; new MutationObserver(() => { win.clearTimeout(tt); tt = win.setTimeout(() => { try { edTint(o); } catch (_) { /* o not ready */ } }, 150); }).observe(el, { childList: true, subtree: true, characterData: true }); }   /* links keep their colors as you type (0.8.224) */
   for (const ty of ["pointerdown", "wheel", "click"]) el.addEventListener(ty, e => e.stopPropagation());
@@ -5889,16 +5886,16 @@ function makeEd(kind){
   // the side editors tuck away to a tab on their edge, like the legend and the note panel; the note stays open in them
   const side = kind !== "center", cb = side ? hd.createEl("button", { cls: "cardbtn cardcol", text: kind === "left" ? "‹" : "›", attr: { type: "button", "aria-label": "Tuck away", title: "Tuck away" } }) : null;
   if (cb) hd.insertBefore(cb, ob);
-  // the primary note can be pinned (0.8.28): then a note you pick opens as the support note, and the pinned note stays (Nick's Mapping Method)
-  // back and forward through the notes this editor has shown (0.8.45, Nick: the trail works too, but that's a leap)
-  /* back and forward on both notes: the primary walks the map's history, the support note its own (0.9.53, Nick) */
+  // the primary note can be pinned (0.8.28): then a note you pick opens as the support note, and the pinned note stays
+  // back and forward through the notes this editor has shown (0.8.45)
+  /* back and forward on both notes: the primary walks the map's history, the support note its own (0.9.53) */
   const nav = [["arrow-left", "Back", -1], ["arrow-right", "Forward", 1]].map(([ic, lb, d_]) => { const b_ = doc.createElement("button"); b_.className = "cardbtn cardnav"; b_.type = "button"; b_.setAttribute("aria-label", lb); setIcon(b_, ic); hd.insertBefore(b_, t); b_.onclick = e => { e.stopPropagation(); if (kind === "right") supGo(d_); else histGo(d_); }; return b_; });
   const pb = kind !== "right" ? hd.createEl("button", { cls: "cardbtn cardpin", attr: { type: "button", "aria-label": "Pin this note", title: "Pin this note" } }) : null;
   if (pb) { setIcon(pb, "pin"); hd.insertBefore(pb, cb || ob); pb.onclick = () => tabPin(); }
-  /* Focus, right after the pin (0.8.272, Nick): the same as the toolbar's Focus on active note; lit while this note is focused */
+  /* Focus, right after the pin (0.8.272): the same as the toolbar's Focus on active note; lit while this note is focused */
   const fb_ = kind === "left" ? hd.createEl("button", { cls: "cardbtn cardfoc", attr: { type: "button", "aria-description": "Focus on this note" } }) : null;
   const hb_ = kind === "left" ? hd.createEl("button", { cls: "cardbtn cardholo", attr: { type: "button", "aria-description": "Turn on Holodeck", "aria-pressed": String(HOLO) } }) : null;
-  if (hb_) { setIcon(hb_, HOLOICON);   /* the notes in front, the map behind (0.9.40, Nick) */ hd.insertBefore(hb_, cb || ob); hb_.onclick = e => { e.stopPropagation(); holoSet(!HOLO); }; }
+  if (hb_) { setIcon(hb_, HOLOICON);   /* the notes in front, the map behind (0.9.40) */ hd.insertBefore(hb_, cb || ob); hb_.onclick = e => { e.stopPropagation(); holoSet(!HOLO); }; }
   if (fb_) { setIcon(fb_, "locate-fixed"); hd.insertBefore(fb_, cb || ob); fb_.onclick = e => { e.stopPropagation(); const i = o.path != null ? PIDX.get(o.path) : null; if (i == null) return; focusArmed = false; setFocus(focus === i ? -1 : i); }; }
   const tab = side ? $("#main").createEl("button", { cls: "dtab edtab edtab-" + kind, attr: { "aria-label": "Show the editor", title: "Show the editor" } }) : null; if (tab) tab.hidden = true;
   const o = { kind, el, nav, strip, drop, open_: "", sub_: "", ed: null, path: null, key: "", pb, col: side && pref("iv-edcol-" + kind, false) === true,
@@ -5910,9 +5907,9 @@ function makeEd(kind){
     close(){ if (!o.ed && el.hidden) return; el.hidden = true; o.path = null; o.key = ""; o.tabSync(); if (o.ed) { o.ed.close(); o.ed = null; } if (kind === "right") hudFollow(null); edFree(); },
     async open(i){ const p = N[i].path, prevP = o.path; if (!o.ed) { o.ed = host.editCard(); body.appendChild(o.ed.el); }
       const nw = o.path !== p; o.path = p; t.setText(N[i].title); if (nw) { o.open_ = ""; o.sub_ = ""; } fillStrip(o, i); edLook(el); const was = el.hidden; el.hidden = o.col; o.key = ""; o.place(); if (was !== el.hidden) edFree();
-      if (kind === "right" && nw) { supHist(p); hudFollow(i); if (holoOn()) supTab(i, prevP); }   /* in the Holodeck every note beside you has a tab (0.9.42) */   /* a note that opens beside is the active one: the HUD, and in Focus the graph, follow it (0.9.28, Nick) */
+      if (kind === "right" && nw) { supHist(p); hudFollow(i); if (holoOn()) supTab(i, prevP); }   /* in the Holodeck every note beside you has a tab (0.9.42) */   /* a note that opens beside is the active one: the HUD, and in Focus the graph, follow it (0.9.28) */
       if (nw) { await o.ed.open(p); o.ed.resize(); propKeep(el); } } };
-  /* drag a title bar onto the other note and they swap (0.9.42, Nick): a plain click still tucks it away */
+  /* drag a title bar onto the other note and they swap (0.9.42): a plain click still tucks it away */
   { let hd_ = null, swallow = false;
     hd.addEventListener("pointerdown", e => { if (e.button !== 0 || !(e.target instanceof Element) || e.target.closest("button") || !o.path) return; hd_ = { x: e.clientX, y: e.clientY, on: false, gh: null, tgt: null };
       const mv = ev => { if (!hd_) return; if (!hd_.on) { if (Math.hypot(ev.clientX - hd_.x, ev.clientY - hd_.y) < 6) return; hd_.on = true; doc.body.classList.add("ivm-grabbing");
@@ -5934,9 +5931,9 @@ function makeEd(kind){
     const up = () => { if (!drag_) return; const ho = drag_.ho; drag_ = null; el.classList.remove("resizing"); if (ho) EDW.holo = Math.round(edRect("left").w); else EDW[kind] = Math.round(edRect(kind).w); save("iv-edw", EDW); for (const q of Object.values(EDS)) if (q.ed) q.ed.resize(); };
     gr.addEventListener("pointerup", up); gr.addEventListener("pointercancel", up);
     gr.addEventListener("dblclick", e => { e.stopPropagation(); if (holoOn()) delete EDW.holo; else delete EDW[kind]; save("iv-edw", EDW); edFree(); draw(); }); }   // double-click: back to the default width
-  xb.onclick = () => { if (kind === "left") edCloseTab(); else { o.close(); panBack(); } };   /* the primary note's ×: closes its orb too (0.8.196, Nick) */ if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
+  xb.onclick = () => { if (kind === "left") edCloseTab(); else { o.close(); panBack(); } };   /* the primary note's ×: closes its orb too (0.8.196) */ if (cb) cb.onclick = () => o.collapse(true); if (tab) tab.onclick = () => o.collapse(false); ob.onclick = () => { if (o.path && host.openNote) host.openNote(o.path); };
   return o; }
-/* the support note's tab works like an Obsidian tab (0.9.47, Nick): a plain link opens in the same tab, replacing the note that was there;
+/* the support note's tab works like an Obsidian tab (0.9.47): a plain link opens in the same tab, replacing the note that was there;
    ⌘-click opens a new tab; a note that has a tab already uses it; a pinned tab is never replaced */
 let SUPTAB = null, SUPNEW = false;
 function supTab(i, prevP){ const p = N[i].path, ex = TABS.find(t_ => t_.path === p), nw = SUPNEW; SUPNEW = false;
@@ -5944,7 +5941,7 @@ function supTab(i, prevP){ const p = N[i].path, ex = TABS.find(t_ => t_.path ===
   if (!nw && SUPTAB && TABS.includes(SUPTAB) && SUPTAB !== TABS[TCUR] && !SUPTAB.pin && SUPTAB.path === prevP) { SUPTAB.path = p; tabsSave(); orbKey = ""; syncOrbs(); return; }
   tabAddBg(i); SUPTAB = TABS.find(t_ => t_.path === p) || null; }
 let LIVEQ = false;   // the map reacting as you write refreshes the note panel quietly: no camera move, no editor reload
-let EDS = null; EDS = { left: makeEd("left"), right: makeEd("right") };   /* the editor in the middle is gone (0.8.195, Nick): the primary note is always on the left */
+let EDS = null; EDS = { left: makeEd("left"), right: makeEd("right") };   /* the editor in the middle is gone (0.8.195): the primary note is always on the left */
 const edMain = () => EDS.left;
 function stripLists(i){ const d = N[i], L = { above: [], below: [], up: [], related: [], out: [...new Set(out[i])].filter(j => j !== i && vis[j]), in: [...new Set(inn[i])].filter(j => j !== i && vis[j]) };
   for (const j of new Set([...out[i], ...inn[i]])) { if (!vis[j] || j === i) continue; const kk = EKIND.get(i*n + j);
@@ -5955,22 +5952,22 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   const lv = o.strip.createSpan({ cls: "slv", text: "L" + d.level }); lv.setCssProps({ "--slc": d.level >= 3 ? GRAD[d.level][0] : d.level === 2 ? css.l2 : css.l1 }); lv.setAttribute("aria-description", LV[d.level] ? LV[d.level].name : "");
   const chip = (key, label, cls) => { const b = o.strip.createEl("button", { cls: "schip " + cls + (o.open_ === key ? " on" : ""), text: label, attr: { type: "button", "aria-expanded": String(o.open_ === key) } });
     b.onclick = e => { e.stopPropagation(); o.open_ = o.open_ === key ? "" : key; fillStrip(o, i); }; };
-  // Nick's order (0.8.42; in before out since 0.8.46; above and below inside the rank since 0.8.47): level, up, related | in, out | the rank; the rank's pill opens the score, how it adds up, and why
+  // The order (0.8.42; in before out since 0.8.46; above and below inside the rank since 0.8.47): level, up, related | in, out | the rank; the rank's pill opens the score, how it adds up, and why
   const bar = () => o.strip.createSpan({ cls: "sbar" });
-  chip("up", L.up.length ? `${L.up.length} up` : "up", "spill sup" + (L.up.length ? "" : " sz")); chip("related", L.related.length ? `${L.related.length} related` : "related", "spill srel" + (L.related.length ? "" : " sz"));   /* always there, dimmed when empty (0.8.207, Nick) */   /* tinted like the note panel's Uplinks and Related (0.8.205, Nick) */
+  chip("up", L.up.length ? `${L.up.length} up` : "up", "spill sup" + (L.up.length ? "" : " sz")); chip("related", L.related.length ? `${L.related.length} related` : "related", "spill srel" + (L.related.length ? "" : " sz"));   /* always there, dimmed when empty (0.8.207) */   /* tinted like the note panel's Uplinks and Related (0.8.205) */
   bar(); chip("in", `${d.body_in} in`, "spill"); chip("out", `${d.body_out} out`, "spill");
   bar();
   const rk = scoreRank(i); chip("score", rk ? `#${rk.toLocaleString()}` : d.score.toFixed(1), "spill sscore");
   /* (the Focus pill of 0.8.238 is gone, 0.8.251: Focus lives in the toolbar) */
-  { const dir = d.path.includes("/") ? d.path.slice(0, d.path.lastIndexOf("/")) : "", f_ = o.strip.createSpan({ cls: "sfold", text: dir ? dir.split("/").pop() : "Vault root" });   /* its folder (0.8.175, Nick); the full path on hover */
+  { const dir = d.path.includes("/") ? d.path.slice(0, d.path.lastIndexOf("/")) : "", f_ = o.strip.createSpan({ cls: "sfold", text: dir ? dir.split("/").pop() : "Vault root" });   /* its folder (0.8.175); the full path on hover */
     f_.setAttribute("aria-description", dir || "the top of the vault"); /* the full path on hover, in the plugin's own small label (0.8.176: aria-description alone showed nothing; the cards sit outside the map, so they get their own) */
     let tp = null; f_.addEventListener("pointerenter", () => { if (tp) tp.remove(); const r = f_.getBoundingClientRect(), cr = o.el.getBoundingClientRect(); tp = o.el.createDiv({ cls: "sfold-tip", text: dir || "The top of the vault" });
       tp.setCssProps({ "--tx": Math.round(r.left - cr.left) + "px", "--ty": Math.round(r.bottom - cr.top + 5) + "px" }); });
     f_.addEventListener("pointerleave", () => { if (tp) { tp.remove(); tp = null; } });
-    if (host.moveNote) { f_.addClass("is-click"); f_.addEventListener("click", e => { e.stopPropagation(); if (tp) { tp.remove(); tp = null; } void host.moveNote(d.path); }); }   /* click: move it to another folder (0.8.188, Nick); the map glides it there */ const ic = createSpan({ cls: "sfold-i" }); setIcon(ic, "folder"); f_.prepend(ic); }
+    if (host.moveNote) { f_.addClass("is-click"); f_.addEventListener("click", e => { e.stopPropagation(); if (tp) { tp.remove(); tp = null; } void host.moveNote(d.path); }); }   /* click: move it to another folder (0.8.188); the map glides it there */ const ic = createSpan({ cls: "sfold-i" }); setIcon(ic, "folder"); f_.prepend(ic); }
   o.drop.empty();
   if (o.open_ === "score") { o.drop.hidden = false; o.drop.createDiv({ cls: "sdh", text: `#${rk.toLocaleString()} IN ${d.archive ? "THE ARCHIVE" : "THE IDEAVERSE"} · SCORE ${f2(d.score)}` });
-    // the score's details stay put when "above" or "below" opens: the list grows below them and the whole list scrolls, from where you were (0.8.55, Nick)
+    // the score's details stay put when "above" or "below" opens: the list grows below them and the whole list scrolls, from where you were (0.8.55)
     const det = o.drop.createDiv({ cls: "sddet" });
     const g = det.createDiv({ cls: "sdnums" }); for (const [v, t_] of [[d.body_in, "linked from"], [d.body_out, "links to"], [d.up_in || 0, "link up to it"], [d.score.toFixed(1), "link score"]]) { const c_ = g.createDiv(); c_.createEl("b", { text: String(v) }); c_.createSpan({ text: t_ }); }
     det.createDiv({ cls: "sdwhy", text: `Level ${d.level}: ${levelRule(i)}` });
@@ -5980,11 +5977,11 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
       const t = det.createDiv({ cls: "sdtab" }); for (const h of ["", "count", "weight", "adds"]) t.createSpan({ cls: "sdth", text: h });
       for (const [l, ct, wt, ad] of rows) { const z = !ad; t.createSpan({ cls: "sdtl" + (z ? " z" : ""), text: l }); t.createSpan({ cls: "sdtn" + (z ? " z" : ""), text: String(ct) }); t.createSpan({ cls: "sdtn" + (z ? " z" : ""), text: "×" + (+wt).toFixed(2) }); t.createSpan({ cls: "sdtn" + (z ? " z" : ""), text: f2(ad) }); }
       t.createSpan({ cls: "sdtl sdtt", text: "Score" }); t.createSpan(); t.createSpan(); t.createSpan({ cls: "sdtn sdtt", text: f2(d.score) }); }
-    // where it sits in emergence: the notes above it and below it, each list opening in place (0.8.47, Nick)
+    // where it sits in emergence: the notes above it and below it, each list opening in place (0.8.47)
     if (L.above.length || L.below.length) { const em = o.drop.createDiv({ cls: "sdem" }); em.createSpan({ cls: "sdh", text: "EMERGENCE" });
       for (const [key, lab] of [["above", "above"], ["below", "below"]]) { if (!L[key].length) continue; const b = em.createEl("button", { cls: "schip " + (key === "above" ? "sab" : "sbe") + (o.sub_ === key ? " on" : ""), text: `${L[key].length} ${lab}`, attr: { type: "button", "aria-expanded": String(o.sub_ === key) } });
         b.onclick = e => { e.stopPropagation(); o.sub_ = o.sub_ === key ? "" : key; fillStrip(o, i); }; }
-      if (o.sub_ && L[o.sub_] && L[o.sub_].length) { const rows = o.drop.createDiv({ cls: "sdl sdsub " + (o.sub_ === "above" ? "sd-up" : "sd-down") });   /* tinted blue above, green below, as in the note panel (0.8.234, Nick) */
+      if (o.sub_ && L[o.sub_] && L[o.sub_].length) { const rows = o.drop.createDiv({ cls: "sdl sdsub " + (o.sub_ === "above" ? "sd-up" : "sd-down") });   /* tinted blue above, green below, as in the note panel (0.8.234) */
         for (const j of L[o.sub_]) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
           r.onclick = e => { e.stopPropagation(); if (!openAs(j, openKind(e))) select(j); }; }
       } }
@@ -5993,7 +5990,7 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
   o.drop.createDiv({ cls: "sdh" + (o.open_ === "up" ? " sdh-up" : o.open_ === "related" ? " sdh-rel" : ""), text: list.length ? `${o.open_.toUpperCase()} · ${list.length}` : o.open_.toUpperCase() }); const rows = o.drop.createDiv({ cls: "sdl" });
   for (const j of list) { const r = rows.createEl("button", { cls: "sdr", attr: { type: "button" } }); r.createSpan({ text: N[j].title }); r.createSpan({ cls: "sdm", text: "L" + N[j].level });
     r.onclick = e => { e.stopPropagation(); if (!openAs(j, openKind(e))) select(j); }; }
-  /* + : link another note here, straight into the up or related property (0.8.207, Nick: "a bespoke properties menu for up and related") */
+  /* + : link another note here, straight into the up or related property (0.8.207) */
   if (prop_) { const key = o.open_, ad = o.drop.createEl("button", { cls: "sdadd", attr: { type: "button", "aria-label": key === "up" ? "Link up to another note" : "Add a related note" } }); setIcon(ad, "plus");
     ad.onclick = async e => { e.stopPropagation(); const have = new Set(list), items = [];
       for (let j = 0; j < n; j++) if (j !== i && !have.has(j) && !ARCH[j]) items.push({ path: N[j].path, title: N[j].title, s: N[j].score }); items.sort((a, b) => b.s - a.s);
@@ -6002,7 +5999,7 @@ function fillStrip(o, i){ if (i == null || i < 0 || !N[i]) { o.strip.empty(); o.
       new Notice(r === "dup" ? `${d.title} already has ${t_} in ${key}.` : r ? `${d.title} → ${key}: ${t_}` : "Couldn't add the link."); }; } }
 // the primary note's history: back and forward move through it without adding to it; a pinned editor keeps its note, so they wait
 let HIST = [], HPOS = -1, HNAV = null;
-// 0.8.51 (Nick: all the way back, and forward was gone): the step back or forward is remembered by the note it goes to, not as a flag the next
+// 0.8.51: the step back or forward is remembered by the note it goes to, not as a flag the next
 // editor change could use up; and going to the note just ahead or behind (from the trail, say) moves along the history instead of cutting it
 function histNote(p){ if (HNAV === p) { HNAV = null; return; } HNAV = null;
   if (HIST[HPOS] === p) return;
@@ -6016,7 +6013,7 @@ let SHIST = [], SHPOS = -1, SHNAV = null;
 function supHist(p){ if (SHNAV === p) { SHNAV = null; syncNav(); return; } SHNAV = null; if (SHIST[SHPOS] === p) return; SHIST = SHIST.slice(0, SHPOS + 1); SHIST.push(p); if (SHIST.length > 60) SHIST.shift(); SHPOS = SHIST.length - 1; syncNav(); }
 function supGo(d_){ let q = SHPOS + d_; while (q >= 0 && q < SHIST.length && PIDX.get(SHIST[q]) == null) q += d_; if (q < 0 || q >= SHIST.length) return; SHPOS = q; SHNAV = SHIST[q]; if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(PIDX.get(SHIST[q])); syncNav(); }
 function histGo(d_){ const q = HPOS + d_; if (q < 0 || q >= HIST.length) return; const i = PIDX.get(HIST[q]); if (i == null) return;
-  /* in Focus, back and forward go to a note outside the focused links too, and the focus moves with you (0.9.38, Nick: "we should still be able to hit back and forward just fine") */
+  /* in Focus, back and forward go to a note outside the focused links too, and the focus moves with you (0.9.38) */
   if (!vis[i] && focus >= 0 && visNoFocus(i)) { HPOS = q; HNAV = HIST[q]; setFocus(i); syncNav(); return; }
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map.`); return; } HPOS = q; HNAV = HIST[q]; select(i); syncNav(); }
 function edFree(){ holoSync(); EDLW = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 0; for (const o of Object.values(EDS)) { o.key = ""; o.place(); } }
@@ -6038,10 +6035,10 @@ async function openMain(i){ if (!edOn() || i < 0 || !vis[i]) { EDS.left.close();
 // A note that isn't on the map right now (filtered out, or not mapped) opens in Obsidian as usual
 // Shift-click opens it as a new tab (an orb); while the primary note is pinned, a plain click opens it as the support note
 if (host.onCardLink) host.onCardLink((path, mode) => { const i = PIDX.get(path); if (i == null || !edOn() || dead) return false;
-  /* in the Holodeck, ⌘-click opens it in the support note and gives it a new tab (0.9.47, Nick: "that will just ensure that the tabs don't run rampant") */
+  /* in the Holodeck, ⌘-click opens it in the support note and gives it a new tab (0.9.47) */
   if (holoOn() && mode === "tab") { SUPNEW = true; if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(i).then(() => { SUPNEW = false; }); draw(); return true; }
   SUPNEW = false;
-  /* a note that Focus (or, in the Holodeck, a filter) hides stays in the map instead of falling out to an Obsidian tab (0.9.29, Nick):
+  /* a note that Focus (or, in the Holodeck, a filter) hides stays in the map instead of falling out to an Obsidian tab (0.9.29):
      pinned, in the Holodeck or ⌘-clicked it opens as the support note; otherwise, in Focus, it becomes the primary note and the focus */
   if (!vis[i]) { const okF = focus >= 0 && visNoFocus(i), pin = !!(TABS[TCUR] && TABS[TCUR].pin);
     if (mode === "tab" || !(okF || holoOn())) return false;
@@ -6049,34 +6046,34 @@ if (host.onCardLink) host.onCardLink((path, mode) => { const i = PIDX.get(path);
     setFocus(i); draw(); return true; }
   if (mode === "side") void EDS.right.open(i); else if (mode === "tab") openAs(i, "tab"); else select(i); draw(); return true; });
 
-// ---------- tabs, shown as orbs (0.8.28, Nick) ----------
+// ---------- tabs, shown as orbs (0.8.28) ----------
 // Obsidian's tab model, in the map: each tab is a note for the primary note; the orb you're on is the note in it. A plain click replaces
 // the current tab's note (unless it's pinned: then the note opens as the support note); Shift-click, on the map or on a link in an editor,
 // opens a new tab. The orbs sit along the top of the map; hover one for its name; Display → Edit mode → Show orbs (tabs), Show orb names.
 let TABS = (() => { const t = pref("iv-tabs", null); return Array.isArray(t) ? t.filter(x => x && typeof x.path === "string").map(x => ({ path: x.path, pin: !!x.pin })) : []; })();
 let TCUR = (pref("iv-tabcur", 0) | 0) === -1 ? -1 : Math.min(Math.max(0, pref("iv-tabcur", 0) | 0), Math.max(0, TABS.length - 1)), TABNEW = false;   /* -1: no orb is current (you clicked away), so the next note gets an orb of its own (0.8.192) */
-let ORBS = true,   /* orb tabs are always on (0.8.214, Nick); their names are the switch */ ORBN = pref("iv-orbn", false) === true;
+let ORBS = true,   /* orb tabs are always on (0.8.214); their names are the switch */ ORBN = pref("iv-orbn", false) === true;
 const tabsSave = () => { save("iv-tabs", TABS); save("iv-tabcur", TCUR); };
 function tabTake(i){ const p = N[i].path, nw = TABNEW; TABNEW = false; const cur = TABS[TCUR];
   if (cur && !cur.path) { const ex = TABS.findIndex(t => t.path === p); if (ex >= 0) { TABS.splice(TCUR, 1); TCUR = ex > TCUR ? ex - 1 : ex; } else TABS[TCUR] = { path: p }; tabsSave(); syncOrbs(); return; }   /* a new tab (⌘T) takes the first note you pick */
   if (!cur) { const ex = TABS.findIndex(t => t.path === p); if (ex >= 0) TCUR = ex; else { TABS.push({ path: p }); TCUR = TABS.length - 1; } }
   else if (cur.path === p) return syncOrbs();
-  else if (cur.pin && !nw) return syncOrbs();   // pinned: the note stays and the pick opens as the support note, even one open in another tab (0.8.60, Nick)
+  else if (cur.pin && !nw) return syncOrbs();   // pinned: the note stays and the pick opens as the support note, even one open in another tab (0.8.60)
   else { const ex = TABS.findIndex(t => t.path === p);
     if (ex >= 0) TCUR = ex;   // already open in a tab: go to it
     else if (nw) { TABS.splice(TCUR + 1, 0, { path: p }); TCUR++; }
     else TABS[TCUR] = { path: p }; }
   tabsSave(); syncOrbs(); }
-/* ⌘-click: a new orb in the background, the way Obsidian opens a tab with "Always focus new tabs" off (0.8.193, Nick): the orb appears, the editor stays put */
+/* ⌘-click: a new orb in the background, the way Obsidian opens a tab with "Always focus new tabs" off (0.8.193): the orb appears, the editor stays put */
 let BGLAST = null;   /* several in a row line up in the order you opened them, as browser tabs do */
 function tabAddBg(i){ const p = N[i].path; if (TABS.some(t => t.path === p)) { orbFlash(p); return; } let at = TCUR >= 0 ? TCUR + 1 : TABS.length; if (BGLAST && BGLAST.cur === TCUR && TABS[BGLAST.at] && TABS[BGLAST.at].path === BGLAST.p) at = BGLAST.at + 1;
   TABS.splice(at, 0, { path: p }); BGLAST = { cur: TCUR, at, p }; tabsSave(); syncOrbs(); orbFlash(p); }
 function orbFlash(p){ win.setTimeout(() => { const j = TABS.findIndex(t => t.path === p), b = orbBar.querySelector(`.ivm-orb[data-i="${j}"]`); if (!b) return; b.classList.remove("flash"); void b.offsetWidth; b.classList.add("flash"); }, 0); }
-/* closing the primary note's note is closing its tab (0.8.196, Nick: "mimic how Obsidian works with Command-W"): the orb goes too, and the next orb's note takes its place, as in Obsidian */
+/* closing the primary note's note is closing its tab (0.8.196): the orb goes too, and the next orb's note takes its place, as in Obsidian */
 function edCloseTab(){ const o = EDS.left; if (o.path) { CLOSED.push(o.path); if (CLOSED.length > 30) CLOSED.shift(); } if (TABS[TCUR] && TABS[TCUR].path === o.path) { tabClose(TCUR); if (!TABS.length || EDS.left.el.hidden) { select(-1); panBack(); } } else { o.close(); panBack(); } }
 function tabPin(){ if (!TABS[TCUR]) { const m = edMain(); if (!m.path) return; TABS.push({ path: m.path }); TCUR = TABS.length - 1; }
   TABS[TCUR].pin = !TABS[TCUR].pin; tabsSave(); syncOrbs(); cmpSync(); arenaSync(); syncNav(); }
-/* the trip between them (0.8.223, Nick: "zooms in and maybe orbits and arcs into position"): a faux flight. Boarding, the chart dives at the note along a gentle arc
+/* the trip between them (0.8.223): a faux flight. Boarding, the chart dives at the note along a gentle arc
    while the dark of space closes in, and the Starship opens on it with its warp; leaving, the Starship fades and the chart starts close on the star you were at and pulls back out */
 const sfVeil = (() => { const v = $("#main").createDiv({ cls: "ivm-sfveil" }); v.hidden = true; return v; })();
 const veilTo = (a, ms) => { sfVeil.hidden = false; sfVeil.style.transition = `opacity ${ms}ms ease`; void sfVeil.offsetWidth; sfVeil.style.opacity = String(a); if (!a) win.setTimeout(() => { if (sfVeil.style.opacity === "0") sfVeil.hidden = true; }, ms + 30); };
@@ -6089,7 +6086,7 @@ function sfCam(from, to, ms, ease, arc, done){ const id = ++SFTRIP, t0 = perform
   RAF(step); }
 function sfShip(on){ SFNP = true; win.clearTimeout(sfShip.t); sfShip.t = win.setTimeout(() => { SFNP = false; }, 1600); const [fl, fr] = freeLR(), mx = (fl + fr) / 2, my = (isPhone() ? H * .48 : H) / 2;
   if (on) { if (view !== "stars" || SFSHIP) return; closePops(); const i = sel >= 0 && vis[sel] ? sel : ckCentre(); SFSHIP = { ckw: CKW, cam: { k, tx, ty } };
-    const board = () => { if (!SFSHIP) return; CKW = "sf"; CK.sfIn = false; setView("cockpit"); win.setTimeout(() => { veilTo(0, 280); sfSwSync(); }, 60); };   /* quick (0.8.225, Nick: "if it only takes half a second… that's all we need") */
+    const board = () => { if (!SFSHIP) return; CKW = "sf"; CK.sfIn = false; setView("cockpit"); win.setTimeout(() => { veilTo(0, 280); sfSwSync(); }, 60); };   /* quick (0.8.225) */
     if (i < 0 || S3D) { veilTo(1, 200); win.setTimeout(board, 210); return; }
     const sx0 = X[i] * k + tx, sy0 = Y[i] * k + ty, side = sx0 < mx ? 1 : -1;
     sfCam({ k, cx: sx0, cy: sy0, wx: X[i], wy: Y[i] }, { k: Math.min(40, k * 8), cx: mx, cy: my, wx: X[i], wy: Y[i] }, 500, p => p * p * (3 - 2 * p), [side * Math.min(160, (fr - fl) * .12), -60], board);
@@ -6103,24 +6100,24 @@ function sfShip(on){ SFNP = true; win.clearTimeout(sfShip.t); sfShip.t = win.set
       land(0); }, 170); }   /* at once, in the same beat as the switch, so no frame of the fitted chart shows */
   win.setTimeout(sfSwSync, 0); }
 const sfSw = (() => { const w = $("#main").createDiv({ cls: "ivm-sfsw seg" }); w.hidden = true;
-  for (const [m, t] of [["ship", "Ship"], ["chart", "Chart"]])   /* Starship first (0.8.323, Nick) */ { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); sfShip(m === "ship"); }; }
+  for (const [m, t] of [["ship", "Ship"], ["chart", "Chart"]])   /* Starship first (0.8.323) */ { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); sfShip(m === "ship"); }; }
   w.createSpan({ cls: "sfk", text: "C", attr: { "aria-hidden": "true" } });   /* the key that toggles them */
   for (const ty of ["pointerdown", "wheel", "click"]) w.addEventListener(ty, ev => ev.stopPropagation()); win.setTimeout(() => sfSwSync(), 0); return w; })();
-/* Starfield leads with the Starship (0.8.320, Nick: "Starfield on its own is so powerful that it should be the lead"); Star Chart is the 2D chart as its own map, and C still swaps */
+/* Starfield leads with the Starship (0.8.320); Star Chart is the 2D chart as its own map, and C still swaps */
 function sfLaunch(){ if (view === "cockpit" && SFSHIP) return; if (view === "stars") { sfShip(true); return; }
   if (view === "cockpit") { setView("stars"); win.setTimeout(() => { if (!dead) sfShip(true); }, 400); return; }
   closePops(); veilTo(1, 150); win.setTimeout(() => { if (dead) return; SFSHIP = { ckw: CKW, cam: null }; CKW = "sf"; CK.sfIn = false; setView("cockpit"); win.setTimeout(() => { veilTo(0, 300); sfSwSync(); }, 80); }, 160); }
 function sfChart(){ if (view === "cockpit" && SFSHIP) { sfShip(false); return; } if (view !== "stars") setView("stars"); }
-/* beside the orb tabs, not under them (0.8.323, Nick: "dead center just below the orb tabs… is prime real estate"); centered at the top when there are no orbs */
+/* beside the orb tabs, not under them (0.8.323); centered at the top when there are no orbs */
 function sfSwPlace(){ for (const el of [sfSw, ivSw]) if (el && !el.hidden) swPlace(el); }
 function swPlace(sfSw){ try { const m = $("#main").getBoundingClientRect(), c = cv.getBoundingClientRect();
-  /* top right of the map, on the orbs' row (0.8.344, Nick: "maybe the switch needs to be further right?"); beside the orbs only when the row is too narrow for both */
+  /* top right of the map, on the orbs' row (0.8.344); beside the orbs only when the row is too narrow for both */
   let r = null; if (orbBar && !orbBar.hidden) for (const ch of orbBar.children) { const q = ch.getBoundingClientRect(); if (!q.width) continue; if (!r || q.right > r.right) r = { right: q.right, top: q.top, height: q.height }; }
   let rr = Math.max(0, Math.round(m.right - c.right + (view === "cockpit" ? 0 : sideW()))) + 16; { const wn = root.querySelector(".wm-name"); if (wn && wn.offsetParent) { const q = wn.getBoundingClientRect(); if (q.width) rr = Math.max(rr, Math.round(m.right - q.left) + 14); } }   /* clear of the plugin's name on the chart */ const sw = sfSw.offsetWidth || 200, top = r ? Math.round(r.top - m.top + r.height / 2) : 20;
   sfSw.classList.remove("sfbeside", "sfright");
   if (!r || m.width - rr - sw > r.right - m.left + 24) { sfSw.classList.add("sfright"); sfSw.setCssProps({ "--sfr": rr + "px", "--sft": top + "px" }); }
   else { sfSw.classList.add("sfbeside"); sfSw.setCssProps({ "--sfl": Math.round(r.right - m.left + 14) + "px", "--sft": top + "px" }); } } catch (_) { /* not laid out yet */ } }
-/* Ideaverse | Obsidian (0.8.356, Nick): the same switch and the same C, for the two graph maps */
+/* Ideaverse | Obsidian (0.8.356): the same switch and the same C, for the two graph maps */
 const ivSw = (() => { const w = $("#main").createDiv({ cls: "ivm-sfsw seg" }); w.hidden = true;
   for (const [m, t] of [["ideaverse", "Ideaverse"], ["graph", "Obsidian"]]) { const b = w.createEl("button", { text: t, attr: { type: "button", "data-m": m } }); b.onclick = e => { e.stopPropagation(); if (view !== m) { closePops(); setView(m); } }; }
   w.createSpan({ cls: "sfk", text: "C", attr: { "aria-hidden": "true" } });
@@ -6128,8 +6125,8 @@ const ivSw = (() => { const w = $("#main").createDiv({ cls: "ivm-sfsw seg" }); w
 function ivSwSync(){ const on = !dead && (view === "ideaverse" || view === "graph"); ivSw.hidden = !on; if (!on) return; ivSw.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === view))); win.setTimeout(sfSwPlace, 0); }
 function sfSwSync(){ ivSwSync(); const on = SFMERGE && !dead && (view === "stars" || (view === "cockpit" && !!SFSHIP)); sfSw.hidden = !on; if (!on) return; win.setTimeout(sfSwPlace, 0); sfSw.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.m === "ship") === (view === "cockpit")))); }
 onKey(e => { if (!SFMERGE || e.metaKey || e.ctrlKey || e.altKey || e.key.toLowerCase() !== "c") return; const a = doc.activeElement; if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable)) return;
-  if (view === "cockpit" && SFSHIP) { e.preventDefault(); sfShip(false); } else if (view === "stars") { e.preventDefault(); sfShip(true); } else if (view === "ideaverse" || view === "graph") { e.preventDefault(); setView(view === "ideaverse" ? "graph" : "ideaverse"); } });   /* C toggles Chart ⇄ Starship (0.8.222, Nick); no other map uses C */
-/* ⌘T: a new, empty tab, as in Obsidian (0.8.211, Nick): an orb of its own, and the primary note waits as a quiet placeholder until you pick a note.
+  if (view === "cockpit" && SFSHIP) { e.preventDefault(); sfShip(false); } else if (view === "stars") { e.preventDefault(); sfShip(true); } else if (view === "ideaverse" || view === "graph") { e.preventDefault(); setView(view === "ideaverse" ? "graph" : "ideaverse"); } });   /* C toggles Chart ⇄ Starship (0.8.222); no other map uses C */
+/* ⌘T: a new, empty tab, as in Obsidian (0.8.211): an orb of its own, and the primary note waits as a quiet placeholder until you pick a note.
    Nothing is lost: the other orbs keep their notes */
 function tabNew(){ const at = TCUR >= 0 && TABS[TCUR] ? TCUR + 1 : TABS.length; TABS.splice(at, 0, { path: "" }); TCUR = at; tabsSave(); select(-1); EDS.left.close(); if (EDS.left.el) EDS.left.el.hidden = true; syncOrbs(); draw();
   win.setTimeout(() => { const q = $("#q"); if (q && !dead) { q.focus(); q.select(); } }, 30); }
@@ -6143,16 +6140,16 @@ function newTabSync(){ const on = !dead && edOn() && !!TABS[TCUR] && !TABS[TCUR]
   newTabEl.setCssProps({ "--ntx": Math.round(c.left - pr.left + r.x) + "px", "--nty": Math.round(c.top - pr.top + r.y) + "px", "--ntw": Math.round(r.w) + "px" }); }
 function tabGo(j){ const t = TABS[j]; if (!t) return; if (!t.path) { if (TABS[TCUR] && TABS[TCUR].pin && j !== TCUR) return; TCUR = j; tabsSave(); select(-1); EDS.left.close(); syncOrbs(); return; }
   const i = PIDX.get(t.path); if (i == null) return;
-  /* in the Holodeck the map is the backdrop, so a filter doesn't stop a tab opening beside you (Nick, Nov 7) */
-  if (holoOn() && j !== TCUR && !(EDS.right.path === t.path && !EDS.right.el.hidden && (vis[i] || (focus >= 0 && visNoFocus(i))) && !(TABS[TCUR] && TABS[TCUR].pin))) { if (EDS.right.col) EDS.right.collapse(false); /* a tucked support note comes back: in the Holodeck a tab opens beside, in plain view (Nick, Nov 7) */ void EDS.right.open(i).then(() => { orbKey = ""; syncOrbs(); }); orbKey = ""; syncOrbs(); return; }
+  /* in the Holodeck the map is the backdrop, so a filter doesn't stop a tab opening beside you */
+  if (holoOn() && j !== TCUR && !(EDS.right.path === t.path && !EDS.right.el.hidden && (vis[i] || (focus >= 0 && visNoFocus(i))) && !(TABS[TCUR] && TABS[TCUR].pin))) { if (EDS.right.col) EDS.right.collapse(false); /* a tucked support note comes back: in the Holodeck a tab opens beside, in plain view */ void EDS.right.open(i).then(() => { orbKey = ""; syncOrbs(); }); orbKey = ""; syncOrbs(); return; }
   if (holoOn() && j !== TCUR) { EDS.right.close(); edFree(); }   /* a second click on the tab beside makes it the primary note */
-  /* in Focus, a tab's note becomes the focus too, even one outside the focused links (0.9.24, Nick: "once you're focused… we can't change it") */
+  /* in Focus, a tab's note becomes the focus too, even one outside the focused links (0.9.24) */
   if (focus >= 0 && visNoFocus(i) && !(j !== TCUR && TABS[TCUR] && TABS[TCUR].pin)) { TCUR = j; tabsSave(); if (focus !== i) setFocus(i); else void openMain(i); syncOrbs(); win.setTimeout(() => { if (!dead) syncOrbs(); }, 300); return; }
   if (!vis[i]) { new Notice(`${N[i].title} is filtered out of this map. Clear the filters to see it.`); return; }
-  // pinned: the primary note keeps its note, and another orb's note opens as the support note (0.8.68, Nick). Unpin to switch tabs
+  // pinned: the primary note keeps its note, and another orb's note opens as the support note (0.8.68). Unpin to switch tabs
   if (j !== TCUR && TABS[TCUR] && TABS[TCUR].pin) { void EDS.right.open(i); return; }
   TCUR = j; tabsSave(); if (sel === i) void openMain(i); else select(i); syncOrbs(); }
-/* a tab dropped on an editor: on the support note it opens there; on the primary note it becomes the primary, past a pin, and the pin stays with the primary (0.9.23, Nick) */
+/* a tab dropped on an editor: on the support note it opens there; on the primary note it becomes the primary, past a pin, and the pin stays with the primary (0.9.23) */
 /* the primary and the support note trade places (a title bar dragged onto the other one, 0.9.42): like a tab dropped on the primary, it goes past a pin and the primary stays pinned */
 function edSwap(){ const a = EDS.left.path, b = EDS.right.el.hidden ? null : EDS.right.path; if (!a || !b) return; const ib = PIDX.get(b), ia = PIDX.get(a); if (ib == null) return;
   let j = TABS.findIndex(t_ => t_.path === b); if (j < 0) { const at = TCUR >= 0 ? TCUR + 1 : TABS.length; TABS.splice(at, 0, { path: b }); j = at; tabsSave(); }
@@ -6167,7 +6164,7 @@ function tabClose(j){ if (!TABS[j]) return; TABS.splice(j, 1); const was = j ===
   if (TCUR >= 0 || was) TCUR = Math.max(0, Math.min(TCUR, TABS.length - 1)); tabsSave();
   if (was) { if (TABS[TCUR]) tabGo(TCUR); else EDS.left.close(); } syncOrbs(); }
 const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; win.setTimeout(() => { if (!dead) syncOrbs(); }, 0);   // saved tabs show from the start
-/* drop notes in from Obsidian (0.9.54, Nick: "dragging notes in from the file list or the search results… That's huge"): a tab, a file, files or a link
+/* drop notes in from Obsidian (0.9.54): a tab, a file, files or a link
    dropped on the tabs becomes tabs where the line shows (a tab dragged in leaves Obsidian's tab bar, as a moved tab does); dropped on the primary note it becomes the primary (past a pin),
    on the support note it opens beside */
 { const src = () => { try { return host.dragSource ? host.dragSource() : null; } catch (_) { return null; } };
@@ -6178,7 +6175,7 @@ const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; 
   const over = (e, fn) => { const S_ = src(); if (!S_ || !edOn()) return; e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = S_.leaf ? "move" : "copy"; quiet(); fn(); };
   const orbOver = e => over(e, () => { unmark(); orbBar.classList.add("dropin"); const m = slot(e); if (m.el) { m.el.classList.add(m.after ? "dropa" : "dropb"); mark = m; } });
   orbBar.addEventListener("dragover", orbOver);
-  /* in the Holodeck the whole tab column takes a drop, not only the tabs themselves (0.9.81, Nick: "anywhere in the vertical tab bar"): from the top of the column down to the Sort box, its full width */
+  /* in the Holodeck the whole tab column takes a drop, not only the tabs themselves (0.9.81): from the top of the column down to the Sort box, its full width */
   const inCol = e => { if (!holoOn() || orbBar.contains(e.target)) return false; const r = orbBar.getBoundingClientRect(), rr = root.getBoundingClientRect(), op = root.querySelector(".ivm-holoop"), bot = op && !op.hidden && op.getBoundingClientRect().height ? op.getBoundingClientRect().top : rr.bottom; return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= bot; };
   root.addEventListener("dragover", e => { if (inCol(e)) orbOver(e); }, true);
   root.addEventListener("drop", e => { if (inCol(e)) orbDrop(e); }, true);
@@ -6195,7 +6192,7 @@ const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; 
       else { SUPNEW = true; if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(i).then(() => { SUPNEW = false; }); }
       dropDone(S_); }, true); };
   card(EDS.left, "left"); card(EDS.right, "right");
-  /* anywhere over the map's drop zones, what's left of Obsidian's split preview goes (it covered the Holodeck in Nick's screenshots) */
+  /* anywhere over the map's drop zones, what's left of Obsidian's split preview goes */
   root.addEventListener("dragover", e => { if (src() && zoneAt(e.clientX, e.clientY)) quiet(); }, true);
   function zoneAt(x, y){ if (dead || !edOn()) return false; const inR = el => { if (!el || el.hidden || !el.isConnected) return false; const r = el.getBoundingClientRect(); return r.width > 0 && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
     if (holoOn()) return inR(root); return inR(orbBar) || inR(EDS.left.el) || inR(EDS.right.el); }
@@ -6211,7 +6208,7 @@ function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".card
     let lastF = null;
     TABS.forEach((t, j) => { if (HO && TSORT === "folder") { const f_ = !t.path ? "" : t.path.includes("/") ? t.path.split("/")[0] : "Vault root"; if (f_ && f_ !== lastF) orbBar.createDiv({ cls: "orbfh", text: f_ }); lastF = f_; }   /* a small header per folder while they're grouped */
       const i = PIDX.get(t.path), nm = !t.path ? "New tab" : i != null ? N[i].title : t.path.replace(/^.*\//, "").replace(/\.md$/, ""), lv = i != null ? N[i].level : 1;
-      const b = orbBar.createEl("button", { cls: "ivm-orb lv" + lv + (t.path ? "" : " blank") + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""),   /* shaped like the note's dot (0.8.202, Nick): Level 5 a square, Level 4 a diamond, the rest round */ attr: { type: "button", "data-name": nm, "data-i": String(j) } });   // no aria-label: Obsidian would add its own tooltip over ours (Nick, 0.8.33); the name is read from a hidden span
+      const b = orbBar.createEl("button", { cls: "ivm-orb lv" + lv + (t.path ? "" : " blank") + (j === TCUR ? " cur" : "") + (t.pin ? " pin" : ""),   /* shaped like the note's dot (0.8.202): Level 5 a square, Level 4 a diamond, the rest round */ attr: { type: "button", "data-name": nm, "data-i": String(j) } });   // no aria-label: Obsidian would add its own tooltip over ours; the name is read from a hidden span
       b.createSpan({ cls: "orbsr", text: nm });
       b.setCssProps({ "--o0": lv >= 3 ? GRAD[lv][0] : lv === 2 ? css.l2 : css.l1, "--o1": lv >= 3 ? GRAD[lv][1] : lv === 2 ? css.l2 : css.l1 });
       b.createSpan({ cls: "orbd" }); if (t.pin) setIcon(b.createSpan({ cls: "orbp" }), "pin");
@@ -6219,7 +6216,7 @@ function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".card
       x.onclick = e => { e.stopPropagation(); tabClose(j); }; b.onauxclick = e => { if (e.button === 1) { e.preventDefault(); tabClose(j); } };
       if (HO) { b.createSpan({ cls: "orbh", text: nm }); if (bes && t.path === bes && j !== TCUR) b.classList.add("beside"); } else if (ORBN) b.createSpan({ cls: "orbn", text: nm });
       b.onclick = e => { e.stopPropagation(); if (orbDragged) { orbDragged = false; return; } tabGo(j); };
-      /* right-click: where to show it, pin, close (0.9.39, Nick) */
+      /* right-click: where to show it, pin, close (0.9.39) */
       b.addEventListener("contextmenu", e => { e.preventDefault(); e.stopPropagation(); if (!t.path) return; const m = new Menu(), isP = j === TCUR && EDS.left.path === t.path, isS = !EDS.right.el.hidden && EDS.right.path === t.path;
         m.addItem(it => it.setTitle("Open as primary note").setIcon("panel-left").setDisabled(isP).onClick(() => tabDrop(j, "left")));
         m.addItem(it => it.setTitle("Open as support note").setIcon("panel-right").setDisabled(isS || EDS.left.path === t.path).onClick(() => tabDrop(j, "right")));
@@ -6232,7 +6229,7 @@ function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".card
         const x0 = e.clientX; let on = false, base = 0;
         const VY = orbBar.classList.contains("holo"), cx_ = ev => VY ? ev.clientY : ev.clientX, mid = r => VY ? r.top + r.height / 2 : r.left + r.width / 2;   /* the Holodeck's column drags up and down */
         const y0 = e.clientY, shift = () => mid(b.getBoundingClientRect());
-        /* drag a tab out onto the primary or the support note and that note changes to it (0.9.23, Nick); on the primary note it even overrides a pin, "a manual, forceful maneuver" */
+        /* drag a tab out onto the primary or the support note and that note changes to it (0.9.23); on the primary note it even overrides a pin, "a manual, forceful maneuver" */
         let out = null, gh = null, tgt = null;
         const outOf = ev => { const r = orbBar.getBoundingClientRect(); return VY ? ev.clientX > r.right + 12 : ev.clientY > r.bottom + 24; };
         const tgtAt = ev => { for (const o of [EDS.left, EDS.right]) { if (!o.el || o.el.hidden) continue; const r = o.el.getBoundingClientRect(); if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) return o; } return null; };
@@ -6258,7 +6255,7 @@ function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".card
   placeOrbs(); }
 function placeOrbs(){ win.setTimeout(() => { if (!dead && typeof sfSwPlace === "function") sfSwPlace(); }, 0); if (orbBar.hidden) return;
   if (orbBar.classList.contains("holo")) { try { const c = cv.getBoundingClientRect(), m = $("#main").getBoundingClientRect(); orbBar.style.left = Math.round(c.left - m.left) + "px"; orbBar.setCssProps({ "--orbt": Math.round(c.top - m.top + 8) + "px" }); orbBar.style.width = (HOLOTW - 14) + "px"; } catch (_) { /* not laid out yet */ }
-    /* a long name wraps to a second line; only one that still doesn't fit gets smaller (Nick, Nov 7) */
+    /* a long name wraps to a second line; only one that still doesn't fit gets smaller */
     win.requestAnimationFrame(() => { for (const h of orbBar.querySelectorAll(".orbh")) { let f = 12.5; h.setCssProps({ "--ohf": "12.5px" }); while (h.scrollHeight > h.clientHeight + 1 && f > 9) { f -= .5; h.setCssProps({ "--ohf": f + "px" }); } } });
     return; }
   const L = !EDS.left.el.hidden ? edRect("left").x + edRect("left").w + 12 : 12, R = (!EDS.right.el.hidden ? edRect("right").x : W - sideW()) - 12;
@@ -6296,16 +6293,16 @@ function drawPreviews(){ const cmp = view === "compass" && EDITM && edOn(), cap 
     ctx.restore(); }
   for (const g of gals) { const p = N[g.i].path; want.add(p); let e = HPV.get(p);
     if (!e) { e = pvLayer.createDiv({ cls: "ivm-card ivm-pv" + (cmp ? " pved" : "") }); e.createDiv({ cls: "pvt", text: N[g.i].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); HPV.set(p, e);
-      if (cmp) { e.dataset.hint = (Platform.isMacOS ? "click to edit · ⌘ new orb · ⌘⌥ support note" : "click to edit · Ctrl new orb · Ctrl+Alt support note");   /* Compass's previews are editable too (0.8.175, Nick), as the Cockpit's */
+      if (cmp) { e.dataset.hint = (Platform.isMacOS ? "click to edit · ⌘ new orb · ⌘⌥ support note" : "click to edit · Ctrl new orb · Ctrl+Alt support note");   /* Compass's previews are editable too (0.8.175), as the Cockpit's */
         e.addEventListener("pointerdown", ev => { ev.stopPropagation(); ev.preventDefault(); const i = PIDX.get(p); if (i == null) return; if (openAs(i, openKind(ev))) return;   /* the same keys as everywhere (0.8.189): ⌘ a new orb, ⌘⌥ the support note */
           const r = e.getBoundingClientRect(), pr = pvLayer.getBoundingClientRect(); void ckEdit(p, r.left - pr.left, r.top - pr.top, pvLayer); }); } }
-    { const lk = `${root.dataset.theme}|${CARDTH}|${CARDMODE}|${CARDOP}|${pw}`; if (e.dataset.lk !== lk) { e.dataset.lk = lk; edLook(e); e.setCssProps({ "--pvw": pw + "px", "--pvh": ph + "px" }); } }   /* the look only when it changes, not every frame (0.8.178, Nick: Compass slow on the desktop) */
+    { const lk = `${root.dataset.theme}|${CARDTH}|${CARDMODE}|${CARDOP}|${pw}`; if (e.dataset.lk !== lk) { e.dataset.lk = lk; edLook(e); e.setCssProps({ "--pvw": pw + "px", "--pvh": ph + "px" }); } }   /* the look only when it changes, not every frame (0.8.178) */
     { const L = Math.round(ox + g.px) + "px", T = Math.round(oy + g.py) + "px"; if (e.style.left !== L) e.style.left = L; if (e.style.top !== T) e.style.top = T; } }
   for (const [p, e] of HPV) if (!want.has(p)) { e.remove(); HPV.delete(p); } }
 cv.addEventListener("pointerdown", () => { if (CK.edit && CK.edit.host === pvLayer) ckEditClose(); });   /* a click on the map finishes a Compass edit */
 function select(i, fromTrail){ if (i !== sel) HUDI = -1;
   if (!LIVEQ && i >= 0 && edOn()) tabTake(i);
-  else if (!LIVEQ && i < 0 && edOn() && TABS[TCUR] && !TABS[TCUR].pin && TABS[TCUR].path) { TCUR = -1; tabsSave(); syncOrbs(); }   /* clicking away lets go of the orb: it stays, and the next note you pick opens in a new one (0.8.192, Nick) */
+  else if (!LIVEQ && i < 0 && edOn() && TABS[TCUR] && !TABS[TCUR].pin && TABS[TCUR].path) { TCUR = -1; tabsSave(); syncOrbs(); }   /* clicking away lets go of the orb: it stays, and the next note you pick opens in a new one (0.8.192) */
   if (view === "compass" && !LIVEQ) win.setTimeout(cmpSync, 0);
   if (view === "arena" && !LIVEQ) win.setTimeout(arenaSync, 0);
   if (view === "cockpit" && !LIVEQ) win.setTimeout(ckSync, 0);
@@ -6361,7 +6358,7 @@ function runSearch(){
   html(res).v = hits.length ? hits.map((i,j) => `<button data-i="${i}" class="${j===0?"on":""}"><span class="t">${esc(N[i].title)}</span><span class="m">L${N[i].level} · ${esc(N[i].sub)}</span></button>`).join("") : `<button disabled><span class="t">No match</span></button>`;
   res.hidden = false;
   res.querySelectorAll("[data-i]").forEach((b, j) => { b.onmousedown = ev => { ev.preventDefault(); go(+b.dataset.i); };
-    b.onmousemove = () => { if (hi === j) return; hi = j; res.querySelectorAll("button").forEach((x, k) => x.classList.toggle("on", k === hi)); }; });   /* the pointer moves the one highlight (0.8.213, Nick saw two: the first result and the one under the mouse) */
+    b.onmousemove = () => { if (hi === j) return; hi = j; res.querySelectorAll("button").forEach((x, k) => x.classList.toggle("on", k === hi)); }; });   /* the pointer moves the one highlight (0.8.213) */
 }
 function go(i){ res.hidden = true; q.blur(); navTo(i); toEditor(i); }
 q.addEventListener("input", runSearch);
@@ -6537,7 +6534,7 @@ const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.
 { const r = $("#emerpop").createEl("label", { cls: "mini lcemo ememo" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = emoOn("emergence"); { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = emoOn("emergence"); }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
   const st = $("#emerpop").createDiv({ cls: "pn lcemost" });
   cb.onchange = async () => { setEmoOn("emergence", cb.checked); st.setText(""); if (cb.checked && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
-// Sensemakers' gear: Show emojis too (Nick, 0.7.58)
+// Sensemakers' gear: Show emojis too
 { const se = doc.createElement("div"); se.id = "senseemo"; se.className = "mspop"; se.hidden = true; $("#sensepop").after(se);   // its own section, since Sensemakers' Placed by only shows with AI placement
   const r = se.createEl("label", { cls: "mini lcemo smemo" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = emoOn("sense"); { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = emoOn("sense"); }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
   const st = se.createDiv({ cls: "pn lcemost" });
@@ -6545,7 +6542,7 @@ const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.
 root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if (!r.checked) return; if (r.value === "spacetime") { goMap("spacetime", false); syncEmd(); return; } if (view === "spacetime") { closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); setView("emergence"); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); morph(true, () => fitTarget()); syncEmd(); });
 syncEmd();
 function goChord(m){ const keep = $("#tclook") && !$("#tclook").hidden && (m === "in" || m === "out");
-  if (keep && view === "chord" && (CSPH === "in" || CSPH === "out") && m !== CSPH) {   /* Tesla ⇄ Corona: the same globe, so just redraw it in the other look, at once (0.8.199, Nick: the old look's lines stayed until a drag) */
+  if (keep && view === "chord" && (CSPH === "in" || CSPH === "out") && m !== CSPH) {   /* Tesla ⇄ Corona: the same globe, so just redraw it in the other look, at once (0.8.199) */
     CSPH = m; save("iv-csph", m); TCLOOK = m; save("iv-tclook", m); syncTL(); ++morphId; morphing = false; camBusy = 0; csAngles(); csProject(); X.set(DX); Y.set(DY); buildGrid(); legend(); draw(); return; }
   if (!keep) closePops(); driftStop(); CSPH = m; save("iv-csph", m); if (m === "in" || m === "out") { TCLOOK = m; save("iv-tclook", m); if (typeof syncTL === "function") syncTL(); } if (view !== "chord") setView("chord"); else morph(true, () => fitTarget()); root.dataset.dome = csphOn() ? "1" : ""; legend(); placePlaybar(); syncRange(); }
 $("#gochord").onclick = () => goChord("");
@@ -6577,7 +6574,7 @@ if (emoAny()) win.setTimeout(() => { void loadEmo().then(() => draw()); }, 0);
 // Rings around the picked note (or, with nothing picked, the biggest Level 5 hubs): its links by kind, a dial of time, and signposts
 // pointing the way to the hubs it links to; click a signpost to go there. Every other Level 5 hub wears one faint broken arc.
 let STCH = pref("iv-schart", false) === true, CHPOST = [], orbWake = () => {};
-// Star Chart's extra layers (0.8.9: one switch each, Nick); the 0.8.3 single switch turns them all on
+// Star Chart's extra layers (0.8.9); the 0.8.3 single switch turns them all on
 const CHL = (() => { const o = pref("iv-chx", null); if (o && typeof o === "object") return { lines: !!o.lines, read: !!o.read, gas: !!o.gas, orb: !!o.orb }; const a = pref("iv-schart2", false) === true; return { lines: a, read: a, gas: a, orb: a }; })();   // STCH2: Star Chart's second layer set (0.8.3)   // the signposts drawn this frame: [x, y, note]
 const chartOn = () => view === "stars" && STCH, chx = k_ => chartOn() && CHL[k_];
 const HUD = a => `rgba(127,231,255,${a})`;
@@ -6739,7 +6736,7 @@ root.querySelectorAll("#shelfsort button").forEach(b => b.onclick = () => { shel
 syncSS();
 for (const g of ["square", "hex", "mandala", "octa", "shells"]) { const b = root.querySelector("#gogeo" + g); if (b) b.onclick = () => { closePops(); driftStop(); GEO = g; save("iv-geo", g); if (view === "quincunx") { morph(true, () => fitTarget()); legend(); } else setView("quincunx"); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : ""; placePlaybar(); }; }
 for (const v of ["quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline"]) { const b = root.querySelector("#go" + v); if (b) b.onclick = () => { closePops(); driftStop(); setView(v); }; }
-/* Tesla and Corona are one map now, Tesla / Corona, with its look picked in the gear menu (0.8.197, Nick) */
+/* Tesla and Corona are one map now, Tesla / Corona, with its look picked in the gear menu (0.8.197) */
 let TCLOOK = pref("iv-tclook", "in") === "out" ? "out" : "in";
 $("#gocsi").onclick = () => goChord(TCLOOK);
 { const cb_ = $("#chordby"), tl = doc.createElement("div"); tl.className = "seg"; tl.id = "tclook"; tl.setAttribute("role", "group"); tl.setAttribute("aria-label", "Look"); tl.hidden = true; cb_.before(tl);
@@ -6818,11 +6815,11 @@ function closeEff(){ $("#effpanel").hidden = true; $("#effbtn").setAttribute("ar
 $("#effbtn").onclick = e => { const p = $("#effpanel"); p.hidden = !p.hidden; e.currentTarget.setAttribute("aria-expanded", String(!p.hidden)); if (!p.hidden) { $("#scorepanel").hidden = true; $("#callpanel").hidden = true; renderEffList(); } };
 $("#efx").onclick = closeEff; $("#effbtn").hidden = !EFF.length;
 // Bookshelf: an index of every call number (hub.map), with a button to copy it as a Markdown list
-/* Link by dragging (0.8.185, Nick: "option drag… pulling the link of a note from the graph"): hold ⌥ (Alt) and drag a note.
+/* Link by dragging (0.8.185): hold ⌥ (Alt) and drag a note.
    Drop it in any editor and its [[link]] lands where you let go. Drop it on another note's dot and it goes into that note's related property;
    hold Control (at the start or as you drop) and it goes into up instead. */
-/* where a link dropped on a note goes (0.8.189, Nick: to try them out, then keep one): its related property, the top of the note, the top as a bullet, or the bottom. Control still sends it to up */
-const LDPOS = "head";   /* a dropped link goes under its own small heading at the top; the only choice since 0.8.209 (Nick), so the Display row is gone. ⌥⌃ still sends it to up */
+/* where a link dropped on a note goes (0.8.189): its related property, the top of the note, the top as a bullet, or the bottom. Control still sends it to up */
+const LDPOS = "head";   /* a dropped link goes under its own small heading at the top; the only choice since 0.8.209, so the Display row is gone. ⌥⌃ still sends it to up */
 const LDPOS_T = { bullet: "top, as a bullet", head: "top, under its heading" };
 let LDRAG = -1, LDCTRL = false, LDROP = -1, LDGHOST = null, LDDONE = false, LDSRC = -1;
 const ldOK = () => view !== "cockpit" && !!host.addLink;
@@ -6837,7 +6834,7 @@ cv.addEventListener("dragend", e => { /* if the system refused the drop over a n
   if (!LDDONE && LDSRC >= 0 && e.dataTransfer && e.dataTransfer.dropEffect === "none") { const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top; if (px >= 0 && py >= 0 && px <= r.width && py <= r.height && doc.elementFromPoint(e.clientX, e.clientY) === cv) { const t = pick(px, py); if (t >= 0 && t !== LDSRC) ldLink(t, LDSRC, LDCTRL || e.ctrlKey); } }
   LDSRC = -1; cv.draggable = false; LDRAG = -1; LDROP = -1; if (LDGHOST) { LDGHOST.remove(); LDGHOST = null; } draw(); });
 cv.addEventListener("dragover", e => { if (!e.dataTransfer || !e.dataTransfer.types.includes("application/x-ivm-note")) return; const t = pick(e.offsetX, e.offsetY), ok = t >= 0 && t !== LDRAG;
-  if (ok) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }   /* copy, not link: on a Mac, holding ⌥ forces a copy, and a "link" drop was refused (0.8.186, Nick: the note glided back) */ const nt = ok ? t : -1; LDCTRL = LDCTRL || e.ctrlKey; if (nt !== LDROP || LDCTRL !== e.ctrlKey) { LDROP = nt; draw(); } });
+  if (ok) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }   /* copy, not link: on a Mac, holding ⌥ forces a copy, and a "link" drop was refused (0.8.186) */ const nt = ok ? t : -1; LDCTRL = LDCTRL || e.ctrlKey; if (nt !== LDROP || LDCTRL !== e.ctrlKey) { LDROP = nt; draw(); } });
 cv.addEventListener("dragleave", () => { if (LDROP >= 0) { LDROP = -1; draw(); } });
 function ldLink(t, j, up){ LDDONE = true; LDCTRL = false; const where = up ? "up" : LDPOS, w_ = up ? "up" : LDPOS_T[LDPOS];
   void host.addLink(N[t].path, N[j].path, where).then(r => { new Notice(r === "dup" ? `${N[t].title} already links to ${N[j].title} there (${w_}).` : r ? `Linked: ${N[j].title} → ${N[t].title} (${w_})` : `Couldn't add the link.`); }); }
@@ -6851,14 +6848,14 @@ dbg.__ck = () => [CK.yaw, CK.pitch];
 dbg.__lv5 = () => N.filter(d => d.level === 5).map(d => d.path);
 function drawLdrop(){ if (LDROP < 0 || !VV(LDROP)) return; const x = sx(X[LDROP]), y = sy(Y[LDROP]), r = rad(LDROP) + 10; ctx.save(); ctx.strokeStyle = css.accent; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
   const t = LDCTRL ? `→ up of ${N[LDROP].title}` : `→ ${N[LDROP].title}: ${LDPOS_T[LDPOS]}`; ctx.font = `600 12px ${css.body}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; const w_ = ctx.measureText(t).width + 16; ctx.fillStyle = css.bg; ctx.beginPath(); ctx.roundRect(x - w_ / 2, y - r - 30, w_, 22, 11); ctx.fill(); ctx.strokeStyle = css.accent; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = css.accent; ctx.fillText(t, x, y - r - 13); ctx.restore(); }   /* above the dot, clear of its name */
-/* One scheme for opening notes (0.8.189, Nick: "if Command-click is what users use in the rest of Obsidian to open a new tab…"), as in Obsidian:
+/* One scheme for opening notes (0.8.189), as in Obsidian:
    click picks (the primary note follows in Edit mode) · ⌘-click a new tab (an orb, when orbs are on) · ⌘⌥-click the support note (Obsidian's split to the right) · ⌥-drag a link.
    Ctrl stands in for ⌘ on Windows and Linux. Shift-click links the note into the primary note (0.8.215). */
 const MODK = e => !!e && (Platform.isMacOS ? e.metaKey : e.ctrlKey);
-/* Shift-click a note: link it into the primary note, under the small heading at the top, as ⌥-drop does (0.8.215, Nick). With no primary note open,
+/* Shift-click a note: link it into the primary note, under the small heading at the top, as ⌥-drop does (0.8.215). With no primary note open,
    or on the primary note itself, Shift-click does nothing (0.8.216). Only on the map and the HUD list; Shift-click on a link inside an editor still opens a new orb */
 function shiftLink(i, e){ if (!e || !e.shiftKey || MODK(e) || e.altKey) return false;
-  if (!edOn() || !EDS || EDS.left.el.hidden || !EDS.left.path) return true;   /* nothing to link into: Shift-click does nothing at all, so it never surprises (0.8.216, Nick) */
+  if (!edOn() || !EDS || EDS.left.el.hidden || !EDS.left.path) return true;   /* nothing to link into: Shift-click does nothing at all, so it never surprises (0.8.216) */
   const t = PIDX.get(EDS.left.path); if (t == null || t === i) return true; ldLink(t, i, false); return true; }
 const openKind = e => MODK(e) && e.altKey ? "side" : MODK(e) ? "tab" : "";
 function openAs(i, kind){ if (i == null || i < 0 || !N[i]) return false;
@@ -6875,15 +6872,15 @@ cv.addEventListener("pointermove", e => { if (view !== "arena") { if (SLOTX) { S
 cv.addEventListener("pointerdown", e => { if (!SLOTX || view !== "arena" || e.button !== 0 || Math.hypot(SLOTX.x - e.offsetX, SLOTX.y - e.offsetY) > 11) return; e.stopImmediatePropagation(); e.preventDefault(); const t = SLOTX; SLOTX = null; if (t.plan) planClear(t.q); else arenaClear(t.q); }, { capture: true });
 function drawSlotX(){ if (!SLOTX || view !== "arena") return; const { x, y } = SLOTX; ctx.save(); ctx.fillStyle = css.bg; ctx.strokeStyle = css.muted; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, 9, 0, 6.2832); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = css.ink; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - 3.5, y - 3.5); ctx.lineTo(x + 3.5, y + 3.5); ctx.moveTo(x + 3.5, y - 3.5); ctx.lineTo(x - 3.5, y + 3.5); ctx.stroke(); ctx.restore(); }
-/* ⌘W (Obsidian's Close tab, whatever its hotkey) closes the primary note's note and its orb; your Toggle pin hotkey pins and unpins it (0.8.196, Nick). Only while the map, or its editor, has the focus and the editor shows a note */
-/* "the map has the focus": the last click was in the map, its editors or its previews (0.8.199, Nick: the pin hotkey didn't answer right after picking a note, since Obsidian's own idea of the active tab can be the editor's leaf) */
+/* ⌘W (Obsidian's Close tab, whatever its hotkey) closes the primary note's note and its orb; your Toggle pin hotkey pins and unpins it (0.8.196). Only while the map, or its editor, has the focus and the editor shows a note */
+/* "the map has the focus": the last click was in the map, its editors or its previews (0.8.199) */
 let MAPFOCUS = false;
 on(doc, "pointerdown", e => { const t = e.target instanceof Node ? e.target : null; MAPFOCUS = !!t && (root.contains(t) || pvLayer.contains(t) || (EDS && Object.values(EDS).some(o => o.el.contains(t)))); }, true);
-const CLOSED = [];   /* the notes you closed, newest last: ⌘⇧T (Obsidian's Undo close tab) opens them again (0.8.199, Nick) */
+const CLOSED = [];   /* the notes you closed, newest last: ⌘⇧T (Obsidian's Undo close tab) opens them again (0.8.199) */
 if (host.onTabCmd) host.onTabCmd((what, check) => { if (dead || !EDS) return false; const a = doc.activeElement; if (!(MAPFOCUS || host.isActive() || (a && Object.values(EDS).some(o => o.el.contains(a))))) return false;
   if (what === "reopen") { if (!CLOSED.length) return false; if (check) return true; while (CLOSED.length) { const i = PIDX.get(CLOSED.pop()); if (i != null && vis[i]) { TABNEW = true; select(i); break; } } return true; }
   if (what === "new") { if (!edOn()) return false; if (check) return true; tabNew(); return true; }
-  /* ⌘⇧W: close every other orb, as Obsidian closes every other tab (0.8.233, Nick); pinned orbs stay, as pinned tabs do */
+  /* ⌘⇧W: close every other orb, as Obsidian closes every other tab (0.8.233); pinned orbs stay, as pinned tabs do */
   if (what === "others") { if (!edOn() || TABS.length < 2) return false; if (check) return true; const keep = TABS[TCUR] || TABS.find(t => EDS.left.path && t.path === EDS.left.path) || null;   /* no current orb (you clicked away): the primary note's orb stays, or only the pinned ones */ for (const t of TABS) if (t !== keep && !t.pin && t.path) { CLOSED.push(t.path); if (CLOSED.length > 30) CLOSED.shift(); }
     TABS = TABS.filter(t => t === keep || t.pin); TCUR = keep ? TABS.indexOf(keep) : -1; tabsSave(); syncOrbs(); return true; }
   if (what === "close" && TABS[TCUR] && !TABS[TCUR].path) { if (check) return true; tabClose(TCUR); return true; }
@@ -6942,16 +6939,16 @@ function navTo(j, fromTrail){
   if (focus >= 0 || focusArmed) { focusArmed = false; setFocus(j, fromTrail); }
   else { select(j, fromTrail); if (view !== "arena" && view !== "compass") flyTo(j); }   // Arena and Compass frame themselves round the picked note
 }
-// Starfield in Focus (0.8.8, Nick): the note centred, zoomed so its galaxy's hub sits just inside the edge (a hub itself: its galaxy fills the view)
-// Focus zoom (0.8.10, Nick: keep both, Normal the default): Normal frames every focused note; Close-Up (Starfield) frames the note with its hub.
+// Starfield in Focus (0.8.8): the note centred, zoomed so its galaxy's hub sits just inside the edge (a hub itself: its galaxy fills the view)
+// Focus zoom (0.8.10): Normal frames every focused note; Close-Up (Starfield) frames the note with its hub.
 // A small square button on the map (in Focus, in Starfield) and the Z key switch between them.
 let FZC = pref("iv-fzclose", false) === true;
-const FZ_MAPS = new Set(["stars", "emergence", "spacetime", "gravity", "graph", "sense", "mosaic", "chord", "lincal", "spiral", "lifeline", "tree", "treemap", "shelf", "quincunx", "ideaverse", "skyline", "posters"]);   /* + the Ideaverse and the other flat maps (0.8.308, Nick: "Ideaverse is one of the few map views that doesn't have the Z zoom") */
+const FZ_MAPS = new Set(["stars", "emergence", "spacetime", "gravity", "graph", "sense", "mosaic", "chord", "lincal", "spiral", "lifeline", "tree", "treemap", "shelf", "quincunx", "ideaverse", "skyline", "posters"]);   /* + the Ideaverse and the other flat maps (0.8.308) */
 const fzOn = () => FZ_MAPS.has(view) && !S3D_ON() && !sphOn() && !domeOn() && !globeOn() && (!geo3On() || IDV()) && !csphOn();   /* the Ideaverse turns, but its notes are projected each frame, so Close-Up frames them as on a flat map */
 function S3D_ON(){ return view === "stars" && S3D; }
 // Close-Up anywhere but Starfield: the note centred, zoomed so most of its linked notes (the nearest three quarters) sit just inside the view
 function closeTarget(xs, ys, i){ const f = fitTarget(), t = closeTarget0(xs, ys, i), kk = Math.max(f.k * 1.5, Math.min(f.k * 12, t.k)), vw = W - sideW();
-  /* the Ideaverse with the primary note open: the note sits a little right of center, toward the free space (0.8.313, Nick: "just shifts slightly to the right, not too much") */
+  /* the Ideaverse with the primary note open: the note sits a little right of center, toward the free space (0.8.313) */
   let cx = vw/2; if (IDV() && EDS && !EDS.left.el.hidden && !EDS.left.col) { const r_ = edRect("left"); cx += Math.max(0, r_.x + r_.w) * .3; }
   return { k: kk, tx: cx - xs[i]*kk, ty: H/2 - ys[i]*kk }; }
 function closeTarget0(xs, ys, i){ if (view === "stars") return starFocusTarget(xs, ys, i);
@@ -7088,11 +7085,11 @@ $("#pmaps").checked = playMaps; $("#pmaps").onchange = () => { playMaps = $("#pm
 onKey(e => { if (e.key === "Escape" && playing) setPlaying(false); });
 root.querySelectorAll("#playseg button").forEach(b => b.addEventListener("click", () => { if (tourRun) { tourRun = null; syncTour(); } }));   // picking Random/Thread leaves the tour
 syncPlay();
-/* the Starship's own Wander choices in the Animations dock (0.8.330, Nick: "Starfield has its specific wander mode settings showing here as well"): Links, Jumps, Drift
+/* the Starship's own Wander choices in the Animations dock (0.8.330): Links, Jumps, Drift
    in place of Random, Trails and Maps, which don't apply there; the seconds slider is the same Pace */
 let ckwmSync = () => {};
 { const ps = $("#playseg"), cs = doc.createElement("div"); cs.className = "seg ckwseg"; cs.setAttribute("role", "group"); cs.setAttribute("aria-label", "Starship Wander mode"); ps.after(cs);
-  for (const [v, t_, tip] of [["links", "Links", "Fly from note to linked note"], ["jumps", "Random", "Hyperspace jumps across the whole sky"], ["drift", "Wonder", "A slow cruise, looking from note to note"]]   /* Nick's names (0.8.339) */) {
+  for (const [v, t_, tip] of [["links", "Links", "Fly from note to linked note"], ["jumps", "Random", "Hyperspace jumps across the whole sky"], ["drift", "Wonder", "A slow cruise, looking from note to note"]]   /* the names (0.8.339) */) {
     const b = doc.createElement("button"); b.dataset.w = v; b.textContent = t_; b.setAttribute("aria-label", tip); cs.appendChild(b);
     b.onclick = () => { CKWM = v; save("iv-ckwm", v); ckwmSync(); if (CK.wd) { ckWander(false); ckWander(true); } }; }
   const s0 = ckwmSync; ckwmSync = () => { s0(); cs.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.w === CKWM))); }; ckwmSync(); }
@@ -7102,7 +7099,7 @@ let ckwmSync = () => {};
   const head = dock.createDiv({ cls: "anihead" }); head.createSpan({ cls: "pl", text: "Animations" });
   const body = dock.createDiv({ cls: "anibody" });
   const SECS = [["time", "Timelapse", $("#timebar"), $("#tlplay")], ["wander", "Wander Mode", $("#playbar"), $("#pplay")], ["orbit", "Orbit", $("#driftbar"), $("#dplay")]];
-  /* a "?" on Wander Mode and Orbit that explains their choices, for the map you're on (0.8.338, Nick) */
+  /* a "?" on Wander Mode and Orbit that explains their choices, for the map you're on (0.8.338) */
   const AHELP = { wander: () => view === "cockpit" ? "Links: fly from the note you're at to one of its links, linger, then on to the next.\n\nRandom: hyperspace jumps across the whole sky, to notes far from here.\n\nWonder: a slow cruise, looking from note to note without landing.\n\nThe seconds set how long the ship stays with each note. With Orbit on too, the ship circles each note while it lingers."
       : "Random: jump to any note on the map.\n\nTrails: walk from a note to one it links to, and on.\n\nMaps: stay on the same note; each step shows it on another map.\n\nThe seconds set how long each step lasts.",
     orbit: () => view === "cockpit" ? "The ship circles the note you're at, mostly left or right, now and then climbing or diving about 30°, and never quite level.\n\nIdea circles the note you're at; Ideaverse pulls back until the whole sky fits and circles all of it.\n\nCalm, Slow and Lively set the speed. G starts and stops it."
@@ -7238,15 +7235,15 @@ function liveLinks(path, list){ const i = PIDX.get(path); if (i == null || ARCH[
   for (const j of nk.keys()) if (!ok.has(j)) LIVE.links.push({ a: i, b: j, t0: now, add: true });
   for (const j of ok.keys()) if (!nk.has(j)) LIVE.links.push({ a: i, b: j, t0: now, add: false });
   starsDirty = true; glowKey = ""; RADJ = null;
-  // the camera holds still: the note you're on (or the one you wrote in) keeps its spot on screen while the map moves around it (0.8.24; Nick saw a zoom stutter)
+  // the camera holds still: the note you're on (or the one you wrote in) keeps its spot on screen while the map moves around it (0.8.24)
   const keep = sel >= 0 ? sel : i, kp = k, px = sx(X[keep]), py = sy(Y[keep]), fixed = sphOn() || geo3On() || s3dOn() || domeOn();
   relayout(true, true, fixed ? undefined : (tX, tY) => ({ k: kp, tx: px - tX[keep]*kp, ty: py - tY[keep]*kp }));
   for (let q = 0; q < n; q++) if (N[q].level !== lv0[q]) LIVE.rings.push({ i: q, t0: now + 300, up: N[q].level > lv0[q], from: lv0[q] });
   if (sel >= 0) win.setTimeout(() => { if (dead || sel < 0) return; const st0 = drawer.scrollTop; LIVEQ = true; try { select(sel, true); } finally { LIVEQ = false; } drawer.scrollTop = st0;
     for (const o of Object.values(EDS)) if (o.path && PIDX.has(o.path)) fillStrip(o, PIDX.get(o.path)); }, 820);   // the panel's numbers, once the map has settled (no camera move, no editor reload)
   draw(); }
-/* how a new link shows itself: Thread, a line that starts loose and pulls taut and glows (0.8.198). Since 0.8.204 it's the only one (Nick kept Thread, dropped Draw, Spark and Bloom),
-   and it rides the same arc as the link it leaves behind, so the eye can follow the thread into the link (Nick: "can the thread follow the same arc as the link?") */
+/* how a new link shows itself: Thread, a line that starts loose and pulls taut and glows (0.8.198). Since 0.8.204 it's the only one,
+   and it rides the same arc as the link it leaves behind, so the eye can follow the thread into the link */
 function linkArc(a, b, x1, y1, x2, y2){   /* the control point of the curve the map draws between two notes (as the selected note's links are drawn) */
   if (view === "chord") { const cx = sx(CH_C.x), cy = sy(CH_C.y); return [cx + ((x1+x2)/2 - cx)*.25, cy + ((y1+y2)/2 - cy)*.25]; }
   return [(x1+x2)/2, (y1+y2)/2 - (view === "planet" ? Math.hypot(x2-x1, y2-y1)*.55 : GRV() ? 0 : Math.abs(x2-x1)*.12)]; }
@@ -7258,7 +7255,7 @@ function linkFx(o, e, x1, y1, x2, y2){ const col = view === "stars" ? "hsl(58,86
   for (let q = 0; q <= 48; q++) { const u = q / 48, w = Math.sin(u * Math.PI) * Math.sin(u * 3 * 6.2832 - ph) * amp, [px, py] = P(u), [nx, ny] = T(u); q ? ctx.lineTo(px + nx * w, py + ny * w) : ctx.moveTo(px + nx * w, py + ny * w); } ctx.stroke();
   if (e > .62 && e < .82) { const f = 1 - Math.abs(e - .72) / .1; ctx.globalAlpha = .7 * f; ctx.lineWidth = 5; ctx.shadowBlur = 26; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx, cy, x2, y2); ctx.stroke(); }   /* the twang */
   ctx.shadowBlur = 0; ctx.globalAlpha = 1; }
-/* a removed link unthreads (0.8.212, Nick: "the opposite of the thread"): the arc pulls taut and flashes once, snaps in the middle,
+/* a removed link unthreads (0.8.212): the arc pulls taut and flashes once, snaps in the middle,
    and the two halves go slack and curl back to their notes as they fade, dotted, in the map's quiet ink */
 function linkUnFx(o, e, x1, y1, x2, y2){ const len = Math.hypot(x2 - x1, y2 - y1) || 1, [cx, cy] = linkArc(o.a, o.b, x1, y1, x2, y2);
   const P = u => { const v = 1 - u; return [v*v*x1 + 2*u*v*cx + u*u*x2, v*v*y1 + 2*u*v*cy + u*u*y2]; }, T = u => { const tx = 2*(1 - u)*(cx - x1) + 2*u*(x2 - cx), ty = 2*(1 - u)*(cy - y1) + 2*u*(y2 - cy), l = Math.hypot(tx, ty) || 1; return [-ty / l, tx / l]; };
@@ -7283,7 +7280,7 @@ function drawLive(){ if (!LIVE.links.length && !LIVE.rings.length) return; const
     else if (o.add) { ctx.globalAlpha = .9*(1 - e); ctx.strokeStyle = view === "stars" ? "hsl(58,86%,66%)" : css.accent; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 14; ctx.lineWidth = 3.2;
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(xm, ym); ctx.stroke();
       ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(x2, y2, Math.max(4, rad(o.b)) * (1 + 2.5*e), 0, 6.2832); ctx.lineWidth = 1.6; ctx.stroke(); }
-    else { ctx.globalAlpha = .7*(1 - e); ctx.strokeStyle = css.muted; ctx.setLineDash([4, 5]); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x1, y1);   /* a removed link fades along the arc it had (0.8.206, Nick) */
+    else { ctx.globalAlpha = .7*(1 - e); ctx.strokeStyle = css.muted; ctx.setLineDash([4, 5]); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x1, y1);   /* a removed link fades along the arc it had (0.8.206) */
       if (sphOn()) { ctx.lineTo(x2, y2); ctx.stroke(); } else { ctx.setLineDash([]); linkUnFx(o, e, x1, y1, x2, y2); } }
     ctx.restore(); }
   ctx.textAlign = "center"; ctx.textBaseline = "bottom";
@@ -7295,7 +7292,7 @@ function drawLive(){ if (!LIVE.links.length && !LIVE.rings.length) return; const
   ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   draw(); }   // keep drawing until the last flare fades
 if (host.onLinks) host.onLinks((p_, list) => { const i_ = PIDX.get(p_); if (i_ != null) { N[i_].mt = Date.now(); RECV++; } liveLinks(p_, list); recSync(); });   /* a note just changed moves to the top of Recents (0.8.235) */
-/* a note moved or renamed (0.8.175, Nick: Cmd-M a note to Atlas and watch it go): its path, folder and name change in place and the map glides it to its new spot, no rescan */
+/* a note moved or renamed (0.8.175): its path, folder and name change in place and the map glides it to its new spot, no rescan */
 const ftAdd = (dir, dlt) => { if (!dir) return; const parts = dir.split("/"); let p = "";
   for (let j = 0; j < parts.length; j++) { const parent = p; p = p ? p + "/" + parts[j] : parts[j]; if (!FT.has(p)) { FT.set(p, { path: p, name: parts[j], kids: [], direct: 0, total: 0 }); if (parent && FT.has(parent)) FT.get(parent).kids.push(p); } FT.get(p).total += dlt; }
   FT.get(dir).direct += dlt; };
@@ -7317,10 +7314,10 @@ const VIEW_NAME = {cockpit:"Starfield", kandinsky:"Kandinsky", arena:"Arena", co
 let views = (() => { const base = [], local = pref("iv-views", null);
   if (!Array.isArray(local)) return base.slice(); const names = new Set(local.map(v => v.name)); return [...local, ...base.filter(v => !names.has(v.name))]; })();
 let curView = "";
-// your own groups of views (Nick: "Annual Review", "Daily Drivers"…), in your order; a view names its group in v.group, and one with none sits under the groups
+// your own groups of views, in your order; a view names its group in v.group, and one with none sits under the groups
 let vgroups = (() => { const g = pref("iv-vgroups", []); return Array.isArray(g) ? g.filter(x => x && typeof x.name === "string") : []; })();
 const saveGroups = () => { save("iv-vgroups", vgroups); writeSaved(); };
-// a first look at Saved (Nick, 0.7.52): someone new gets one group, Base, with two views (Emergence and its Space-Time version), so the shape is clear.
+// a first look at Saved: someone new gets one group, Base, with two views (Emergence and its Space-Time version), so the shape is clear.
 // They live in the plugin's own data only, never written to your views file until you change something; delete them and they stay gone.
 if (!views.length && !vgroups.length && !(host.savedFolder && host.savedFolder()) && pref("iv-vseeded", false) !== true) {
   vgroups = [{ name: "Base", open: true }]; views = [{ name: "Emergence", view: "emergence", mode: "time", group: "Base" }, { name: "Emergence · Space-Time", view: "spacetime", mode: "time", group: "Base" }];
@@ -7360,10 +7357,10 @@ function snapView(name){
     // every filter (0.7.54): the years' edge strips, dating by modified time and its window, MOCs, properties and bases; and Linear Calendar's years and halves
     yrAll: YRALL, bymt: BYMT, mtwin: MTWIN, ctwin: CTWIN, fixd: FIXD ? { ...FIXD } : null, mocs: [...MOCSEL], mocDeg: MDEG, props: JSON.parse(JSON.stringify(PSEL)), bq: [...BQ],
     lc: view === "lincal" ? {r0: LCR0, r1: LCR1, half: LCHALF, shape: LCSHAPE, born: LCBORN || undefined, names: LCNAMES, d30: LCSHAPE === "days" ? LC30 : undefined} : null,
-    emo: { ...EMON },   // Show emojis, map by map (0.7.58, Nick)
-    // Base Builder and Posters (0.7.58): the layout (Rows, Scatter, Mosaic, Constellation, Timeline) and what each axis, row and size reads (Nick's movies Mosaic came back as Rows)
+    emo: { ...EMON },   // Show emojis, map by map (0.7.58)
+    // Base Builder and Posters (0.7.58): the layout (Rows, Scatter, Mosaic, Constellation, Timeline) and what each axis, row and size reads
     pst: view === "builder" || view === "posters" ? (P_ => ({ across: P_.across, lanes: P_.lanes, size: P_.size, height: P_.height, mosaic: !!P_.mosaic, con: !!P_.con, tl: !!P_.tl, conSel: P_.conSel, conMax: P_.conMax, rng: JSON.parse(JSON.stringify(P_.rng || {})), lhide: JSON.parse(JSON.stringify(P_.lhide || {})) }))(view === "builder" ? PSTB : PSTP) : null,
-    /* the Holodeck (0.9.43, Nick: "Saved Views doesn't save Holodecks"): its tabs, primary and support notes, column width and sort */
+    /* the Holodeck (0.9.43): its tabs, primary and support notes, column width and sort */
     holo: holoOn() ? { tabs: TABS.map(t_ => ({ path: t_.path, pin: !!t_.pin })), p: EDS.left.path, s: !EDS.right.el.hidden ? EDS.right.path : null, tw: HOLOTW, sort: TSORT, man: [...TMAN] } : null,
     cam: {cx: +((W/2 - tx)/k).toFixed(1), cy: +((H/2 - ty)/k).toFixed(1), k: +k.toFixed(4)}, saved: new Date().toISOString().slice(0,10)};
 }
@@ -7440,7 +7437,7 @@ function renderViewList(){
   $("#vq").hidden = views.length < 8;
   const hit = v => !s_ || v.name.toLowerCase().includes(s_) || viewSummary(v).toLowerCase().includes(s_);
   const names = new Set(vgroups.map(g => g.name)); for (const v of views) if (v.group && !names.has(v.group)) delete v.group;
-  // no hover hints here (Nick: they cover the list); screen readers still get a description
+  // no hover hints here; screen readers still get a description
   const btn = (el, cls, txt, title, fn) => { const b = el.createEl("button", { cls: "va " + cls, text: txt, attr: { type: "button", "aria-description": title } }); b.onclick = e => { e.stopPropagation(); e.preventDefault(); fn(b); }; return b; };
   // drag and drop: a view onto a view (before or after it, joining its group), onto a group's name (into it, at the end) or onto No group; a group onto a group
   const clearDrop = () => box.querySelectorAll(".dropb,.dropa,.dropin").forEach(x => x.classList.remove("dropb", "dropa", "dropin"));
@@ -7460,7 +7457,7 @@ function renderViewList(){
     if (vgroups.length) { const sel_ = r.createEl("select", { cls: "vgsel", attr: { "aria-description": "Move to a group" } }); sel_.createEl("option", { text: "No group", value: "" });
       for (const g of vgroups) sel_.createEl("option", { text: g.name, value: g.name }); sel_.value = v.group || "";
       sel_.onclick = e => e.stopPropagation(); sel_.onchange = () => { if (sel_.value) v.group = sel_.value; else delete v.group; const a = views.indexOf(v); views.splice(a, 1); views.push(v); saveViews(); renderViewList(); }; }
-    // Rename (Nick, 0.7.58): a click on the name opens the view, so renaming has its own button; the name turns into a box in place
+    // Rename: a click on the name opens the view, so renaming has its own button; the name turns into a box in place
     btn(r, "vren", "Rename", "Rename this view", () => { const inp = doc.createElement("input"); inp.type = "text"; inp.value = v.name; inp.className = "vgren vrenin"; go.replaceWith(inp); inp.focus(); inp.select();
       let fired = false; const fin = ok => { if (fired) return; fired = true; const nm = (inp.value || "").trim();
         if (ok && nm && nm !== v.name && !views.some(x => x !== v && x.name === nm)) { if (curView === v.name) curView = nm; v.name = nm; saveViews(); }
@@ -7526,7 +7523,7 @@ POPS.push(["#viewbtn", "#viewpop", "#viewms", () => { renderViewList(); }]);
     // on a phone (no pointing, no dragging) the rows show just their names; Edit shows each view's controls on a line of its own beneath it (0.7.55)
     const ed = fa.createEl("button", { cls: "chip vgedit", text: "Edit", attr: { type: "button" } });
     ed.onclick = e => { e.stopPropagation(); const on = !$("#vlist").classList.contains("editing"); $("#vlist").classList.toggle("editing", on); ed.textContent = on ? "Done" : "Edit"; ed.classList.toggle("on", on); }; } }
-// Saved shows no hover hints (Nick, 0.7.50): each button keeps its words as a description for screen readers
+// Saved shows no hover hints: each button keeps its words as a description for screen readers
 { const vp = $("#viewpop"); for (const el of vp.querySelectorAll("[title], [aria-label]")) { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); } syncFolderBtn(); }
 $("#viewbtn").onclick = e => { e.stopPropagation(); const el = $("#viewpop"), open = el.hidden; closePops("#viewpop"); closeColl(); el.hidden = !open; $("#viewbtn").setAttribute("aria-expanded", String(open)); if (open) { renderViewList(); if (typeof renderTourList === "function") renderTourList(); } };
 $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1;
@@ -7559,11 +7556,11 @@ POPS.push(['#vseg button[data-v="stars"]', "#starpop", "#vsegms"]);
 const wobLab = doc.createElement("label"); wobLab.className = "pmaps dwob"; wobLab.title = "With Earth, Mercury or LYT: the tilt rocks gently once a turn, like a spinning top";
 { const cb = doc.createElement("input"); cb.type = "checkbox"; cb.id = "dwob"; cb.checked = WOB; const sw = doc.createElement("i"); sw.className = "sw"; const t = doc.createElement("span"); t.textContent = "Wobble like the Earth"; wobLab.append(cb, sw, t);
   cb.onchange = () => { WOB = cb.checked; save("iv-wob", WOB); }; $("#driftbar").appendChild(wobLab); }
-/* the Starship's own Orbit (0.8.322, Nick): round the note you're at, Lateral (a level circle) or Dynamic (left or right, now and then climbing or diving at about 30°) */
+/* the Starship's own Orbit (0.8.322): round the note you're at, Lateral (a level circle) or Dynamic (left or right, now and then climbing or diving at about 30°) */
 let CKORB = "dyn";
 { const db_ = root.querySelector("#driftbar"), sg_ = doc.createElement("div"); sg_.className = "seg ckosc"; sg_.setAttribute("role", "group"); sg_.setAttribute("aria-label", "What the Starship orbits");
   for (const [v_, t_] of [["idea", "Idea"], ["verse", "Ideaverse"]]) { const b = doc.createElement("button"); b.dataset.o = v_; b.textContent = t_; sg_.appendChild(b); b.onclick = () => { CKOSC = v_; save("iv-ckosc", v_); sg_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.o === CKOSC))); if (!drifting) driftStart(); }; }
-  sg_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.o === CKOSC))); const ds_ = root.querySelector("#driftseg"); if (ds_) ds_.after(sg_); else if (db_) db_.appendChild(sg_); }   /* Dynamic only (0.8.326, Nick: "we don't need the lateral orbit") */
+  sg_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.o === CKOSC))); const ds_ = root.querySelector("#driftseg"); if (ds_) ds_.after(sg_); else if (db_) db_.appendChild(sg_); }   /* Dynamic only (0.8.326) */
 { const seg_ = root.querySelector("#driftseg"); if (seg_) for (const [d, t, tip] of [["lat", "Lateral", "A level circle round the note"], ["dyn", "Dynamic", "Mostly left or right, now and then climbing or diving at about 30°"]]) { const b = doc.createElement("button"); b.dataset.d = d; b.className = "dship"; b.textContent = t; b.setAttribute("aria-label", tip); seg_.appendChild(b); } }
 const syncDrift = () => { root.querySelectorAll("#driftseg button").forEach(b => b.setAttribute("aria-pressed", String(b.classList.contains("dship") ? b.dataset.d === CKORB : b.dataset.d === dSp()))); wobLab.classList.toggle("dim", !earthy()); };
 root.querySelectorAll("#driftseg button").forEach(b => b.onclick = () => { const d = b.dataset.d; if (b.classList.contains("dship")) { CKORB = d; save("iv-ckorb", d); syncDrift(); return; } if (globeSet()) { DSG = d; save("iv-drift3", d); } else { DSF = d; save("iv-drift", d); } syncDrift(); });
@@ -7574,7 +7571,7 @@ $("#dplay").onclick = () => drifting ? driftStop() : driftStart(); syncDrift();
 { const r3 = root.querySelector('input[name="s3d"][value="3d"]'); if (r3 && !root.querySelector('input[name="s3d"][value="chart"]')) { const l3 = r3.closest("label"), lc = l3.cloneNode(true), ic = lc.querySelector("input"); ic.value = "chart"; ic.checked = false;
     lc.querySelector("b").textContent = "Star Chart"; lc.querySelector("em").textContent = "a navigator's chart: rings around a hub, and signposts to the hubs it links to"; l3.after(lc); } }
 // the second layer set: a mini switch in Starfield's gear, shown while Star Chart is on
-// ---------- Starfield's overview map (0.8.7, Nick): a small picture of the whole sky in the bottom right, with a box for where you are ----------
+// ---------- Starfield's overview map (0.8.7): a small picture of the whole sky in the bottom right, with a box for where you are ----------
 // so a jump from one note to another far away (Focus, a signpost, a link) never loses your place. Click or drag in it to move the view there.
 let MINI = pref("iv-mini", false) === true, MB = null;   // MB: the world box the overview shows
 const miniCv = doc.createElement("canvas"); miniCv.className = "minimap"; miniCv.hidden = true; cv.parentElement.appendChild(miniCv); const mctx = miniCv.getContext("2d");
@@ -7785,7 +7782,7 @@ if (doc.fonts) doc.fonts.ready.then(() => { if (!dead) { readCss(); draw(); } })
   for (const [b, ic] of [[hb, "chevron-up"], [tab, "chevron-down"]]) { b.empty(); setIcon(b, ic); const sv = b.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } }
   hb.onclick = () => flip(true); tab.onclick = () => flip(false);
   set(pref("iv-hcol", false) === true); }
-// a phone on its side (0.8.142, Nick: landscape "really fails"): the top bar and the trail step aside so the map gets the height; turn it back upright and they return
+// a phone on its side (0.8.142): the top bar and the trail step aside so the map gets the height; turn it back upright and they return
 { const land = () => { const on_ = Platform.isMobile && win.innerWidth > win.innerHeight && win.innerHeight < 560; if (root.classList.contains("ivm-land") !== on_) { root.classList.toggle("ivm-land", on_); win.setTimeout(() => { if (!dead) { resize(); draw(); } }, 60); } };
   on(win, "resize", land); land(); }
 
@@ -7893,11 +7890,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       const gk = doc.createElement("button"); gk.className = "chip"; gk.id = "gokandinsky"; gk.textContent = "Kandinsky"; gk.setAttribute("aria-label", "One note and its links as a painting, after Kandinsky's Composition VIII");
       ga.after(gk); gk.onclick = () => { closePops(); driftStop(); setView("kandinsky"); };
       const gp = doc.createElement("button"); gp.className = "chip"; gp.id = "gocockpit"; gp.textContent = "Starship"; gp.setAttribute("aria-label", "Fly through a note's links from the bridge of your starship");
-      gk.after(gp); gp.onclick = () => { closePops(); driftStop(); sfLaunch(); }; { const park = root.createDiv(); park.hidden = true; park.appendChild(gp); } }   /* Starship retired as its own map: Starfield is the Starship now (0.8.350, Nick) */
+      gk.after(gp); gp.onclick = () => { closePops(); driftStop(); sfLaunch(); }; { const park = root.createDiv(); park.hidden = true; park.appendChild(gp); } }   /* Starship retired as its own map: Starfield is the Starship now (0.8.350) */
     // Mosaic: every note a tile, after Treemap
     const gm = doc.createElement("button"); gm.className = "chip"; gm.id = "gomosaic"; gm.textContent = "Mosaic"; gm.setAttribute("aria-label", "Every note a tile, set like stones: Level 5 at the heart, each level a frame around it");
     $("#gotreemap").after(gm); gm.onclick = () => { closePops(); driftStop(); setView("mosaic"); };
-  }   /* Posters and People are gone as maps of their own (0.9.25, Nick); their engines live on in Base Builder's layouts, and an old saved view opens Base Builder */
+  }   /* Posters and People are gone as maps of their own (0.9.25); their engines live on in Base Builder's layouts, and an old saved view opens Base Builder */
   { const pc = $("#laygrp").createDiv({ cls: "postctl", attr: { id: "pplctl" } }); pc.hidden = true;
     pc.createDiv({ cls: "phint", text: "People from these properties:" }); pc.createDiv({ cls: "plchips pplchips" });
     const row = pc.createEl("label", { cls: "prow" }); row.createSpan({ text: "Show" }); const r = row.createEl("input", { type: "range" }); r.min = "5"; r.max = "150"; r.step = "1"; r.value = String(PPL.max);
@@ -7921,19 +7918,19 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const tg = yc.createEl("label", { cls: "pmaps yrall", attr: { "aria-label": "Show notes with no date, and notes from before or after the years shown, in strips at the edges" } });
     const cb = tg.createEl("input", { type: "checkbox", attr: { id: "yrall" } }); cb.checked = YRALL; tg.createEl("i", { cls: "sw" }); tg.createSpan({ text: "Show notes outside the date range" });
     cb.onchange = () => { YRALL = cb.checked; save("iv-yrall", YRALL); relayout(true, false, () => fitTarget()); };
-    // date by when each file was last changed instead of the Date property (Nick: "Organize by most recently modified")
+    // date by when each file was last changed instead of the Date property
     const tm = yc.createEl("label", { cls: "pmaps yrall", attr: { "aria-label": "Date each note by when its file was last modified, instead of the Date property" } });
     const cm = tm.createEl("input", { type: "checkbox", attr: { id: "bymt" } }); cm.checked = BYMT; tm.createEl("i", { cls: "sw" }); tm.createSpan({ text: "Organize by most recently modified" });
     // the window back from right now, in place of the years slider while the switch is on
     const wr = yc.createDiv({ cls: "mtwin mtslide" }); wr.createSpan({ cls: "mtl", text: "Recent" }); const wsl = wr.createEl("input", { type: "range", attr: { min: "0", max: String(WSTOPS.length - 1), step: "1", "aria-label": "How far back to show" } }), wv = wr.createSpan({ cls: "mtv" });
     wsl.onclick = e => e.stopPropagation(); let wt = 0;
-    const wset = commit => { const v = WSTOPS[WSTOPS.length - 1 - +wsl.value][0];   /* All on the left, 1 day on the right (0.8.200, Nick) */ if (BYMT) MTWIN = v; else CTWIN = v; wv.setText(v === "all" ? "All" : wLabel(v)); win.clearTimeout(wt);
+    const wset = commit => { const v = WSTOPS[WSTOPS.length - 1 - +wsl.value][0];   /* All on the left, 1 day on the right (0.8.200) */ if (BYMT) MTWIN = v; else CTWIN = v; wv.setText(v === "all" ? "All" : wLabel(v)); win.clearTimeout(wt);
       const go = () => { if (BYMT) save("iv-mtwin", v); else save("iv-ctwin", v); NOWMS = Date.now(); syncMT(); relayout(true, false, () => fitTarget()); if (typeof syncTB === "function") syncTB(); }; if (commit) go(); else wt = win.setTimeout(go, 160); };
     wsl.oninput = () => wset(false); wsl.onchange = () => wset(true);
     { const ends = wr.createDiv({ cls: "mtends" }); ends.createSpan({ text: "All" }); ends.createSpan({ text: "1 day" }); }
     box.after(wr);   /* right under the years, so the two read as one choice: a span of years, or how recent */
-    /* Dates: a fixed span, from one day to another (0.9.15, Nick: "control over specific dates in time"); "Keep these dates" turns a Recent window into fixed dates */
-    /* on the Recent row itself, right of a shorter slider (0.9.16, Nick: no new row, no sideways scroll): the two days, then a pin that keeps them, or × to let go */
+    /* Dates: a fixed span, from one day to another (0.9.15); "Keep these dates" turns a Recent window into fixed dates */
+    /* on the Recent row itself, right of a shorter slider (0.9.16): the two days, then a pin that keeps them, or × to let go */
     const fr = wr.createDiv({ cls: "fixrow" });
     const da = fr.createEl("input", { type: "date", cls: "fixd", attr: { "aria-description": "From" } }); fr.createSpan({ cls: "fixdash", text: "–" }); const db = fr.createEl("input", { type: "date", cls: "fixd", attr: { "aria-description": "To" } });
     const keep = fr.createEl("button", { cls: "fixkeep", attr: { type: "button", "aria-description": "Keep these dates: they stop moving with today" } }), clr = fr.createEl("button", { cls: "fixclr", attr: { type: "button", "aria-description": "Let go of the fixed dates" } }); setIcon(keep, "pin"); setIcon(clr, "x");
@@ -7954,7 +7951,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       if (view === "sense" && typeof senseSteps === "function") { senseStop(); senseT = null; senseTrail = []; SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; $("#tldate").textContent = "All time"; }
       win.clearTimeout(t_); if (commit) { save("iv-yr0", YR0); save("iv-yr1", YR1); } t_ = win.setTimeout(() => { relayout(false); if (typeof syncTB === "function") syncTB(); }, commit ? 0 : 90); };
     a.oninput = b.oninput = () => upd(false); a.onchange = b.onchange = () => upd(true);
-    /* Reset (0.8.203, Nick: "a little confusing to look at how to accomplish that"): every year again, and Recent back to All (upd lets go of the window). Shows only when something's narrowed */
+    /* Reset (0.8.203): every year again, and Recent back to All (upd lets go of the window). Shows only when something's narrowed */
     const rs = yc.createEl("button", { cls: "chip yrreset", text: "Reset", attr: { type: "button", id: "yrreset", "aria-label": "Show every year again, and set Recent back to All" } }); rs.hidden = true;
     rs.onclick = e => { e.stopPropagation(); a.value = String(SLMIN); b.value = String(NOW_Y); upd(true); }; }
   // Obsidian and Ideaverse: the forces, live (drag a slider and the graph moves as you go)
@@ -8062,7 +8059,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = KNAMES; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Show note names" });
       c_.onchange = () => { KNAMES = c_.checked; save("iv-knames", KNAMES); draw(); }; }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "kandinsky"; }; }
-  /* a "?" after a menu switch: hover (or tap) it for a line or two on what the switch does (0.8.302, Nick). The card is the map's own, never a system tooltip */
+  /* a "?" after a menu switch: hover (or tap) it for a line or two on what the switch does (0.8.302). The card is the map's own, never a system tooltip */
 let QHC = null, RELHELP = "";   /* RELHELP: the relevance score, explained (shared by the Starship and Display) */
 QHELP = (el, text) => qHelp(el, text);
 function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh", text: "?" }); const show = () => { if (!QHC) QHC = $("#main").createDiv({ cls: "ivm-qhcard" }); QHC.empty(); for (const p_ of String(typeof text === "function" ? text() : text).split("\n\n")) QHC.createEl("p", { text: p_ });   /* text can follow the map you're on */
@@ -8070,22 +8067,22 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     QHC.setCssProps({ "--qx": Math.max(8, x) + "px", "--qy": Math.max(8, y) + "px" }); };
   q.addEventListener("pointerenter", show); q.addEventListener("pointerleave", () => { if (QHC) QHC.hidden = true; });
   q.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); if (QHC && !QHC.hidden) QHC.hidden = true; else show(); }); }
-  // Cockpit: the canopy's frame (Nick: the structure bars from the mockup)
+  // Cockpit: the canopy's frame
   { const fa = mo.createDiv({ cls: "mosec emoany ckany" }); fa.hidden = true;
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKAUTO; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Lock on the most relevant note when you arrive" }); qHelp(l_, "When you arrive at a note, the ship turns toward its most relevant link and locks on.");
       c_.onchange = () => { CKAUTO = c_.checked; save("iv-ckauto", CKAUTO); if (!CKAUTO) { CK.lock = -1; CK.auto = false; } }; }
     { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKINV; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Drag the other way (grab the sky)" }); qHelp(l_, "Dragging moves the sky instead of turning the ship, as if you grabbed it.");
       c_.onchange = () => { CKINV = c_.checked; save("iv-ckinv", CKINV); }; }
-    if (Platform.isMobile && !Platform.isIosApp) { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKTILT;   /* not on iPhone or iPad: the Obsidian app there doesn't pass the phone's motion to plugins (0.8.142, Nick tried) */ l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Look around by moving the phone" });
+    if (Platform.isMobile && !Platform.isIosApp) { const l_ = fa.createEl("label", { cls: "mini lcemo" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKTILT;   /* not on iPhone or iPad: the Obsidian app there doesn't pass the phone's motion to plugins (0.8.142) */ l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Look around by moving the phone" });
       c_.onchange = async () => { c_.checked = await ckTiltSet(c_.checked); }; }
-    /* Dynamic: Wander, Orbit, More (0.8.334, Nick): Wander and Orbit start or stop with their last settings (underlined while running); More opens the Animations dock, where their choices live */
+    /* Dynamic: Wander, Orbit, More (0.8.334): Wander and Orbit start or stop with their last settings (underlined while running); More opens the Animations dock, where their choices live */
     { const sr = fa.createDiv({ cls: "eorow arnrow ckseg ckdyn" }); sr.createSpan({ cls: "eol", text: "DYNAMIC:" }); const seg = sr.createDiv({ cls: "seg" });
       const bw = seg.createEl("button", { text: "Wander", attr: { type: "button" } }), bo = seg.createEl("button", { text: "Orbit", attr: { type: "button" } }), bm = seg.createEl("button", { text: "More", attr: { type: "button" } });
       bw.onclick = e => { e.stopPropagation(); setPlaying(!playing); FUI.ckplay(); };
       bo.onclick = e => { e.stopPropagation(); drifting ? driftStop() : driftStart(); FUI.ckplay(); };
       bm.onclick = e => { e.stopPropagation(); closePops(); const t_ = $("#anitab"); if (t_ && !t_.hidden) t_.click(); };
       FUI.ckplay = () => { bw.setAttribute("aria-pressed", String(!!(playing && view === "cockpit"))); bo.setAttribute("aria-pressed", String(!!drifting)); }; FUI.ckplay(); }
-    /* the layers in two small groups, each under a mini header (0.8.302, Nick: "HUD Artifacts" and "Cosmotic Elements", as in the cosmos); a "?" beside a switch says what it does */
+    /* the layers in two small groups, each under a mini header (0.8.302); a "?" beside a switch says what it does */
     { const QH = { rear: "The round scope at the bottom right: the linked notes behind you.", rings: "Rings with tick marks round the big hubs near you.", read: "A small readout beside the note you're at: its level, score, links and years.",
         rel: ["How close a linked note is to the cockpit note, 100 for the closest; the lists down the sides are in this order, with up links always first.",
           "1. Each pair of notes gets a weight: every link between them added up, either direction (up or related 2, a link in the text 1, another property 0.6, navigation 0.5; collections don't count), ×1.25 if they link both ways.",
@@ -8102,11 +8099,11 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
           c_.onchange = () => { if (k_ === "frame") { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); return; } CKX = { ...CKX, [k_]: c_.checked }; save("iv-ckx", CKX); if (k_ === "turn") CKSF.ver = -1; if (k_ === "emo" && c_.checked && !EMOI) void loadEmo(); }; } };
       grp("HUD artifacts", ["rings", "read", "posts", "dial", "mini", "card", "rear", "mirror", "frame"]);   /* Relevance scores follows Display → HUD links now (0.8.309) */
       grp("Cosmotic elements", ["names", "gas", "gasp", "orb", "lines", "twinkle", "turn", "haze", "emo"]); }
-    /* the game, near the bottom (0.8.302, Nick: "too prioritized right now") */
+    /* the game, near the bottom (0.8.302) */
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
       for (const [k_, v_] of [["R W  ↑ ↓", "forward, back"], ["T", "impulse: a slow, steady cruise"], ["X V  ← →", "pan left, right"], ["S F", "orbit left, right round the note"], ["G", "Orbit on or off: circle the note, climbing and diving now and then"], ["ly", "distances in light-years: the whole Ideaverse is 100 ly across"], ["E D", "orbit over, under the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
         const r_ = box.createDiv({ cls: "ckkey" }); r_.createEl("kbd", { text: k_ }); r_.createSpan({ text: v_ }); } }
-    /* the game after Controls (0.8.332, Nick: "The true/false mini toggle below the controls") */
+    /* the game after Controls (0.8.332) */
     { const l_ = fa.createEl("label", { cls: "mini lcemo ckgame" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = CKG; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "True or false (a game: right answers jump you there)" }); qHelp(l_, "A quiz about the notes around you. Answer right and the ship jumps to the note in question.");
       c_.onchange = () => { CKG = c_.checked; save("iv-ckgame", CKG); if (CKG && CK.wd) ckWanderStop(); CK.gs = 0; ckGameNew(); }; }
     const f0 = FUI.emoany; FUI.emoany = () => { if (f0) f0(); fa.hidden = view !== "cockpit"; }; }
@@ -8261,7 +8258,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     pt.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(e); } };
     // the whole header row folds it (its own buttons, like Clear, still do their own thing)
     const hd_ = fc.querySelector(".fhd"); hd_.classList.add("fhdt"); hd_.addEventListener("click", e => { if (e.target.closest("button, input, select, label")) return; flip(e); }); }
-  // a dot before each list's name while it's narrowing the map (Nick): Years when not every year shows, Folders when some are off, and so on
+  // a dot before each list's name while it's narrowing the map: Years when not every year shows, Folders when some are off, and so on
   { const live = { years: () => YRV.has(view) && (yrNarrow() || winSpan() > 0), folders: () => !$("#foldx").hidden, collections: () => colls.length > 0, mocs: () => !!MS, properties: () => !!PRS, bases: () => BQ.length > 0 };
     const dots = () => { for (const hb of fheads.querySelectorAll(".fhb")) { const f_ = live[hb.dataset.f]; const on_ = !!(f_ && f_()); hb.classList.toggle("live", on_); } };
     fDots = dots; dots(); }
@@ -8275,9 +8272,9 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
   // Show more map names: the grid beside the tabs (wide windows), with the themes moved in here
   const alSw = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "Draw every link on the map, faintly" } }); const alCb = alSw.createEl("input", { type: "checkbox" }); alSw.createEl("i", { cls: "sw" }); alSw.createSpan({ text: "Show all links" });
   alCb.onchange = () => { if (alCb.checked !== showAll) $("#alllinks").click(); };
-  /* Edit mode became the map's way of working (0.8.214, Nick): its switch and the indented group are gone, and what it held sits at the top level:
+  /* Edit mode became the map's way of working (0.8.214): its switch and the indented group are gone, and what it held sits at the top level:
      the editor's theme and opacity together, note mini-previews, and orb tab names (orb tabs themselves are always on) */
-  /* Edit mode, back as a switch (0.9.18, Nick: "a general option to turn off edit mode in case people just don't want that"): off, picking a note opens it in an Obsidian tab beside the map, as before Edit mode; the map rebuilds itself to match */
+  /* Edit mode, back as a switch (0.9.18): off, picking a note opens it in an Obsidian tab beside the map, as before Edit mode; the map rebuilds itself to match */
   if (!host.embed) { const l = DI.p.createEl("label", { cls: "pmaps drow" }), cb = l.createEl("input", { type: "checkbox" }); cb.checked = EDITM; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Edit mode" });
     cb.onchange = () => { save("iv-editm", cb.checked); if (host.remount) host.remount(); }; }
   if (!host.embed) { const l = DI.p.createEl("label", { cls: "pmaps drow" }), cb = l.createEl("input", { type: "checkbox" }); cb.checked = HOLOPAUSE; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Pause the map behind the Holodeck" });
@@ -8292,9 +8289,9 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     for (const [v, t] of [["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]]) { const b = ms_.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CARDMODE === v) } });
       b.onclick = e => { e.stopPropagation(); CARDMODE = v; save("iv-cardmode", v); ms_.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); for (const o of Object.values(EDS)) edLook(o.el); for (const e_ of HPV.values()) edLook(e_); }; }
     syncM(); seg.addEventListener("click", () => win.setTimeout(syncM, 0));
-    const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor see-through" }); const sl = or_.createEl("input", { type: "range", attr: { min: "0", max: "100", step: "1" } }); sl.value = String(100 - CARDOP); const ov = or_.createSpan({ cls: "eov", text: (100 - CARDOP) + "%" });   /* "Editor see-through" (0.9.27, Nick): how much of the map shows through the editors' backing; stored as its opacity, iv-cardop */
+    const or_ = g.createDiv({ cls: "drow eorow tchoice" }); or_.createSpan({ cls: "eol", text: "Editor see-through" }); const sl = or_.createEl("input", { type: "range", attr: { min: "0", max: "100", step: "1" } }); sl.value = String(100 - CARDOP); const ov = or_.createSpan({ cls: "eov", text: (100 - CARDOP) + "%" });   /* "Editor see-through" (0.9.27): how much of the map shows through the editors' backing; stored as its opacity, iv-cardop */
     CARDOPSL = { sl, ov }; sl.oninput = () => { cardOpSet(100 - +sl.value, sl); ov.setText((100 - CARDOP) + "%"); }; sl.onchange = () => save("iv-cardop", CARDOP); sl.onclick = e => e.stopPropagation();
-    /* Editor text size (0.8.229, Nick: "a little large… a slider to make it smaller"): 70–120% of Obsidian's text size; double-click it for 100% */
+    /* Editor text size (0.8.229): 70–120% of Obsidian's text size; double-click it for 100% */
     const fr_ = g.createDiv({ cls: "drow eorow tchoice" }); fr_.createSpan({ cls: "eol", text: "Editor text size" }); const fs = fr_.createEl("input", { type: "range", attr: { min: "70", max: "120", step: "5" } }); fs.value = String(CARDFS); const fv = fr_.createSpan({ cls: "eov", text: CARDFS + "%" });
     const fsSet = v => { CARDFS = v; fs.value = String(v); fv.setText(v + "%"); for (const o of Object.values(EDS)) { edLook(o.el); if (o.ed) o.ed.resize(); } };
     fs.oninput = () => fsSet(+fs.value); fs.onchange = () => save("iv-cardfs", CARDFS); fs.onclick = e => e.stopPropagation(); fs.ondblclick = e => { e.stopPropagation(); fsSet(100); save("iv-cardfs", 100); };
@@ -8303,32 +8300,32 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
         b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
     { const l_ = g.createEl("label", { cls: "mini lcemo ctrrk top" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = ORBN; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Show orb tab names" }); c_.onchange = () => { ORBN = c_.checked; save("iv-orbn", ORBN); syncOrbs(); }; } }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
-    { const l2 = DI.p.createEl("label", { cls: "pmaps drow" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = COLLON;   /* its own switch, not under Starfield link colors (0.8.343, Nick) */ l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Collection links in coral" });
-      c2.onchange = () => { COLLON = c2.checked; save("iv-colllinks", COLLON); RECKEY = ""; draw(); }; }   /* the picked note's collections as coral links (0.8.296, Nick) */
+    { const l2 = DI.p.createEl("label", { cls: "pmaps drow" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = COLLON;   /* its own switch, not under Starfield link colors (0.8.343) */ l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Collection links in coral" });
+      c2.onchange = () => { COLLON = c2.checked; save("iv-colllinks", COLLON); RECKEY = ""; draw(); }; }   /* the picked note's collections as coral links (0.8.296) */
     cb.onchange = () => { SFLINKS = cb.checked; save("iv-sflinks", SFLINKS); readCss(); try { CK.SL = SPACELINK(); } catch (_) { /* no Starship yet */ }   /* the Starship's lines follow at once (0.8.343) */ legend(); if (sel >= 0) select(sel, true); draw(); for (const o of Object.values(EDS)) if (o && o.el) { try { edLook(o.el); } catch (_) { /* not open */ } } if (host.linkColors) host.linkColors(); }; }   /* "Color all links" and the editors follow the switch (0.8.294) */
   // HUD links (0.8.143): the picked note's links down the right, as in the Cockpit
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = HUDL; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Links HUD" });
     const l2 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = HUDR; l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Show relevance scores" }); l2.hidden = !HUDL;
     c2.onchange = () => { HUDR = c2.checked; save("iv-hudr", HUDR); draw(); };
-    /* names in their level's color instead of a dot before them (0.8.284, Nick) */
+    /* names in their level's color instead of a dot before them (0.8.284) */
     const l4 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c4 = l4.createEl("input", { type: "checkbox" }); c4.checked = HUDTC; l4.createEl("i", { cls: "sw" }); l4.createSpan({ text: "Colored names" }); l4.hidden = !HUDL;
     c4.onchange = () => { HUDTC = c4.checked; save("iv-hudtc", HUDTC); draw(); };
-    /* property links in their own groups under the written ones (0.8.297, Nick: option H2, a mini switch for now) */
+    /* property links in their own groups under the written ones (0.8.297) */
     const l5 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c5 = l5.createEl("input", { type: "checkbox" }); c5.checked = HUDGRP; l5.createEl("i", { cls: "sw" }); l5.createSpan({ text: "Group property links" }); l5.hidden = !HUDL;
     c5.onchange = () => { HUDGRP = c5.checked; save("iv-hudgrp", HUDGRP); RECKEY = ""; draw(); }; l5.remove();
     const l3 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c3 = l3.createEl("input", { type: "checkbox" }); c3.checked = HUDPV; l3.createEl("i", { cls: "sw" }); l3.createSpan({ text: "Automatically see mini-preview on hover" }); l3.hidden = !HUDL;
     c3.onchange = () => { HUDPV = c3.checked; save("iv-hudpv", HUDPV); if (!HUDPV) hudPv(-1); };
-    /* from the Links pane (0.9.115): the order, and four switches (Nick: orders and display, not the pane's file sorts, times, tuck or folder filter) */
+    /* from the Links pane (0.9.115): the order, and four switches */
     const so = DI.p.createDiv({ cls: "drow eorow tchoice ctrrk hudsortrow" }); so.createSpan({ cls: "eol", text: "Links order" }); const sseg = so.createDiv({ cls: "seg" }); so.hidden = !HUDL;
     for (const [v, t] of [["remg", "Relative"], ["lvl", "Emergence"], ["rel", "Relevance"]]) { const b = sseg.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(HUDSORT === v) } }); b.onclick = e => { e.stopPropagation(); HUDSORT = v; save("iv-hudsort", v); sseg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); l9.hidden = !HUDL || HUDSORT === "rel"; RECKEY = ""; recSync(); }; }
     const mk = (t, get, set) => { const l_ = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = get(); l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: t }); l_.hidden = !HUDL; c_.onchange = () => { set(c_.checked); RECKEY = ""; recSync(); draw(); }; return l_; };
-    const la = mk("Show inlink/outlink arrows", () => HUDARR, v => { HUDARR = v; save("iv-hudarr", v); });   /* Nick's name, as in the Links pane (0.9.118) */
+    const la = mk("Show inlink/outlink arrows", () => HUDARR, v => { HUDARR = v; save("iv-hudarr", v); });   /* the name, as in the Links pane (0.9.118) */
     const l6 = mk("Show Idea Emergence orbs", () => HUDORB, v => { HUDORB = v; save("iv-hudorb", v); });
     const l7 = mk("Show emojis on links", () => HUDEMO, v => { HUDEMO = v; save("iv-hudemo", v); });
     const l8 = mk("Show unrequited links only", () => HUDUNQ, v => { HUDUNQ = v; save("iv-hudunq", v); });
     const l9 = mk("Show link score", () => HUDLSC, v => { HUDLSC = v; save("iv-hudlsc", v); }); l9.hidden = !HUDL || HUDSORT === "rel";
     cb.onchange = () => { HUDL = cb.checked; save("iv-hudl", HUDL); l2.hidden = l3.hidden = l4.hidden = l5.hidden = so.hidden = la.hidden = l6.hidden = l7.hidden = l8.hidden = !HUDL; l9.hidden = !HUDL || HUDSORT === "rel"; if (!HUDL) hudPv(-1); draw(); }; }
-  /* Recents (0.8.237, Nick): the notes changed most lately, behind a tab on the right edge */
+  /* Recents (0.8.237): the notes changed most lately, behind a tab on the right edge */
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = RECON; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Recents HUD" });
     const r2 = DI.p.createDiv({ cls: "eorow ctrrk tchoice" }); r2.createSpan({ cls: "eol", text: "Show" }); const sl = r2.createEl("input", { type: "range", attr: { min: "5", max: "50", step: "1", "aria-label": "How many recent notes to show" } }); sl.value = String(RECN); const sv = r2.createSpan({ cls: "eov", text: String(RECN) }); r2.hidden = !RECON;
     sl.oninput = () => { RECN = +sl.value; sv.setText(String(RECN)); RECKEY = ""; recSync(); }; sl.onchange = () => save("iv-recn", RECN); sl.onclick = e => e.stopPropagation();
@@ -8339,10 +8336,10 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     const l5 = DI.p.createEl("label", { cls: "mini lcemo ctrrk" }); const c5 = l5.createEl("input", { type: "checkbox" }); c5.checked = RECAGE; l5.createEl("i", { cls: "sw" }); l5.createSpan({ text: "Show time since modified" }); l5.hidden = !RECON;
     c5.onchange = () => { RECAGE = c5.checked; save("iv-recage", RECAGE); RECKEY = ""; recSync(); };
     cb.onchange = () => { RECON = cb.checked; save("iv-recent", RECON); r2.hidden = l5.hidden = r6.hidden = l7.hidden = !RECON; recSync(); }; }
-  /* Color all links by Idea Emergence (0.8.234, Nick: "color ALL links in all Obsidian windows by Idea Emergence") */
+  /* Color all links by Idea Emergence (0.8.234) */
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = pref("iv-linkcolor", false) === true; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Color all links by Idea Emergence" });
     cb.onchange = () => { save("iv-linkcolor", cb.checked); if (host.linkColors) host.linkColors(); for (const o of Object.values(EDS)) edTint(o); }; }
-  // Contrails (0.8.56, Nick): your path from note to note as a vapor trail behind a small airplane
+  // Contrails (0.8.56): your path from note to note as a vapor trail behind a small airplane
   { const l = DI.p.createEl("label", { cls: "pmaps drow" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = CTRON; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Contrails" });
     const l2 = DI.p.createDiv({ cls: "eorow ctrrk tchoice" }); l2.createSpan({ cls: "eol", text: "Ship" }); l2.hidden = !CTRON; const sg2 = l2.createDiv({ cls: "seg" });
     for (const [v, t] of [["none", "None"], ["rocket", "Rocket"], ["star", "Starship"]]) { const b = sg2.createEl("button", { text: t, attr: { type: "button", "aria-pressed": String(CTRSHIP === v) } }); b.onclick = e => { e.stopPropagation(); CTRSHIP = v; save("iv-ctrship", v); sg2.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); }; }
@@ -8374,7 +8371,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     const sw_ = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-label": "A panel to pick areas and projects; each one picked lights up its notes" } }); const cb = sw_.createEl("input", { type: "checkbox" }); sw_.createEl("i", { cls: "sw" }); sw_.createSpan({ text: "Show area and projects selector" });
     sw_.hidden = !EFF.length; cb.checked = !pnl.hidden; cb.onchange = () => { if (cb.checked === pnl.hidden) eb.click(); };   // Display stays open as the panel comes and goes
     new MutationObserver(() => { cb.checked = !pnl.hidden; }).observe(pnl, { attributes: true, attributeFilter: ["hidden"] }); }
-  /* a side panel opening or closing (Efforts, scores, calls) moves the map's right edge: the Recents and Links tabs follow it at once, not on the next map change (0.8.312, Nick: "the Recents and Links tabs get stuck") */
+  /* a side panel opening or closing (Efforts, scores, calls) moves the map's right edge: the Recents and Links tabs follow it at once, not on the next map change (0.8.312) */
   { const reHR = () => win.setTimeout(() => { if (dead) return; recSync(); if (HUDTAB && !HUDTAB.hidden) { const c = cv.getBoundingClientRect(), mr = $("#main").getBoundingClientRect(); HUDTAB.setCssProps({ "--hr": Math.max(0, Math.round(mr.right - c.right + (view === "cockpit" ? 0 : sideW()))) + "px" }); } draw(); }, 0);
     for (const id of ["#effpanel", "#scorepanel", "#callpanel"]) { const p_ = $(id); if (p_) new MutationObserver(reHR).observe(p_, { attributes: true, attributeFilter: ["hidden"] }); } }
   const thSec = DI.p.createDiv({ cls: "fsec thsec" }); thSec.createDiv({ cls: "pt", text: "Theme" });
@@ -8437,8 +8434,8 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
   const fo = $("#focusmode"); fo.empty(); fo.appendChild(icon(I.focus)); fo.classList.add("tbb", "tbi"); fo.setAttribute("aria-label", "Focus on active note"); fo.title = "Focus on active note"; left.appendChild(fo);
   // Sync uses Obsidian's own link icon
   const fb = $("#follownote"); fb.empty(); setIcon(fb, "link"); { const sv = fb.querySelector("svg"); if (sv) { sv.setAttribute("width", "15"); sv.setAttribute("height", "15"); } } fb.classList.add("tbb", "tbi"); fb.setAttribute("aria-label", "Sync active note with Obsidian editor"); fb.title = "Sync active note with Obsidian editor"; left.insertBefore(fb, fo);   // Sync (the link) sits left of Focus
-  // Display: just its sliders icon, right after Focus (Nick, 0.7.42)
-  /* Display, grouped (0.8.309, Nick: "consider how to reorder that menu, like we recently did for Starfield's"): mini headers over Link colors, HUD, Editors and Wayfinding,
+  // Display: just its sliders icon, right after Focus
+  /* Display, grouped (0.8.309): mini headers over Link colors, HUD, Editors and Wayfinding,
      the same mini switches, a "?" on each. Built where each switch lives, then moved into place once the menu is whole */
   win.setTimeout(() => { try { const P = DI.p, kids = [...P.children], find = t => kids.find(c => (c.innerText || c.textContent || "").trim().startsWith(t)), H = t => { const d = doc.createElement("div"); d.className = "dmh"; d.textContent = t; return d; };
       const tcl = doc.createElement("label"); tcl.className = "mini lcemo ctrrk tcsub"; { const c_ = tcl.createEl("input", { type: "checkbox" }); c_.checked = TABCLR; tcl.createEl("i", { cls: "sw" }); tcl.createSpan({ text: "See-through tabs" });
@@ -8454,21 +8451,21 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       const order = [find("Show all links"), H("Link colors"), find("Starfield link colors"), find("Collection links in coral"), find("Color all links by Idea Emergence"),
         H("Heads Up Display"), find("Recents HUD"), find("Show30") || kids.find(c => c.querySelector && c.querySelector('input[type="range"][min="5"]')), find("Emojis"), find("Show time since modified"), find("Links HUD"), find("Links order"), find("Show inlink/outlink arrows"), find("Show relevance scores"), find("Show link score"), find("Colored names"), find("Show Idea Emergence orbs"), find("Show emojis on links"), find("Show unrequited links only"), find("Group property links"), find("Automatically see mini-preview"), op, tcl,
         H("Editors"), find("Edit mode"), find("Editor theme"), find("Editor mode"), find("Editor see-through"), find("Editor text size"), H("Interface"), find("Note mini-previews"), find("Show orb tab names"),
-        H("Wayfinding"), find("Contrails"), kids.find(c => c.querySelector && c.querySelector(".seg") && /Ship/.test(c.innerText || "")), find("Show the way home"), kids.find(c => c.classList.contains("bacto")), kids.find(c => c.classList.contains("bcfind")), H("Sidebar Selection and Customization"), find("Show area and projects selector"), kids.find(c => c.classList.contains("emolink")), kids.find(c => c.classList.contains("emopage")), kids.find(c => c.classList.contains("dlink") && /How notes are scored/.test(c.textContent || ""))].filter(Boolean);   /* its own mini header (0.8.317, Nick) */
+        H("Wayfinding"), find("Contrails"), kids.find(c => c.querySelector && c.querySelector(".seg") && /Ship/.test(c.innerText || "")), find("Show the way home"), kids.find(c => c.classList.contains("bacto")), kids.find(c => c.classList.contains("bcfind")), H("Sidebar Selection and Customization"), find("Show area and projects selector"), kids.find(c => c.classList.contains("emolink")), kids.find(c => c.classList.contains("emopage")), kids.find(c => c.classList.contains("dlink") && /How notes are scored/.test(c.textContent || ""))].filter(Boolean);   /* its own mini header (0.8.317) */
       const anchor = kids.find(c => c.classList.contains("thsec")) || null; for (const el of order) P.insertBefore(el, anchor);
       for (const el of order) { if (el.tagName !== "LABEL" || el.querySelector(".qh")) continue; const t = (el.innerText || el.textContent || "").trim(), k_ = Object.keys(help).find(h => t.startsWith(h)); if (k_) qHelp(el, help[k_]); }
       const sync_ = () => { tcl.hidden = !RECON && !HUDL; }; sync_(); } catch (_) { /* the menu stays as built */ } }, 0);
   { const t_ = DI.b.querySelector(".tbl2"); if (t_) t_.remove(); DI.b.classList.add("tbi"); DI.b.setAttribute("aria-label", "Display"); DI.b.title = "Display"; left.appendChild(DI.w); }
   // Arrange (how the notes are placed, with its current choice) sits just before Sync, by the map tabs
   { const aw = $("#arrms"); if (aw) left.insertBefore(aw, fb); }
-  // Saved (the telescope): on the left, just before Display (Nick, 0.7.46)
+  // Saved (the telescope): on the left, just before Display
   left.insertBefore($("#viewms"), DI.w); { const vb = $("#viewbtn"); vb.empty(); setIcon(vb, "telescope"); { const sv = vb.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } } vb.classList.add("tbb", "tbi"); vb.setAttribute("aria-label", "Saved views"); vb.title = "Saved views"; }
-  // Obsidian shows an element's aria-label as a hover tooltip, even on a whole menu ("Saved views and tours" hung under Saved, Nick 0.7.58); menus describe themselves instead
+  // Obsidian shows an element's aria-label as a hover tooltip, even on a whole menu; menus describe themselves instead
   { const MENU = '[role="dialog"][aria-label], .mspop[aria-label], .tbpop[aria-label]', quiet = el => { el.setAttribute("aria-description", el.getAttribute("aria-label")); el.removeAttribute("aria-label"); };
-    /* and everything inside a menu too (0.8.214, Nick hovered "Show the way home" and got Obsidian's pop-up): any aria-label or title under the pointer turns quiet before Obsidian or the system can show it */
+    /* and everything inside a menu too (0.8.214): any aria-label or title under the pointer turns quiet before Obsidian or the system can show it */
     const POP = '.mspop, .tbpop, [role="dialog"]', hush = el => { const t_ = el.getAttribute("title"); if (t_ != null) { if (!el.getAttribute("aria-description")) el.setAttribute("aria-description", t_); el.removeAttribute("title"); } if (el.hasAttribute("aria-label")) quiet(el); };
     root.querySelectorAll(MENU).forEach(quiet); on(root, "pointerover", e => { if (!(e.target instanceof Element)) return; const el = e.target.closest(MENU); if (el && root.contains(el)) quiet(el);
-    /* and on everything of the map's that sits outside it (0.8.249, Nick, "for the 1000th time"): the editors' headers and buttons, Recents, the edge tabs, the previews.
+    /* and on everything of the map's that sits outside it (0.8.249): the editors' headers and buttons, Recents, the edge tabs, the previews.
        Obsidian turns an aria-label into its beige tooltip and the system turns a title into its own; both go quiet the moment the pointer arrives */
     const OUT = ".ivm-card, .ivm-recents, .ivm-orbs, .dtab, .ivm-sfsw, .ivm header input, .ivm header .search", hushAll = el => { if (el.hasAttribute("title")) { if (!el.getAttribute("aria-description")) el.setAttribute("aria-description", el.getAttribute("title")); el.removeAttribute("title"); }
       if (el.hasAttribute("aria-label")) { if (!el.getAttribute("aria-description")) el.setAttribute("aria-description", el.getAttribute("aria-label")); el.removeAttribute("aria-label"); } };
@@ -8545,7 +8542,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     st.createSpan({ cls: "tbadge", text: c ? String(c) : "" }); const t = `${c || "Some"} notes changed · rescan`; st.setAttribute("aria-label", t); st.title = t; right.appendChild(st); } }
   // Theme: one orb in the toolbar, the theme you're on; it opens the list of themes, each with its name
   const thSlot = right.createDiv({ cls: "thslot" }); thSlot.hidden = true;
-  // Tours: their own button, just left of Capture (Nick, 0.7.47): record a tour, name it, play it
+  // Tours: their own button, just left of Capture: record a tour, name it, play it
   { const TO = popBtn("tour", "Tours", "star"); TO.b.empty(); setIcon(TO.b, "route"); { const sv = TO.b.querySelector("svg"); if (sv) { sv.setAttribute("width", "16"); sv.setAttribute("height", "16"); } }
     TO.b.classList.add("tbi"); TO.b.setAttribute("aria-label", "Tours"); TO.b.title = "Tours"; const cm = $("#capms"); if (cm) right.insertBefore(TO.w, cm);
     const vp = $("#viewpop"), tt = [...vp.querySelectorAll(":scope > .pt")].find(x => /tours/i.test(x.textContent));
@@ -8555,7 +8552,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
   { const TH = popBtn("theme", "Theme", "star"); TH.b.empty(); TH.b.classList.add("tbi", "thorb"); TH.b.setAttribute("aria-label", "Theme"); TH.b.createEl("i"); TH.p.classList.add("thpop"); TH.p.createDiv({ cls: "pt", text: "Theme" });
     const seg = $("#themeseg"); TH.p.appendChild(seg); const THN = { paper: "Play", softpaper: "Soft Paper", lyt: "LYT Mode", starfield: "Starfield", obsidian: "Match Obsidian" };
     if (!seg.querySelector('button[data-th="starfield"]')) { const b = doc.createElement("button"); b.dataset.th = "starfield"; b.setAttribute("aria-description", "Starfield"); b.appendChild(doc.createElement("i")); const ly = seg.querySelector('button[data-th="lyt"]'); if (ly) ly.after(b); else seg.appendChild(b);
-      b.setAttribute("aria-pressed", String(root.dataset.theme === "starfield")); b.onclick = () => setTheme("starfield", true); }   /* the Starfield theme (0.8.224, Nick) */
+      b.setAttribute("aria-pressed", String(root.dataset.theme === "starfield")); b.onclick = () => setTheme("starfield", true); }   /* the Starfield theme (0.8.224) */
     for (const b of seg.querySelectorAll("button")) if (!b.querySelector(".thn")) b.createSpan({ cls: "thn", text: THN[b.dataset.th] || b.dataset.th });
     const sync = () => { const on = seg.querySelector('button[aria-pressed="true"]'); TH.b.dataset.th = on ? on.dataset.th : ""; const t = "Theme: " + (on ? THN[on.dataset.th] || on.dataset.th : ""); TH.b.setAttribute("aria-label", t); };
     sync(); new MutationObserver(sync).observe(seg, { attributes: true, subtree: true, attributeFilter: ["aria-pressed"] });
@@ -8580,7 +8577,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     // one row if it fits (folding tabs as needed); if even Emergence alone doesn't fit beside the tools, the tools drop to a second row and the tabs get the whole first row
     // keep one row as long as possible: first Find shrinks to its magnifying glass, then tabs fold into the ☰ list, and only if even one tab won't fit do the tools drop to a second row
     // the icons after the map button (Arrange, Sync, Focus, Saved, Display) stay on the first row while they fit; when the tools have taken a second row and the first still runs out of room,
-    // they move down one at a time, from the end, so the first row stays full and nothing runs off the edge (0.7.51; Nick: "one should only move down when it runs out of space")
+    // they move down one at a time, from the end, so the first row stays full and nothing runs off the edge (0.7.51)
     const MOV = ["#arrms", "#follownote", "#focusmode", "#viewms", "#dispms", "#holotag"].map(id => $(id)).filter(Boolean), tr = root.querySelector("header .tbr");
     if (MOV.some(el => el.parentElement !== tl)) for (const el of MOV) tl.appendChild(el);
     root.dataset.tbone = Platform.isMobile ? "" : "1"; root.dataset.tbwrap = ""; root.dataset.findmini = ""; fold();
@@ -8590,7 +8587,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     if (over()) { root.dataset.tbwrap = "1"; root.dataset.findmini = ""; fold();
       if (tr) for (let q = MOV.length - 1; q >= 0 && over(); q--) tr.insertBefore(MOV[q], tr.firstChild); }
     $("#vmorepop").querySelectorAll(":scope > .vfoldb").forEach(x => x.remove()); vfold.hidden = false;
-    /* the top four (0.8.311, Nick): Emergence, Ideaverse, Starfield and Calendar ("the coveted 4 spot"); Sensemakers moves down to head the list below */
+    /* the top four (0.8.311): Emergence, Ideaverse, Starfield and Calendar ("the coveted 4 spot"); Sensemakers moves down to head the list below */
     const TOP4 = [...MAIN.filter(b => b.dataset.v !== "sense").map(b => [b.dataset.v, [...b.childNodes].filter(nd => !(nd instanceof Element && nd.classList.contains("ivm-sr"))).map(nd => nd.textContent).join("").replace(/\s*▾\s*$/, "").trim()]), ["lincal", "Calendar"]];
     for (const [tv, tl_] of TOP4) { const b = { dataset: { v: tv } }; const c = $("#vmorepop").createEl("button", { cls: "chip", text: tl_, attr: { type: "button" } });   // the tab's own name, not its hidden label (0.8.66) if (tabV(view) === b.dataset.v) c.classList.add("on");
       c.classList.add("vfoldb"); c.dataset.v = b.dataset.v; micon(c, MICON[b.dataset.v]); vfold.before(c);
@@ -8621,26 +8618,26 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     for (const [id, ic] of Object.entries(MICON)) { const el = id.startsWith("go") && MP.querySelector("#" + id); if (el) micon(el, ic); }
     const t0 = MP.querySelector(":scope > .pt"); if (t0) t0.after(Object.assign(doc.createElement("div"), { className: "vfold vfold0" }));
     { const ex = MP.querySelector(":scope > details"); if (ex) { const exd = Object.assign(doc.createElement("div"), { className: "vfold" }); ex.before(exd);
-        // Nick's order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Tesla, Corona, Chord, Base Builder (the quick keys follow it)
+        // The order after the main maps (Oct 26): Gravity, Obsidian, Treemap, Mosaic, Bookshelf, Linear Calendar, Tesla, Corona, Chord, Base Builder (the quick keys follow it)
         { const gs = doc.createElement("button"); gs.className = "chip"; gs.id = "gosense"; gs.textContent = "Sensemakers"; gs.setAttribute("aria-label", "Your notes placed by what they are and how they're written");
           gs.onclick = () => { closePops(); driftStop(); setView("sense"); }; micon(gs, MICON.gosense); MP.appendChild(gs);
           const gsc = doc.createElement("button"); gsc.className = "chip"; gsc.id = "gostarchart"; gsc.textContent = "Star Chart"; gsc.setAttribute("aria-label", "Starfield as a 2D chart: galaxies of notes you zoom and pan");
           gsc.onclick = () => { closePops(); driftStop(); sfChart(); }; micon(gsc, "map"); MP.appendChild(gsc);   /* the chart as its own map (0.8.320) */
           const lc_ = MP.querySelector("#golincal"); if (lc_) { const park = root.createDiv(); park.hidden = true; park.appendChild(lc_); } }   /* Calendar is one of the top four now (0.8.311) */
         for (const id of ["gosense", "gostarchart", "gogravity", "gograph", "gotreemap", "gomosaic", "goshelf", "golincal", "gocsi", "gocso", "gochord", "gobuilder"]) { const el = MP.querySelector("#" + id); if (el) exd.before(el); }
-        // Compass, Arena and Kandinsky wait under Experimental → Unfinished for now (Nick, 0.8.67)
+        // Compass, Arena and Kandinsky wait under Experimental → Unfinished for now
         { let at = MP.querySelector("#goskyline"); for (const id of ["gocompass", "goarena", "gokandinsky", "gocockpit"]) { const el = MP.querySelector("#" + id); if (el && at) { at.after(el); at = el; } } }
-        { const uf = MP.querySelector("#goskyline"), ud = uf && uf.closest("details"), es = ex.querySelector(":scope > summary"); if (ud && ud !== ex && es) es.after(ud); }   /* Unfinished first under Experimental (Nick, 0.8.80) */
-        /* Misc (0.8.357, Nick): Tree, Skyline and Kandinsky get their own group, right after Unfinished, which keeps Compass and Arena */
+        { const uf = MP.querySelector("#goskyline"), ud = uf && uf.closest("details"), es = ex.querySelector(":scope > summary"); if (ud && ud !== ex && es) es.after(ud); }   /* Unfinished first under Experimental */
+        /* Misc (0.8.357): Tree, Skyline and Kandinsky get their own group, right after Unfinished, which keeps Compass and Arena */
         { const uf = MP.querySelector("#gocompass"), ud = uf && uf.closest("details"); if (ud) { const md = doc.createElement("details"); md.className = ud.className; const su_ = doc.createElement("summary"); su_.textContent = "Misc"; md.appendChild(su_);
             for (const id of ["gotree", "goskyline", "gokandinsky"]) { const el = MP.querySelector("#" + id); if (el) md.appendChild(el); } ud.after(md); } }
         const su = ex.querySelector(":scope > summary"); if (su) micon(su, "flask-conical"); } }
     // the quick keys in list order: 1–9, 0, then - = [ ] \
-    const QK = [..."1234567890-=[]\\"], QPIN = {};   /* the quick keys simply follow the list now, nothing pinned (0.8.193, Nick) */
+    const QK = [..."1234567890-=[]\\"], QPIN = {};   /* the quick keys simply follow the list now, nothing pinned (0.8.193) */
     const KEYED = () => { const m_ = new Map(), cs = KEYMAPS().filter(c_ => !QPIN[c_.id]); cs.slice(0, QK.length).forEach((c_, j) => m_.set(QK[j], c_));
       for (const [id, k_] of Object.entries(QPIN)) { const el = MP.querySelector("#" + id); if (el) m_.set(k_, el); } return m_; };
     const KEYMAPS = () => [...MP.querySelectorAll(":scope > .chip")].filter(c_ => !c_.hidden);
-    /* your own order (0.8.190, Nick): drag a map up or down the menu (and within Experimental's groups, 0.8.197); "Reset order" at the bottom puts them back. The quick keys follow the order */
+    /* your own order (0.8.190): drag a map up or down the menu (and within Experimental's groups, 0.8.197); "Reset order" at the bottom puts them back. The quick keys follow the order */
     { const div = MP.querySelector(":scope > .vfold:not(.vfold0)"), exd_ = MP.querySelector(":scope > details"), SEP = "|";
       const cur = () => [...MP.children].filter(c_ => c_ === div || (c_.classList.contains("chip") && c_.id)).map(c_ => c_ === div ? SEP : c_.id);
       const endDiv = exd_ && exd_.previousElementSibling && exd_.previousElementSibling.classList.contains("vfold") && exd_.previousElementSibling !== div ? exd_.previousElementSibling : null, END = endDiv || exd_ || null;   /* the divider above Experimental stays put */
@@ -8673,7 +8670,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
         tree: "gotree", skyline: "goskyline", chord: CSPH === "out" || CSPH === "in" ? "gocsi" : "gochord", quincunx: "gogeo" + GEO, planet: "gopl" + PMODE }[view];
       return id ? MP.querySelector("#" + id) : MP.querySelector(`.vfoldb[data-v="${tabV(view)}"]`); };
     // this map's settings: its variants (Emergence, Starfield, Sensemakers) and its own options; false when there are none
-    // every map's gear in Starfield's tighter look (0.8.13, Nick: "apply to the other map settings"): a group of choices becomes one row with
+    // every map's gear in Starfield's tighter look (0.8.13): a group of choices becomes one row with
     // the chosen one's line beneath it, and Off | On rows become plain switches; run each time the gear opens, so it follows any change
     const tightenMO = () => { const mo_ = $("#mapopts"); if (!mo_) return;
       const groups = new Map(); mo_.querySelectorAll('label.srow input[type="radio"]').forEach(r => { if (r.closest(".sfmenu")) return; (groups.get(r.name) || groups.set(r.name, []).get(r.name)).push(r); });
@@ -8690,7 +8687,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
         row.classList.add("tgone"); sw_.querySelector("input").checked = bs[1].getAttribute("aria-pressed") === "true"; sw_.hidden = row.hidden; }); };
     const fillMO = () => { const v_ = variants(); for (const id of ["#emerpop", "#starpop", "#sensepop", "#senseemo"]) $(id).hidden = id !== v_; if (view === "sense") $("#senseemo").hidden = false; if (v_ === "#emerpop" && typeof syncEmd === "function") syncEmd();
       syncRange(); root.querySelectorAll("#mapopts .swrow").forEach(r_ => { const c_ = r_.querySelector(".swsrc"); if (c_) r_.hidden = c_.hidden; }); moT.setText(VN()); const l = hasLay(); FUI.emoany(); moL.hidden = !l || !v_; moNone.hidden = true; tightenMO(); return !!(l || v_ || emoGen() || view === "compass" || view === "arena" || view === "kandinsky" || view === "cockpit"); };
-    // no hover hints in the maps menu (Nick): a map's description stays for screen readers only
+    // no hover hints in the maps menu: a map's description stays for screen readers only
     const quiet = () => MP.querySelectorAll("[aria-label], [title]").forEach(el => { const d_ = el.getAttribute("aria-label") || el.getAttribute("title"); el.removeAttribute("aria-label"); el.removeAttribute("title"); el.removeAttribute("data-tooltip-delay"); if (d_) el.setAttribute("aria-description", d_); });
     const openMaps = () => { quiet(); closePops("#vmorepop"); if (typeof closeColl === "function") closeColl(); MP.hidden = false; MB.setAttribute("aria-expanded", "true");
       MP.querySelectorAll(".chip.on").forEach(x => x.classList.remove("on")); const c = chipFor();
@@ -8712,7 +8709,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     toggleMapOpts = () => { if (!mo.hidden) closePops(); else openSet(); };
     // quick keys, along the top row of the keyboard: 1–9, then 0 - = [ ] \ for maps 10–15 (Treemap, Mosaic, Bookshelf, Base Builder, Linear Calendar)
     onKey(e => { if (e.metaKey || e.ctrlKey || e.altKey) return; const ch = KEYED().get(e.key); if (!ch) return; const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return; e.preventDefault(); ch.click(); });
-    // letter keys (Nick): O orbit on/off, J K L its three speeds (Earth, Mercury, LYT Speed on a globe; Calm, Slow, Lively on a flat map), A the Animations dock,
+    // letter keys: O orbit on/off, J K L its three speeds (Earth, Mercury, LYT Speed on a globe; Calm, Slow, Lively on a flat map), A the Animations dock,
     // W Wander Mode, T Timelapse, S Sync with the editor, F Filter, N Focus, V Saved views
     { const vis_ = el => el && !el.hidden && getComputedStyle(el).display !== "none";
       const hit = sel_ => { const el = root.querySelector(sel_); if (el && !el.hidden) { el.click(); return true; } return false; };
@@ -8751,7 +8748,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       const sync = () => { const on = chip.getAttribute("aria-pressed") === "true"; for (const [b_, v] of bs) b_.setAttribute("aria-pressed", String(on === v)); r.hidden = chip.hidden; };
       sync(); new MutationObserver(sync).observe(chip, { attributes: true, attributeFilter: ["aria-pressed", "hidden"] }); };
     { const t_ = GS[3][0].querySelector(":scope > .pt"); if (t_) t_.remove(); swRow($("#tmsubs"), "Subfolders"); swRow($("#csbands"), "Bands");
-      // Bookshelf's Index: a mini switch, in Nick's words
+      // Bookshelf's Index: a mini switch
       { const cb = $("#callbtn"), cp = $("#callpanel"), r = doc.createElement("label"); r.className = "mini swrow"; cb.before(r);
         const inp = r.createEl("input", { type: "checkbox" }); r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show bookshelf auto-index system" }); r.appendChild(cb); cb.classList.add("swsrc");
         inp.onchange = () => { if (inp.checked === cp.hidden) cb.click(); };
@@ -8774,7 +8771,7 @@ return {
   // a map embedded in a note (0.8.171): show a saved view, by name or as the view itself (from a .moti file)
   async showSaved(spec){ await savedReady; if (dead) return false; const v = spec && typeof spec === "object" ? spec : views.find(x => x.name.toLowerCase() === String(spec || "").trim().toLowerCase());
     if (!v) return false; win.setTimeout(() => { if (!dead) applySaved(host.embed ? { ...v, cam: null } : v); }, 60); return true; },   /* an embed is smaller than the map the view was saved on: fit it instead of the saved zoom */
-  // the commands "Open note in Emergence / Starfield" (0.8.27, Nick: so they can be hotkeyed): that map, Edit mode on, the note in the primary note
+  // the commands "Open note in Emergence / Starfield" (0.8.27): that map, Edit mode on, the note in the primary note
   /** a note opened elsewhere while the map is in front: show it as the primary note (0.8.218). False when the map can't (not in the map, or filtered out) */
   hasNote(path){ return PIDX.has(path); },
   /** how the note at toPath relates to the one at fromPath, for link colors everywhere (0.8.234): upp, rel, up, down, prop, or "" */

@@ -26,7 +26,7 @@ export function spotInfo(app, path, cur) { const mc = app.metadataCache, f = app
   const outOnly = !hit && !fmHit && !!cur && !!(mc.resolvedLinks[cur] || {})[path];
   return { f, hit, fmHit, outOnly }; }
 
-/* the line under the title, in Nick's words (0.9.111), the property in bold (0.9.112) */
+/* the line under the title (0.9.111), the property in bold (0.9.112) */
 export function spotSub(sub, info) { if (info.hit) sub.setText("Links to the active note at the spot below."); else if (info.fmHit) { sub.append("Links to the active note via the "); sub.createEl("b", { text: String(info.fmHit.key).split(".")[0] }); sub.append(" property."); } else if (info.outOnly) sub.setText("The active note links to this note."); }
 
 /* the passage around the link (2 lines before, up to 8 after, within its paragraph), rendered, the link marked and scrolled into view; else the note's opening */

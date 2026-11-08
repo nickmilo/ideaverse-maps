@@ -1,4 +1,4 @@
-// 0.8.24: adding a link while writing must not move the camera (Nick saw a zoom stutter on Emergence)
+// 0.8.24: adding a link while writing must not move the camera (a zoom stutter on Emergence)
 module.exports = async ({ page, sleep, shot }) => {
   const errs = []; page.on('pageerror', e => errs.push(e.message));
   await page.evaluate(() => app.emulateMobile(false)); await sleep(2500);

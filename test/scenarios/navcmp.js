@@ -9,7 +9,7 @@ module.exports = async ({ page, sleep, shot }) => {
   const pick = async nm => { await page.locator('.ivm #q').fill(nm); await sleep(700); await page.keyboard.press('Enter'); await sleep(3000); await page.evaluate(() => document.activeElement && document.activeElement.blur()); };
   const st = () => page.evaluate(() => { const c = document.querySelector('.ivm-card-left:not([hidden])'); if (!c) return 'no card'; const b = c.querySelectorAll('.cardnav'); return c.querySelector('.cardt').textContent + ' back:' + !b[0].disabled + ' fwd:' + !b[1].disabled; });
   await pick('Architect & Gardener'); await pick('Idea Emergence'); await pick('Pace Layers'); console.log('now', await st());
-  // click a note on the map too (like Nick)
+  // click a note on the map too
   const pt = await page.evaluate(() => app.workspace.getLeavesOfType('ideaverse-maps')[0].view.map._at('Atlas/Things/E-shaped Understanding.md'));
   const cvr = await page.evaluate(() => document.querySelector('.ivm canvas').getBoundingClientRect().toJSON());
   if (pt) { await page.mouse.click(cvr.x + pt[0], cvr.y + pt[1]); await sleep(3500); console.log('clicked', await st()); }

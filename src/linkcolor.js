@@ -1,7 +1,7 @@
 import { TFile } from "obsidian";
 import { VIEW_TYPE } from "./view.js";
 
-/* Color ALL links in all Obsidian windows by Idea Emergence (0.8.234, Nick): with Display → "Color all links by Idea Emergence" on,
+/* Color ALL links in all Obsidian windows by Idea Emergence (0.8.234): with Display → "Color all links by Idea Emergence" on,
    every link in every note is marked with how its note relates to the one it sits in (data-ivk: upp up property, rel related, up above,
    down below, prop another property), and the colors come from styles.css (or a theme that styles [data-ivk], like Starfield).
    The relations come from an open map (its emergence levels and link kinds), so the colors show while a map is open, in front or not. */
@@ -26,14 +26,14 @@ export function registerLinkColors(plugin) {
         if (host_) { const t = app.metadataCache.getFirstLinkpathDest(String(host_.getAttribute("src") || "").split("#")[0], path); if (t instanceof TFile) { from = t.path; MM = targets(app, from); } } }
       const p = MM.get(key) || MM.get(key.split("|")[0].split("#")[0].trim()) || MM.get(key.split("|").pop().trim()), kd = p ? m.linkKind(from, p) : (m.hasNote && m.hasNote(from) && e.matches(LINK) ? "none" : "");   /* only an unresolved link is a placeholder (0.8.347) */   /* a placeholder (0.8.280) */
       if ((e.dataset.ivk || "") !== kd) { if (kd) e.dataset.ivk = kd; else delete e.dataset.ivk; } } };
-  /* the backlinks pane (0.8.282, Nick): each note's title colored by how it relates to the note the pane is for. A backlink is a link the other way,
+  /* the backlinks pane (0.8.282): each note's title colored by how it relates to the note the pane is for. A backlink is a link the other way,
      so its kind is read from that note's side and turned round: a note whose up is this one sits below it (green), and so on */
   const FLIP = { upp: "down", up: "down", down: "up", rel: "rel", prop: "prop" };
   const markBL = (bl, path, m) => { const L = bl && bl.backlinkDom && bl.backlinkDom.resultDomLookup; if (!L || !path) return;
     for (const [f, rd] of L) { const el = rd && rd.selfEl && (rd.selfEl.querySelector(".tree-item-inner") || rd.selfEl); if (!el || !f || !f.path) continue;
-      let kd = m.linkKind(path, f.path); if (!kd) { const rk = m.linkKind(f.path, path); kd = rk === "prop" && m.vertKind ? m.vertKind(path, f.path) : FLIP[rk] || ""; }   /* another note's property pointing here (a book's "by") isn't one of this note's properties: above or below, by level (0.8.295, Nick) */
+      let kd = m.linkKind(path, f.path); if (!kd) { const rk = m.linkKind(f.path, path); kd = rk === "prop" && m.vertKind ? m.vertKind(path, f.path) : FLIP[rk] || ""; }   /* another note's property pointing here (a book's "by") isn't one of this note's properties: above or below, by level (0.8.295) */
       if ((el.dataset.ivk || "") !== kd) { if (kd) el.dataset.ivk = kd; else delete el.dataset.ivk; } } };
-  const run = () => { const yes = on(); document.body.classList.toggle("ivm-linkcolors", yes); document.body.classList.toggle("ivm-sflinks", plugin.store.get("iv-sflinks") === true);   /* the map's Starfield link colors switch: below red everywhere (0.8.294, Nick) */ if (!yes) return; const m = mapApi(); if (!m) return;
+  const run = () => { const yes = on(); document.body.classList.toggle("ivm-linkcolors", yes); document.body.classList.toggle("ivm-sflinks", plugin.store.get("iv-sflinks") === true);   /* the map's Starfield link colors switch: below red everywhere (0.8.294) */ if (!yes) return; const m = mapApi(); if (!m) return;
     app.workspace.iterateAllLeaves(l => { const v = l.view; const ty = v && v.getViewType && v.getViewType();
       if (ty === "markdown" && v.file) { mark(v.containerEl, v.file.path, m); if (v.backlinks) markBL(v.backlinks, v.file.path, m); }   /* backlinks at the bottom of a note too */
       else if (ty === "backlink" && v.backlink) markBL(v.backlink, (v.file && v.file.path) || (v.backlink.file && v.backlink.file.path), m); }); };

@@ -1,7 +1,7 @@
 import { Component, FuzzySuggestModal, MarkdownRenderChild, Notice, TFile, normalizePath } from "obsidian";
 import { mountInto, openBeside } from "./view.js";
 
-/* A map inside a note (0.8.171, Nick: "like Bases can be embedded in obsidian notes with ![[base]] syntax… the same with a MOTI saved view").
+/* A map inside a note (0.8.171).
    Two ways in:
    - a code block:   ```moti
                      view: 2026 Annual Review
