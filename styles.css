@@ -2287,7 +2287,7 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .menu.ivd-menu .menu-item-icon.mod-checked{order:-1;margin-left:0}
 .ivd-links .ivd-lkdiv{flex:none;height:1px;margin:6px 6px 4px;background:var(--background-modifier-border)}   /* after the pinned up links (0.9.94) */
 /* our menus let the pane show through a little, with a soft blur, so what a switch changes stays visible behind it (0.9.95, Nick: "Maybe it's 84%") */
-.menu.ivd-menu{background-color:color-mix(in srgb,var(--background-secondary,var(--background-primary)) 70%,transparent);backdrop-filter:blur(2px)}   /* 70% (0.9.97, Nick; 84%, then 60%) */
+.menu.ivd-menu{background-color:color-mix(in srgb,var(--background-secondary,var(--background-primary)) 60%,transparent);backdrop-filter:blur(2px)}   /* 60% (0.9.101, Nick, after 84%, 60% and 70%) */
 /* the "?" for our three orders and its card (0.9.96), in the map's qHelp style */
 .ivd-links .ivd-lkqh{appearance:none;flex:none;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;padding:0;margin-left:6px;border:1px solid var(--text-muted);border-radius:50%;background:none;box-shadow:none;font:600 9px var(--font-interface);color:var(--text-muted);opacity:.55;cursor:help}
 .ivd-links .ivd-lkqh:hover,.ivd-links .ivd-lkqh.on{opacity:1;color:var(--text-normal);border-color:var(--text-normal)}
@@ -2315,3 +2315,6 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-lksort:hover{color:var(--icon-color-hover,var(--text-normal));opacity:1}
 .ivd-links .ivd-lkqh{opacity:.85;color:var(--icon-color,var(--text-muted));border-color:currentColor}
 .ivd-links .ivd-lksb{opacity:.7;color:var(--icon-color,var(--text-muted))}
+/* group headers: a touch bigger, the count quiet beside the name (0.9.101, Nick: "Quiet number… a little bit bigger") */
+.ivd-links .ivd-lvh,.ivd-links .ivd-lkg{font-size:10.5px}
+.ivd-links .ivd-gn{margin-left:7px;font-weight:500;opacity:.5}
