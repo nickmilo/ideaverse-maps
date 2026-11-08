@@ -41,7 +41,13 @@ export default class IdeaverseMapsPlugin extends Plugin {
     /* which tab is being dragged (0.9.54, Nick: drag a note's tab onto the Holodeck): Obsidian drags tabs on a track of its own, so the map is told here */
     { const W = this.app.workspace, oDL = W.onDragLeaf;
       if (typeof oDL === "function") { W.onDragLeaf = (e, leaf, ...rest) => { this.dragLeaf = leaf; const end = () => { window.setTimeout(() => { this.dragLeaf = null; }, 50); }; document.addEventListener("dragend", end, { once: true, capture: true }); return oDL.call(W, e, leaf, ...rest); };
-        this.register(() => { W.onDragLeaf = oDL; }); } }
+        this.register(() => { W.onDragLeaf = oDL; }); }
+      /* while a tab is dragged over the map's drop zones (all of the Holodeck; elsewhere its tabs and notes), Obsidian doesn't offer to split there:
+         its split preview covered the Holodeck's tabs and made the drop flicker (0.9.57, Nick: "the drop zone… is wonky") */
+      const oGDL = W.getDropLocation;
+      if (typeof oGDL === "function") { W.getDropLocation = (e, ...rest) => { if (this.dragLeaf && this.dropBlocks && e && typeof e.clientX === "number") for (const f of this.dropBlocks) { try { if (f(e.clientX, e.clientY)) return null; } catch (_) { /* a map mid-teardown */ } }
+          return oGDL.call(W, e, ...rest); };
+        this.register(() => { W.getDropLocation = oGDL; }); } }
     registerDeck(this);   // the Mini Deck: writing first, no graph (0.9.1)
     registerEmbeds(this);   // a map inside a note: a ```moti code block, or ![[name.moti]] (0.8.171)
 

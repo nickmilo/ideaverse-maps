@@ -6154,6 +6154,11 @@ const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; 
       else { SUPNEW = true; if (EDS.right.col) EDS.right.collapse(false); void EDS.right.open(i).then(() => { SUPNEW = false; }); }
       dropDone(S_); }, true); };
   card(EDS.left, "left"); card(EDS.right, "right");
+  /* anywhere over the map's drop zones, what's left of Obsidian's split preview goes (it covered the Holodeck in Nick's screenshots) */
+  root.addEventListener("dragover", e => { if (src() && zoneAt(e.clientX, e.clientY)) quiet(); }, true);
+  function zoneAt(x, y){ if (dead || !edOn()) return false; const inR = el => { if (!el || el.hidden || !el.isConnected) return false; const r = el.getBoundingClientRect(); return r.width > 0 && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
+    if (holoOn()) return inR(root); return inR(orbBar) || inR(EDS.left.el) || inR(EDS.right.el); }
+  if (host.registerDropZone) host.registerDropZone(zoneAt);
   doc.addEventListener("dragend", unmark, true);
   /* a tab dragged in moves: it leaves Obsidian's tab bar, unless it's the last tab there */
   function dropDone(S_){ if (S_.leaf && host.dragMoved) host.dragMoved(S_.leaf); } }

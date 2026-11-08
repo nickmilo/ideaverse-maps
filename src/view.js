@@ -307,6 +307,8 @@ export async function mountInto(owner, el, opts) {
         plugin.register(() => { c.checkCallback = oc; c.callback = ob; plugin.tabCmdPatched = false; }); } },
     linkColors: () => { if (plugin.linkColorsRun) plugin.linkColorsRun(); },
     /* what's being dragged in from Obsidian (0.9.54): a tab, a file (file list, search results), several files, or a link; markdown notes only */
+    /* a place on this map where a dragged tab should land with us, not split Obsidian's layout (0.9.57) */
+    registerDropZone: fn => { if (!plugin.dropBlocks) plugin.dropBlocks = new Set(); plugin.dropBlocks.add(fn); events.register(() => { plugin.dropBlocks.delete(fn); }); },
     dragSource: () => { const md = f => f instanceof TFile && f.extension === "md";
       const lf = plugin.dragLeaf; if (lf && lf.view && md(lf.view.file) && !lf.ivmCard) return { paths: [lf.view.file.path], leaf: lf };
       const dm = app.dragManager, d = dm && dm.draggable; if (!d) return null; const out = [];
@@ -314,7 +316,8 @@ export async function mountInto(owner, el, opts) {
       return out.length ? { paths: out, leaf: null } : null; },
     /* while a drag is over the map's own drop targets, Obsidian's tab-drop preview stays out of sight; it cleans itself up when the drag ends */
     dragQuiet: () => { try { const dm = app.dragManager; if (dm && dm.hideOverlay) dm.hideOverlay(); } catch (_) { /* not there */ }
-      for (const o of document.querySelectorAll(".workspace-fake-target-overlay, .workspace-fake-target-container")) o.hide();
+      for (const o of document.querySelectorAll(".workspace-fake-target-overlay")) o.hide();
+      for (const o of document.querySelectorAll(".workspace-fake-target-container")) o.remove();   /* removed, not hidden: Obsidian puts it back if the drag goes on over its own panes */
       for (const o of document.querySelectorAll(".workspace-leaf, .workspace-tabs, .workspace-split")) if (o instanceof HTMLElement && o.style.opacity === "0") o.style.removeProperty("opacity"); },
     /* a tab dragged into the map moves there: it leaves Obsidian's tab bar, unless it's the only tab left in the main area */
     dragMoved: leaf => { window.setTimeout(() => { try { if (!leaf || leaf === this.leaf || leaf.ivmCard) return; const W = app.workspace; let n = 0; W.iterateRootLeaves(() => { n++; }); if (leaf.getRoot() === W.rootSplit && n <= 1) return; leaf.detach(); } catch (_) { /* already gone */ } }, 60); },
