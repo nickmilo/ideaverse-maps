@@ -2286,3 +2286,5 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .menu.ivd-menu .menu-item.mod-checked > .menu-item-icon:first-child{display:none}
 .menu.ivd-menu .menu-item-icon.mod-checked{order:-1;margin-left:0}
 .ivd-links .ivd-lkdiv{flex:none;height:1px;margin:6px 6px 4px;background:var(--background-modifier-border)}   /* after the pinned up links (0.9.94) */
+/* our menus let the pane show through a little, with a soft blur, so what a switch changes stays visible behind it (0.9.95, Nick: "Maybe it's 84%") */
+.menu.ivd-menu{background-color:color-mix(in srgb,var(--background-secondary,var(--background-primary)) 84%,transparent);backdrop-filter:blur(3px)}
