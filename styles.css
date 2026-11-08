@@ -2382,3 +2382,4 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivm .ivm-recents .lkorb.lv4{border-radius:1.5px;width:6px;height:6px;transform:rotate(45deg);margin:0 1px}
 .ivm .ivm-recents .rce.rceown{position:relative}
 .ivm .ivm-recents .rce.rceown::after{content:"";position:absolute;right:-1px;bottom:0;width:4px;height:4px;border-radius:50%;background:var(--accent,#e8bf45);box-shadow:0 0 0 1px var(--bg)}
+.ivm .hudsortrow .seg{flex-wrap:nowrap;white-space:nowrap}   /* the three orders on one line (0.9.118) */

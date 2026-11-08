@@ -393,7 +393,7 @@ export class LinksPaneView extends DeckView {
       m.addSeparator(); hd_("Middle");
       it_("col", sp => { sp.append("Show "); tx(sp, "Idea", "ivd-mc-upp"); sp.append(" "); tx(sp, "Emergence", "ivd-mc-rel"); sp.append(" "); tx(sp, "link", "ivd-mc-up"); sp.append(" "); tx(sp, "colors", "ivd-mc-down"); });
       if (SO === "lvl") it_("lvh", "Show Idea Emergence headers", h => tx(h, "LEVEL 5", "ivd-mhh"));
-      it_("unreq", "Show unrequited notes", h => tx(h, "←", "ivd-mha"));   /* notes that link here that this note doesn't link back to; the rest dim (0.9.107, Nick's "unrequited notes") */   /* rows indent under their group header, like an outline (0.9.103, Nick) */   /* only while sorted by Idea Emergence (0.9.73); in Middle (0.9.89, Nick) */
+      it_("unreq", "Show unrequited links only", h => tx(h, "←", "ivd-mha"));   /* notes that link here that this note doesn't link back to; the rest dim (0.9.107, Nick's "unrequited notes") */   /* rows indent under their group header, like an outline (0.9.103, Nick) */   /* only while sorted by Idea Emergence (0.9.73); in Middle (0.9.89, Nick) */
       m.addSeparator(); hd_("Right");
       /* the score column holds one thing: while link score or a time fills it, relevance shows unchecked and greyed, its own setting kept (0.9.87, Nick) */
       it_("rel", "Show relevance scores", h => tx(h, "82", "ivd-mhn"), TAKEN);
