@@ -2237,13 +2237,16 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-lkhd{display:flex;align-items:baseline;gap:8px;min-width:0}
 .ivd-links .ivd-lkhd .ivd-h{flex:none}
 .ivd-links .ivd-lkn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);font-size:12px}
-.ivd-links .ivd-lkqr{display:flex;align-items:center;gap:4px}
 .ivd-links .ivd-lksort{flex:none;width:26px;height:24px;padding:0;display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:6px;background:transparent;box-shadow:none;color:var(--text-faint)}
 .ivd-links .ivd-lksort:hover{color:var(--text-normal)}
 .ivd-links .ivd-lksort[aria-pressed="true"]{color:var(--ivd-up);border-color:color-mix(in srgb,var(--ivd-up) 55%,transparent)}
 .ivd-links .ivd-lksort:focus-visible{box-shadow:none}
 .ivd-links .ivd-lksort svg{width:15px;height:15px}
-.ivd-links .ivd-lkq{flex:1;min-width:0;width:100%;height:24px;padding:0 8px;border:1px solid var(--background-modifier-border);border-radius:12px;background:transparent;font-size:12px}
+.ivd-links .ivd-lksb{appearance:none;flex:none;display:flex;align-items:center;height:auto;margin-left:-2px;padding:0 2px;border:0;background:none;box-shadow:none;color:var(--text-muted);opacity:.45;cursor:pointer}
+.ivd-links .ivd-lksb svg{width:11px;height:11px}
+.ivd-links .ivd-lksb:hover,.ivd-links .ivd-lksb.on{opacity:1;color:var(--text-normal)}
+.ivd-links .ivd-lkq{flex:1;min-width:0;height:18px;margin:0 2px;padding:0 6px;border:1px solid var(--background-modifier-border);border-radius:9px;background:transparent;font-size:11px;box-shadow:none}   /* the HUD's slim field (0.9.78) */
+.ivd-links .ivd-lkq[hidden],.ivd-links .ivd-lksp[hidden]{display:none}
 .ivd-links .ivd-lklist{display:flex;flex-direction:column;overflow-y:auto;min-height:0;flex:1}
 .ivd-links .ivd-lklist::after{content:"";flex:none;height:40px}   /* room to scroll the last rows clear of Obsidian's status bar (0.9.76, Nick) */
 .ivd-links .ivd-lkg{margin-top:10px}

@@ -340,7 +340,11 @@ export class LinksPaneView extends DeckView {
     const inG = new Set([...[...own.values()].flatMap(x => [...x]), ...[...back.values()].flatMap(x => [...x])]);
     const KR = { upp: 0 }, KEEP = new Set(["upp", "rel"]), main = ls.filter(l => !inG.has(l.p) || KEEP.has(this.kindOf(path, l.p)))
       .sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || b.s - a.s);
-    const hd = box.createDiv({ cls: "ivd-lkhd" }); const NL = ls.length;   /* every link, collections and properties included, as the HUD counts now (0.9.70) */ hd.createSpan({ cls: "ivd-h", text: `⇄ LINKS · ${NL}` });   /* counted as the HUD counts: links on the map's graph, so collections (drawn, never counted) aren't (0.9.65) */ hd.createSpan({ cls: "ivd-lksp" });
+    const hd = box.createDiv({ cls: "ivd-lkhd" }); const NL = ls.length;   /* every link, collections and properties included, as the HUD counts now (0.9.70) */ const hc = hd.createSpan({ cls: "ivd-h", text: `⇄ LINKS · ${NL}` });   /* counted as the HUD counts: links on the map's graph, so collections (drawn, never counted) aren't (0.9.65) */ /* search as the Links HUD does it (0.9.78, Nick: the full-width field was "too prominent"): a faint magnifier after the count opens a slim field in the header */
+    const qOpen = this.qOpen || !!this.q, sk = hd.createEl("button", { cls: "ivd-lksb" + (qOpen ? " on" : ""), attr: { type: "button", "aria-description": "Search links" } }); setIcon(sk, "search");
+    const qi = hd.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); qi.value = this.q; qi.hidden = !qOpen;
+    const sp_ = hd.createSpan({ cls: "ivd-lksp" }); sp_.hidden = qOpen;
+    sk.onclick = () => { if (this.qOpen || this.q) { this.qOpen = false; this.q = ""; this.qFocus = false; this.render(); } else { this.qOpen = true; this.qFocus = true; this.render(); } };
     /* sort (0.9.61, Nick: relevance by default, Idea Emergence, and Obsidian's own six); up and related stay on top in every order */
     const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "rel", MOD = SO === "mnew" || SO === "mold", CRE = SO === "cnew" || SO === "cold";
     const sb = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Sort links", "aria-pressed": String(SO !== "rel") } }); setIcon(sb, "arrow-up-narrow-wide");
@@ -349,7 +353,6 @@ export class LinksPaneView extends DeckView {
     const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal");
     db.onclick = e => { const m = new Menu(), it_ = (k, t) => m.addItem(it => it.setTitle(t).setChecked(this.opt(k)).onClick(() => this.setLOpt(k, !this.opt(k))));
       it_("rel", "Show relevance scores"); it_("col", "Show Idea Emergence link colors"); if (SO === "lvl") it_("lvh", "Show Idea Emergence headers");   /* headers only while sorted by Idea Emergence: they are that order (0.9.73, Nick) */ it_("orb", "Show Idea Emergence orbs"); it_("emo", "Show emojis"); if (MOD) it_("age", "Show time since modified"); if (CRE) it_("cage", "Show time since created");   /* each offered only while its sort is on (0.9.66, Nick) */ m.showAtMouseEvent(e); };
-    const qr = box.createDiv({ cls: "ivd-lkqr" }), qi = qr.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); qi.value = this.q;
     const G = this.G, fi = p => this.file(p), lv = p => { const n_ = G && G.idx.get(p); return n_ ? [n_.level || 0, n_.score || 0] : [0, 0]; }, sc0 = new Map(ls.map(l => [l.p, l.s]));
     const cmp = {
       rel: (a, b) => (sc0.get(b) || 0) - (sc0.get(a) || 0) || this.title(a).localeCompare(this.title(b)),
@@ -383,9 +386,11 @@ export class LinksPaneView extends DeckView {
     const group = (lab, set, arrow, coral) => { if (!set.size) return; const c_ = !COL ? "" : coral && CORAL ? "var(--ivd-coll)" : "var(--ivd-prop)"; const h_ = list.createDiv({ cls: "ivd-h ivd-lkg", text: `${lab.toUpperCase()} · ${set.size}` }); if (c_) h_.style.setProperty("--c", c_); if (c_) h_.addClass("ivd-lkgc");
       for (const p of [...set].sort(cmp)) put(p, arrow, c_ || "var(--ivd-link)"); };
     for (const [k, set] of own) group(k, set, "→", ck.has(k)); for (const [k, set] of back) group(k, set, "←", false);
-    const apply = () => { const q = this.q.trim().toLowerCase(); for (const r of list.querySelectorAll(".ivd-row")) r.toggleAttribute("hidden", !!q && !(r.dataset.q || "").includes(q));
+    const apply = () => { const q = this.q.trim().toLowerCase(); let m_ = 0; for (const r of list.querySelectorAll(".ivd-row")) { const hit = !q || (r.dataset.q || "").includes(q); r.toggleAttribute("hidden", !hit); if (hit && q) m_++; } hc.setText(q ? `⇄ LINKS · ${m_}/${NL}` : `⇄ LINKS · ${NL}`);
       for (const g of list.querySelectorAll(".ivd-lkg")) { let n = g.nextElementSibling, any = false; while (n && !n.classList.contains("ivd-lkg")) { if (!n.hasAttribute("hidden")) any = true; n = n.nextElementSibling; } g.toggleAttribute("hidden", !!q && !any); } };
-    qi.addEventListener("input", () => { this.q = qi.value; apply(); }); qi.addEventListener("keydown", e => { if (e.key === "Escape") { this.q = ""; qi.value = ""; apply(); } });
+    qi.addEventListener("input", () => { this.q = qi.value; apply(); }); qi.addEventListener("keydown", e => { if (e.key === "Escape") { this.q = ""; this.qOpen = false; this.qFocus = false; this.render(); } });
+    qi.addEventListener("focus", () => { this.qFocus = true; }); qi.addEventListener("blur", () => { this.qFocus = false; if (!this.q) { this.qOpen = false; window.setTimeout(() => { if (!this.qOpen && !this.q) this.render(); }, 150); } });
+    if (qOpen && this.qFocus) window.setTimeout(() => { qi.focus(); const n_ = qi.value.length; qi.setSelectionRange(n_, n_); }, 0);
     apply(); }
 }
 export function registerDeck(plugin) {
