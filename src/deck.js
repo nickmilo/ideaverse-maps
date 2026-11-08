@@ -320,7 +320,7 @@ export class LinksPaneView extends DeckView {
     pv.createDiv({ cls: "ivd-pvt", text: this.title(path) });
     /* a plain line under the title says what the card is showing (0.9.109, Nick) */
     const outOnly = !hit && !fmHit && cur && fc !== undefined && !!(mc.resolvedLinks[cur] || {})[path];
-    pv.createDiv({ cls: "ivd-pvsub", text: hit ? "Links to the active note at the spot below." : fmHit ? `Links to the active note via the ${String(fmHit.key).split(".")[0]} property.` : outOnly ? "The active note links to this note." : "" });   /* Nick's wording (0.9.111) */
+    { const sub = pv.createDiv({ cls: "ivd-pvsub" }); if (hit) sub.setText("Links to the active note at the spot below."); else if (fmHit) { sub.append("Links to the active note via the "); sub.createEl("b", { text: String(fmHit.key).split(".")[0] }); sub.append(" property."); } else if (outOnly) sub.setText("The active note links to this note."); }   /* the property in bold (0.9.112, Nick) */   /* Nick's wording (0.9.111) */
     const body = pv.createDiv({ cls: "ivd-pvb markdown-rendered" });
     if (f) void this.app.vault.cachedRead(f).then(t => { if (!pv.isConnected) return; let md;
       if (hit && hit.position) { const lines = t.split(/\r?\n/), L = hit.position.start.line; let a = L, b = L; while (a > 0 && lines[a - 1].trim() !== "" && L - a < 2) a--; while (b < lines.length - 1 && lines[b + 1].trim() !== "" && b - L < 8) b++; md = lines.slice(Math.max(0, a), b + 1).join("\n"); if (a > 0) md = "…\n\n" + md; }
