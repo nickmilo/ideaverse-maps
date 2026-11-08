@@ -2339,7 +2339,9 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-pvfloat .ivd-pvt{display:flex;align-items:baseline;gap:8px;font-weight:600;font-size:13px}
 .ivd-pvfloat .ivd-pvwhere{font:600 9px var(--font-monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
 .ivd-pvfloat .ivd-pvb{overflow:hidden;flex:1;min-height:0;font-size:12.5px}
-.ivd-pvfloat a.ivd-pvhit{background:color-mix(in srgb,var(--ivd-acc,#e8bf45) 22%,transparent);border-radius:3px;padding:0 2px;color:var(--text-normal)}
+.ivd-pvfloat a.ivd-pvhit{background:color-mix(in srgb,var(--ivd-acc,#e8bf45) 18%,transparent);border-radius:3px;padding:0 2px;box-shadow:0 0 0 1px color-mix(in srgb,var(--ivd-acc,#e8bf45) 45%,transparent)}   /* still a link, just marked (0.9.109, Nick) */
+.ivd-pvfloat .ivd-pvsub{margin-top:-4px;font-size:11px;color:var(--text-muted)}
+.ivd-pvfloat .ivd-pvsub:empty{display:none}
 /* Show unrequited notes: everything else steps back (0.9.107) */
 .ivd-links .ivd-row.ivd-dim{opacity:.3}
 .ivd-links .ivd-row.ivd-dim:hover{opacity:.75}

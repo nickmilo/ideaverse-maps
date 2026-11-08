@@ -317,7 +317,10 @@ export class LinksPaneView extends DeckView {
     const f = this.file(path), cur = this.cur, mc = this.app.metadataCache, fc = f ? mc.getFileCache(f) : null;
     const hit = cur && fc ? (fc.links || []).concat(fc.embeds || []).find(l => { const t = mc.getFirstLinkpathDest(l.link.split("#")[0].split("|")[0], path); return t && t.path === cur; }) : null;
     const fmHit = !hit && cur && fc ? (fc.frontmatterLinks || []).find(l => { const t = mc.getFirstLinkpathDest(l.link.split("#")[0].split("|")[0], path); return t && t.path === cur; }) : null;
-    const hd = pv.createDiv({ cls: "ivd-pvt" }); hd.createSpan({ text: this.title(path) }); if (hit || fmHit) hd.createSpan({ cls: "ivd-pvwhere", text: hit ? "where it links here" : "in its " + String(fmHit.key).split(".")[0] });
+    pv.createDiv({ cls: "ivd-pvt", text: this.title(path) });
+    /* a plain line under the title says what the card is showing (0.9.109, Nick) */
+    const outOnly = !hit && !fmHit && cur && fc !== undefined && !!(mc.resolvedLinks[cur] || {})[path];
+    pv.createDiv({ cls: "ivd-pvsub", text: hit ? "Links to the active note here" : fmHit ? `Linked in the ${String(fmHit.key).split(".")[0]} property` : outOnly ? "The active note links to this note" : "" });
     const body = pv.createDiv({ cls: "ivd-pvb markdown-rendered" });
     if (f) void this.app.vault.cachedRead(f).then(t => { if (!pv.isConnected) return; let md;
       if (hit && hit.position) { const lines = t.split(/\r?\n/), L = hit.position.start.line; let a = L, b = L; while (a > 0 && lines[a - 1].trim() !== "" && L - a < 2) a--; while (b < lines.length - 1 && lines[b + 1].trim() !== "" && b - L < 8) b++; md = lines.slice(Math.max(0, a), b + 1).join("\n"); if (a > 0) md = "…\n\n" + md; }
