@@ -357,7 +357,8 @@ export class LinksPaneView extends DeckView {
       az: (a, b) => this.title(a).localeCompare(this.title(b), undefined, { numeric: true }), za: (a, b) => this.title(b).localeCompare(this.title(a), undefined, { numeric: true }),
       mnew: (a, b) => ((fi(b) || {}).stat || {}).mtime - ((fi(a) || {}).stat || {}).mtime || 0, mold: (a, b) => ((fi(a) || {}).stat || {}).mtime - ((fi(b) || {}).stat || {}).mtime || 0,
       cnew: (a, b) => this.createdMs(b) - this.createdMs(a) || ((fi(b) || {}).stat || {}).ctime - ((fi(a) || {}).stat || {}).ctime || 0, cold: (a, b) => this.createdMs(a) - this.createdMs(b) || ((fi(a) || {}).stat || {}).ctime - ((fi(b) || {}).stat || {}).ctime || 0 }[SO];
-    main.sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || cmp(a.p, b.p));
+    const PIN = SO === "rel" || SO === "lvl";   /* up on top only in our own two orders; Obsidian's six sort everything alike (0.9.71, Nick) */
+    main.sort((a, b) => (PIN ? (KR[this.kindOf(path, a.p)] ?? 2) - (KR[this.kindOf(path, b.p)] ?? 2) : 0) || cmp(a.p, b.p));
     const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
     const ORB = this.opt("orb"), AGE = MOD && this.opt("age"), CAGE = CRE && this.opt("cage"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
