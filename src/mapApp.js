@@ -556,6 +556,23 @@ const gapAng = () => mode === "ace" ? ((aceArc || (buildAceArc(), aceArc)) ? ace
 const SX = new Float32Array(n), SY = new Float32Array(n), SR = new Float32Array(n), SC = new Uint8Array(n);
 const BOD = new Int32Array(n).fill(-1), COREB = new Int32Array(n).fill(-1);
 let BODIES = [], UB = {x0:0, y0:0, x1:WW, y1:WH}, starsDirty = true, starVer = 0;
+/* Place by coordinates (0.9.139): a vault whose notes carry two number properties (Settings → Coordinate properties, x and y by default) can lay Starfield out by them
+   instead of by links: a map's own grid, a galaxy's, a city's. Notes without coordinates sit beside the notes they link to (the mean of their placed neighbours, three
+   passes), and the rest ring the edge. Galaxies (bodies) are dropped: the coordinates are the picture. Off unless switched on in Starfield's gear, and only offered when
+   at least 20 notes have both. */
+const COORDK = (() => { const k = (D.settings && D.settings.coord_props) || ["x", "y"]; return [k[0] || "x", k[1] || "y"]; })();
+const COORDV = i => { const v = N[i] && N[i].p && N[i].p.n; if (!v) return null; const x = v[COORDK[0]], y = v[COORDK[1]]; return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null; };
+let COORDN = -1; const coordCount = () => { if (COORDN < 0) { COORDN = 0; for (let i = 0; i < n; i++) if (COORDV(i)) COORDN++; } return COORDN; };
+let COORDS = pref("iv-sfcoord", false) === true; const coordOn = () => COORDS && coordCount() >= 20;
+function coordPlace(B, web){
+  const pts = []; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let i = 0; i < n; i++) { const c = COORDV(i); if (!c) continue; pts.push(i); x0 = Math.min(x0, c[0]); x1 = Math.max(x1, c[0]); y0 = Math.min(y0, c[1]); y1 = Math.max(y1, c[1]); }
+  const span = Math.max(x1 - x0, y1 - y0, 1e-9), S = 2600 / span, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, set = new Uint8Array(n);
+  for (const i of pts) { const c = COORDV(i); SX[i] = UC.x + (c[0] - cx) * S; SY[i] = UC.y + (c[1] - cy) * S; set[i] = 1; }
+  for (let pass = 0; pass < 3; pass++) { const nx = []; for (let i = 0; i < n; i++) { if (set[i]) continue; let sx = 0, sy = 0, k = 0; for (const j of out[i].concat(inn[i])) if (set[j]) { sx += SX[j]; sy += SY[j]; k++; } if (k) nx.push([i, sx / k, sy / k]); }
+    for (const [i, x, y] of nx) { const a = hash(N[i].path, 37) * 6.2832, r = 14 + hash(N[i].path, 38) * 22; SX[i] = x + Math.cos(a) * r; SY[i] = y + Math.sin(a) * r; set[i] = 1; } }
+  for (let i = 0; i < n; i++) { BOD[i] = -1; if (set[i]) continue; const a = hash(N[i].path, 37) * 6.2832, r = 1500 + hash(N[i].path, 38) * 200; SX[i] = UC.x + Math.cos(a) * r; SY[i] = UC.y + Math.sin(a) * r; }
+  B.length = 0; web.length = 0; BOD.fill(-1); COREB.fill(-1); }
 const UC = {x: WW/2, y: WH/2};
 const SADJ = Array.from({length:n}, () => []);
 for (const [a,b,t] of E) if ((t <= 1 || t === 4) && !ARCH[a] && !ARCH[b]) { SADJ[a].push(b); SADJ[b].push(a); }
@@ -673,11 +690,13 @@ function layoutStars(){
         lx += g1*wdt; ly += g2*wdt; const m = Math.hypot(lx, ly), soft = .75*b.r; if (m > soft) { const m2 = soft + (b.r - soft)*(1 - Math.exp(-(m - soft)/(b.r - soft))); lx *= m2/m; ly *= m2/m; }   // past three-quarters out, ease toward the edge instead of piling up on it
         SX[i] = UC.x + b.x + lx; SY[i] = UC.y + b.y + ly; continue; }
     } }
+  if (coordOn()) coordPlace(B, web);
   for (let i=0;i<n;i++) { const lv = N[i].level;
     SR[i] = (lv === 5 ? 3.4 + Math.min(N[i].score, 30)*.08 : lv === 4 ? 2.4 : lv === 3 ? 1.6 : lv === 2 ? 1 + Math.min(N[i].score, 5)*.1 : .8) * (ARCH[i] ? .85 : 1); }
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const b of B) { x0 = Math.min(x0, UC.x + b.x - b.r); x1 = Math.max(x1, UC.x + b.x + b.r); y0 = Math.min(y0, UC.y + b.y - b.r); y1 = Math.max(y1, UC.y + b.y + b.r); }
   UB = {x0: x0 - 80, y0: y0 - 80, x1: x1 + 80, y1: y1 + 80};
+  if (coordOn()) UB = {x0: UC.x - 1800, y0: UC.y - 1800, x1: UC.x + 1800, y1: UC.y + 1800};
   BODIES = B; BODIES.web = web;
 }
 function colorStars(){
@@ -7580,6 +7599,7 @@ function drawMini(){ if (!miniOn() || !BODIES.length) { miniCv.hidden = true; re
   const mw = 196, mh = 128, d = Math.min(2, win.devicePixelRatio || 1); if (miniCv.width !== mw*d) { miniCv.width = mw*d; miniCv.height = mh*d; miniCv.style.width = mw + "px"; miniCv.style.height = mh + "px"; }
   miniCv.style.left = Math.max(0, cv.offsetLeft + W - sideW() - 62 - mw) + "px"; miniCv.style.top = (cv.offsetTop + H - mh - (doc.body.classList.contains("is-mobile") ? 14 : 42)) + "px";   // beside the zoom buttons, in the part of the map you can see
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const b of BODIES) { const bx = UC.x + b.x, by = UC.y + b.y; x0 = Math.min(x0, bx - b.r); x1 = Math.max(x1, bx + b.r); y0 = Math.min(y0, by - b.r); y1 = Math.max(y1, by + b.r); }
+  if (!BODIES.length) { x0 = UB.x0; y0 = UB.y0; x1 = UB.x1; y1 = UB.y1; }   /* Place by coordinates has no bodies (0.9.139) */
   const pad = 8, sc = Math.min((mw - 2*pad)/(x1 - x0), (mh - 2*pad)/(y1 - y0)), ox = (mw - (x1 - x0)*sc)/2 - x0*sc, oy = (mh - (y1 - y0)*sc)/2 - y0*sc; MB = { sc, ox, oy };
   const mx = x => x*sc + ox, my = y => y*sc + oy;
   mctx.setTransform(d, 0, 0, d, 0, 0); mctx.clearRect(0, 0, mw, mh);
@@ -8019,6 +8039,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const tog = (label, get, set) => { const r = $("#starpop").createEl("label", { cls: "mini lcemo sfsw" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = get(); r.createEl("i", { cls: "sw" }); r.createSpan({ text: label });
       cb.onchange = () => set(cb.checked); };
     tog("Twinkle", () => twOn, v => { twOn = v; save("iv-twinkle", v); twWake(); });
+    if (coordCount() >= 20) tog("Place by coordinates", () => COORDS, v => { COORDS = v; save("iv-sfcoord", v); starsDirty = true; glowKey = ""; s3dVer = -1; CKSF.ver = -1; morph(true); });   /* (0.9.139) */
     tog("Turning galaxies", () => sTurn, v => { sTurn = v; save("iv-sturn", v); turnSync(); if (!v && view === "stars") { glowKey = ""; morph(true); } }); }
   // a tighter Starfield menu (0.8.9, with Filter as the reference): the three ways to see it as one row, the chosen one's line beneath,
   // Star Chart's layers two to a row under it, then Galaxy glow, then the switches in one list

@@ -71,6 +71,10 @@ export class MapsSettingTab extends PluginSettingTab {
       .setPlaceholder("year, rating").setValue((s.axisProps || ["year"]).join(", "))
       .onChange(async v => { s.axisProps = v.split(",").map(x => x.trim()).filter(Boolean); await p.saveSettings(); }));
 
+    new Setting(containerEl).setName("Coordinate properties").setDesc("Two number properties, x then y (comma-separated), that place notes at fixed spots in Starfield when its gear's Place by coordinates is on: a map's own grid, a galaxy's, a city's. Notes without them sit beside the notes they link to. Rescan after changing.")
+      .addText(t => t.setPlaceholder("x, y").setValue((s.coordProps || ["x", "y"]).join(", "))
+      .onChange(async v => { s.coordProps = v.split(",").map(x => x.trim()).filter(Boolean).slice(0, 2); await p.saveSettings(); }));
+
     new Setting(containerEl).setName("PKM Planet").setHeading();
     new Setting(containerEl).setName("Map image").setDesc("A full-size PKM Planet image in your vault (PNG, JPG or WebP). Left empty, the map uses the smaller image built into the plugin.").addText(t => t
       .setPlaceholder("Folder/PKM Planet.png").setValue(s.planetImage || "")
