@@ -2271,6 +2271,7 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-mhx{display:inline-flex;align-items:center;gap:5px;margin-left:8px;vertical-align:middle}
 .ivd-mhn{font:600 10px var(--font-monospace);color:#a87a05}
 .theme-dark .ivd-mhn{color:#f2d45c}
+.ivd-mha{font-size:11px;color:var(--text-muted);letter-spacing:.15em}
 .ivd-mhh{font:600 9px var(--font-monospace);letter-spacing:.1em;color:var(--text-muted)}
 .ivd-mc-upp{color:#b8860b}.ivd-mc-rel{color:#8a3ff0}.ivd-mc-up{color:#1f86c4}.ivd-mc-down{color:#1f8f6a}
 .theme-dark .ivd-mc-upp{color:#ffcf5a}.theme-dark .ivd-mc-rel{color:#c9a2ff}.theme-dark .ivd-mc-up{color:#6fbcff}.theme-dark .ivd-mc-down{color:#6fe08f}

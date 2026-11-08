@@ -358,6 +358,7 @@ export class LinksPaneView extends DeckView {
       const orbS = (h, L_) => { const o = D.createElement("span"); o.className = "ivd-orb lv" + L_; const g_ = LVGRAD[L_]; o.style.setProperty("--o0", g_[0]); o.style.setProperty("--o1", g_[1]); h.append(o); };
       it_("rel", "Show relevance scores", h => tx(h, "82", "ivd-mhn"));
       it_("col", sp => { sp.append("Show "); tx(sp, "Idea", "ivd-mc-upp"); sp.append(" "); tx(sp, "Emergence", "ivd-mc-rel"); sp.append(" "); tx(sp, "link", "ivd-mc-up"); sp.append(" "); tx(sp, "colors", "ivd-mc-down"); });
+      it_("arr", "Show in-link/out-links", h => tx(h, "← → ↔", "ivd-mha"));   /* Nick's name for it (0.9.83) */
       it_("orb", "Show Idea Emergence orbs", h => { orbS(h, 5); orbS(h, 4); orbS(h, 3); });
       it_("emo", "Show emojis", h => tx(h, "✨"));
       /* a sort's own switch goes last, under a thin line, so it reads as new for this order (0.9.79, Nick); headers only while sorted by Idea Emergence (0.9.73) */
@@ -377,9 +378,9 @@ export class LinksPaneView extends DeckView {
     main.sort((a, b) => (PIN ? (KR[this.kindOf(path, a.p)] ?? 2) - (KR[this.kindOf(path, b.p)] ?? 2) : 0) || cmp(a.p, b.p));
     const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
-    const LSC = (SO === "lvl" || SO === "remg") && this.opt("lsc"), ORB = this.opt("orb"), AGE = MOD && this.opt("age"), CAGE = CRE && this.opt("cage"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
+    const ARR = this.opt("arr"), LSC = (SO === "lvl" || SO === "remg") && this.opt("lsc"), ORB = this.opt("orb"), AGE = MOD && this.opt("age"), CAGE = CRE && this.opt("cage"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
     const onG = p => !this.G || this.G.ek.has(path + "\u0000" + p) || this.G.ek.has(p + "\u0000" + path), right = p => LSC ? (() => { const n_ = this.G && this.G.idx.get(p); if (!n_ || n_.score == null) return ""; const v = +n_.score; return v.toFixed(v < 10 ? 1 : 0); })() : AGE ? (fi(p) ? this.age(fi(p).stat.mtime) : "") : CAGE ? (fi(p) ? this.age(this.createdMs(p)) : "") : REL && sc.has(p) && onG(p) ? String(sc.get(p).s) : "";   /* no score for a collection: the map never counts it */
-    const put = (p, a, c) => { if (MC.has(p)) c = !COL ? "var(--ivd-link)" : this.plugin.store.get("iv-colllinks") !== false ? "var(--ivd-coll)" : "var(--ivd-prop)"; else if (MP.has(p) && !MC.has(p) && COL && !KEEP.has(this.kindOf(path, p))) c = "var(--ivd-prop)"; const r = this.row(list, p, a, c, right(p)); r.dataset.q = this.title(p).toLowerCase();
+    const put = (p, a, c) => { if (!ARR) a = ""; if (MC.has(p)) c = !COL ? "var(--ivd-link)" : this.plugin.store.get("iv-colllinks") !== false ? "var(--ivd-coll)" : "var(--ivd-prop)"; else if (MP.has(p) && !MC.has(p) && COL && !KEEP.has(this.kindOf(path, p))) c = "var(--ivd-prop)"; const r = this.row(list, p, a, c, right(p)); r.dataset.q = this.title(p).toLowerCase();
       /* the Holodeck tab's orb (0.9.67, Nick): its level's shape and gradient, 5 a rounded square, 4 a diamond, 3 to 1 a circle */
       if (ORB) { const L_ = lv(p)[0], t0 = r.querySelector(".ivd-t"), o_ = createSpan({ cls: "ivd-orb lv" + L_ }), g_ = LVGRAD[L_]; if (g_) { o_.style.setProperty("--o0", g_[0]); o_.style.setProperty("--o1", g_[1]); } if (t0) t0.before(o_); }
       if (EMO) { const em = this.emoOf(p), t = r.querySelector(".ivd-t"), sp = createSpan({ cls: "ivd-e", text: em && !this.title(p).startsWith(em) ? em : "" }); if (t) t.before(sp); } return r; };
