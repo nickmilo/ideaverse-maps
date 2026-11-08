@@ -1489,7 +1489,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm.ivm-land header,.ivm.ivm-land .trail{display:none}
 .ivm .dtab.hudtab{top:62%;right:var(--hr,0px)}
 .ivm .dtab.hudtab[hidden]{display:none}
-.ivm .ivm-card.ivm-pv.hudpv{position:absolute;left:var(--pvx);top:var(--pvy);pointer-events:none;z-index:5}
+.ivm .ivm-card.ivm-pv.hudpv{position:absolute;left:var(--pvx);top:var(--pvy);pointer-events:none;z-index:30}   /* above the editors: with a support note open the card had slipped behind it (0.9.117, Nick) */
 .ivm .ivm-card.ivm-pv.hudpv[hidden]{display:none}
 /* the preview's hint, in the plugin's own small label style (0.8.145) */
 .ivm .ivm-cockpit .ivm-card.ivm-pv.ckpv{overflow:visible}
