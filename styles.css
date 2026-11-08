@@ -2420,3 +2420,5 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivm .ivm-recents:not(.ivm-lkhud) > .rch{padding-bottom:3px}
 .ivm .ivm-recents:not(.ivm-lkhud) .rcl{margin-top:3px;padding-top:9px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 8px,#000 calc(100% - 6px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 8px,#000 calc(100% - 6px),transparent 100%)}
 .ivm .ivm-recents.paired:not(.ivm-lkhud) .rcl.rcrec{max-height:calc(17.5px * var(--rcrows,10) + 15px)}
+/* 0.9.133, Nick: a pane's title in the theme's own text color, not gold, and no icon before it (the HUD keeps both) */
+.ivd.ivd-links .ivd-lkhd .ivd-h{color:var(--text-normal)}
