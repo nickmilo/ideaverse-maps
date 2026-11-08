@@ -459,13 +459,70 @@ export class LinksPaneView extends DeckView {
     if (qOpen && this.qFocus) window.setTimeout(() => { qi.focus(); const n_ = qi.value.length; qi.setSelectionRange(n_, n_); }, 0);
     apply(); }
 }
+/* The Recents pane (0.9.120, Nick: "take the Recents heads-up display and everything we learned from our Links heads-up display and Links pane"): the notes changed most
+   lately, newest first, as the Recents HUD lists them, in a pane of its own, built on the Links pane: the same header (count, quiet search, folder filter, Display with
+   Left · Middle · Right), the same rows (drag into a note, ⌘ for the spot preview, click opens, ⌘-click a new tab), and the note you're in marked */
+export const RECENTS_TYPE = "ideaverse-recents";
+export class RecentsPaneView extends LinksPaneView {
+  getViewType() { return RECENTS_TYPE; }
+  getDisplayText() { return "Recents"; }
+  getIcon() { return "history"; }
+  opt(k) { const v = this.plugin.store.get("iv-recents-" + k); return v == null ? k === "age" : v === true; }   /* time since modified on; every other Show switch off */
+  setLOpt(k, v) { this.plugin.store.set("iv-recents-" + k, v); for (const l of this.app.workspace.getLeavesOfType(RECENTS_TYPE)) if (l.view instanceof RecentsPaneView) l.view.render(); }
+  async onOpen() { await super.onOpen(); this.contentEl.addClass("ivd-recents");
+    for (const ev of ["modify", "create", "delete", "rename"]) this.registerEvent(this.app.vault.on(ev, () => this.soon())); }
+  render() { const box = this.contentEl; if (!box) return; box.empty(); this.ensureGraph(); const cur = this.cur, D = box.ownerDocument;
+    const ex = ((this.plugin.settings && this.plugin.settings.exclude) || []).map(x => String(x).replace(/\/+$/, "")).filter(Boolean), HIDF = (v => Array.isArray(v) ? v : [])(this.plugin.store.get("iv-recents-hidef"));
+    const dirOf = p => p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "", under = (p, L) => { const d = dirOf(p); return L.some(h => d === h || d.startsWith(h + "/")); };
+    const all = this.app.vault.getMarkdownFiles().filter(f => !under(f.path, ex)).sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, 200), files = all.filter(f => !under(f.path, HIDF)).slice(0, 100);
+    const hd = box.createDiv({ cls: "ivd-lkhd" }); const hc = hd.createSpan({ cls: "ivd-h", text: `◷ RECENTS · ${files.length}` });
+    const qOpen = this.qOpen || !!this.q, sk = hd.createEl("button", { cls: "ivd-lksb" + (qOpen ? " on" : ""), attr: { type: "button", "aria-description": "Search recents" } }); setIcon(sk, "search");
+    const qi = hd.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search recents", spellcheck: "false" } }); qi.value = this.q; qi.hidden = !qOpen;
+    hd.createSpan({ cls: "ivd-lksp" });
+    sk.onclick = () => { if (this.qOpen || this.q) { this.qOpen = false; this.q = ""; this.qFocus = false; } else { this.qOpen = true; this.qFocus = true; } this.render(); };
+    const fb = hd.createEl("button", { cls: "ivd-lksort clickable-icon" + (this.filtOpen ? " is-active" : ""), attr: { type: "button", "aria-description": "Filter by folder", "aria-pressed": String(HIDF.length > 0) } }); setIcon(fb, "filter"); fb.onclick = () => { this.filtOpen = !this.filtOpen; this.render(); };
+    const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal"); hd.createSpan({ cls: "ivd-lkqh ivd-lkqh-ph" });
+    db.onclick = () => { if (this.menuJust(db)) return; const m = new Menu(), tx = (h, s_, c) => { const x = D.createElement("span"); x.className = c || ""; x.textContent = s_; h.append(x); };
+      const it_ = (k, t, hint) => m.addItem(it => { const f = D.createDocumentFragment(), sp = D.createElement("span"); sp.className = "ivd-mh"; if (typeof t === "string") sp.append(t); else t(sp); if (hint) { const h = D.createElement("span"); h.className = "ivd-mhx"; hint(h); sp.append("\u2002", h); } f.append(sp); it.setTitle(f).setChecked(this.opt(k)).onClick(() => this.setLOpt(k, !this.opt(k))); });
+      const hd_ = t => m.addItem(it => { const f = D.createDocumentFragment(), x = D.createElement("span"); x.className = "ivd-mlab"; x.textContent = t; f.append(x); it.setTitle(f); if (typeof it.setIsLabel === "function") it.setIsLabel(true); else it.setDisabled(true); });
+      const orbS = (h, L_) => { const o = D.createElement("span"); o.className = "ivd-orb lv" + L_; const g_ = LVGRAD[L_]; o.style.setProperty("--o0", g_[0]); o.style.setProperty("--o1", g_[1]); h.append(o); };
+      hd_("Left"); it_("orb", "Show Idea Emergence orbs", h => { orbS(h, 5); orbS(h, 4); orbS(h, 3); }); it_("emo", "Show emojis", h => tx(h, "✨"));
+      m.addSeparator(); hd_("Middle"); it_("col", sp => { sp.append("Show "); tx(sp, "Idea", "ivd-mc-upp"); sp.append(" "); tx(sp, "Emergence", "ivd-mc-rel"); sp.append(" "); tx(sp, "level", "ivd-mc-up"); sp.append(" "); tx(sp, "colors", "ivd-mc-down"); }); it_("day", "Show day headers", h => tx(h, "TODAY", "ivd-mhh"));
+      m.addSeparator(); hd_("Right"); it_("age", "Show time since modified", h => tx(h, "6d", "ivd-mhn"));
+      this.menuUnder(m, db); };
+    if (this.filtOpen) { const fp = box.createDiv({ cls: "ivd-lkfilt" }), cnt = new Map(); for (const f of all) { let d = dirOf(f.path); while (true) { cnt.set(d, (cnt.get(d) || 0) + 1); if (!d) break; d = dirOf(d); } }
+      const h2 = fp.createDiv({ cls: "ivd-lkfh" }); h2.createSpan({ text: "Folders" }); if (HIDF.length) { const b = h2.createEl("button", { cls: "ivd-lkfall", text: "Show all", attr: { type: "button" } }); b.onclick = () => this.setLOpt("hidef", []); }
+      for (const d of [...cnt.keys()].filter(Boolean).sort((a, b) => a.localeCompare(b))) { const off = HIDF.some(h => d === h || d.startsWith(h + "/")), row = fp.createEl("button", { cls: "ivd-lkfr" + (off ? " off" : ""), attr: { type: "button" } }); row.style.setProperty("--fd", String(d.split("/").length - 1));
+        const cb = row.createSpan({ cls: "ivd-lkfc" }); if (!off) setIcon(cb, "check"); row.createSpan({ cls: "ivd-lkfn", text: d.split("/").pop() }); row.createSpan({ cls: "ivd-lkfk", text: String(cnt.get(d)) });
+        row.onclick = () => this.setLOpt("hidef", HIDF.includes(d) ? HIDF.filter(h => h !== d) : off ? HIDF : [...HIDF.filter(h => !h.startsWith(d + "/")), d]); } }
+    const list = box.createDiv({ cls: "ivd-lklist" }); this.underHead = false;
+    const G = this.G, LC = { 5: "var(--ivd-upp)", 4: "var(--ivd-rel)", 3: "var(--ivd-up)", 2: "var(--ivd-down)", 1: "var(--text-muted)" }, ORB = this.opt("orb"), EMO = this.opt("emo"), COL = this.opt("col"), AGE = this.opt("age"), DAY = this.opt("day");
+    const dayOf = ms => { const d0 = new Date(); d0.setHours(0, 0, 0, 0); const t0 = d0.getTime(), dd = (t0 - ms) / 86400000; return ms >= t0 ? "Today" : dd <= 1 ? "Yesterday" : dd <= 6 ? "This week" : dd <= 30 ? "This month" : "Earlier"; };
+    let lastDay = null;
+    for (const f of files) { const p = f.path, nd = G && G.idx.get(p), L_ = nd ? nd.level || 1 : 1;
+      if (DAY) { const dk = dayOf(f.stat.mtime); if (dk !== lastDay) { this.ghead(list, "ivd-lkg ivd-lvh", dk, files.filter(x => dayOf(x.stat.mtime) === dk).length); lastDay = dk; } }
+      const r = this.row(list, p, "", COL ? LC[L_] : "var(--ivd-link)", AGE ? this.age(f.stat.mtime) : ""); r.dataset.q = this.title(p).toLowerCase(); if (p === cur) r.addClass("ivd-cur"); if (this.underHead) r.addClass("ivd-under");
+      const t = r.querySelector(".ivd-t");
+      if (ORB && t) { const o_ = createSpan({ cls: "ivd-orb lv" + L_ }), g_ = LVGRAD[L_]; if (g_) { o_.style.setProperty("--o0", g_[0]); o_.style.setProperty("--o1", g_[1]); } t.before(o_); }
+      if (EMO && t) { const m_ = LEAD_EMO.exec(this.title(p)), em = m_ ? m_[1] : this.emoOf(p), sp = createSpan({ cls: "ivd-e" + (m_ ? " ivd-e-own" : ""), text: em || "" }); if (m_) t.setText(this.title(p).slice(m_[0].length)); t.before(sp); }
+      r.addEventListener("dragstart", e => { const dm = this.app.dragManager; if (!dm || typeof dm.dragFile !== "function") return; if (dm.draggable && typeof dm.onDragEnd === "function") { try { dm.onDragEnd(e); } catch (_) { /* stale */ } } const d = dm.dragFile(e, f); if (d) dm.onDragStart(e, d); r.addEventListener("dragend", ev => { if (dm.draggable && typeof dm.onDragEnd === "function") { try { dm.onDragEnd(ev); } catch (_) { /* clean */ } } }, { once: true }); }); }
+    const apply = () => { const q = this.q.trim().toLowerCase(); let m_ = 0; for (const r of list.querySelectorAll(".ivd-row")) { const hit = !q || (r.dataset.q || "").includes(q); r.toggleAttribute("hidden", !hit); if (hit && q) m_++; } hc.setText(q ? `◷ RECENTS · ${m_}/${files.length}` : `◷ RECENTS · ${files.length}`);
+      for (const g of list.querySelectorAll(".ivd-lkg")) { let n = g.nextElementSibling, any = false; while (n && !n.classList.contains("ivd-lkg")) { if (!n.hasAttribute("hidden")) any = true; n = n.nextElementSibling; } g.toggleAttribute("hidden", !!q && !any); } };
+    qi.addEventListener("input", () => { this.q = qi.value; apply(); }); qi.addEventListener("keydown", e => { if (e.key === "Escape") { this.q = ""; this.qOpen = false; this.qFocus = false; this.render(); } });
+    qi.addEventListener("blur", () => { this.qFocus = false; if (!this.q) { this.qOpen = false; window.setTimeout(() => { if (!this.qOpen && !this.q) this.render(); }, 150); } });
+    if (qOpen && this.qFocus) window.setTimeout(() => { qi.focus(); const n_ = qi.value.length; qi.setSelectionRange(n_, n_); }, 0);
+    apply(); }
+}
 export function registerDeck(plugin) {
   plugin.registerView(DECK_TYPE, leaf => new DeckView(leaf, plugin));
   plugin.registerView(LINKS_TYPE, leaf => new LinksPaneView(leaf, plugin));
+  plugin.registerView(RECENTS_TYPE, leaf => new RecentsPaneView(leaf, plugin));
   /* the Links pane: in the right sidebar, where Obsidian's backlinks sit, or anywhere you drag it */
   plugin.addCommand({ id: "open-links-pane", name: "Open the Links pane", callback: async () => { const W = plugin.app.workspace, ex = W.getLeavesOfType(LINKS_TYPE)[0];
     if (ex) { await W.revealLeaf(ex); return; } const lf = W.getRightLeaf(false); if (!lf) return; await lf.setViewState({ type: LINKS_TYPE, active: true }); await W.revealLeaf(lf); } });
   plugin.addCommand({ id: "open-links-pane-tab", name: "Open the Links pane in a new tab", callback: async () => { const W = plugin.app.workspace, lf = W.getLeaf("tab"); await lf.setViewState({ type: LINKS_TYPE, active: true }); } });
+  plugin.addCommand({ id: "open-recents-pane", name: "Open the Recents pane", callback: async () => { const W = plugin.app.workspace, ex = W.getLeavesOfType(RECENTS_TYPE)[0]; if (ex) { await W.revealLeaf(ex); return; } const lf = W.getRightLeaf(false); if (lf) { await lf.setViewState({ type: RECENTS_TYPE, active: true }); await W.revealLeaf(lf); } } });
+  plugin.addCommand({ id: "open-recents-pane-tab", name: "Open the Recents pane in a new tab", callback: async () => { const W = plugin.app.workspace, lf = W.getLeaf("tab"); await lf.setViewState({ type: RECENTS_TYPE, active: true }); } });
   const active = () => { const f = plugin.app.workspace.getActiveFile(); return f && f.extension === "md" ? f.path : null; };
   /* on mobile there are no pop-out windows: the Mini Deck opens as a tab (0.9.46, Nick: "a quick way between recent notes… as opposed to all these panes you swipe left and right for");
      "Mini Deck", not "Deck Mini": the Holodeck is the main one, the Mini Deck the tiny one (0.9.48, Nick) */
