@@ -269,6 +269,7 @@ export class DeckView extends ItemView {
    for the note you're reading anywhere in Obsidian, straight, in a tab or the sidebar. It sorts links the HUD's way: up and related first, then by relevance,
    with ← → ↔ and level colors; then this note's own properties, one group each (collections in coral); then other notes' properties pointing back */
 export const LINKS_TYPE = "ideaverse-links";
+const LVGRAD = { 5: ["#f7c948", "#e8538a"], 4: ["#8a5bd6", "#3466d6"], 3: ["#4fc3ef", "#5b2e91"] };   /* the map's GRAD */
 const LINKSORTS = [["rel", "Relevance"], ["lvl", "Idea Emergence"], null, ["az", "File name (A to Z)"], ["za", "File name (Z to A)"], null, ["mnew", "Modified time (new to old)"], ["mold", "Modified time (old to new)"], null, ["cnew", "Created time (new to old)"], ["cold", "Created time (old to new)"]];
 export class LinksPaneView extends DeckView {
   constructor(leaf, plugin) { super(leaf, plugin); this.cur = null; this.q = ""; }
@@ -305,7 +306,7 @@ export class LinksPaneView extends DeckView {
   linksOf(path) { const rows = super.linksOf(path), rv = this.relFrom(path); if (!rv) return rows; for (const x of rows) x.r = rv.get(x.p) || 0;
     const mx = Math.max(1e-12, ...rows.map(x => x.r)); for (const x of rows) x.s = Math.round(100 * x.r / mx); return rows; }
   /* the pane's own Display (0.9.64, Nick): relevance scores, link colors, Idea Emergence headers, emojis, time since modified; shared by every Links pane */
-  opt(k) { const v = this.plugin.store.get("iv-links-" + k); return v == null ? !(k === "lvh" || k === "emo") : v === true; }
+  opt(k) { const v = this.plugin.store.get("iv-links-" + k); return v == null ? !(k === "lvh" || k === "emo" || k === "orb") : v === true; }
   setLOpt(k, v) { this.plugin.store.set("iv-links-" + k, v); for (const l of this.app.workspace.getLeavesOfType(LINKS_TYPE)) if (l.view instanceof LinksPaneView) l.view.render(); }
   /* a note's emoji as the map finds it (Display → Assign emojis): its deepest folder with one, else the emoji base's column */
   emoOf(p) { const F = this.plugin.store.get("iv-emofold") || {}; let q = p; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (F[q]) return F[q]; }
@@ -335,7 +336,7 @@ export class LinksPaneView extends DeckView {
     /* Display, beside Sort (0.9.64); time since modified is offered only while sorted by modified time */
     const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal");
     db.onclick = e => { const m = new Menu(), it_ = (k, t) => m.addItem(it => it.setTitle(t).setChecked(this.opt(k)).onClick(() => this.setLOpt(k, !this.opt(k))));
-      it_("rel", "Show relevance scores"); it_("col", "Color links by Idea Emergence"); it_("lvh", "Idea Emergence headers"); it_("emo", "Show emojis"); if (MOD) it_("age", "Show time since modified"); if (CRE) it_("cage", "Show time since created");   /* each offered only while its sort is on (0.9.66, Nick) */ m.showAtMouseEvent(e); };
+      it_("rel", "Show relevance scores"); it_("col", "Color links by Idea Emergence"); it_("lvh", "Idea Emergence headers"); it_("orb", "Show Idea Emergence orbs"); it_("emo", "Show emojis"); if (MOD) it_("age", "Show time since modified"); if (CRE) it_("cage", "Show time since created");   /* each offered only while its sort is on (0.9.66, Nick) */ m.showAtMouseEvent(e); };
     const qr = box.createDiv({ cls: "ivd-lkqr" }), qi = qr.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); qi.value = this.q;
     const G = this.G, fi = p => this.file(p), lv = p => { const n_ = G && G.idx.get(p); return n_ ? [n_.level || 0, n_.score || 0] : [0, 0]; }, sc0 = new Map(ls.map(l => [l.p, l.s]));
     const cmp = {
@@ -347,9 +348,11 @@ export class LinksPaneView extends DeckView {
     main.sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || cmp(a.p, b.p));
     const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
-    const AGE = MOD && this.opt("age"), CAGE = CRE && this.opt("cage"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
+    const ORB = this.opt("orb"), AGE = MOD && this.opt("age"), CAGE = CRE && this.opt("cage"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
     const onG = p => !this.G || this.G.ek.has(path + "\u0000" + p) || this.G.ek.has(p + "\u0000" + path), right = p => AGE ? (fi(p) ? this.age(fi(p).stat.mtime) : "") : CAGE ? (fi(p) ? this.age(fi(p).stat.ctime) : "") : REL && sc.has(p) && onG(p) ? String(sc.get(p).s) : "";   /* no score for a collection: the map never counts it */
     const put = (p, a, c) => { const r = this.row(list, p, a, c, right(p)); r.dataset.q = this.title(p).toLowerCase();
+      /* the Holodeck tab's orb (0.9.67, Nick): its level's shape and gradient, 5 a rounded square, 4 a diamond, 3 to 1 a circle */
+      if (ORB) { const L_ = lv(p)[0], t0 = r.querySelector(".ivd-t"), o_ = createSpan({ cls: "ivd-orb lv" + L_ }), g_ = LVGRAD[L_]; if (g_) { o_.style.setProperty("--o0", g_[0]); o_.style.setProperty("--o1", g_[1]); } if (t0) t0.before(o_); }
       if (EMO) { const em = this.emoOf(p), t = r.querySelector(".ivd-t"), sp = createSpan({ cls: "ivd-e", text: em && !this.title(p).startsWith(em) ? em : "" }); if (t) t.before(sp); } return r; };
     /* Idea Emergence headers (0.9.64, Nick): the main list grouped by level, highest first, in the Holodeck's folder-header style; up and related lead each level */
     if (this.opt("lvh")) { const by = new Map(); for (const l of main) { const k = lv(l.p)[0]; if (!by.has(k)) by.set(k, []); by.get(k).push(l); }

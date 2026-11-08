@@ -2249,5 +2249,11 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-lksp{flex:1}
 .ivd-links .ivd-lvh{margin-top:8px;padding:0 0 1px 6px;font:600 9.5px var(--font-monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
 .ivd-links .ivd-lklist>.ivd-lvh:first-child{margin-top:0}
+.ivd-links .ivd-orb{flex:none;width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--o0,var(--ivd-l1)),var(--o1,var(--ivd-l1)));--ivd-l1:rgba(110,118,112,.38)}
+.theme-dark .ivd-links .ivd-orb{--ivd-l1:hsla(224,37%,80%,.3)}
+.ivd-links .ivd-orb.lv2{--o0:rgba(47,174,120,.55);--o1:rgba(47,174,120,.55)}
+.theme-dark .ivd-links .ivd-orb.lv2{--o0:hsla(151,54%,64%,.7);--o1:hsla(151,54%,64%,.7)}
+.ivd-links .ivd-orb.lv5{border-radius:2.5px;width:9px;height:9px;margin:0 .5px}
+.ivd-links .ivd-orb.lv4{border-radius:1.5px;width:7px;height:7px;margin:0 1.5px;transform:rotate(45deg)}   /* the Holodeck orb (0.9.67) */
 .ivd-links .ivd-e{flex:none;width:16px;text-align:center;font-size:12px;line-height:1}
 .ivd-links .ivd-row[hidden],.ivd-links .ivd-lkg[hidden]{display:none}
