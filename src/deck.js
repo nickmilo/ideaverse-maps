@@ -6,6 +6,7 @@
 import { ItemView, MarkdownRenderer, Menu, Notice, Platform, TFile, normalizePath, setIcon } from "obsidian";
 import { FolderPicker, NotePicker } from "./view.js";
 import { BaseQ } from "./baseq.js";
+import { LEAD_EMO, LINKHELP, LVGRAD, spotInfo, spotRender, spotSub } from "./spot.js";
 import { dateKeys, parseDay } from "./scan.js";
 
 export const DECK_TYPE = "ideaverse-deck";
@@ -270,18 +271,6 @@ export class DeckView extends ItemView {
    for the note you're reading anywhere in Obsidian, straight, in a tab or the sidebar. It sorts links the HUD's way: up and related first, then by relevance,
    with ← → ↔ and level colors; then this note's own properties, one group each (collections in coral); then other notes' properties pointing back */
 export const LINKS_TYPE = "ideaverse-links";
-const LVGRAD = { 5: ["#f7c948", "#e8538a"], 4: ["#8a5bd6", "#3466d6"], 3: ["#4fc3ef", "#5b2e91"] };   /* the map's GRAD */
-/* what the three orders mean, from the map's own explanations (Starship → relevance "?", Display → How notes are scored) */
-const LINKHELP = {
-  rel: ["How close each link is to this note, 100 for the closest. Up links sit on top.",
-    "A walk starts at this note and keeps coming home; the notes it lands on most often are the most relevant. Links count by kind (up or related 2, a link in the text 1, another property 0.6), a little more when two notes link both ways; big hubs are toned down so they don't win just for being big; and what you declared counts most: a note in this note's up ×3, a related note ×1.6."],
-  lvl: ["Highest Idea Emergence level first: 5 Home & hubs, 4 Maps of maps, 3 Maps of content, 2 Linked notes, 1 Unlinked notes. Within a level, the higher link score first. Up links sit on top.",
-    "A note gets the highest level it qualifies for. Level 5: a home note, or one of the top scorers. Level 4: a map linking 3+ maps, or a score at the Level 4 cut-off. Level 3: any map, or a score at the Level 3 cut-off. Level 2: any link. Level 1: no links yet.",
-    "Link score: each kind of link, counted with diminishing returns, times its weight, added up (Maps of the Ideaverse → Display → How notes are scored)."],
-  remg: ["Where each link sits relative to this note, as its note strip and link colors show it.",
-    "Up: named in this note's up. Related: named in its related. Above: a higher level, or the same level with a higher link score. Below: the rest. This note sits between Above and Below; each group goes by relevance."] };
-/* an emoji leading a file name (with its variation selector, skin tone or joined parts), and the space after it */
-export const LEADEMO = /^((?:\p{Extended_Pictographic}|\p{Regional_Indicator}{2})(?:\uFE0F|\p{Emoji_Modifier}|\u200D\p{Extended_Pictographic}\uFE0F?)*)\s*/u;
 const LINKSORTS = [["remg", "Relative Emergence"], ["lvl", "Idea Emergence"], ["rel", "Relevance"], null, ["az", "File name (A to Z)"], ["za", "File name (Z to A)"], null, ["mnew", "Modified time (new to old)"], ["mold", "Modified time (old to new)"], null, ["cnew", "Created time (new to old)"], ["cold", "Created time (old to new)"]];
 export class LinksPaneView extends DeckView {
   constructor(leaf, plugin) { super(leaf, plugin); this.cur = null; this.q = ""; }
@@ -314,19 +303,9 @@ export class LinksPaneView extends DeckView {
      For a note that links here, it shows the passage in that note where the link sits, rendered, with the link lit; for a note this one links to, its opening, as before */
   showPv(path, anchor) { if (!path || !anchor || !anchor.isConnected) return; if (this.pvEl && this.pvEl.dataset.path === path) return; this.hidePv(true);
     const D = anchor.ownerDocument, pv = D.body.createDiv({ cls: "ivd-pvcard ivd-pvfloat", attr: { draggable: "true" } }); pv.dataset.path = path; this.pvEl = pv;
-    const f = this.file(path), cur = this.cur, mc = this.app.metadataCache, fc = f ? mc.getFileCache(f) : null;
-    const hit = cur && fc ? (fc.links || []).concat(fc.embeds || []).find(l => { const t = mc.getFirstLinkpathDest(l.link.split("#")[0].split("|")[0], path); return t && t.path === cur; }) : null;
-    const fmHit = !hit && cur && fc ? (fc.frontmatterLinks || []).find(l => { const t = mc.getFirstLinkpathDest(l.link.split("#")[0].split("|")[0], path); return t && t.path === cur; }) : null;
-    pv.createDiv({ cls: "ivd-pvt", text: this.title(path) });
-    /* a plain line under the title says what the card is showing (0.9.109, Nick) */
-    const outOnly = !hit && !fmHit && cur && fc !== undefined && !!(mc.resolvedLinks[cur] || {})[path];
-    { const sub = pv.createDiv({ cls: "ivd-pvsub" }); if (hit) sub.setText("Links to the active note at the spot below."); else if (fmHit) { sub.append("Links to the active note via the "); sub.createEl("b", { text: String(fmHit.key).split(".")[0] }); sub.append(" property."); } else if (outOnly) sub.setText("The active note links to this note."); }   /* the property in bold (0.9.112, Nick) */   /* Nick's wording (0.9.111) */
-    const body = pv.createDiv({ cls: "ivd-pvb markdown-rendered" });
-    if (f) void this.app.vault.cachedRead(f).then(t => { if (!pv.isConnected) return; let md;
-      if (hit && hit.position) { const lines = t.split(/\r?\n/), L = hit.position.start.line; let a = L, b = L; while (a > 0 && lines[a - 1].trim() !== "" && L - a < 2) a--; while (b < lines.length - 1 && lines[b + 1].trim() !== "" && b - L < 8) b++; md = lines.slice(Math.max(0, a), b + 1).join("\n"); if (a > 0) md = "…\n\n" + md; }
-      else md = t.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").slice(0, 700);
-      void MarkdownRenderer.render(this.app, md, body, path, this).then(() => { if (!cur) return; for (const el of body.querySelectorAll("a.internal-link")) { const h = el.getAttribute("data-href") || el.getAttribute("href") || ""; const t2 = mc.getFirstLinkpathDest(h.split("#")[0].split("|")[0], path); if (t2 && t2.path === cur) el.addClass("ivd-pvhit"); }
-        /* bring the link into view: the card shows the spot, not the top of the passage (0.9.108, Nick: it wasn't "opening up to where the link actually exists") */ const h0 = body.querySelector(".ivd-pvhit"); if (h0) { const br = body.getBoundingClientRect(), hr = h0.getBoundingClientRect(); body.scrollTop = Math.max(0, body.scrollTop + hr.top - br.top - br.height / 3); } }); });
+    const cur = this.cur, info = spotInfo(this.app, path, cur);
+    pv.createDiv({ cls: "ivd-pvt", text: this.title(path) }); spotSub(pv.createDiv({ cls: "ivd-pvsub" }), info);   /* the shared spot preview (src/spot.js, 0.9.114) */
+    const body = pv.createDiv({ cls: "ivd-pvb markdown-rendered" }); void spotRender(this.app, path, cur, info, body, this);
     const r = anchor.getBoundingClientRect(), pr = this.contentEl.getBoundingClientRect(), vw = D.documentElement.clientWidth, vh = D.documentElement.clientHeight, w = 320, h = 260;
     let x = pr.left - w - 10; if (x < 8) x = Math.min(vw - w - 8, pr.right + 10); const y = Math.max(8, Math.min(r.top - 20, vh - h - 8));
     pv.setCssProps({ "--pvx": Math.round(x) + "px", "--pvy": Math.round(y) + "px" });
@@ -450,7 +429,7 @@ export class LinksPaneView extends DeckView {
       /* the Holodeck tab's orb (0.9.67, Nick): its level's shape and gradient, 5 a rounded square, 4 a diamond, 3 to 1 a circle */
       if (ORB) { const L_ = lv(p)[0], t0 = r.querySelector(".ivd-t"), o_ = createSpan({ cls: "ivd-orb lv" + L_ }), g_ = LVGRAD[L_]; if (g_) { o_.style.setProperty("--o0", g_[0]); o_.style.setProperty("--o1", g_[1]); } if (t0) t0.before(o_); }
       /* an emoji at the start of the file name is the note's emoji: it fills the column, ahead of folders and the base, and leaves the name (0.9.102, Nick) */
-      if (EMO) { const t = r.querySelector(".ivd-t"), m_ = LEADEMO.exec(this.title(p)), em = m_ ? m_[1] : this.emoOf(p), sp = createSpan({ cls: "ivd-e" + (m_ ? " ivd-e-own" : ""), text: em || "" });   /* the file name's own emoji carries a small dot at its corner (0.9.105, Nick picked "A dot on the emoji") */ if (t) { if (m_) t.setText(this.title(p).slice(m_[0].length)); t.before(sp); } } if (this.underHead) r.addClass("ivd-under"); if (UNREQ && !unq) r.addClass("ivd-dim");   /* requited (or this note's own link) steps back */
+      if (EMO) { const t = r.querySelector(".ivd-t"), m_ = LEAD_EMO.exec(this.title(p)), em = m_ ? m_[1] : this.emoOf(p), sp = createSpan({ cls: "ivd-e" + (m_ ? " ivd-e-own" : ""), text: em || "" });   /* the file name's own emoji carries a small dot at its corner (0.9.105, Nick picked "A dot on the emoji") */ if (t) { if (m_) t.setText(this.title(p).slice(m_[0].length)); t.before(sp); } } if (this.underHead) r.addClass("ivd-under"); if (UNREQ && !unq) r.addClass("ivd-dim");   /* requited (or this note's own link) steps back */
       /* a row drags like a file from Obsidian's list, so dropping it into the note writes a link (0.9.107) */
       r.addEventListener("dragstart", e => { const f_ = this.file(p), dm = this.app.dragManager; if (!f_ || !dm || typeof dm.dragFile !== "function") return; if (dm.draggable && typeof dm.onDragEnd === "function") { try { dm.onDragEnd(e); } catch (_) { /* stale */ } } const d = dm.dragFile(e, f_); if (d) dm.onDragStart(e, d); r.addEventListener("dragend", ev => { if (dm.draggable && typeof dm.onDragEnd === "function") { try { dm.onDragEnd(ev); } catch (_) { /* clean */ } } }, { once: true }); });
       return r; };

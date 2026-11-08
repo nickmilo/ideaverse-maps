@@ -2361,3 +2361,11 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-lkhd .ivd-h{margin-right:4px}
 .ivd-links .ivd-lksort{width:26px}
 .ivd-links .ivd-lkqh{margin-left:8px}
+/* the spot preview in the Links HUD (0.9.114): the same card as the pane's, in the map's preview */
+.ivm .ivm-card.ivm-pv.hudspot{display:flex;flex-direction:column}
+.ivm .ivm-card.ivm-pv.hudspot .ivd-pvsub{flex:none;margin:0 0 4px;padding-bottom:5px;border-bottom:1px solid var(--line,var(--background-modifier-border));font-size:10.5px;font-style:italic;opacity:.75}
+.ivm .ivm-card.ivm-pv.hudspot .ivd-pvsub:empty{display:none}
+.ivm .ivm-card.ivm-pv.hudspot .pvb{flex:1;min-height:0;overflow:hidden}
+.ivm .ivm-card.ivm-pv.hudspot a.ivd-pvhit{background:color-mix(in srgb,#e8bf45 18%,transparent);border-radius:3px;padding:0 2px;box-shadow:0 0 0 1px color-mix(in srgb,#e8bf45 45%,transparent)}
+.ivm .ivm-card.ivm-pv.hudspot{font-size:11px;line-height:1.4;padding:8px 11px}
+.ivm .ivm-card.ivm-pv.hudspot .pvb{height:auto;mask-image:none}

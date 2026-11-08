@@ -34,6 +34,7 @@ export class FolderPicker extends FuzzySuggestModal {
 }
 import { UI, buildUI } from "./ui.js";
 import { mountMap } from "./mapApp.js";
+import { spotInfo, spotRender, spotSub } from "./spot.js";
 import { PLANET_IMG } from "./planet.js";
 import { CREATOR_IMG } from "./creator.js";
 
@@ -271,6 +272,8 @@ export async function mountInto(owner, el, opts) {
         focus: () => { const ed = leaf && leaf.view && leaf.view.editor; if (ed) ed.focus(); },   // straight to the editor: our leaf has no tab group, so it can't be the workspace's active leaf
         close: () => { if (leaf) { leaf.detach(); leaf = null; } split.containerEl.remove(); } }; },
     // a read-only preview of a note (Starfield's hub previews): its text without the properties, the start of it, rendered as Obsidian would
+    /* the spot preview for a Links HUD row (0.9.114): the passage where `path` links to `ctx`, or the note's opening with the line that says why */
+    async spot(path, ctx, sub, body) { const info = spotInfo(app, path, ctx); if (sub) spotSub(sub, info); await spotRender(app, path, ctx, info, body, events, info.hit ? null : () => this.preview(path, body)); },
     preview: async (path, el) => { const f = app.vault.getAbstractFileByPath(path); if (!(f instanceof TFile)) return;
       const txt = (await app.vault.cachedRead(f)).replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "")
         .replace(/^([ \t>]*)(```|~~~)[^\n]*\n[\s\S]*?^\1\2[^\n]*$/gm, "").replace(/!\[\[[^\]\n]*?\.base(?:[#|][^\]\n]*)?\]\]/g, "")

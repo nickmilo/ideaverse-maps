@@ -2,6 +2,7 @@
    the page's code runs inside the plugin's view, scoped to `root`, with Obsidian handling storage, events and notes. */
 import { Menu, Notice, Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
+import { LEAD_EMO, LINKHELP, LVGRAD } from "./spot.js";
 
 export const VIEWS_ON = ["cockpit", "kandinsky", "arena", "compass", "emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
@@ -117,7 +118,6 @@ const CIDX = new Map(); N.forEach((d, i) => { if (d.archive) return; const k_ = 
 const collOf = (i, any) => { if (!(COLLON || any) || i < 0) return []; const r_ = []; for (const c of N[i].collections || []) { const j = CIDX.get(String(c).replace(/^\[\[|\]\]$/g, "").split("/").pop().toLowerCase()); if (j != null && j !== i && !r_.includes(j)) r_.push(j); } return r_; };
 let COLLS = { i: -2, s: new Set() }; const collSet = i => { if (COLLS.i !== i) COLLS = { i, s: new Set(collOf(i, true)) }; return COLLS.s; };
 let VISV = 0, RECCK = true;   // bumps whenever what shows changes (Recent caches by it)
-const LEAD_EMO = /^((?:\p{Extended_Pictographic}|\p{Regional_Indicator}{2})(?:\uFE0F|\p{Emoji_Modifier}|\u200D\p{Extended_Pictographic}\uFE0F?)*)\s*/u;
 const emoBuild = () => { const has = Object.keys(EMOF).length > 0;
   EMOI = N.map(d => { const m0 = LEAD_EMO.exec(String(d.title || "")); if (m0) return m0[1];   /* an emoji leading the file name wins (0.9.102, Nick) */ if (has) { let q = d.path; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (EMOF[q]) return EMOF[q]; } } return EMO ? EMO.get(d.path) : undefined; }); };
 emoBuild();
@@ -5326,8 +5326,10 @@ function hudTab(nLinks){ if (!HUDTAB) { HUDTAB = $("#main").createEl("button", {
 function hudCol(c){ HUDCOL = c; save("iv-hudcol", c); draw(); try { RECKEY = ""; recSync(); } catch (_) { /* not built yet */ } }
 function hudPv(j, x, y, force){ if (j < 0 && typeof RECHV !== "undefined" && RECHV >= 0 && (CMDK || HUDPV)) return;   /* a Recents row is showing its preview: the map's redraws leave it be */
   if (!(HUDPV || force) || j < 0 || !host.preview) { if (HUDPVE) HUDPVE.hidden = true; return; } const p = N[j].path;
-  if (!HUDPVE || HUDPVP !== p) { if (HUDPVE) HUDPVE.remove(); const e = $("#main").createDiv({ cls: "ivm-card ivm-pv hudpv" }); e.createDiv({ cls: "pvt", text: N[j].title }); const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } HUDPVE = e; HUDPVP = p; }
-  const c = cv.getBoundingClientRect(), pr = $("#main").getBoundingClientRect(), pw = 230, ph = 140; HUDPVE.hidden = false;
+  /* a Links row shows the spot preview (0.9.114, from the Links pane): where that note links to the picked one, rendered, the link marked */
+  const ctx = typeof RECHVEL !== "undefined" && RECHVEL && RECHVEL.closest && RECHVEL.closest(".ivm-lkhud") && hsel() >= 0 && N[hsel()] ? N[hsel()].path : null, key = p + "\u0000" + (ctx || "");
+  if (!HUDPVE || HUDPVP !== key) { if (HUDPVE) HUDPVE.remove(); const e = $("#main").createDiv({ cls: "ivm-card ivm-pv hudpv" + (ctx ? " hudspot" : "") }); e.createDiv({ cls: "pvt", text: N[j].title }); const sub_ = ctx ? e.createDiv({ cls: "ivd-pvsub" }) : null; const b_ = e.createDiv({ cls: "pvb markdown-rendered" }); if (ctx && host.spot) void host.spot(p, ctx, sub_, b_); else void host.preview(p, b_); try { edLook(e); } catch (_) { /* theme only */ } HUDPVE = e; HUDPVP = key; }
+  const c = cv.getBoundingClientRect(), pr = $("#main").getBoundingClientRect(), pw = ctx ? 300 : 230, ph = ctx ? 220 : 140; HUDPVE.hidden = false;
   HUDPVE.setCssProps({ "--pvx": Math.round(c.left - pr.left + Math.max(8, x - pw - 14)) + "px", "--pvy": Math.round(c.top - pr.top + Math.max(8, Math.min(H - ph - 8, y - ph / 2))) + "px", "--pvw": pw + "px", "--pvh": ph + "px" }); }
 let HUDL = pref("iv-hudl", false) === true, HUDR = pref("iv-hudr", true) !== false, HUDHOV = -1, HUDC = { i: -2, list: [], rel: null };
 function hudData(i){ if (HUDC.i === i && HUDC.rj === RADJ && HUDC.vv === VISV) return HUDC;   /* cached until the relevance graph or what shows changes; it used to recompute (and rebuild the HUD) on every redraw while RADJ was empty (0.8.290) */ const L = stripLists(i), inS = new Set(L.in), outS = new Set(L.out), upS = new Set(L.up); let rel = null; try { rel = relFrom(i); } catch (_) { rel = null; }
