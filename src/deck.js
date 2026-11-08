@@ -325,7 +325,12 @@ export class LinksPaneView extends DeckView {
     return { own, back }; }
   render() { const box = this.contentEl; if (!box) return; box.empty(); const path = this.cur; if (this.leaf && typeof this.leaf.updateHeader === "function") this.leaf.updateHeader();
     if (!path || !this.file(path)) { box.createDiv({ cls: "ivd-empty", text: "Open a note to see its links." }); return; }
-    const ls = this.linksOf(path), { own, back } = this.propGroups(path), inG = new Set([...[...own.values()].flatMap(x => [...x]), ...[...back.values()].flatMap(x => [...x])]);
+    const ls = this.linksOf(path), { own, back } = this.propGroups(path);
+    /* collections join the other links under Obsidian's six sorts; only Relevance and Idea Emergence keep them in their own group (0.9.68, Nick) */
+    const SO0 = this.plugin.store.get("iv-links-sort"), MC = new Set();
+    if (SO0 && SO0 !== "rel" && SO0 !== "lvl") { const ck0 = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
+      for (const k of [...own.keys()]) if (ck0.has(k)) { for (const x of own.get(k)) MC.add(x); own.delete(k); } }
+    const inG = new Set([...[...own.values()].flatMap(x => [...x]), ...[...back.values()].flatMap(x => [...x])]);
     const KR = { upp: 0 }, KEEP = new Set(["upp", "rel"]), main = ls.filter(l => !inG.has(l.p) || KEEP.has(this.kindOf(path, l.p)))
       .sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || b.s - a.s);
     const hd = box.createDiv({ cls: "ivd-lkhd" }); const NL = this.G ? ls.filter(l => this.G.ek.has(path + "\u0000" + l.p) || this.G.ek.has(l.p + "\u0000" + path)).length : ls.length; hd.createSpan({ cls: "ivd-h", text: `⇄ LINKS · ${NL}` });   /* counted as the HUD counts: links on the map's graph, so collections (drawn, never counted) aren't (0.9.65) */ hd.createSpan({ cls: "ivd-lksp" });
@@ -350,7 +355,7 @@ export class LinksPaneView extends DeckView {
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
     const ORB = this.opt("orb"), AGE = MOD && this.opt("age"), CAGE = CRE && this.opt("cage"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
     const onG = p => !this.G || this.G.ek.has(path + "\u0000" + p) || this.G.ek.has(p + "\u0000" + path), right = p => AGE ? (fi(p) ? this.age(fi(p).stat.mtime) : "") : CAGE ? (fi(p) ? this.age(fi(p).stat.ctime) : "") : REL && sc.has(p) && onG(p) ? String(sc.get(p).s) : "";   /* no score for a collection: the map never counts it */
-    const put = (p, a, c) => { const r = this.row(list, p, a, c, right(p)); r.dataset.q = this.title(p).toLowerCase();
+    const put = (p, a, c) => { if (MC.has(p)) c = !COL ? "var(--ivd-link)" : this.plugin.store.get("iv-colllinks") !== false ? "var(--ivd-coll)" : "var(--ivd-prop)"; const r = this.row(list, p, a, c, right(p)); r.dataset.q = this.title(p).toLowerCase();
       /* the Holodeck tab's orb (0.9.67, Nick): its level's shape and gradient, 5 a rounded square, 4 a diamond, 3 to 1 a circle */
       if (ORB) { const L_ = lv(p)[0], t0 = r.querySelector(".ivd-t"), o_ = createSpan({ cls: "ivd-orb lv" + L_ }), g_ = LVGRAD[L_]; if (g_) { o_.style.setProperty("--o0", g_[0]); o_.style.setProperty("--o1", g_[1]); } if (t0) t0.before(o_); }
       if (EMO) { const em = this.emoOf(p), t = r.querySelector(".ivd-t"), sp = createSpan({ cls: "ivd-e", text: em && !this.title(p).startsWith(em) ? em : "" }); if (t) t.before(sp); } return r; };
