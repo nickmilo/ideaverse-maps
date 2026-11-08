@@ -280,7 +280,7 @@ const LINKHELP = {
     "Link score: each kind of link, counted with diminishing returns, times its weight, added up (Maps of the Ideaverse → Display → How notes are scored)."],
   remg: ["Where each link sits relative to this note, as its note strip and link colors show it.",
     "Up: named in this note's up. Related: named in its related. Above: a higher level, or the same level with a higher link score. Below: the rest. This note sits between Above and Below; each group goes by relevance."] };
-const LINKSORTS = [["rel", "Relevance"], ["lvl", "Idea Emergence"], ["remg", "Relative Emergence"], null, ["az", "File name (A to Z)"], ["za", "File name (Z to A)"], null, ["mnew", "Modified time (new to old)"], ["mold", "Modified time (old to new)"], null, ["cnew", "Created time (new to old)"], ["cold", "Created time (old to new)"]];
+const LINKSORTS = [["remg", "Relative Emergence"], ["lvl", "Idea Emergence"], ["rel", "Relevance"], null, ["az", "File name (A to Z)"], ["za", "File name (Z to A)"], null, ["mnew", "Modified time (new to old)"], ["mold", "Modified time (old to new)"], null, ["cnew", "Created time (new to old)"], ["cold", "Created time (old to new)"]];
 export class LinksPaneView extends DeckView {
   constructor(leaf, plugin) { super(leaf, plugin); this.cur = null; this.q = ""; }
   getViewType() { return LINKS_TYPE; }
@@ -325,7 +325,7 @@ export class LinksPaneView extends DeckView {
   linksOf(path) { const rows = super.linksOf(path), rv = this.relFrom(path); if (!rv) return rows; for (const x of rows) x.r = rv.get(x.p) || 0;
     const mx = Math.max(1e-12, ...rows.map(x => x.r)); for (const x of rows) x.s = Math.round(100 * x.r / mx); return rows; }
   /* the pane's own Display (0.9.64, Nick): relevance scores, link colors, Idea Emergence headers, emojis, time since modified; shared by every Links pane */
-  opt(k) { const v = this.plugin.store.get("iv-links-" + k); return v == null ? !(k === "lvh" || k === "emo" || k === "orb" || k === "lsc") : v === true; }
+  opt(k) { const v = this.plugin.store.get("iv-links-" + k); return v === true; }   /* every Show switch starts off for a new user (0.9.100, Nick) */
   setLOpt(k, v) { this.plugin.store.set("iv-links-" + k, v); for (const l of this.app.workspace.getLeavesOfType(LINKS_TYPE)) if (l.view instanceof LinksPaneView) l.view.render(); }
   /* a note's emoji as the map finds it (Display → Assign emojis): its deepest folder with one, else the emoji base's column */
   emoOf(p) { const F = this.plugin.store.get("iv-emofold") || {}; let q = p; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (F[q]) return F[q]; }
@@ -358,10 +358,10 @@ export class LinksPaneView extends DeckView {
     hd.createSpan({ cls: "ivd-lksp" });
     sk.onclick = () => { if (this.qOpen || this.q) { this.qOpen = false; this.q = ""; this.qFocus = false; this.render(); } else { this.qOpen = true; this.qFocus = true; this.render(); } };
     /* sort (0.9.61, Nick: relevance by default, Idea Emergence, and Obsidian's own six); up and related stay on top in every order */
-    const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "rel", MOD = SO === "mnew" || SO === "mold", CRE = SO === "cnew" || SO === "cold";
+    const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "remg",   /* Relative Emergence by default (0.9.100, Nick) */ MOD = SO === "mnew" || SO === "mold", CRE = SO === "cnew" || SO === "cold";
     /* our three orders explain themselves (0.9.96, Nick: "Hey, how are these things being scored?"): a small circled ? before Sort while one is on opens a card */
     const HELPT = LINKHELP[SO];
-    const sb = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Sort links", "aria-pressed": String(SO !== "rel") } }); setIcon(sb, "arrow-up-narrow-wide");
+    const sb = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Sort links", "aria-pressed": String(SO !== "remg") } }); setIcon(sb, "arrow-up-narrow-wide");
     sb.onclick = () => { if (this.menuJust(sb)) return; const m = new Menu(); for (const x of LINKSORTS) { if (!x) { m.addSeparator(); continue; } m.addItem(it => it.setTitle(x[1]).setChecked(x[0] === SO).onClick(() => this.setLOpt("sort", x[0]))); } this.menuUnder(m, sb); };
     /* Display, beside Sort (0.9.64); time since modified is offered only while sorted by modified time */
     const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal"); if (HELPT) { const qb = hd.createEl("button", { cls: "ivd-lkqh" + (this.helpOpen ? " on" : ""), text: "?", attr: { type: "button", "aria-description": "How this order works" } }); qb.onclick = () => { this.helpOpen = !this.helpOpen; this.render(); }; } else hd.createSpan({ cls: "ivd-lkqh ivd-lkqh-ph" });   /* the same slot when there's nothing to explain, so Sort and Display stay put */   /* after Sort and Display: its card opens inline and covers nothing (0.9.97, Nick) */
@@ -413,7 +413,7 @@ export class LinksPaneView extends DeckView {
        each by relevance; property groups follow as in Relevance */
     if (SO === "remg") { const RK = p => { const k = this.kindOf(path, p); if (k === "upp" || k === "rel" || k === "up" || k === "down") return k; const A = this.G && this.G.idx.get(path), B = this.G && this.G.idx.get(p); if (!A || !B) return "down"; return B.level !== A.level ? (B.level > A.level ? "up" : "down") : (B.score || 0) >= (A.score || 0) ? "up" : "down"; };
       for (const [k, lab] of [["upp", "Up"], ["rel", "Related"], ["up", "Above"], ["here"], ["down", "Below"]]) {
-        if (k === "here") { /* the note itself, between above and below (0.9.75, Nick: "in a special style") */ const h = list.createDiv({ cls: "ivd-here" }); if (ORB) { const L_ = lv(path)[0], o_ = h.createSpan({ cls: "ivd-orb lv" + L_ }), g_ = LVGRAD[L_]; if (g_) { o_.style.setProperty("--o0", g_[0]); o_.style.setProperty("--o1", g_[1]); } } h.createSpan({ cls: "ivd-ht", text: this.title(path) }); const L0 = lv(path)[0], sc_ = this.G && this.G.idx.get(path); if (LSC && sc_ && sc_.score != null) { const v = +sc_.score; h.createSpan({ cls: "ivd-n", text: v.toFixed(v < 10 ? 1 : 0) }); } else if (L0) h.createSpan({ cls: "ivd-hl", text: "L" + L0 }); continue; }   /* with Show link score on, its own score in line with the rest, in place of the level (0.9.86, Nick) */
+        if (k === "here") { /* the note itself, between above and below (0.9.75, Nick: "in a special style") */ const h = list.createDiv({ cls: "ivd-here" }); if (ORB) { const L_ = lv(path)[0], o_ = h.createSpan({ cls: "ivd-orb lv" + L_ }), g_ = LVGRAD[L_]; if (g_) { o_.style.setProperty("--o0", g_[0]); o_.style.setProperty("--o1", g_[1]); } } h.createSpan({ cls: "ivd-ht", text: this.title(path) }); const L0 = lv(path)[0], sc_ = this.G && this.G.idx.get(path); if (LSC && sc_ && sc_.score != null) { const v = +sc_.score; h.createSpan({ cls: "ivd-n", text: v.toFixed(v < 10 ? 1 : 0) }); } continue; }   /* no level on the pill (0.9.100, Nick) */   /* with Show link score on, its own score in line with the rest, in place of the level (0.9.86, Nick) */
         const ar = main.filter(l => RK(l.p) === k); if (!ar.length) continue; list.createDiv({ cls: "ivd-lkg ivd-lvh", text: `${lab} · ${ar.length}` }); for (const l of ar) put(l.p, l.a, l.c); } }
     else if (SO === "lvl" && this.opt("lvh")) { const by = new Map(); for (const l of main) { const k = lv(l.p)[0]; if (!by.has(k)) by.set(k, []); by.get(k).push(l); }
       for (const k of [...by.keys()].sort((a, b) => b - a)) { const ar = by.get(k); list.createDiv({ cls: "ivd-lkg ivd-lvh", text: k ? `Level ${k} · ${ar.length}` : `Not on the map · ${ar.length}` }); for (const l of ar) put(l.p, l.a, l.c); } }
