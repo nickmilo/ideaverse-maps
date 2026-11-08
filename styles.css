@@ -2369,3 +2369,16 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivm .ivm-card.ivm-pv.hudspot a.ivd-pvhit{background:color-mix(in srgb,#e8bf45 18%,transparent);border-radius:3px;padding:0 2px;box-shadow:0 0 0 1px color-mix(in srgb,#e8bf45 45%,transparent)}
 .ivm .ivm-card.ivm-pv.hudspot{font-size:11px;line-height:1.4;padding:8px 11px}
 .ivm .ivm-card.ivm-pv.hudspot .pvb{height:auto;mask-image:none}
+/* the Links HUD, from the Links pane (0.9.115) */
+.ivm .ivm-recents .lkg.lkgh{cursor:default;color:var(--muted)}
+.ivm .ivm-recents .lkg.lkgh .lkgn{margin-left:6px;font-weight:500;opacity:.5}
+.ivm .ivm-recents .lkg.lkhere{display:flex;align-items:center;gap:6px;margin:5px 8px 3px 12px;padding:2px 8px;border:1px solid color-mix(in srgb,var(--accent,#e8bf45) 60%,transparent);border-radius:10px;background:color-mix(in srgb,var(--accent,#e8bf45) 12%,transparent);cursor:default;font:600 11px var(--body);letter-spacing:0;color:var(--accent,#e8bf45)}
+.ivm .ivm-recents .lkg.lkhere .lkht{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.ivm .ivm-recents .lkg.lkhere .lks{flex:none;font:600 9.5px var(--mono)}
+.ivm .ivm-recents .lkr.unqdim{opacity:.3}
+.ivm .ivm-recents .lkr.unqdim:hover{opacity:.75}
+.ivm .ivm-recents .lkorb{flex:none;width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,var(--o0),var(--o1))}
+.ivm .ivm-recents .lkorb.lv5{border-radius:2px;width:7.5px;height:7.5px}
+.ivm .ivm-recents .lkorb.lv4{border-radius:1.5px;width:6px;height:6px;transform:rotate(45deg);margin:0 1px}
+.ivm .ivm-recents .rce.rceown{position:relative}
+.ivm .ivm-recents .rce.rceown::after{content:"";position:absolute;right:-1px;bottom:0;width:4px;height:4px;border-radius:50%;background:var(--accent,#e8bf45);box-shadow:0 0 0 1px var(--bg)}
