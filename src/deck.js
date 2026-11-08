@@ -5,6 +5,7 @@
    Each Deck tab keeps its own notes in its own saved state, so a Mini and the full Deck (and the main map) never fight over settings. */
 import { ItemView, MarkdownRenderer, Menu, Notice, Platform, TFile, normalizePath, setIcon } from "obsidian";
 import { FolderPicker, NotePicker } from "./view.js";
+import { BaseQ } from "./baseq.js";
 
 export const DECK_TYPE = "ideaverse-deck";
 
@@ -285,6 +286,14 @@ export class LinksPaneView extends DeckView {
     this.registerDomEvent(D, "keyup", e => { if (e.key === "Meta" || e.key === "Control") this.hidePv(); });
     follow(); this.render(); }
   soon() { window.clearTimeout(this.soonT); this.soonT = window.setTimeout(() => this.render(), 400); }
+  /* the pane's own Display (0.9.64, Nick): relevance scores, link colors, Idea Emergence headers, emojis, time since modified; shared by every Links pane */
+  opt(k) { const v = this.plugin.store.get("iv-links-" + k); return v == null ? !(k === "lvh" || k === "emo") : v === true; }
+  setLOpt(k, v) { this.plugin.store.set("iv-links-" + k, v); for (const l of this.app.workspace.getLeavesOfType(LINKS_TYPE)) if (l.view instanceof LinksPaneView) l.view.render(); }
+  /* a note's emoji as the map finds it (Display → Assign emojis): its deepest folder with one, else the emoji base's column */
+  emoOf(p) { const F = this.plugin.store.get("iv-emofold") || {}; let q = p; while (q.includes("/")) { q = q.slice(0, q.lastIndexOf("/")); if (F[q]) return F[q]; }
+    if (!this.emoMap && !this.emoBusy) { this.emoBusy = true; void (async () => { try { const st = this.plugin.settings; let bp = st.emojiBase || ""; if (!bp) { const f = this.app.vault.getFiles().find(x => x.extension === "base" && x.basename.toLowerCase() === "recents"); bp = f ? f.path : ""; }
+      const q_ = this.plugin.baseQ || (this.plugin.baseQ = new BaseQ(this.app)); const r = bp ? await q_.column(bp, st.emojiCol || "") : null; this.emoMap = new Map(r && r.map ? Object.entries(r.map) : []); } catch (e) { this.emoMap = new Map(); } this.render(); })(); }
+    return this.emoMap ? this.emoMap.get(p) || "" : ""; }
   /* a click opens the note where you're reading; ⌘-click in a new tab */
   openPrimary(path) { if (path) void this.app.workspace.openLinkText(path, "", false); }
   openSupport(path) { if (path) void this.app.workspace.openLinkText(path, "", "tab"); }
@@ -300,12 +309,16 @@ export class LinksPaneView extends DeckView {
     const ls = this.linksOf(path), { own, back } = this.propGroups(path), inG = new Set([...[...own.values()].flatMap(x => [...x]), ...[...back.values()].flatMap(x => [...x])]);
     const KR = { upp: 0, rel: 1 }, main = ls.filter(l => !inG.has(l.p) || KR[this.kindOf(path, l.p, l.a !== "←", l.a !== "→")] != null)
       .sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || b.s - a.s);
-    const hd = box.createDiv({ cls: "ivd-lkhd" }); hd.createSpan({ cls: "ivd-h", text: `⇄ LINKS · ${ls.length}` });
-    const qr = box.createDiv({ cls: "ivd-lkqr" }), qi = qr.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); qi.value = this.q;
+    const hd = box.createDiv({ cls: "ivd-lkhd" }); hd.createSpan({ cls: "ivd-h", text: `⇄ LINKS · ${ls.length}` }); hd.createSpan({ cls: "ivd-lksp" });
     /* sort (0.9.61, Nick: relevance by default, Idea Emergence, and Obsidian's own six); up and related stay on top in every order */
-    const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "rel";
-    const sb = qr.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Sort links", "aria-pressed": String(SO !== "rel") } }); setIcon(sb, "arrow-up-narrow-wide");
-    sb.onclick = e => { const m = new Menu(); for (const x of LINKSORTS) { if (!x) { m.addSeparator(); continue; } m.addItem(it => it.setTitle(x[1]).setChecked(x[0] === SO).onClick(() => { this.plugin.store.set("iv-links-sort", x[0]); for (const l of this.app.workspace.getLeavesOfType(LINKS_TYPE)) if (l.view instanceof LinksPaneView) l.view.render(); })); } m.showAtMouseEvent(e); };
+    const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "rel", MOD = SO === "mnew" || SO === "mold";
+    const sb = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Sort links", "aria-pressed": String(SO !== "rel") } }); setIcon(sb, "arrow-up-narrow-wide");
+    sb.onclick = e => { const m = new Menu(); for (const x of LINKSORTS) { if (!x) { m.addSeparator(); continue; } m.addItem(it => it.setTitle(x[1]).setChecked(x[0] === SO).onClick(() => this.setLOpt("sort", x[0]))); } m.showAtMouseEvent(e); };
+    /* Display, beside Sort (0.9.64); time since modified is offered only while sorted by modified time */
+    const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal");
+    db.onclick = e => { const m = new Menu(), it_ = (k, t) => m.addItem(it => it.setTitle(t).setChecked(this.opt(k)).onClick(() => this.setLOpt(k, !this.opt(k))));
+      it_("rel", "Show relevance scores"); it_("col", "Color links by Idea Emergence"); it_("lvh", "Idea Emergence headers"); it_("emo", "Show emojis"); if (MOD) it_("age", "Show time since modified"); m.showAtMouseEvent(e); };
+    const qr = box.createDiv({ cls: "ivd-lkqr" }), qi = qr.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); qi.value = this.q;
     const G = this.G, fi = p => this.file(p), lv = p => { const n_ = G && G.idx.get(p); return n_ ? [n_.level || 0, n_.score || 0] : [0, 0]; }, sc0 = new Map(ls.map(l => [l.p, l.s]));
     const cmp = {
       rel: (a, b) => (sc0.get(b) || 0) - (sc0.get(a) || 0) || this.title(a).localeCompare(this.title(b)),
@@ -316,9 +329,16 @@ export class LinksPaneView extends DeckView {
     main.sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || cmp(a.p, b.p));
     const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
-    for (const l of main) this.row(list, l.p, l.a, l.c, this.opt("rel") ? String(l.s) : "").dataset.q = this.title(l.p).toLowerCase();
+    const AGE = MOD && this.opt("age"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
+    const right = p => AGE ? (fi(p) ? this.age(fi(p).stat.mtime) : "") : REL && sc.has(p) ? String(sc.get(p).s) : "";
+    const put = (p, a, c) => { const r = this.row(list, p, a, c, right(p)); r.dataset.q = this.title(p).toLowerCase();
+      if (EMO) { const em = this.emoOf(p), t = r.querySelector(".ivd-t"), sp = createSpan({ cls: "ivd-e", text: em && !this.title(p).startsWith(em) ? em : "" }); if (t) t.before(sp); } return r; };
+    /* Idea Emergence headers (0.9.64, Nick): the main list grouped by level, highest first, in the Holodeck's folder-header style; up and related lead each level */
+    if (this.opt("lvh")) { const by = new Map(); for (const l of main) { const k = lv(l.p)[0]; if (!by.has(k)) by.set(k, []); by.get(k).push(l); }
+      for (const k of [...by.keys()].sort((a, b) => b - a)) { const ar = by.get(k); list.createDiv({ cls: "ivd-lkg ivd-lvh", text: k ? `Level ${k} · ${ar.length}` : `Not on the map · ${ar.length}` }); for (const l of ar) put(l.p, l.a, l.c); } }
+    else for (const l of main) put(l.p, l.a, l.c);
     const group = (lab, set, arrow, coral) => { if (!set.size) return; list.createDiv({ cls: "ivd-h ivd-lkg", text: `${lab.toUpperCase()} · ${set.size}` });
-      for (const p of [...set].sort(cmp)) this.row(list, p, arrow, coral ? "var(--ivd-coll)" : "var(--ivd-prop)", sc.has(p) && this.opt("rel") ? String(sc.get(p).s) : "").dataset.q = this.title(p).toLowerCase(); };
+      for (const p of [...set].sort(cmp)) put(p, arrow, !COL ? "var(--ivd-link)" : coral ? "var(--ivd-coll)" : "var(--ivd-prop)"); };
     for (const [k, set] of own) group(k, set, "→", ck.has(k)); for (const [k, set] of back) group(k, set, "←", false);
     const apply = () => { const q = this.q.trim().toLowerCase(); for (const r of list.querySelectorAll(".ivd-row")) r.toggleAttribute("hidden", !!q && !(r.dataset.q || "").includes(q));
       for (const g of list.querySelectorAll(".ivd-lkg")) { let n = g.nextElementSibling, any = false; while (n && !n.classList.contains("ivd-lkg")) { if (!n.hasAttribute("hidden")) any = true; n = n.nextElementSibling; } g.toggleAttribute("hidden", !!q && !any); } };
