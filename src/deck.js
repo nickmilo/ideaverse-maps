@@ -271,7 +271,7 @@ const LINKSORTS = [["rel", "Relevance"], ["lvl", "Idea Emergence"], null, ["az",
 export class LinksPaneView extends DeckView {
   constructor(leaf, plugin) { super(leaf, plugin); this.cur = null; this.q = ""; }
   getViewType() { return LINKS_TYPE; }
-  getDisplayText() { return "Links"; }
+  getDisplayText() { return this.cur && this.file(this.cur) ? "Links for " + this.title(this.cur) : "Links"; }   /* as Obsidian names its Backlinks tab; the pane itself no longer repeats the note (0.9.62, Nick) */
   getIcon() { return "waypoints"; }
   getState() { return {}; }
   async setState(state, result) { await ItemView.prototype.setState.call(this, state, result); this.render(); }
@@ -295,12 +295,12 @@ export class LinksPaneView extends DeckView {
     const rl = mc.resolvedLinks || {}; for (const [src, m] of Object.entries(rl)) { if (src === path || !m || !m[path]) continue; const c = mc.getFileCache(this.file(src) || { path: src });
       for (const L of (c && c.frontmatterLinks) || []) { const k = keyOf(L.key); if (skip.has(k)) continue; const t = mc.getFirstLinkpathDest(L.link.split("#")[0].split("|")[0], src); if (t && t.path === path) { if (!back.has(k)) back.set(k, new Set()); back.get(k).add(src); } } }
     return { own, back }; }
-  render() { const box = this.contentEl; if (!box) return; box.empty(); const path = this.cur;
+  render() { const box = this.contentEl; if (!box) return; box.empty(); const path = this.cur; if (this.leaf && typeof this.leaf.updateHeader === "function") this.leaf.updateHeader();
     if (!path || !this.file(path)) { box.createDiv({ cls: "ivd-empty", text: "Open a note to see its links." }); return; }
     const ls = this.linksOf(path), { own, back } = this.propGroups(path), inG = new Set([...[...own.values()].flatMap(x => [...x]), ...[...back.values()].flatMap(x => [...x])]);
     const KR = { upp: 0, rel: 1 }, main = ls.filter(l => !inG.has(l.p) || KR[this.kindOf(path, l.p, l.a !== "←", l.a !== "→")] != null)
       .sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || b.s - a.s);
-    const hd = box.createDiv({ cls: "ivd-lkhd" }); hd.createSpan({ cls: "ivd-h", text: `⇄ LINKS · ${ls.length}` }); hd.createSpan({ cls: "ivd-lkn", text: this.title(path) });
+    const hd = box.createDiv({ cls: "ivd-lkhd" }); hd.createSpan({ cls: "ivd-h", text: `⇄ LINKS · ${ls.length}` });
     const qr = box.createDiv({ cls: "ivd-lkqr" }), qi = qr.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); qi.value = this.q;
     /* sort (0.9.61, Nick: relevance by default, Idea Emergence, and Obsidian's own six); up and related stay on top in every order */
     const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "rel";
