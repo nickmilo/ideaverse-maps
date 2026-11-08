@@ -2345,3 +2345,19 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 /* Show unrequited notes: everything else steps back (0.9.107) */
 .ivd-links .ivd-row.ivd-dim{opacity:.3}
 .ivd-links .ivd-row.ivd-dim:hover{opacity:.75}
+/* Links pane → Filter by folder (0.9.110), in the map's Filter → Folders manner */
+.ivd-links .ivd-lkfilt{flex:none;max-height:40%;overflow-y:auto;margin:0 0 4px;padding:6px 6px 8px;border:1px solid var(--background-modifier-border);border-radius:8px;background:var(--background-primary-alt,var(--background-primary))}
+.ivd-links .ivd-lkfh{display:flex;align-items:center;padding:0 4px 4px;font:600 10px var(--font-monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+.ivd-links .ivd-lkfall{margin-left:auto;padding:0 6px;height:18px;border:0;background:none;box-shadow:none;font:500 11px var(--font-interface);letter-spacing:0;text-transform:none;color:var(--text-accent);cursor:pointer}
+.ivd-links .ivd-lkfr{appearance:none;display:flex;align-items:center;gap:6px;width:100%;height:21px;padding:0 4px 0 calc(4px + var(--fd,0) * 14px);border:0;border-radius:5px;background:none;box-shadow:none;font-size:12px;color:var(--text-normal);cursor:pointer;text-align:left}
+.ivd-links .ivd-lkfr:hover{background:var(--background-modifier-hover)}
+.ivd-links .ivd-lkfc{flex:none;display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border:1px solid var(--text-muted);border-radius:3px}
+.ivd-links .ivd-lkfc svg{width:10px;height:10px}
+.ivd-links .ivd-lkfn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ivd-links .ivd-lkfk{flex:none;font:500 10px var(--font-monospace);color:var(--text-faint)}
+.ivd-links .ivd-lkfr.off .ivd-lkfn,.ivd-links .ivd-lkfr.off .ivd-lkfk{opacity:.45;text-decoration:line-through}
+/* four header buttons fit a narrow pane on one line (0.9.110) */
+.ivd-links .ivd-lkhd{gap:2px}
+.ivd-links .ivd-lkhd .ivd-h{margin-right:4px}
+.ivd-links .ivd-lksort{width:26px}
+.ivd-links .ivd-lkqh{margin-left:8px}

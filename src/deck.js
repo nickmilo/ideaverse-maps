@@ -373,7 +373,10 @@ export class LinksPaneView extends DeckView {
     return { own, back }; }
   render() { const box = this.contentEl; if (!box) return; box.empty(); const path = this.cur; if (this.leaf && typeof this.leaf.updateHeader === "function") this.leaf.updateHeader();
     if (!path || !this.file(path)) { box.createDiv({ cls: "ivd-empty", text: "Open a note to see its links." }); return; }
-    const ls = this.linksOf(path), { own, back } = this.propGroups(path);
+    const lsAll = this.linksOf(path), { own, back } = this.propGroups(path);
+    /* Filter → folders (0.9.110, Nick: "all I need right now is just the ability to deselect specific folders"): a hidden folder hides its notes and everything under it */
+    const HIDF = (v => Array.isArray(v) ? v : [])(this.plugin.store.get("iv-links-hidef")), dirOf = p => p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "", hidden = p => { const d = dirOf(p); return HIDF.some(h => d === h || d.startsWith(h + "/")); };
+    const ls = lsAll.filter(l => !hidden(l.p)); for (const m of [own, back]) for (const [k, set] of m) { for (const x of [...set]) if (hidden(x)) set.delete(x); if (!set.size) m.delete(k); }
     /* collections join the other links under Obsidian's six sorts; only Relevance and Idea Emergence keep them in their own group (0.9.68, Nick) */
     const SO0 = this.plugin.store.get("iv-links-sort"), MC = new Set(), MP = new Set();
     if (SO0 && SO0 !== "rel" && SO0 !== "lvl" && SO0 !== "remg") { const ck0 = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
@@ -393,6 +396,7 @@ export class LinksPaneView extends DeckView {
     const sb = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Sort links", "aria-pressed": String(SO !== "remg") } }); setIcon(sb, "arrow-up-narrow-wide");
     sb.onclick = () => { if (this.menuJust(sb)) return; const m = new Menu(); for (const x of LINKSORTS) { if (!x) { m.addSeparator(); continue; } m.addItem(it => it.setTitle(x[1]).setChecked(x[0] === SO).onClick(() => this.setLOpt("sort", x[0]))); } this.menuUnder(m, sb); };
     /* Display, beside Sort (0.9.64); time since modified is offered only while sorted by modified time */
+    const fb = hd.createEl("button", { cls: "ivd-lksort clickable-icon" + (this.filtOpen ? " is-active" : ""), attr: { type: "button", "aria-description": "Filter by folder", "aria-pressed": String(HIDF.length > 0) } }); setIcon(fb, "filter"); fb.onclick = () => { this.filtOpen = !this.filtOpen; this.render(); };
     const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal"); if (HELPT) { const qb = hd.createEl("button", { cls: "ivd-lkqh" + (this.helpOpen ? " on" : ""), text: "?", attr: { type: "button", "aria-description": "How this order works" } }); qb.onclick = () => { this.helpOpen = !this.helpOpen; this.render(); }; } else hd.createSpan({ cls: "ivd-lkqh ivd-lkqh-ph" });   /* the same slot when there's nothing to explain, so Sort and Display stay put */   /* after Sort and Display: its card opens inline and covers nothing (0.9.97, Nick) */
     /* each switch shows a sample of what it turns on (0.9.82, Nick: "ways to help the user understand what they're about to toggle on") */
     db.onclick = () => { if (this.menuJust(db)) return; const m = new Menu(), D = this.contentEl.ownerDocument; if (typeof m.setUseNativeMenu === "function") m.setUseNativeMenu(false);   /* macOS draws native menus as plain text by default (Settings → Appearance → Native menus): the samples and headers need Obsidian's own menu, as Canvas does for its rich menus (0.9.90) */
@@ -430,6 +434,13 @@ export class LinksPaneView extends DeckView {
       cnew: (a, b) => this.createdMs(b) - this.createdMs(a) || ((fi(b) || {}).stat || {}).ctime - ((fi(a) || {}).stat || {}).ctime || 0, cold: (a, b) => this.createdMs(a) - this.createdMs(b) || ((fi(a) || {}).stat || {}).ctime - ((fi(b) || {}).stat || {}).ctime || 0 }[SO];
     const PIN = SO === "rel" || SO === "lvl";   /* (Relative Emergence groups up on its own) */   /* up on top only in our own two orders; Obsidian's six sort everything alike (0.9.71, Nick) */
     main.sort((a, b) => (PIN ? (KR[this.kindOf(path, a.p)] ?? 2) - (KR[this.kindOf(path, b.p)] ?? 2) : 0) || cmp(a.p, b.p));
+    /* the folder list: every folder this note's links live in, as a tree with counts; a click hides or shows it (like the map's Filter → Folders) */
+    if (this.filtOpen) { const fp = box.createDiv({ cls: "ivd-lkfilt" }), cnt = new Map(); for (const l of lsAll) { let d = dirOf(l.p); while (true) { cnt.set(d, (cnt.get(d) || 0) + 1); if (!d) break; d = dirOf(d); } }
+      const hd2 = fp.createDiv({ cls: "ivd-lkfh" }); hd2.createSpan({ text: "Folders" }); if (HIDF.length) { const all = hd2.createEl("button", { cls: "ivd-lkfall", text: "Show all", attr: { type: "button" } }); all.onclick = () => this.setLOpt("hidef", []); }
+      const dirs = [...cnt.keys()].filter(Boolean).sort((a_, b_) => a_.localeCompare(b_));
+      for (const d of dirs) { const depth = d.split("/").length - 1, off = HIDF.some(h => d === h || d.startsWith(h + "/")), row = fp.createEl("button", { cls: "ivd-lkfr" + (off ? " off" : ""), attr: { type: "button" } }); row.style.setProperty("--fd", String(depth));
+        const cb = row.createSpan({ cls: "ivd-lkfc" }); if (!off) setIcon(cb, "check"); row.createSpan({ cls: "ivd-lkfn", text: d.split("/").pop() }); row.createSpan({ cls: "ivd-lkfk", text: String(cnt.get(d)) });
+        row.onclick = () => { const own_ = HIDF.includes(d); let nx = own_ ? HIDF.filter(h => h !== d) : off ? HIDF : [...HIDF.filter(h => !h.startsWith(d + "/")), d]; this.setLOpt("hidef", nx); }; } }
     if (HELPT && this.helpOpen) { const c_ = box.createDiv({ cls: "ivd-lkhelp" }); c_.createDiv({ cls: "ivd-lkht", text: LINKSORTS.find(x => x && x[0] === SO)[1] }); for (const para of HELPT) c_.createEl("p", { text: para }); c_.onclick = () => { this.helpOpen = false; this.render(); }; }
     const list = box.createDiv({ cls: "ivd-lklist" + (this.opt("tuck") ? " ivd-tuck" : "") }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
