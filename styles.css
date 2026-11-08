@@ -2310,3 +2310,8 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 /* the ? (or its empty slot) sits over the score column, so Sort and Display stay left of it and their menus leave the scores in view (0.9.98) */
 .ivd-links .ivd-lkqh{margin-left:12px}
 .ivd-links .ivd-lkqh-ph{visibility:hidden;border:0}
+/* the header's icons at Obsidian's own icon color, not faint: they're working controls (0.9.99, Nick: Display "so muted") */
+.ivd-links .ivd-lksort{color:var(--icon-color,var(--text-muted));opacity:var(--icon-opacity,.85)}
+.ivd-links .ivd-lksort:hover{color:var(--icon-color-hover,var(--text-normal));opacity:1}
+.ivd-links .ivd-lkqh{opacity:.85;color:var(--icon-color,var(--text-muted));border-color:currentColor}
+.ivd-links .ivd-lksb{opacity:.7;color:var(--icon-color,var(--text-muted))}
