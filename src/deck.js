@@ -353,7 +353,7 @@ export class LinksPaneView extends DeckView {
     const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal");
     /* each switch shows a sample of what it turns on (0.9.82, Nick: "ways to help the user understand what they're about to toggle on") */
     db.onclick = e => { const m = new Menu(), D = this.contentEl.ownerDocument;
-      const it_ = (k, t, hint) => m.addItem(it => { const f = D.createDocumentFragment(), sp = D.createElement("span"); sp.className = "ivd-mh"; if (typeof t === "string") sp.append(t); else t(sp); if (hint) { const h = D.createElement("span"); h.className = "ivd-mhx"; hint(h); sp.append("\u2002", h); }   /* an en space too, so the sample never touches the words even where the menu's styles differ */ f.append(sp); it.setTitle(f).setChecked(this.opt(k)).onClick(() => this.setLOpt(k, !this.opt(k))); });
+      const it_ = (k, t, hint, dis) => m.addItem(it => { const f = D.createDocumentFragment(), sp = D.createElement("span"); sp.className = "ivd-mh"; if (typeof t === "string") sp.append(t); else t(sp); if (hint) { const h = D.createElement("span"); h.className = "ivd-mhx"; hint(h); sp.append("\u2002", h); }   /* an en space too, so the sample never touches the words even where the menu's styles differ */ f.append(sp); it.setTitle(f).setChecked(dis ? false : this.opt(k)); if (dis) it.setDisabled(true); else it.onClick(() => this.setLOpt(k, !this.opt(k))); });
       const tx = (h, s_, c) => { const x = D.createElement("span"); x.className = c || ""; x.textContent = s_; h.append(x); return x; };
       const orbS = (h, L_) => { const o = D.createElement("span"); o.className = "ivd-orb lv" + L_; const g_ = LVGRAD[L_]; o.style.setProperty("--o0", g_[0]); o.style.setProperty("--o1", g_[1]); h.append(o); };
       /* left to right along a row: arrows, orb, emoji, color, score (0.9.85, Nick) */
@@ -361,7 +361,9 @@ export class LinksPaneView extends DeckView {
       it_("orb", "Show Idea Emergence orbs", h => { orbS(h, 5); orbS(h, 4); orbS(h, 3); });
       it_("emo", "Show emojis", h => tx(h, "✨"));
       it_("col", sp => { sp.append("Show "); tx(sp, "Idea", "ivd-mc-upp"); sp.append(" "); tx(sp, "Emergence", "ivd-mc-rel"); sp.append(" "); tx(sp, "link", "ivd-mc-up"); sp.append(" "); tx(sp, "colors", "ivd-mc-down"); });
-      it_("rel", "Show relevance scores", h => tx(h, "82", "ivd-mhn"));
+      /* the score column holds one thing: while link score or a time fills it, relevance shows unchecked and greyed (its own setting kept for later) (0.9.87, Nick) */
+      const TAKEN = ((SO === "lvl" || SO === "remg") && this.opt("lsc")) || (MOD && this.opt("age")) || (CRE && this.opt("cage"));
+      it_("rel", "Show relevance scores", h => tx(h, "82", "ivd-mhn"), TAKEN);
       /* a sort's own switch goes last, under a thin line, so it reads as new for this order (0.9.79, Nick); headers only while sorted by Idea Emergence (0.9.73) */
       const EMG = SO === "lvl" || SO === "remg"; if (EMG || MOD || CRE) m.addSeparator();
       if (SO === "lvl") it_("lvh", "Show Idea Emergence headers", h => tx(h, "LEVEL 5", "ivd-mhh"));
