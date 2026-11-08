@@ -271,7 +271,7 @@ export class DeckView extends ItemView {
    with ← → ↔ and level colors; then this note's own properties, one group each (collections in coral); then other notes' properties pointing back */
 export const LINKS_TYPE = "ideaverse-links";
 const LVGRAD = { 5: ["#f7c948", "#e8538a"], 4: ["#8a5bd6", "#3466d6"], 3: ["#4fc3ef", "#5b2e91"] };   /* the map's GRAD */
-const LINKSORTS = [["rel", "Relevance"], ["lvl", "Idea Emergence"], null, ["az", "File name (A to Z)"], ["za", "File name (Z to A)"], null, ["mnew", "Modified time (new to old)"], ["mold", "Modified time (old to new)"], null, ["cnew", "Created time (new to old)"], ["cold", "Created time (old to new)"]];
+const LINKSORTS = [["rel", "Relevance"], ["lvl", "Idea Emergence"], ["remg", "Relative Emergence"], null, ["az", "File name (A to Z)"], ["za", "File name (Z to A)"], null, ["mnew", "Modified time (new to old)"], ["mold", "Modified time (old to new)"], null, ["cnew", "Created time (new to old)"], ["cold", "Created time (old to new)"]];
 export class LinksPaneView extends DeckView {
   constructor(leaf, plugin) { super(leaf, plugin); this.cur = null; this.q = ""; }
   getViewType() { return LINKS_TYPE; }
@@ -335,7 +335,7 @@ export class LinksPaneView extends DeckView {
     const ls = this.linksOf(path), { own, back } = this.propGroups(path);
     /* collections join the other links under Obsidian's six sorts; only Relevance and Idea Emergence keep them in their own group (0.9.68, Nick) */
     const SO0 = this.plugin.store.get("iv-links-sort"), MC = new Set(), MP = new Set();
-    if (SO0 && SO0 !== "rel" && SO0 !== "lvl") { const ck0 = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
+    if (SO0 && SO0 !== "rel" && SO0 !== "lvl" && SO0 !== "remg") { const ck0 = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
       for (const k of [...own.keys()]) { for (const x of own.get(k)) (ck0.has(k) ? MC : MP).add(x); own.delete(k); } for (const k of [...back.keys()]) { for (const x of back.get(k)) MP.add(x); back.delete(k); } }   /* every property group joins in (0.9.70, Nick: "just do it for everything") */
     const inG = new Set([...[...own.values()].flatMap(x => [...x]), ...[...back.values()].flatMap(x => [...x])]);
     const KR = { upp: 0 }, KEEP = new Set(["upp", "rel"]), main = ls.filter(l => !inG.has(l.p) || KEEP.has(this.kindOf(path, l.p)))
@@ -353,11 +353,12 @@ export class LinksPaneView extends DeckView {
     const G = this.G, fi = p => this.file(p), lv = p => { const n_ = G && G.idx.get(p); return n_ ? [n_.level || 0, n_.score || 0] : [0, 0]; }, sc0 = new Map(ls.map(l => [l.p, l.s]));
     const cmp = {
       rel: (a, b) => (sc0.get(b) || 0) - (sc0.get(a) || 0) || this.title(a).localeCompare(this.title(b)),
+      remg: (a, b) => (sc0.get(b) || 0) - (sc0.get(a) || 0) || this.title(a).localeCompare(this.title(b)),
       lvl: (a, b) => { const A = lv(a), B = lv(b); return B[0] - A[0] || B[1] - A[1] || this.title(a).localeCompare(this.title(b)); },
       az: (a, b) => this.title(a).localeCompare(this.title(b), undefined, { numeric: true }), za: (a, b) => this.title(b).localeCompare(this.title(a), undefined, { numeric: true }),
       mnew: (a, b) => ((fi(b) || {}).stat || {}).mtime - ((fi(a) || {}).stat || {}).mtime || 0, mold: (a, b) => ((fi(a) || {}).stat || {}).mtime - ((fi(b) || {}).stat || {}).mtime || 0,
       cnew: (a, b) => this.createdMs(b) - this.createdMs(a) || ((fi(b) || {}).stat || {}).ctime - ((fi(a) || {}).stat || {}).ctime || 0, cold: (a, b) => this.createdMs(a) - this.createdMs(b) || ((fi(a) || {}).stat || {}).ctime - ((fi(b) || {}).stat || {}).ctime || 0 }[SO];
-    const PIN = SO === "rel" || SO === "lvl";   /* up on top only in our own two orders; Obsidian's six sort everything alike (0.9.71, Nick) */
+    const PIN = SO === "rel" || SO === "lvl";   /* (Relative Emergence groups up on its own) */   /* up on top only in our own two orders; Obsidian's six sort everything alike (0.9.71, Nick) */
     main.sort((a, b) => (PIN ? (KR[this.kindOf(path, a.p)] ?? 2) - (KR[this.kindOf(path, b.p)] ?? 2) : 0) || cmp(a.p, b.p));
     const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
@@ -368,7 +369,11 @@ export class LinksPaneView extends DeckView {
       if (ORB) { const L_ = lv(p)[0], t0 = r.querySelector(".ivd-t"), o_ = createSpan({ cls: "ivd-orb lv" + L_ }), g_ = LVGRAD[L_]; if (g_) { o_.style.setProperty("--o0", g_[0]); o_.style.setProperty("--o1", g_[1]); } if (t0) t0.before(o_); }
       if (EMO) { const em = this.emoOf(p), t = r.querySelector(".ivd-t"), sp = createSpan({ cls: "ivd-e", text: em && !this.title(p).startsWith(em) ? em : "" }); if (t) t.before(sp); } return r; };
     /* Idea Emergence headers (0.9.64, Nick): the main list grouped by level, highest first, in the Holodeck's folder-header style; up and related lead each level */
-    if (SO === "lvl" && this.opt("lvh")) { const by = new Map(); for (const l of main) { const k = lv(l.p)[0]; if (!by.has(k)) by.set(k, []); by.get(k).push(l); }
+    /* Relative Emergence (0.9.74, Nick): this note's links by where they sit relative to it, as the note strip and the link colors say: up, related, above, below,
+       each by relevance; property groups follow as in Relevance */
+    if (SO === "remg") { const RK = p => { const k = this.kindOf(path, p); if (k === "upp" || k === "rel" || k === "up" || k === "down") return k; const A = this.G && this.G.idx.get(path), B = this.G && this.G.idx.get(p); if (!A || !B) return "down"; return B.level !== A.level ? (B.level > A.level ? "up" : "down") : (B.score || 0) >= (A.score || 0) ? "up" : "down"; };
+      for (const [k, lab] of [["upp", "Up"], ["rel", "Related"], ["up", "Above"], ["down", "Below"]]) { const ar = main.filter(l => RK(l.p) === k); if (!ar.length) continue; list.createDiv({ cls: "ivd-lkg ivd-lvh", text: `${lab} · ${ar.length}` }); for (const l of ar) put(l.p, l.a, l.c); } }
+    else if (SO === "lvl" && this.opt("lvh")) { const by = new Map(); for (const l of main) { const k = lv(l.p)[0]; if (!by.has(k)) by.set(k, []); by.get(k).push(l); }
       for (const k of [...by.keys()].sort((a, b) => b - a)) { const ar = by.get(k); list.createDiv({ cls: "ivd-lkg ivd-lvh", text: k ? `Level ${k} · ${ar.length}` : `Not on the map · ${ar.length}` }); for (const l of ar) put(l.p, l.a, l.c); } }
     else for (const l of main) put(l.p, l.a, l.c);
     /* a group's header takes its rows' color, as in the HUD (0.9.65, Nick): collections coral (with Display → Collection links in coral), other properties slate; plain with link colors off */
