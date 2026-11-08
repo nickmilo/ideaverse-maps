@@ -2287,4 +2287,10 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .menu.ivd-menu .menu-item-icon.mod-checked{order:-1;margin-left:0}
 .ivd-links .ivd-lkdiv{flex:none;height:1px;margin:6px 6px 4px;background:var(--background-modifier-border)}   /* after the pinned up links (0.9.94) */
 /* our menus let the pane show through a little, with a soft blur, so what a switch changes stays visible behind it (0.9.95, Nick: "Maybe it's 84%") */
-.menu.ivd-menu{background-color:color-mix(in srgb,var(--background-secondary,var(--background-primary)) 84%,transparent);backdrop-filter:blur(3px)}
+.menu.ivd-menu{background-color:color-mix(in srgb,var(--background-secondary,var(--background-primary)) 60%,transparent);backdrop-filter:blur(2px)}   /* 60% (0.9.96, Nick: 84% wasn't enough) */
+/* the "?" for our three orders and its card (0.9.96), in the map's qHelp style */
+.ivd-links .ivd-lkqh{appearance:none;flex:none;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;padding:0;margin-right:4px;border:1px solid var(--text-muted);border-radius:50%;background:none;box-shadow:none;font:600 9px var(--font-interface);color:var(--text-muted);opacity:.55;cursor:help}
+.ivd-links .ivd-lkqh:hover,.ivd-links .ivd-lkqh.on{opacity:1;color:var(--text-normal);border-color:var(--text-normal)}
+.ivd-links .ivd-lkhelp{flex:none;margin:0 0 4px;padding:8px 10px;border:1px solid var(--background-modifier-border);border-radius:8px;background:var(--background-primary-alt,var(--background-primary));font-size:11.5px;line-height:1.45;color:var(--text-muted);cursor:pointer}
+.ivd-links .ivd-lkhelp p{margin:4px 0 0}
+.ivd-links .ivd-lkht{font:600 9.5px var(--font-monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--text-normal)}

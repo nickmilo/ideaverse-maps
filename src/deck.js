@@ -271,6 +271,15 @@ export class DeckView extends ItemView {
    with ← → ↔ and level colors; then this note's own properties, one group each (collections in coral); then other notes' properties pointing back */
 export const LINKS_TYPE = "ideaverse-links";
 const LVGRAD = { 5: ["#f7c948", "#e8538a"], 4: ["#8a5bd6", "#3466d6"], 3: ["#4fc3ef", "#5b2e91"] };   /* the map's GRAD */
+/* what the three orders mean, from the map's own explanations (Starship → relevance "?", Display → How notes are scored) */
+const LINKHELP = {
+  rel: ["How close each link is to this note, 100 for the closest. Up links sit on top.",
+    "A walk starts at this note and keeps coming home; the notes it lands on most often are the most relevant. Links count by kind (up or related 2, a link in the text 1, another property 0.6), a little more when two notes link both ways; big hubs are toned down so they don't win just for being big; and what you declared counts most: a note in this note's up ×3, a related note ×1.6."],
+  lvl: ["Highest Idea Emergence level first: 5 Home & hubs, 4 Maps of maps, 3 Maps of content, 2 Linked notes, 1 Unlinked notes. Within a level, the higher link score first. Up links sit on top.",
+    "A note gets the highest level it qualifies for. Level 5: a home note, or one of the top scorers. Level 4: a map linking 3+ maps, or a score at the Level 4 cut-off. Level 3: any map, or a score at the Level 3 cut-off. Level 2: any link. Level 1: no links yet.",
+    "Link score: each kind of link, counted with diminishing returns, times its weight, added up (Maps of the Ideaverse → Display → How notes are scored)."],
+  remg: ["Where each link sits relative to this note, as its note strip and link colors show it.",
+    "Up: named in this note's up. Related: named in its related. Above: a higher level, or the same level with a higher link score. Below: the rest. This note sits between Above and Below; each group goes by relevance."] };
 const LINKSORTS = [["rel", "Relevance"], ["lvl", "Idea Emergence"], ["remg", "Relative Emergence"], null, ["az", "File name (A to Z)"], ["za", "File name (Z to A)"], null, ["mnew", "Modified time (new to old)"], ["mold", "Modified time (old to new)"], null, ["cnew", "Created time (new to old)"], ["cold", "Created time (old to new)"]];
 export class LinksPaneView extends DeckView {
   constructor(leaf, plugin) { super(leaf, plugin); this.cur = null; this.q = ""; }
@@ -350,6 +359,8 @@ export class LinksPaneView extends DeckView {
     sk.onclick = () => { if (this.qOpen || this.q) { this.qOpen = false; this.q = ""; this.qFocus = false; this.render(); } else { this.qOpen = true; this.qFocus = true; this.render(); } };
     /* sort (0.9.61, Nick: relevance by default, Idea Emergence, and Obsidian's own six); up and related stay on top in every order */
     const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "rel", MOD = SO === "mnew" || SO === "mold", CRE = SO === "cnew" || SO === "cold";
+    /* our three orders explain themselves (0.9.96, Nick: "Hey, how are these things being scored?"): a small circled ? before Sort while one is on opens a card */
+    const HELPT = LINKHELP[SO]; if (HELPT) { const qb = hd.createEl("button", { cls: "ivd-lkqh" + (this.helpOpen ? " on" : ""), text: "?", attr: { type: "button", "aria-description": "How this order works" } }); qb.onclick = () => { this.helpOpen = !this.helpOpen; this.render(); }; }
     const sb = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Sort links", "aria-pressed": String(SO !== "rel") } }); setIcon(sb, "arrow-up-narrow-wide");
     sb.onclick = () => { if (this.menuJust(sb)) return; const m = new Menu(); for (const x of LINKSORTS) { if (!x) { m.addSeparator(); continue; } m.addItem(it => it.setTitle(x[1]).setChecked(x[0] === SO).onClick(() => this.setLOpt("sort", x[0]))); } this.menuUnder(m, sb); };
     /* Display, beside Sort (0.9.64); time since modified is offered only while sorted by modified time */
@@ -388,6 +399,7 @@ export class LinksPaneView extends DeckView {
       cnew: (a, b) => this.createdMs(b) - this.createdMs(a) || ((fi(b) || {}).stat || {}).ctime - ((fi(a) || {}).stat || {}).ctime || 0, cold: (a, b) => this.createdMs(a) - this.createdMs(b) || ((fi(a) || {}).stat || {}).ctime - ((fi(b) || {}).stat || {}).ctime || 0 }[SO];
     const PIN = SO === "rel" || SO === "lvl";   /* (Relative Emergence groups up on its own) */   /* up on top only in our own two orders; Obsidian's six sort everything alike (0.9.71, Nick) */
     main.sort((a, b) => (PIN ? (KR[this.kindOf(path, a.p)] ?? 2) - (KR[this.kindOf(path, b.p)] ?? 2) : 0) || cmp(a.p, b.p));
+    if (HELPT && this.helpOpen) { const c_ = box.createDiv({ cls: "ivd-lkhelp" }); c_.createDiv({ cls: "ivd-lkht", text: LINKSORTS.find(x => x && x[0] === SO)[1] }); for (const para of HELPT) c_.createEl("p", { text: para }); c_.onclick = () => { this.helpOpen = false; this.render(); }; }
     const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
     const ARR = this.opt("arr"), LSC = (SO === "lvl" || SO === "remg") && this.opt("lsc"), ORB = this.opt("orb"), AGE = MOD && this.opt("age"), CAGE = CRE && this.opt("cage"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
