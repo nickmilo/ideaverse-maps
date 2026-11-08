@@ -384,7 +384,8 @@ export class LinksPaneView extends DeckView {
       it_("emo", "Show emojis", h => tx(h, "✨"));
       m.addSeparator(); hd_("Middle");
       it_("col", sp => { sp.append("Show "); tx(sp, "Idea", "ivd-mc-upp"); sp.append(" "); tx(sp, "Emergence", "ivd-mc-rel"); sp.append(" "); tx(sp, "link", "ivd-mc-up"); sp.append(" "); tx(sp, "colors", "ivd-mc-down"); });
-      if (SO === "lvl") it_("lvh", "Show Idea Emergence headers", h => tx(h, "LEVEL 5", "ivd-mhh"));   /* only while sorted by Idea Emergence (0.9.73); in Middle (0.9.89, Nick) */
+      if (SO === "lvl") it_("lvh", "Show Idea Emergence headers", h => tx(h, "LEVEL 5", "ivd-mhh"));
+      it_("tuck", "Tuck rows under headers", h => tx(h, "↳", "ivd-mha"));   /* rows indent under their group header, like an outline (0.9.103, Nick) */   /* only while sorted by Idea Emergence (0.9.73); in Middle (0.9.89, Nick) */
       m.addSeparator(); hd_("Right");
       /* the score column holds one thing: while link score or a time fills it, relevance shows unchecked and greyed, its own setting kept (0.9.87, Nick) */
       it_("rel", "Show relevance scores", h => tx(h, "82", "ivd-mhn"), TAKEN);
@@ -404,7 +405,7 @@ export class LinksPaneView extends DeckView {
     const PIN = SO === "rel" || SO === "lvl";   /* (Relative Emergence groups up on its own) */   /* up on top only in our own two orders; Obsidian's six sort everything alike (0.9.71, Nick) */
     main.sort((a, b) => (PIN ? (KR[this.kindOf(path, a.p)] ?? 2) - (KR[this.kindOf(path, b.p)] ?? 2) : 0) || cmp(a.p, b.p));
     if (HELPT && this.helpOpen) { const c_ = box.createDiv({ cls: "ivd-lkhelp" }); c_.createDiv({ cls: "ivd-lkht", text: LINKSORTS.find(x => x && x[0] === SO)[1] }); for (const para of HELPT) c_.createEl("p", { text: para }); c_.onclick = () => { this.helpOpen = false; this.render(); }; }
-    const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
+    const list = box.createDiv({ cls: "ivd-lklist" + (this.opt("tuck") ? " ivd-tuck" : "") }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
     const ARR = this.opt("arr"), LSC = (SO === "lvl" || SO === "remg" || SO === "az" || SO === "za") && this.opt("lsc"), ORB = this.opt("orb"), AGE = MOD && this.opt("age"), CAGE = CRE && this.opt("cage"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
     const onG = p => !this.G || this.G.ek.has(path + "\u0000" + p) || this.G.ek.has(p + "\u0000" + path), right = p => LSC ? (() => { const n_ = this.G && this.G.idx.get(p); if (!n_ || n_.score == null) return ""; const v = +n_.score; return v.toFixed(v < 10 ? 1 : 0); })() : AGE ? (fi(p) ? this.age(fi(p).stat.mtime) : "") : CAGE ? (fi(p) ? this.age(this.createdMs(p)) : "") : REL && sc.has(p) && onG(p) ? String(sc.get(p).s) : "";   /* no score for a collection: the map never counts it */
