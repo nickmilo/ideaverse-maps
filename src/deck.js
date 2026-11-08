@@ -334,6 +334,9 @@ export class LinksPaneView extends DeckView {
     const mx = Math.max(1e-12, ...rows.map(x => x.r)); for (const x of rows) x.s = Math.round(100 * x.r / mx); return rows; }
   /* the pane's own Display (0.9.64, Nick): relevance scores, link colors, Idea Emergence headers, emojis, time since modified; shared by every Links pane */
   opt(k) { const v = this.plugin.store.get("iv-links-" + k); return v === true; }   /* every Show switch starts off for a new user (0.9.100, Nick) */
+  /* a re-render (a filter click, a setting, a vault change) keeps the folder list and the list where they were; a new note starts the list at the top (0.9.126, Nick: the folders "bounce back up to the top") */
+  keepScroll(box, key) { const f = box.querySelector(".ivd-lkfilt"), l = box.querySelector(".ivd-lklist"), ft = f ? f.scrollTop : 0, lt = l && this.scrollKey === key ? l.scrollTop : 0; this.scrollKey = key;
+    void Promise.resolve().then(() => { const f2 = box.querySelector(".ivd-lkfilt"), l2 = box.querySelector(".ivd-lklist"); if (f2 && ft) f2.scrollTop = ft; if (l2 && lt) l2.scrollTop = lt; }); }
   /* the folder filter's tree: top-level folders, each folding open with Obsidian's file-tree arrow (0.9.122, Nick: "toggle collapse arrows for the folders"); open folders remembered per pane kind; a folder with something hidden inside shows a dash */
   folderTree(fp, cnt, HIDF, openKey) { const OPEN = new Set((v => Array.isArray(v) ? v : [])(this.plugin.store.get(openKey))), kids = new Map();
     for (const d of [...cnt.keys()].filter(Boolean)) { const pa = d.includes("/") ? d.slice(0, d.lastIndexOf("/")) : ""; if (!kids.has(pa)) kids.set(pa, []); kids.get(pa).push(d); }
@@ -361,7 +364,7 @@ export class LinksPaneView extends DeckView {
     const rl = mc.resolvedLinks || {}; for (const [src, m] of Object.entries(rl)) { if (src === path || !m || !m[path]) continue; const c = mc.getFileCache(this.file(src) || { path: src });
       for (const L of (c && c.frontmatterLinks) || []) { const k = keyOf(L.key); if (skip.has(k)) continue; const t = mc.getFirstLinkpathDest(L.link.split("#")[0].split("|")[0], src); if (t && t.path === path) { if (!back.has(k)) back.set(k, new Set()); back.get(k).add(src); } } }
     return { own, back }; }
-  render() { const box = this.contentEl; if (!box) return; box.empty(); const path = this.cur; if (this.leaf && typeof this.leaf.updateHeader === "function") this.leaf.updateHeader();
+  render() { const box = this.contentEl; if (!box) return; this.keepScroll(box, this.cur); box.empty(); const path = this.cur; if (this.leaf && typeof this.leaf.updateHeader === "function") this.leaf.updateHeader();
     if (!path || !this.file(path)) { box.createDiv({ cls: "ivd-empty", text: "Open a note to see its links." }); return; }
     const lsAll = this.linksOf(path), { own, back } = this.propGroups(path);
     /* Filter → folders (0.9.110, Nick: "all I need right now is just the ability to deselect specific folders"): a hidden folder hides its notes and everything under it */
@@ -481,7 +484,7 @@ export class RecentsPaneView extends LinksPaneView {
   setLOpt(k, v) { this.plugin.store.set("iv-recents-" + k, v); for (const l of this.app.workspace.getLeavesOfType(RECENTS_TYPE)) if (l.view instanceof RecentsPaneView) l.view.render(); }
   async onOpen() { await super.onOpen(); this.contentEl.addClass("ivd-recents");
     for (const ev of ["modify", "create", "delete", "rename"]) this.registerEvent(this.app.vault.on(ev, () => this.soon())); }
-  render() { const box = this.contentEl; if (!box) return; box.empty(); this.ensureGraph(); const cur = this.cur, D = box.ownerDocument;
+  render() { const box = this.contentEl; if (!box) return; this.keepScroll(box, "recents"); box.empty(); this.ensureGraph(); const cur = this.cur, D = box.ownerDocument;
     const ex = ((this.plugin.settings && this.plugin.settings.exclude) || []).map(x => String(x).replace(/\/+$/, "")).filter(Boolean), HIDF = (v => Array.isArray(v) ? v : [])(this.plugin.store.get("iv-recents-hidef"));
     const dirOf = p => p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "", under = (p, L) => { const d = dirOf(p); return L.some(h => d === h || d.startsWith(h + "/")); };
     const all = this.app.vault.getFiles().filter(f => !under(f.path, ex)).sort((a, b) => b.stat.mtime - a.stat.mtime), files = all.filter(f => !under(f.path, HIDF)).slice(0, 100);   /* every file (images, PDFs, canvases too, as a base lists them: 0.9.125) feeds the folder filter, and the 100 shown are the newest that pass it, as a base fills its limit (0.9.123, Nick) */
