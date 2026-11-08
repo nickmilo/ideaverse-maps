@@ -183,7 +183,7 @@ export class DeckView extends ItemView {
   optN() { const v = +this.plugin.store.get("iv-deck-recn"); return v >= 5 && v <= 50 ? v : 30; }
   setOpt(k, v) { this.plugin.store.set("iv-deck-" + k, v); for (const l of this.app.workspace.getLeavesOfType(DECK_TYPE)) if (l.view instanceof DeckView) l.view.render(); }
   recents(n) { return this.app.vault.getMarkdownFiles().sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, n); }
-  age(ms) { const s = (Date.now() - ms) / 1000; return s < 3600 ? Math.max(1, Math.round(s / 60)) + "m" : s < 86400 ? Math.round(s / 3600) + "h" : Math.round(s / 86400) + "d"; }
+  age(ms) { const s = (Date.now() - ms) / 1000; return s < 3600 ? Math.max(1, Math.round(s / 60)) + "m" : s < 86400 ? Math.round(s / 3600) + "h" : s < 365 * 86400 ? Math.round(s / 86400) + "d" : Math.round(s / 31557600) + "y"; }   /* years past a year (0.9.66), so a 2019 note reads 7y, not 2500d */
 
   /* one row: click = primary; ⌘ click = a support slot; drag it onto a slot */
   showPv(path, anchor) { if (!path || !anchor || !anchor.isConnected) return; if (this.pvEl && this.pvEl.dataset.path === path) return; this.hidePv(true);
@@ -329,13 +329,13 @@ export class LinksPaneView extends DeckView {
       .sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || b.s - a.s);
     const hd = box.createDiv({ cls: "ivd-lkhd" }); const NL = this.G ? ls.filter(l => this.G.ek.has(path + "\u0000" + l.p) || this.G.ek.has(l.p + "\u0000" + path)).length : ls.length; hd.createSpan({ cls: "ivd-h", text: `⇄ LINKS · ${NL}` });   /* counted as the HUD counts: links on the map's graph, so collections (drawn, never counted) aren't (0.9.65) */ hd.createSpan({ cls: "ivd-lksp" });
     /* sort (0.9.61, Nick: relevance by default, Idea Emergence, and Obsidian's own six); up and related stay on top in every order */
-    const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "rel", MOD = SO === "mnew" || SO === "mold";
+    const SO = LINKSORTS.some(x => x && x[0] === this.plugin.store.get("iv-links-sort")) ? this.plugin.store.get("iv-links-sort") : "rel", MOD = SO === "mnew" || SO === "mold", CRE = SO === "cnew" || SO === "cold";
     const sb = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Sort links", "aria-pressed": String(SO !== "rel") } }); setIcon(sb, "arrow-up-narrow-wide");
     sb.onclick = e => { const m = new Menu(); for (const x of LINKSORTS) { if (!x) { m.addSeparator(); continue; } m.addItem(it => it.setTitle(x[1]).setChecked(x[0] === SO).onClick(() => this.setLOpt("sort", x[0]))); } m.showAtMouseEvent(e); };
     /* Display, beside Sort (0.9.64); time since modified is offered only while sorted by modified time */
     const db = hd.createEl("button", { cls: "ivd-lksort clickable-icon", attr: { type: "button", "aria-description": "Display" } }); setIcon(db, "sliders-horizontal");
     db.onclick = e => { const m = new Menu(), it_ = (k, t) => m.addItem(it => it.setTitle(t).setChecked(this.opt(k)).onClick(() => this.setLOpt(k, !this.opt(k))));
-      it_("rel", "Show relevance scores"); it_("col", "Color links by Idea Emergence"); it_("lvh", "Idea Emergence headers"); it_("emo", "Show emojis"); if (MOD) it_("age", "Show time since modified"); m.showAtMouseEvent(e); };
+      it_("rel", "Show relevance scores"); it_("col", "Color links by Idea Emergence"); it_("lvh", "Idea Emergence headers"); it_("emo", "Show emojis"); if (MOD) it_("age", "Show time since modified"); if (CRE) it_("cage", "Show time since created");   /* each offered only while its sort is on (0.9.66, Nick) */ m.showAtMouseEvent(e); };
     const qr = box.createDiv({ cls: "ivd-lkqr" }), qi = qr.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search links", spellcheck: "false" } }); qi.value = this.q;
     const G = this.G, fi = p => this.file(p), lv = p => { const n_ = G && G.idx.get(p); return n_ ? [n_.level || 0, n_.score || 0] : [0, 0]; }, sc0 = new Map(ls.map(l => [l.p, l.s]));
     const cmp = {
@@ -347,8 +347,8 @@ export class LinksPaneView extends DeckView {
     main.sort((a, b) => (KR[this.kindOf(path, a.p, a.a !== "←", a.a !== "→")] ?? 2) - (KR[this.kindOf(path, b.p, b.a !== "←", b.a !== "→")] ?? 2) || cmp(a.p, b.p));
     const list = box.createDiv({ cls: "ivd-lklist" }); const sc = new Map(ls.map(l => [l.p, l]));
     const ck = new Set(((v => Array.isArray(v) ? v : String(v || "collections").split(","))(this.plugin.settings && this.plugin.settings.collectionProps)).map(x => String(x).trim()).filter(Boolean));
-    const AGE = MOD && this.opt("age"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
-    const onG = p => !this.G || this.G.ek.has(path + "\u0000" + p) || this.G.ek.has(p + "\u0000" + path), right = p => AGE ? (fi(p) ? this.age(fi(p).stat.mtime) : "") : REL && sc.has(p) && onG(p) ? String(sc.get(p).s) : "";   /* no score for a collection: the map never counts it */
+    const AGE = MOD && this.opt("age"), CAGE = CRE && this.opt("cage"), REL = this.opt("rel"), COL = this.opt("col"), EMO = this.opt("emo");
+    const onG = p => !this.G || this.G.ek.has(path + "\u0000" + p) || this.G.ek.has(p + "\u0000" + path), right = p => AGE ? (fi(p) ? this.age(fi(p).stat.mtime) : "") : CAGE ? (fi(p) ? this.age(fi(p).stat.ctime) : "") : REL && sc.has(p) && onG(p) ? String(sc.get(p).s) : "";   /* no score for a collection: the map never counts it */
     const put = (p, a, c) => { const r = this.row(list, p, a, c, right(p)); r.dataset.q = this.title(p).toLowerCase();
       if (EMO) { const em = this.emoOf(p), t = r.querySelector(".ivd-t"), sp = createSpan({ cls: "ivd-e", text: em && !this.title(p).startsWith(em) ? em : "" }); if (t) t.before(sp); } return r; };
     /* Idea Emergence headers (0.9.64, Nick): the main list grouped by level, highest first, in the Holodeck's folder-header style; up and related lead each level */
