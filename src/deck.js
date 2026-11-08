@@ -476,13 +476,15 @@ export class RecentsPaneView extends LinksPaneView {
   getDisplayText() { return "Recents"; }
   getIcon() { return "history"; }
   opt(k) { const v = this.plugin.store.get("iv-recents-" + k); return v == null ? k === "age" : v === true; }   /* time since modified on; every other Show switch off */
+  title(p) { const f = this.file(p); return !f ? "" : f.extension === "md" ? f.basename : f.name; }   /* a non-note keeps its extension, as a base shows it (0.9.125) */
+  showPv(path, anchor) { if (/\.md$/i.test(path)) super.showPv(path, anchor); }
   setLOpt(k, v) { this.plugin.store.set("iv-recents-" + k, v); for (const l of this.app.workspace.getLeavesOfType(RECENTS_TYPE)) if (l.view instanceof RecentsPaneView) l.view.render(); }
   async onOpen() { await super.onOpen(); this.contentEl.addClass("ivd-recents");
     for (const ev of ["modify", "create", "delete", "rename"]) this.registerEvent(this.app.vault.on(ev, () => this.soon())); }
   render() { const box = this.contentEl; if (!box) return; box.empty(); this.ensureGraph(); const cur = this.cur, D = box.ownerDocument;
     const ex = ((this.plugin.settings && this.plugin.settings.exclude) || []).map(x => String(x).replace(/\/+$/, "")).filter(Boolean), HIDF = (v => Array.isArray(v) ? v : [])(this.plugin.store.get("iv-recents-hidef"));
     const dirOf = p => p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "", under = (p, L) => { const d = dirOf(p); return L.some(h => d === h || d.startsWith(h + "/")); };
-    const all = this.app.vault.getMarkdownFiles().filter(f => !under(f.path, ex)).sort((a, b) => b.stat.mtime - a.stat.mtime), files = all.filter(f => !under(f.path, HIDF)).slice(0, 100);   /* every note feeds the folder filter, and the 100 shown are the newest that pass it, as a base fills its limit (0.9.123, Nick) */
+    const all = this.app.vault.getFiles().filter(f => !under(f.path, ex)).sort((a, b) => b.stat.mtime - a.stat.mtime), files = all.filter(f => !under(f.path, HIDF)).slice(0, 100);   /* every file (images, PDFs, canvases too, as a base lists them: 0.9.125) feeds the folder filter, and the 100 shown are the newest that pass it, as a base fills its limit (0.9.123, Nick) */
     const hd = box.createDiv({ cls: "ivd-lkhd" }); const hc = hd.createSpan({ cls: "ivd-h", text: `◷ RECENTS · ${files.length}` });
     const qOpen = this.qOpen || !!this.q, sk = hd.createEl("button", { cls: "ivd-lksb" + (qOpen ? " on" : ""), attr: { type: "button", "aria-description": "Search recents" } }); setIcon(sk, "search");
     const qi = hd.createEl("input", { cls: "ivd-lkq", type: "text", attr: { placeholder: "Search recents", spellcheck: "false" } }); qi.value = this.q; qi.hidden = !qOpen;
