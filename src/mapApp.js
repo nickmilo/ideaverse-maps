@@ -4567,7 +4567,7 @@ const sx = x => x*k + tx, sy = y => y*k + ty, wx = x => (x - tx)/k, wy = y => (y
    Measured on a 15,700-note vault: idle and typing it costs nothing either way; a note switch did ~175ms of work with the map live, ~110ms paused, ~117ms in plain Obsidian */
 let HOLOPAUSE = pref("iv-holopause", false) === true;
 /* the Holodeck's icon, picked in Display → Editors (0.9.58, Nick); rectangle goggles by default */
-const HOLOICONS = ["rectangle-goggles", "blend", "eclipse", "projector", "aperture", "armchair"];
+const HOLOICONS = ["rectangle-goggles", "blend", "eclipse", "projector", "aperture", "joystick"];
 let HOLOICON = (v => HOLOICONS.includes(v) ? v : "rectangle-goggles")(pref("iv-holoicon", "rectangle-goggles"));
 let raf = 0; function draw(){ if (HOLOPAUSE && typeof holoOn === "function" && holoOn()) return; if (!raf) raf = RAF(render); }
 function animateTo(t){ const k0=k, x0=tx, y0=ty, t0=performance.now(), dur=420, mid = morphId;
