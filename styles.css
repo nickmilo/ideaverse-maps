@@ -2397,12 +2397,12 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd-links .ivd-lkfa.shut svg{transform:rotate(-90deg)}
 .ivd-links .ivd-lkfa.none{visibility:hidden}
 .ivd-links .ivd-lkfc{margin-right:2px}   /* the folder filter folds like Obsidian's file tree (0.9.122) */
-/* 0.9.124, Nick: the panes read smaller than his Recents base beside them. Rows at Obsidian's base-table size, emojis to match (both panes) */
-.ivd.ivd-links .ivd-row{height:24px;font-size:14px;gap:7px}
-.ivd.ivd-links .ivd-e{width:18px;font-size:14.5px}
-.ivd.ivd-links .ivd-orb{width:11px;height:11px}
-.ivd.ivd-links .ivd-orb.lv5{width:10px;height:10px}
-.ivd.ivd-links .ivd-orb.lv4{width:8px;height:8px}
-.ivd.ivd-links .ivd-a{font-size:12.5px;width:16px}
-.ivd.ivd-links .ivd-here .ivd-ht{font-size:14px}
-.ivd.ivd-links .ivd-row .ivd-n{font-size:11.5px}
+/* 0.9.124, Nick: the panes read smaller than his Recents base beside them; 0.9.127: "split the difference", one size down from the base table: Obsidian's small UI text (13px), as in the file explorer (both panes) */
+.ivd.ivd-links .ivd-row{height:22.5px;font-size:var(--font-ui-small,13px);gap:6.5px}
+.ivd.ivd-links .ivd-e{width:17px;font-size:13.5px}
+.ivd.ivd-links .ivd-orb{width:10.5px;height:10.5px}
+.ivd.ivd-links .ivd-orb.lv5{width:9.5px;height:9.5px}
+.ivd.ivd-links .ivd-orb.lv4{width:7.5px;height:7.5px}
+.ivd.ivd-links .ivd-a{font-size:11.75px;width:15px}
+.ivd.ivd-links .ivd-here .ivd-ht{font-size:var(--font-ui-small,13px)}
+.ivd.ivd-links .ivd-row .ivd-n{font-size:10.75px}
