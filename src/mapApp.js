@@ -2770,8 +2770,7 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
   const sf = CKW === "sf" ? ckSF() : null;
   let gl = null; if (!sf) { CK.glide = null; if ((CK.arrV || 0) > 150) { ckUpright(); const v = Math.min(CK.arrV, 1500), dur = 1.8, s_ = v * dur / 3, fw = ckFwd(); gl = { P0: CK.P.slice(), fw, s: s_, dur, t0: win.performance.now() }; } else { CK.P = [0, 0, 0]; CK.yaw = 0; CK.pitch = 0; } CK.arrV = 0; }   /* 0.8.169: a flown arrival in Links no longer snaps the ship home; it glides on and the new links gather ahead */
   else if (c >= 0 && coordOn()) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]];   /* placed by coordinates (0.9.144): the galaxy seen from above, as on the Chart; first the whole of it, then over the note, still looking down */
-    if (!CK.sfIn) { const U = ckUniverse(); CK.P = [U.c[0], U.c[1], U.c[2] - U.r * 1.05]; CK.yaw = 0; CK.pitch = 0; CK.sfIn = true; CK.ov = true; }
-    else if (Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) > 1600) { CK.P = [T[0], T[1], T[2] - 1300]; CK.yaw = 0; CK.pitch = 0; } }
+    if (!CK.sfIn) { const U = ckUniverse(); CK.P = [U.c[0], U.c[1], U.c[2] - U.r * 1.05]; CK.yaw = 0; CK.pitch = 0; CK.sfIn = true; CK.ov = true; } }   /* a later pick glides there from where the ship is (the settle), no jump (0.9.145) */
   else if (c >= 0) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]];   /* in Starfield the ship stays where it is, unless the note is far off: then it jumps to just outside it, facing it */
     if (!CK.sfIn || Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) > 1600) { const bi = BOD[c], G = bi >= 0 ? sf.B[bi] : { x: 0, y: 0, z: 0 }; let d = [T[0] - G.x, T[1] - G.y, T[2] - G.z]; let l = Math.hypot(...d); if (l < 1) { d = [0, 0, -1]; l = 1; }
       let nn = [0, -1, 0]; if (bi >= 0 && G.u) { const u = G.u, v = G.v; nn = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]; if (nn[1] > 0) nn = nn.map(q => -q); }   /* from above its galaxy's disk, a little outside, so the disk opens up */
@@ -2825,6 +2824,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   g.save(); g.beginPath(); g.rect(0, 0, W, VH); g.clip(); g.globalCompositeOperation = "lighter";
   const pr = (x, y, z) => { const [xc, yc, zc] = ckCam(x, y, z); return zc > 12 ? [cx + F * xc / zc, cy + F * yc / zc, zc] : null; };
   if (coordOn() && COORDART) ckCoordArt(g, pr, sf, F);
+  if (CK.galBtn) { const on_ = coordOn(); if (CK.galBtn.hidden === on_) CK.galBtn.hidden = !on_; }
   for (const B of sf.B) { const b = B.b; if (b.coord) continue; p0 = pr(B.x, B.y, B.z); const dist = Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]); if (!p0 && dist > B.r) continue;
     const lay = b.kind === "gal" ? [[1.15, b.hue, .3], [.65, b.hue, .26], [.3, "#fff1d6", .6], [.1, "#ffffff", .85]] : b.kind === "neb" ? [[1, b.hue, .22], [.55, b.hue, .14]] : b.kind === "dwarf" ? [[1.1, b.hue, .26], [.25, "#fff1d6", .35]] : [[1.05, b.hue || "#ffb380", .28], [.4, "#fff1d6", .4]];
     const near = Math.min(1, Math.max(.15, dist / (B.r * 3)));   /* inside a galaxy its glow thins so the stars stay clear */
@@ -3003,13 +3003,15 @@ function ckRebase(){ /* items into the ship's own frame, ship back home: nothing
 function ckFwd(){ const cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch); return [sy_ * cp, sp, cy * cp]; }
 function ckCam(x, y, z){ const dx = x - CK.P[0], dy = y - CK.P[1], dz = z - CK.P[2], cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);
   const xc = cy * dx - sy_ * dz, z1 = sy_ * dx + cy * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1; return [xc, yc, zc]; }
-function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); if (!(CK.settle && CK.settle.flow) && !CK.glide) CK.warp = 1; else CK.fadeT = win.performance.now(); if (CKG && !CK.gj) win.setTimeout(() => { if (!dead && CKG && (!CK.gq || CK.gq.j === CK.c || !CK.items.find(it => it.i === CK.gq.j))) ckGameNew(); }, 700); } }
+function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); if (!(CK.settle && CK.settle.flow) && !CK.glide && !(coordOn() && CKW === "sf")) CK.warp = 1;   /* placed by coordinates: you see the galaxy go by instead of a hyperspace flash (0.9.145) */ else CK.fadeT = win.performance.now(); if (CKG && !CK.gj) win.setTimeout(() => { if (!dead && CKG && (!CK.gq || CK.gq.j === CK.c || !CK.items.find(it => it.i === CK.gq.j))) ckGameNew(); }, 700); } }
 function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.createElement("div"); el.className = "ivm-cockpit"; el.hidden = true; m.appendChild(el);
   const c_ = doc.createElement("canvas"); el.appendChild(c_); CK.el = el; CK.cv = c_; CK.g = c_.getContext("2d");
   const bar = el.createDiv({ cls: "ckbtns" });
   const back = bar.createEl("button", { text: "Back", attr: { type: "button", "aria-label": "Fly back to the note before (B)" } }); back.onclick = e => { e.stopPropagation(); ckBack(); };
   const ej = bar.createEl("button", { cls: "ckeject", text: "Eject", attr: { type: "button", "aria-label": "Unpin the editor's note" } }); ej.onclick = e => { e.stopPropagation(); try { if (TABS[TCUR] && TABS[TCUR].pin) tabPin(); } catch (_) { /* no editor */ } };
   CK.ej = ej;
+  /* placed by coordinates: back up to see the whole galaxy from above (0.9.145) */
+  const gv = bar.createEl("button", { text: "Galaxy", attr: { type: "button", "aria-description": "See the whole galaxy from above" } }); gv.onclick = e => { e.stopPropagation(); ckOverview(); }; gv.hidden = true; CK.galBtn = gv;
   // True or false (0.8.104): a card at the top of the view
   { const gc = el.createDiv({ cls: "ckgame" }); gc.hidden = true; const hd = gc.createDiv({ cls: "ckghd" }), tx = gc.createDiv({ cls: "ckgtx" }), row = gc.createDiv({ cls: "ckgrow" });
     const bt = row.createEl("button", { cls: "ckgt", text: "1 · True", attr: { type: "button" } }), bf = row.createEl("button", { cls: "ckgf", text: "2 · False", attr: { type: "button" } });
@@ -3058,6 +3060,7 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
 }
 function ckOrder(){ return CK.items.map((it, q) => q).filter(q => ckShows(CK.items[q])).sort((a, b) => { const A = CK.items[a], B = CK.items[b]; return (A.zc > 0 ? 0 : 1) - (B.zc > 0 ? 0 : 1) || A.sx - B.sx; }); }
 function ckShows(it){ return !CK.only || (CK.only === "in" ? it.inn : it.out); }
+function ckOverview(){ const U = ckUniverse(); if (!U.c) return; CK.auto = false; CK.v = 0; CK.settle = { flow: false, vin: 0, P0: CK.P.slice(), P1: [U.c[0], U.c[1], U.c[2] - U.r * 1.05], T: U.c.slice(), t0: win.performance.now() }; }
 function ckBack(){ if (!trail.length) return; const p = trail.pop(); if (p != null && p >= 0) select(p, true); }
 function ckLeftEd(){ try { if (EDS && !EDS.left.el.hidden && !EDS.left.col) { const r = edRect("left"); return r.x + r.w + 8; } } catch (_) { /* no editors */ } return 0; }
 // Previews: Off | One | Fewer | Natural | Max (0.8.135, as Compass's): One is the hovered or locked note; the others also preview the most relevant links in view
@@ -3272,7 +3275,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   if (CK.glide) { const G_ = CK.glide, f = Math.min(1, (win.performance.now() - G_.t0) / 1000 / G_.dur), h = G_.s * (1 - Math.pow(1 - f, 3)); if (K.size || CK.drag || CK.auto || CKW === "sf") ckRebase(); else { CK.P = [0, 1, 2].map(q => G_.P0[q] + G_.fw[q] * h); CK.v = 0; CK.roll *= .9; if (f >= 1) ckRebase(); } }   /* Links: the flown arrival eases to a stop, then the view quietly becomes the usual one */   /* Wander lets the arrival swing play out (0.8.165) */
   /* the settle (0.8.133): the ship swings round the note on an arc (never through it),
      always upright, its gaze easing from where it looked onto the note; no roll */
-  if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / (S_.flow ? 3 : 2.4)), e = S_.flow ? 1 - Math.pow(1 - f, 3) : f < .5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2, T = S_.T;
+  if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / (S_.flow ? 3 : coordOn() && CKW === "sf" ? 3.4 : 2.4)), e = S_.flow ? 1 - Math.pow(1 - f, 3) : f < .5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2, T = S_.T;
     if (!S_.u0) { const v0 = [0, 1, 2].map(q => S_.P0[q] - T[q]), r0 = Math.hypot(...v0) || 1, v1 = [0, 1, 2].map(q => S_.P1[q] - T[q]), r1 = Math.hypot(...v1) || 1; S_.u0 = v0.map(v => v / r0); S_.u1 = v1.map(v => v / r1); S_.r0 = r0; S_.r1 = r1; S_.f0 = ckFwd();
       if (S_.flow && S_.aF) { const dur = 3, vr = Math.max(0, S_.vin * -(S_.aF[0] * S_.u0[0] + S_.aF[1] * S_.u0[1] + S_.aF[2] * S_.u0[2])), floor = .55 * Math.min(r0, r1); let m = -vr * dur;   /* 0.8.168: the ship doesn't stop dead and back away; it carries its speed in, swings round and eases out */
         const rr = (q, m_) => (2 * q * q * q - 3 * q * q + 1) * r0 + (q * q * q - 2 * q * q + q) * m_ + (-2 * q * q * q + 3 * q * q) * r1;
@@ -8200,7 +8203,11 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
           c_.checked = k_ === "frame" ? CKFRAME : !!CKX[k_]; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: lab }); qHelp(l_, QH[k_]);
           c_.onchange = () => { if (k_ === "frame") { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); return; } CKX = { ...CKX, [k_]: c_.checked }; save("iv-ckx", CKX); if (k_ === "turn") CKSF.ver = -1; if (k_ === "emo" && c_.checked && !EMOI) void loadEmo(); }; } };
       grp("HUD artifacts", ["rings", "read", "posts", "dial", "mini", "card", "rear", "mirror", "frame"]);   /* Relevance scores follows Display → HUD links now (0.8.309) */
-      grp("Cosmotic elements", ["names", "gas", "gasp", "orb", "lines", "twinkle", "turn", "haze", "emo"]); }
+      grp("Cosmotic elements", ["names", "gas", "gasp", "orb", "lines", "twinkle", "turn", "haze", "emo"]);
+      if (coordCount() >= 20) { fa.createDiv({ cls: "ckmh", text: "Coordinates" }); const grid = fa.createDiv({ cls: "ckxgrid" });   /* the Star Chart gear's two switches, here too (0.9.145) */
+        for (const [lab, get, set, tip] of [["Place by coordinates", () => COORDS, v => { COORDS = v; save("iv-sfcoord", v); starsDirty = true; glowKey = ""; s3dVer = -1; CKSF.ver = -1; CK.sfIn = false; relayout(false); }, "Lay the stars out by the notes' x and y properties (Settings → Coordinate properties) instead of by links."],
+          ["Places only", () => COORDONLY, v => { COORDONLY = v; save("iv-sfplaces", v); computeVis(); BAC.key = ""; glowKey = ""; relayout(false); }, "Only notes with coordinates: overview notes (regions, routes, the home note) leave the sky, so paths run place to place."]]) {
+          const l_ = grid.createEl("label", { cls: "mini lcemo" }), c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = get(); l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: lab }); qHelp(l_, tip); c_.onchange = () => set(c_.checked); } } }
     /* the game, near the bottom (0.8.302) */
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
       for (const [k_, v_] of [["R W  ↑ ↓", "forward, back"], ["T", "impulse: a slow, steady cruise"], ["X V  ← →", "pan left, right"], ["S F", "orbit left, right round the note"], ["G", "Orbit on or off: circle the note, climbing and diving now and then"], ["ly", "distances in light-years: the whole Ideaverse is 100 ly across"], ["E D", "orbit over, under the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
