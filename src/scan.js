@@ -187,7 +187,7 @@ export async function scanVault(adapter, settings, onProgress) {
     }
     for (const l of e.P) { const q = resolve(l, p); if (q && q !== p) { add(propOut, p, q); add(propIn, q, p); } }   // any property's links (topics, source, people…) make both notes linked
     for (const l of e.C) { const q = resolve(l, p); if (q && q !== p && (!isPack(p) || isPack(q))) { add(collIn, q, p); add(collOut, p, q); } }
-    const props = Object.assign({}, e.props); { const nm = {}; for (const k of [...(C.axisProps || []), ...(C.coordProps || [])]) if (e.num && e.num[k] != null) nm[k] = e.num[k]; if (Object.keys(nm).length) props.n = nm; }
+    const props = Object.assign({}, e.props); { const nm = {}; for (const k of [...(C.axisProps || []), ...(C.coordProps || []), "landmark"]) if (e.num && e.num[k] != null) nm[k] = e.num[k]; if (Object.keys(nm).length) props.n = nm; }
     const lines = { length: e.lines }, linkLines = e.linkLines;
     let rank = e.rank; rank = rank === "" || !isFinite(Number(rank)) ? null : Number(rank);
     const created = createdOf(e, C);

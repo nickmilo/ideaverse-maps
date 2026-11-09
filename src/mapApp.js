@@ -618,8 +618,34 @@ function ckCoordArt(g, pr, sf, F){ const A = COORDART, P = sf.P, sc = sf.sc; if 
   g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.lineJoin = "round"; g.lineCap = "round";
   for (const major of [false, true]) { g.lineWidth = major ? 1.5 : 1; g.strokeStyle = major ? "rgba(255,255,255,.6)" : "rgba(255,255,255,.12)";
     for (const r_ of A.routes) { if (r_.major !== major) continue; g.beginPath(); let on = false; for (const [x, y] of r_.P) { const p = pr((x - UC.x) * sc, (y - UC.y) * sc, 0); if (!p) { on = false; continue; } if (on) g.lineTo(p[0], p[1]); else { g.moveTo(p[0], p[1]); on = true; } } g.stroke(); } }
-  g.globalCompositeOperation = "lighter"; }
+  if (RUN) { g.lineWidth = 2.2; g.strokeStyle = "rgba(255,214,110,.85)"; g.beginPath(); let on = false; for (const j of RUN.r.path) { const p = pr(P[3 * j], P[3 * j + 1], P[3 * j + 2]); if (!p) { on = false; continue; } if (on) g.lineTo(p[0], p[1]); else { g.moveTo(p[0], p[1]); on = true; } } g.stroke(); }   /* the run's own lane, in gold */
+  g.font = `600 11px ${css.body || "sans-serif"}`; g.textBaseline = "middle"; g.lineWidth = 3.5; g.strokeStyle = "rgba(3,4,10,.85)";
+  for (const i of landmarks()) { if (!vis[i] || i === CK.c) continue; const p = pr(P[3 * i], P[3 * i + 1], P[3 * i + 2]); if (!p || p[0] < -50 || p[0] > g.canvas.width) continue; const t = N[i].title; g.globalAlpha = Math.max(.45, Math.min(1, 60000 / p[2])); g.strokeText(t, p[0] + 7, p[1]); g.fillStyle = "#f2e6c8"; g.fillText(t, p[0] + 7, p[1]); }
+  g.globalAlpha = 1; g.textBaseline = "alphabetic"; g.globalCompositeOperation = "lighter"; }
 let COORDART = null, COORDCV = null;
+/* landmarks (0.9.146): notes with a landmark property of 1 or more are always named on a coordinate Starfield, Chart and Ship (a world's famous places) */
+let LANDMK = null; const landmarks = () => { if (LANDMK) return LANDMK; LANDMK = []; for (let i = 0; i < n; i++) { const v = N[i].p && N[i].p.n; if (v && v.landmark >= 1) LANDMK.push(i); } return LANDMK; };
+/* Runs (0.9.146): fly a route stop by stop, the route's name across the top; in the Ship each hop is a hyperspace jump and a glide down over the stop */
+let RUN = null;
+const runIv = win.setInterval(() => { if (dead) win.clearInterval(runIv); else runTick(); }, 250);
+function runStart(r_){ RUN = { r: r_, q: -1, t: 0, at: 0, name: N[r_.i].title, a: N[r_.path[0]].title, b: N[r_.path[r_.path.length - 1]].title }; runStep(); }
+function runStop(){ RUN = null; draw(); }
+function runStep(){ if (!RUN) return; RUN.q++; if (RUN.q >= RUN.r.path.length) { const done = RUN; RUN = null; CK.wmsg = `${done.name} · run complete`; draw(); return; }
+  const j = RUN.r.path[RUN.q]; if (!vis[j]) { runStep(); return; } RUN.t = win.performance.now(); RUN.at = 0; CK.runJump = RUN.q > 0; select(j); }
+function runTick(){ if (!RUN || dead) return; const now = win.performance.now(), j = RUN.r.path[RUN.q];
+  if (sel !== j && now - RUN.t > 600) { runStop(); return; }   /* you picked something else: the run ends */
+  if (view === "cockpit") { if (CK.settle || CK.warp > .05) { RUN.at = 0; return; } if (!RUN.at) { RUN.at = now; return; } if (now - RUN.at < 1300) return; }
+  else if (now - RUN.t < 2600) return;
+  runStep(); }
+const runBanner = (g, W, top) => { if (!RUN) return; g.save(); g.globalCompositeOperation = "source-over"; g.textAlign = "center"; g.textBaseline = "top";
+  const t1 = RUN.name.toUpperCase(), t2 = `${RUN.a}  →  ${RUN.b}   ·   ${RUN.q + 1} / ${RUN.r.path.length}   ·   ${N[RUN.r.path[RUN.q]] ? N[RUN.r.path[RUN.q]].title : ""}`;
+  g.font = `600 13px ${css.mono || "monospace"}`; if ("letterSpacing" in g) g.letterSpacing = "3px"; g.lineWidth = 4; g.strokeStyle = "rgba(3,4,10,.85)"; g.strokeText(t1, W / 2, top); g.fillStyle = "rgba(255,225,120,.92)"; g.fillText(t1, W / 2, top);
+  if ("letterSpacing" in g) g.letterSpacing = "0px"; g.font = `500 11.5px ${css.body || "sans-serif"}`; g.strokeText(t2, W / 2, top + 20); g.fillStyle = "rgba(225,232,255,.85)"; g.fillText(t2, W / 2, top + 20); g.restore(); };
+function runMenu(ev, anchor){ const A = COORDART; if (!A || !A.routes.length) return; const m = new Menu(); if (typeof m.setUseNativeMenu === "function") m.setUseNativeMenu(false);
+  if (RUN) m.addItem(it => it.setTitle(`Stop the run (${RUN.name})`).onClick(() => runStop()));
+  const rs = A.routes.filter(r_ => r_.path.length >= 3).sort((p, q) => N[p.i].title.localeCompare(N[q.i].title));
+  for (const r_ of rs) m.addItem(it => it.setTitle(`${N[r_.i].title} · ${r_.path.length} stops`).onClick(() => runStart(r_)));
+  const b = anchor.getBoundingClientRect(); m.showAtPosition({ x: b.left, y: b.bottom + 4 }, anchor.ownerDocument); }
 /* one picture in map space, drawn once per layout: a spiral of faint dust round the middle, then each region as a soft band in its colour (a fine grid,
    each cell given to the region whose notes are densest there, then blurred) */
 function buildCoordArt(){ const A = COORDART; if (!A || A.ver === starVer) return COORDCV; A.ver = starVer;
@@ -643,6 +669,7 @@ function drawCoordArt(bgDim){ const cvA = buildCoordArt(); if (!cvA) return; ctx
   ctx.drawImage(cvA, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0) * k, (UB.y1 - UB.y0) * k); ctx.globalAlpha = 1; }
 /* the routes, bright and thin over the bands, a soft glow under each; drawn every frame so they stay sharp at any zoom */
 function drawCoordRoutes(bgDim){ const A = COORDART; if (!A || !A.routes.length) return; ctx.save(); ctx.lineJoin = "round"; ctx.lineCap = "round";
+  if (RUN) { ctx.lineWidth = 2.4; ctx.strokeStyle = "rgba(255,214,110,.85)"; ctx.beginPath(); RUN.r.path.forEach((j, q) => { const x = sx(SX[j]), y = sy(SY[j]); if (q) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); runBanner(ctx, W, 44); }
   const smooth = (path, PW) => { const P = PW.map(([x, y]) => [sx(x), sy(y)]); ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for (let q = 1; q < P.length - 1; q++) { const mx = (P[q][0] + P[q + 1][0]) / 2, my = (P[q][1] + P[q + 1][1]) / 2; ctx.quadraticCurveTo(P[q][0], P[q][1], mx, my); } const L = P[P.length - 1]; ctx.lineTo(L[0], L[1]); };
   for (const major of [false, true]) for (const [lw, al] of major ? [[6, .08], [1.6, .7]] : [[1, .13]]) { ctx.lineWidth = lw; ctx.strokeStyle = `rgba(255,255,255,${al * Math.max(.4, bgDim)})`;
     for (const r_ of A.routes) { if (r_.major !== major || (!vis[r_.i] && !COORDONLY)) continue; smooth(r_.path, r_.P); ctx.stroke(); } }
@@ -2824,7 +2851,8 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   g.save(); g.beginPath(); g.rect(0, 0, W, VH); g.clip(); g.globalCompositeOperation = "lighter";
   const pr = (x, y, z) => { const [xc, yc, zc] = ckCam(x, y, z); return zc > 12 ? [cx + F * xc / zc, cy + F * yc / zc, zc] : null; };
   if (coordOn() && COORDART) ckCoordArt(g, pr, sf, F);
-  if (CK.galBtn) { const on_ = coordOn(); if (CK.galBtn.hidden === on_) CK.galBtn.hidden = !on_; }
+  if (CK.galBtn) { const on_ = coordOn(); if (CK.galBtn.hidden === on_) CK.galBtn.hidden = !on_; if (CK.runBtn && CK.runBtn.hidden === on_) CK.runBtn.hidden = !on_; if (CK.runBtn) CK.runBtn.toggleClass("on", !!RUN); }
+  if (RUN) runBanner(g, W, 46);
   for (const B of sf.B) { const b = B.b; if (b.coord) continue; p0 = pr(B.x, B.y, B.z); const dist = Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]); if (!p0 && dist > B.r) continue;
     const lay = b.kind === "gal" ? [[1.15, b.hue, .3], [.65, b.hue, .26], [.3, "#fff1d6", .6], [.1, "#ffffff", .85]] : b.kind === "neb" ? [[1, b.hue, .22], [.55, b.hue, .14]] : b.kind === "dwarf" ? [[1.1, b.hue, .26], [.25, "#fff1d6", .35]] : [[1.05, b.hue || "#ffb380", .28], [.4, "#fff1d6", .4]];
     const near = Math.min(1, Math.max(.15, dist / (B.r * 3)));   /* inside a galaxy its glow thins so the stars stay clear */
@@ -3003,7 +3031,7 @@ function ckRebase(){ /* items into the ship's own frame, ship back home: nothing
 function ckFwd(){ const cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch); return [sy_ * cp, sp, cy * cp]; }
 function ckCam(x, y, z){ const dx = x - CK.P[0], dy = y - CK.P[1], dz = z - CK.P[2], cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);
   const xc = cy * dx - sy_ * dz, z1 = sy_ * dx + cy * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1; return [xc, yc, zc]; }
-function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); if (!(CK.settle && CK.settle.flow) && !CK.glide && !(coordOn() && CKW === "sf")) CK.warp = 1;   /* placed by coordinates: you see the galaxy go by instead of a hyperspace flash (0.9.145) */ else CK.fadeT = win.performance.now(); if (CKG && !CK.gj) win.setTimeout(() => { if (!dead && CKG && (!CK.gq || CK.gq.j === CK.c || !CK.items.find(it => it.i === CK.gq.j))) ckGameNew(); }, 700); } }
+function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); const rj = CK.runJump; CK.runJump = false; if (!(CK.settle && CK.settle.flow) && !CK.glide && (!(coordOn() && CKW === "sf") || rj)) CK.warp = 1;   /* placed by coordinates: you see the galaxy go by instead of a hyperspace flash (0.9.145) */ else CK.fadeT = win.performance.now(); if (CKG && !CK.gj) win.setTimeout(() => { if (!dead && CKG && (!CK.gq || CK.gq.j === CK.c || !CK.items.find(it => it.i === CK.gq.j))) ckGameNew(); }, 700); } }
 function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.createElement("div"); el.className = "ivm-cockpit"; el.hidden = true; m.appendChild(el);
   const c_ = doc.createElement("canvas"); el.appendChild(c_); CK.el = el; CK.cv = c_; CK.g = c_.getContext("2d");
   const bar = el.createDiv({ cls: "ckbtns" });
@@ -3012,6 +3040,7 @@ function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.c
   CK.ej = ej;
   /* placed by coordinates: back up to see the whole galaxy from above (0.9.145) */
   const gv = bar.createEl("button", { text: "Galaxy", attr: { type: "button", "aria-description": "See the whole galaxy from above" } }); gv.onclick = e => { e.stopPropagation(); ckOverview(); }; gv.hidden = true; CK.galBtn = gv;
+  const rb = bar.createEl("button", { text: "Runs", attr: { type: "button", "aria-description": "Fly a hyperspace route stop by stop" } }); rb.onclick = e => { e.stopPropagation(); runMenu(e, rb); }; rb.hidden = true; CK.runBtn = rb;
   // True or false (0.8.104): a card at the top of the view
   { const gc = el.createDiv({ cls: "ckgame" }); gc.hidden = true; const hd = gc.createDiv({ cls: "ckghd" }), tx = gc.createDiv({ cls: "ckgtx" }), row = gc.createDiv({ cls: "ckgrow" });
     const bt = row.createEl("button", { cls: "ckgt", text: "1 · True", attr: { type: "button" } }), bf = row.createEl("button", { cls: "ckgf", text: "2 · False", attr: { type: "button" } });
@@ -5151,6 +5180,7 @@ function labels(lit){ let PICKDRAW = null;   // the picked note's name is drawn 
   const must = [];
   if (sel >= 0) must.push(sel); if (hover >= 0) must.push(hover);
   if (expOn() && EXP[view].mustLabel) for (const j of EXP[view].mustLabel()) must.push(j);
+  if (view === "stars" && coordOn()) { if (RUN) must.push(RUN.r.path[RUN.q]); for (const j of landmarks()) if (vis[j]) must.push(j); }   /* a coordinate world's landmarks, always named (0.9.146) */
   const hl = sel >= 0 ? sel : hover;
   if (lit) [...lit].filter(j => j !== hl).sort((a,b) => (N[b].level-N[a].level) || (N[b].score-N[a].score)).forEach(j => must.push(j));
   const seen = new Set(), list = [...must, ...order];
@@ -8124,6 +8154,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     tog("Twinkle", () => twOn, v => { twOn = v; save("iv-twinkle", v); twWake(); });
     if (coordCount() >= 20) tog("Place by coordinates", () => COORDS, v => { COORDS = v; save("iv-sfcoord", v); starsDirty = true; glowKey = ""; s3dVer = -1; CKSF.ver = -1; morph(true); });   /* (0.9.139) */
     if (coordCount() >= 20) tog("Places only", () => COORDONLY, v => { COORDONLY = v; save("iv-sfplaces", v); computeVis(); BAC.key = ""; glowKey = ""; morph(true); });   /* (0.9.143) notes without coordinates step out */
+    if (coordCount() >= 20) { const rb = $("#starpop").createEl("button", { text: RUN ? `Stop the run · ${RUN.name}` : "Fly a run…", cls: "mini sfrun", attr: { type: "button", "aria-description": "Travel a hyperspace route stop by stop" } });
+      rb.onclick = e => { e.stopPropagation(); if (RUN) { runStop(); rb.textContent = "Fly a run…"; } else runMenu(e, rb); }; }   /* (0.9.146) */
     tog("Turning galaxies", () => sTurn, v => { sTurn = v; save("iv-sturn", v); turnSync(); if (!v && view === "stars") { glowKey = ""; morph(true); } }); }
   // a tighter Starfield menu (0.8.9, with Filter as the reference): the three ways to see it as one row, the chosen one's line beneath,
   // Star Chart's layers two to a row under it, then Galaxy glow, then the switches in one list
