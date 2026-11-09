@@ -13,7 +13,7 @@ const SHOTS = process.env.SHOTS || path.join(require('os').tmpdir(), 'ivm-shots'
   for (const f of ['main.js', 'manifest.json', 'styles.css']) fs.copyFileSync(path.join(ROOT, f), path.join(plug, f));
   try { fs.unlinkSync(path.join(vault, '.obsidian/workspace.json')); } catch (e) {}
   if (process.env.FRESH) try { fs.unlinkSync(path.join(plug, 'data.json')); } catch (e) {}
-  fs.writeFileSync(path.join(vault, '.obsidian/community-plugins.json'), JSON.stringify(['ideaverse-maps']));
+  fs.writeFileSync(path.join(vault, '.obsidian/community-plugins.json'), JSON.stringify(['ideaverse-maps', ...(process.env.EXTRA ? process.env.EXTRA.split(',') : [])]));   // EXTRA: other plugins already in the vault, such as an extension
   fs.mkdirSync(DATA, { recursive: true });
   fs.writeFileSync(path.join(DATA, 'obsidian.json'), JSON.stringify({ vaults: { t1: { path: vault, ts: Date.now(), open: true } } }));
   const p = spawn(OBSIDIAN, ['--no-sandbox', `--user-data-dir=${DATA}`, ...(process.env.GPU ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : ['--disable-gpu']), '--remote-debugging-port=9333', `--window-size=${Wd},${Ht}`], { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -27,7 +27,7 @@ const SHOTS = process.env.SHOTS || path.join(require('os').tmpdir(), 'ivm-shots'
   await page.waitForFunction(() => window.app && app.workspace && app.workspace.layoutReady, null, { timeout: 30000 });
   await page.evaluate(([w, h]) => { try { const r = require('@electron/remote'); r.getCurrentWindow().setSize(w, h); } catch (e) { try { require('electron').remote.getCurrentWindow().setSize(w, h); } catch (e2) {} } }, [+Wd, +Ht]);
   await page.evaluate(() => { const l = app.workspace.leftSplit; if (l && !l.collapsed) l.collapse(); });
-  await page.evaluate(async () => { if (!app.plugins.isEnabled()) await app.plugins.setEnable(true); if (!app.plugins.plugins['ideaverse-maps']) await app.plugins.enablePluginAndSave('ideaverse-maps'); });
+  await page.evaluate(async (X) => { if (!app.plugins.isEnabled()) await app.plugins.setEnable(true); if (!app.plugins.plugins['ideaverse-maps']) await app.plugins.enablePluginAndSave('ideaverse-maps'); for (const id of X) if (!app.plugins.plugins[id]) await app.plugins.enablePluginAndSave(id); }, process.env.EXTRA ? process.env.EXTRA.split(',') : []);
   await sleep(500);
   await page.evaluate(() => { for (const l of app.workspace.getLeavesOfType('bases')) l.detach(); });   // start with no stray base tabs (each holds its own map)
   // tests: open whichever toolbar menu holds a control (the current map's menu, or Arrange/Group/Filter/Display)

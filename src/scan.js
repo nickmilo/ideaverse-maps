@@ -43,7 +43,6 @@ export const DEFAULTS = {
   privateFolders: [],     // only big maps (Level 3+) from these folders appear
   homeNotes: [],          // always Level 5
   axisProps: ["year"],
-  coordProps: ["x", "y"],   // two number properties that place a note at fixed coordinates (Starfield → Place by coordinates)
   dateProps: ["created", "createdAt", "created_at", "created on", "date created", "dateCreated", "creation date", "creation_date", "date"],  // the property that says when a note was made; the first one a note has wins (any capitalization)    // number properties offered under By → More… (as well as the built-in axes)
   mapFolders: [],         // every note in these folders counts as a map
   mapCollections: ["Maps", "Views"],   // notes listed in these collections count as maps
@@ -187,7 +186,7 @@ export async function scanVault(adapter, settings, onProgress) {
     }
     for (const l of e.P) { const q = resolve(l, p); if (q && q !== p) { add(propOut, p, q); add(propIn, q, p); } }   // any property's links (topics, source, people…) make both notes linked
     for (const l of e.C) { const q = resolve(l, p); if (q && q !== p && (!isPack(p) || isPack(q))) { add(collIn, q, p); add(collOut, p, q); } }
-    const props = Object.assign({}, e.props); { const nm = {}; for (const k of [...(C.axisProps || []), ...(C.coordProps || []), "landmark"]) if (e.num && e.num[k] != null) nm[k] = e.num[k]; if (Object.keys(nm).length) props.n = nm; }
+    const props = Object.assign({}, e.props); { const nm = {}; for (const k of (C.axisProps || [])) if (e.num && e.num[k] != null) nm[k] = e.num[k]; if (Object.keys(nm).length) props.n = nm; }
     const lines = { length: e.lines }, linkLines = e.linkLines;
     let rank = e.rank; rank = rank === "" || !isFinite(Number(rank)) ? null : Number(rank);
     const created = createdOf(e, C);
@@ -286,7 +285,7 @@ export async function scanVault(adapter, settings, onProgress) {
   }
 
   return { generated: new Date().toISOString().slice(0, 19), vault: adapter.vaultName || "Vault",
-    settings: { axis_props: C.axisProps || [], coord_props: C.coordProps || ["x", "y"], date_props: C.dateProps || ["created"], exclude: C.exclude, moc_only: C.privateFolders, home_notes: C.homeNotes, l5_top: L5, l4_map_links: C.l4MapLinks, l3_min_out: C.l3MinOut,
+    settings: { axis_props: C.axisProps || [], date_props: C.dateProps || ["created"], exclude: C.exclude, moc_only: C.privateFolders, home_notes: C.homeNotes, l5_top: L5, l4_map_links: C.l4MapLinks, l3_min_out: C.l3MinOut,
       l3_density: C.l3Density, promote_l4: C.promoteL4, promote_l3: C.promoteL3, nav_jaccard: C.navJaccard, weights: W, map_folders: C.mapFolders,
       map_collections: C.mapCollections, packs: PACKS, archive: ARCHIVE },
     nodes, edges, unresolved, dropped: dropped.length };

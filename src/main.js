@@ -14,6 +14,10 @@ export default class IdeaverseMapsPlugin extends Plugin {
     this.graph = null;          // the last scan, shared by every open map
     this.dirty = false;         // notes changed since the last scan
 
+    // extensions (0.9.147): another plugin, an expansion pack's, registers hooks here; open maps remount to pick them up. See docs/extensions.md
+    this.exts = [];
+    const remountMaps = () => { for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) if (leaf.view instanceof MapView && leaf.view.map) void leaf.view.reload(); };
+    this.api = { version: 1, register: ext => { this.exts.push(ext); remountMaps(); return () => { this.exts = this.exts.filter(e => e !== ext); remountMaps(); }; } };
     this.registerView(VIEW_TYPE, leaf => new MapView(leaf, this));
     this.addRibbonIcon("orbit", "Open Maps of the Ideaverse", () => { void this.openMap(); });
     this.addCommand({ id: "open", name: "Open map", callback: () => { void this.openMap(); } });

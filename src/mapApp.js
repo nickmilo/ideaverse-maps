@@ -223,8 +223,8 @@ function computeVis(){ VISV++; const fs = new Set(folders);
       && (!fset || fset[i] || curV() === "people")) ? 1 : 0; }
   // tags switched off (Treemap, Bookshelf and Chord by tags) leave the map
   if (tagHide.on()) for (let i=0;i<n;i++) if (vis[i] && tagHide.hid(i)) vis[i] = 0;
-  /* Place by coordinates, places only (0.9.143): notes without coordinates (a galaxy's regions, sectors, routes, its home note) leave Starfield, so the way home and the paths run place to place */
-  try { if (COORDONLY && coordOn() && (view === "stars" || view === "cockpit")) for (let i = 0; i < n; i++) if (vis[i] && !COORDV(i)) vis[i] = 0; } catch (_) { /* not set up yet */ }
+  /* an extension may hide notes in Starfield (0.9.147) */
+  try { const x = (view === "stars" || view === "cockpit") && xOn(); if (x && x.hide) for (let i = 0; i < n; i++) if (vis[i] && x.hide(i)) vis[i] = 0; } catch (_) { /* not set up yet */ }
   if (YRV.has(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
   if (winSpan() && YRV.has(curV()) && !YRALL) { const w0 = winStart(), w1 = winEnd(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0 && TV[i] < w1)) vis[i] = 0; }   /* both ends: fixed dates end before today (0.9.17) */
   if (BYMT) capDays();
@@ -558,122 +558,20 @@ const gapAng = () => mode === "ace" ? ((aceArc || (buildAceArc(), aceArc)) ? ace
 const SX = new Float32Array(n), SY = new Float32Array(n), SR = new Float32Array(n), SC = new Uint8Array(n);
 const BOD = new Int32Array(n).fill(-1), COREB = new Int32Array(n).fill(-1);
 let BODIES = [], UB = {x0:0, y0:0, x1:WW, y1:WH}, starsDirty = true, starVer = 0;
-/* Place by coordinates (0.9.139): a vault whose notes carry two number properties (Settings → Coordinate properties, x and y by default) can lay Starfield out by them
-   instead of by links: a map's own grid, a galaxy's, a city's. Notes without coordinates sit beside the notes they link to (the mean of their placed neighbours, three
-   passes), and the rest ring the edge. Galaxies (bodies) are dropped: the coordinates are the picture. Off unless switched on in Starfield's gear, and only offered when
-   at least 20 notes have both. */
-const COORDK = (() => { const k = (D.settings && D.settings.coord_props) || ["x", "y"]; return [k[0] || "x", k[1] || "y"]; })();
-const COORDV = i => { const v = N[i] && N[i].p && N[i].p.n; if (!v) return null; const x = v[COORDK[0]], y = v[COORDK[1]]; return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null; };
-let COORDN = -1; const coordCount = () => { if (COORDN < 0) { COORDN = 0; for (let i = 0; i < n; i++) if (COORDV(i)) COORDN++; } return COORDN; };
-let COORDS = pref("iv-sfcoord", false) === true, COORDONLY = pref("iv-sfplaces", false) === true; const coordOn = () => COORDS && coordCount() >= 20;
-if (COORDONLY) win.setTimeout(() => { try { if (coordOn()) { relayout(false); BAC.key = ""; } } catch (_) { /* the map closed first */ } }, 0);   /* the first filter ran before these existed */
-/* where a group of points is thickest: the mean of the fullest cell on a grid an eighth of their spread wide. A ring (the Outer Rim) has no middle worth naming,
-   so a hub or a region's name goes where its notes actually gather */
-function denseAt(xy){ if (xy.length < 4) { let x = 0, y = 0; for (const [a, b] of xy) { x += a; y += b; } return [x / xy.length, y / xy.length]; }
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [a, b] of xy) { x0 = Math.min(x0, a); x1 = Math.max(x1, a); y0 = Math.min(y0, b); y1 = Math.max(y1, b); }
-  const c = Math.max(x1 - x0, y1 - y0, 1e-9) / 8, m = new Map(); for (const [a, b] of xy) { const k = Math.floor((a - x0) / c) + "," + Math.floor((b - y0) / c), o = m.get(k) || m.set(k, [0, 0, 0]).get(k); o[0] += a; o[1] += b; o[2]++; }
-  let best = null; for (const o of m.values()) if (!best || o[2] > best[2]) best = o; return [best[0] / best[2], best[1] / best[2]]; }
-function coordPlace(B, web){
-  const pts = []; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (let i = 0; i < n; i++) { const c = COORDV(i); if (!c) continue; pts.push(i); x0 = Math.min(x0, c[0]); x1 = Math.max(x1, c[0]); y0 = Math.min(y0, c[1]); y1 = Math.max(y1, c[1]); }
-  const span = Math.max(x1 - x0, y1 - y0, 1e-9), S = 2600 / span, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, set = new Uint8Array(n);
-  for (const i of pts) { const c = COORDV(i); SX[i] = UC.x + (c[0] - cx) * S; SY[i] = UC.y + (c[1] - cy) * S; set[i] = 1; }
-  for (let pass = 0; pass < 3; pass++) { const nx = []; for (let i = 0; i < n; i++) { if (set[i]) continue; let sx = 0, sy = 0, k = 0; const xy = []; for (const j of out[i].concat(inn[i])) if (set[j]) xy.push([SX[j], SY[j]]); if (xy.length) { const [x, y] = denseAt(xy); nx.push([i, x, y]); } }
-    for (const [i, x, y] of nx) { const a = hash(N[i].path, 37) * 6.2832, r = 14 + hash(N[i].path, 38) * 22; SX[i] = x + Math.cos(a) * r; SY[i] = y + Math.sin(a) * r; set[i] = 1; } }
-  for (let i = 0; i < n; i++) { BOD[i] = -1; if (set[i]) continue; const a = hash(N[i].path, 37) * 6.2832, r = 1500 + hash(N[i].path, 38) * 200; SX[i] = UC.x + Math.cos(a) * r; SY[i] = UC.y + Math.sin(a) * r; }
-  B.length = 0; web.length = 0; BOD.fill(-1); COREB.fill(-1);
-  /* regions: the placed notes grouped by folder, at the first depth that gives 3 to 40 groups (a galaxy's regions, a city's boroughs), each a tinted glow with its name.
-     The stars keep their coordinates (BOD stays -1); the bodies only light and name the regions */
-  const dirAt = (p, d) => { const parts = p.split("/").slice(0, -1); return parts.length >= d ? parts.slice(0, d).join("/") : null; };
-  let groups = null, np = 0; for (let i = 0; i < n; i++) if (set[i]) np++; const minG = Math.max(5, Math.round(np * .02));   /* the depth with the most sizable folders (2% of the notes or more), 3 to 40 of them */
-  for (let d = 1; d <= 4; d++) { const m = new Map(); for (let i = 0; i < n; i++) { if (!set[i]) continue; const k = dirAt(N[i].path, d); if (k == null) continue; (m.get(k) || m.set(k, []).get(k)).push(i); }
-    const big = [...m.entries()].filter(([, v]) => v.length >= minG); if (big.length >= 3 && big.length <= 40 && (!groups || big.length > groups.length)) groups = big; }
-  const HUES = ["#8fa6ff", "#ffb36b", "#7fe0c4", "#ff8fb1", "#c9a2ff", "#ffe07a", "#6fd3ff", "#ff9e7d", "#a6e37a", "#e7a6ff", "#7aa8ff", "#ffc7a0"];
-  if (groups) groups.sort((p, q) => q[1].length - p[1].length).forEach(([k, mem], g) => { const [mx, my] = denseAt(mem.map(i => [SX[i], SY[i]]));
-    const ds = mem.map(i => Math.hypot(SX[i] - mx, SY[i] - my)).sort((p, q) => p - q), r = Math.max(60, Math.min(520, ds[Math.floor(ds.length * .5)] || 60));
-    const b = { kind: "neb", coord: true, name: k.split("/").pop(), members: mem, x: mx - UC.x, y: my - UC.y, r, hue: HUES[g % HUES.length], seed: "coord" + k, id: B.length }; B.push(b); });
-  /* the art the coordinates call for (0.9.142): region bands coloured from the middle out, the routes as lines, a spiral behind */
-  let cx0 = 0, cy0 = 0; for (const i of pts) { cx0 += SX[i]; cy0 += SY[i]; } cx0 /= pts.length || 1; cy0 /= pts.length || 1;
-  const RAMP = ["#f4f1ea", "#ffd27a", "#ffa98f", "#ff8fb8", "#c9a2ff", "#8fd3e8", "#6fb2ff", "#5b8de6", "#4b6fc9", "#3d5aa8"];
-  const regs = (groups || []).map(([k, mem]) => { const pm = mem.filter(i => COORDV(i)); const d = pm.map(i => Math.hypot(SX[i] - cx0, SY[i] - cy0)).sort((p, q) => p - q); return { k, mem: pm, d: d.length ? d[d.length >> 1] : 1e9 }; }).filter(r_ => r_.mem.length);
-  regs.sort((p, q) => p.d - q.d); regs.forEach((r_, q) => { r_.col = RAMP[Math.min(RAMP.length - 1, Math.round(q * (RAMP.length - 1) / Math.max(1, regs.length - 1)))]; });
-  const isC = new Uint8Array(n); for (const i of pts) isC[i] = 1; const routes = [];
-  for (let i = 0; i < n; i++) { if (isC[i]) continue; const st = [...new Set(out[i])].filter(j => isC[j]); if (st.length < 3 || st.length > 80) continue;
-    /* along the stops' main axis (their first principal direction), so a long lane reads as one stroke, not a zigzag */
-    let mx = 0, my = 0; for (const j of st) { mx += SX[j]; my += SY[j]; } mx /= st.length; my /= st.length; let sxx = 0, syy = 0, sxy = 0; for (const j of st) { const dx = SX[j] - mx, dy = SY[j] - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
-    const th = .5 * Math.atan2(2 * sxy, sxx - syy), ux = Math.cos(th), uy = Math.sin(th); const path = st.slice().sort((p, q) => ((SX[p] - mx) * ux + (SY[p] - my) * uy) - ((SX[q] - mx) * ux + (SY[q] - my) * uy));
-    const P0 = path.map(j => [SX[j], SY[j]]), K = Math.max(1, Math.round(P0.length / 8)), P = P0.map((_, q) => { let x = 0, y = 0, c_ = 0; for (let z = Math.max(0, q - K); z <= Math.min(P0.length - 1, q + K); z++) { x += P0[z][0]; y += P0[z][1]; c_++; } return [x / c_, y / c_]; });   /* a running mean along the lane: a smooth stroke through where its stops lie */
-    P[0] = P0[0]; P[P.length - 1] = P0[P0.length - 1]; routes.push({ i, path, P, w: st.length }); }
-  routes.sort((p, q) => q.w - p.w); routes.forEach((r_, q) => { r_.major = q < 6; });
-  const colOf = new Array(n).fill(null); for (const r_ of regs) for (const i of r_.mem) colOf[i] = r_.col;
-  let R0 = 0; for (const i of pts) R0 = Math.max(R0, Math.hypot(SX[i] - cx0, SY[i] - cy0)); R0 = R0 || 1000; let a_ = 131; const rnd = () => { a_ = (a_ * 16807) % 2147483647; return a_ / 2147483647; }, dust = [];
-  for (let q = 0; q < 4200; q++) { const arm = q % 3, t = Math.pow(rnd(), .85), r = R0 * (.1 + 1.2 * t), ang = arm * 2.0944 + 5.2 * Math.log(1 + 2.2 * t) + (rnd() - .5) * (.35 + .25 * t); dust.push([cx0 + Math.cos(ang) * r, cy0 + Math.sin(ang) * r, (rnd() - .5) * 60, rnd()]); }
-  COORDART = { regs, routes, cx: cx0, cy: cy0, ver: -1, colOf, dust }; }
-/* the same picture in the Ship (0.9.144): each placed star lights a soft patch in its region's colour, the dust spiral as faint points, the routes as lines, all in the galaxy's plane */
-function ckCoordArt(g, pr, sf, F){ const A = COORDART, P = sf.P, sc = sf.sc; if (!A) return;
-  g.globalCompositeOperation = "lighter";
-  for (const [x, y, z, w] of A.dust) { const p = pr((x - UC.x) * sc, (y - UC.y) * sc, z * sc); if (!p) continue; const r = Math.max(.6, Math.min(3, F * 5 * sc / p[2])); g.globalAlpha = .1 + .18 * w; g.fillStyle = w < .55 ? "#5fd0d8" : "#8fa8ff"; g.fillRect(p[0] - r / 2, p[1] - r / 2, r, r); }
-  const rw = 140 * sc; for (let i = 0; i < n; i++) { const col = A.colOf[i]; if (!col || !vis[i]) continue; const p = pr(P[3 * i], P[3 * i + 1], P[3 * i + 2]); if (!p) continue; const r = F * rw / p[2]; if (r < 1.5) continue;
-    const rr = Math.min(320, r); g.globalAlpha = .055 * Math.min(1, 200 / rr); g.drawImage(sprite(col), p[0] - rr, p[1] - rr, rr * 2, rr * 2); }
-  g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.lineJoin = "round"; g.lineCap = "round";
-  for (const major of [false, true]) { g.lineWidth = major ? 1.5 : 1; g.strokeStyle = major ? "rgba(255,255,255,.6)" : "rgba(255,255,255,.12)";
-    for (const r_ of A.routes) { if (r_.major !== major) continue; g.beginPath(); let on = false; for (const [x, y] of r_.P) { const p = pr((x - UC.x) * sc, (y - UC.y) * sc, 0); if (!p) { on = false; continue; } if (on) g.lineTo(p[0], p[1]); else { g.moveTo(p[0], p[1]); on = true; } } g.stroke(); } }
-  if (RUN) { g.lineWidth = 2.2; g.strokeStyle = "rgba(255,214,110,.85)"; g.beginPath(); let on = false; for (const j of RUN.r.path) { const p = pr(P[3 * j], P[3 * j + 1], P[3 * j + 2]); if (!p) { on = false; continue; } if (on) g.lineTo(p[0], p[1]); else { g.moveTo(p[0], p[1]); on = true; } } g.stroke(); }   /* the run's own lane, in gold */
-  g.font = `600 11px ${css.body || "sans-serif"}`; g.textBaseline = "middle"; g.lineWidth = 3.5; g.strokeStyle = "rgba(3,4,10,.85)";
-  for (const i of landmarks()) { if (!vis[i] || i === CK.c) continue; const p = pr(P[3 * i], P[3 * i + 1], P[3 * i + 2]); if (!p || p[0] < -50 || p[0] > g.canvas.width) continue; const t = N[i].title; g.globalAlpha = Math.max(.45, Math.min(1, 60000 / p[2])); g.strokeText(t, p[0] + 7, p[1]); g.fillStyle = "#f2e6c8"; g.fillText(t, p[0] + 7, p[1]); }
-  g.globalAlpha = 1; g.textBaseline = "alphabetic"; g.globalCompositeOperation = "lighter"; }
-let COORDART = null, COORDCV = null;
-/* landmarks (0.9.146): notes with a landmark property of 1 or more are always named on a coordinate Starfield, Chart and Ship (a world's famous places) */
-let LANDMK = null; const landmarks = () => { if (LANDMK) return LANDMK; LANDMK = []; for (let i = 0; i < n; i++) { const v = N[i].p && N[i].p.n; if (v && v.landmark >= 1) LANDMK.push(i); } return LANDMK; };
-/* Runs (0.9.146): fly a route stop by stop, the route's name across the top; in the Ship each hop is a hyperspace jump and a glide down over the stop */
-let RUN = null;
-const runIv = win.setInterval(() => { if (dead) win.clearInterval(runIv); else runTick(); }, 250);
-function runStart(r_){ RUN = { r: r_, q: -1, t: 0, at: 0, name: N[r_.i].title, a: N[r_.path[0]].title, b: N[r_.path[r_.path.length - 1]].title }; runStep(); }
-function runStop(){ RUN = null; draw(); }
-function runStep(){ if (!RUN) return; RUN.q++; if (RUN.q >= RUN.r.path.length) { const done = RUN; RUN = null; CK.wmsg = `${done.name} · run complete`; draw(); return; }
-  const j = RUN.r.path[RUN.q]; if (!vis[j]) { runStep(); return; } RUN.t = win.performance.now(); RUN.at = 0; CK.runJump = RUN.q > 0; select(j); }
-function runTick(){ if (!RUN || dead) return; const now = win.performance.now(), j = RUN.r.path[RUN.q];
-  if (sel !== j && now - RUN.t > 600) { runStop(); return; }   /* you picked something else: the run ends */
-  if (view === "cockpit") { if (CK.settle || CK.warp > .05) { RUN.at = 0; return; } if (!RUN.at) { RUN.at = now; return; } if (now - RUN.at < 1300) return; }
-  else if (now - RUN.t < 2600) return;
-  runStep(); }
-const runBanner = (g, W, top) => { if (!RUN) return; g.save(); g.globalCompositeOperation = "source-over"; g.textAlign = "center"; g.textBaseline = "top";
-  const t1 = RUN.name.toUpperCase(), t2 = `${RUN.a}  →  ${RUN.b}   ·   ${RUN.q + 1} / ${RUN.r.path.length}   ·   ${N[RUN.r.path[RUN.q]] ? N[RUN.r.path[RUN.q]].title : ""}`;
-  g.font = `600 13px ${css.mono || "monospace"}`; if ("letterSpacing" in g) g.letterSpacing = "3px"; g.lineWidth = 4; g.strokeStyle = "rgba(3,4,10,.85)"; g.strokeText(t1, W / 2, top); g.fillStyle = "rgba(255,225,120,.92)"; g.fillText(t1, W / 2, top);
-  if ("letterSpacing" in g) g.letterSpacing = "0px"; g.font = `500 11.5px ${css.body || "sans-serif"}`; g.strokeText(t2, W / 2, top + 20); g.fillStyle = "rgba(225,232,255,.85)"; g.fillText(t2, W / 2, top + 20); g.restore(); };
-function runMenu(ev, anchor){ const A = COORDART; if (!A || !A.routes.length) return; const m = new Menu(); if (typeof m.setUseNativeMenu === "function") m.setUseNativeMenu(false);
-  if (RUN) m.addItem(it => it.setTitle(`Stop the run (${RUN.name})`).onClick(() => runStop()));
-  const rs = A.routes.filter(r_ => r_.path.length >= 3).sort((p, q) => N[p.i].title.localeCompare(N[q.i].title));
-  for (const r_ of rs) m.addItem(it => it.setTitle(`${N[r_.i].title} · ${r_.path.length} stops`).onClick(() => runStart(r_)));
-  const b = anchor.getBoundingClientRect(); m.showAtPosition({ x: b.left, y: b.bottom + 4 }, anchor.ownerDocument); }
-/* one picture in map space, drawn once per layout: a spiral of faint dust round the middle, then each region as a soft band in its colour (a fine grid,
-   each cell given to the region whose notes are densest there, then blurred) */
-function buildCoordArt(){ const A = COORDART; if (!A || A.ver === starVer) return COORDCV; A.ver = starVer;
-  const ww = UB.x1 - UB.x0, wh = UB.y1 - UB.y0, gs = Math.min(1, 1600 / Math.max(ww, wh)); COORDCV ||= doc.createElement("canvas"); COORDCV.width = Math.ceil(ww * gs); COORDCV.height = Math.ceil(wh * gs);
-  const c = COORDCV.getContext("2d"), gx = x => (x - UB.x0) * gs, gy = y => (y - UB.y0) * gs; c.clearRect(0, 0, COORDCV.width, COORDCV.height);
-  let R = 0; for (const r_ of A.regs) for (const i of r_.mem) R = Math.max(R, Math.hypot(SX[i] - A.cx, SY[i] - A.cy)); R = R || 1000;
-  /* the spiral: two arms of dust, turning out past the regions */
-  c.globalCompositeOperation = "lighter"; let a_ = 97; const rnd = () => { a_ = (a_ * 16807) % 2147483647; return a_ / 2147483647; };
-  for (let q = 0; q < 16000; q++) { const arm = q % 3, t = Math.pow(rnd(), .85), r = R * (.1 + 1.2 * t), ang = arm * 2.0944 + 5.2 * Math.log(1 + 2.2 * t) + (rnd() - .5) * (.35 + .25 * t), sp = R * .035 * (rnd() - .5);
-    const x = A.cx + Math.cos(ang) * r + sp, y = A.cy + Math.sin(ang) * r + sp, s = (.6 + rnd() * 1.6) * Math.max(1, gs * 4); c.globalAlpha = (.06 + .14 * rnd()) * (1.25 - .55 * t); c.fillStyle = rnd() < .55 ? "#5fd0d8" : rnd() < .5 ? "#7f9cff" : "#cfe6ff"; c.beginPath(); c.arc(gx(x), gy(y), s, 0, 6.2832); c.fill(); }
-  c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
-  /* the bands */
-  const cell = 30, nx = Math.ceil(ww / cell), ny = Math.ceil(wh / cell), dens = A.regs.map(() => new Float32Array(nx * ny)), rad = 4;
-  A.regs.forEach((r_, q) => { const D = dens[q]; for (const i of r_.mem) { const ix = Math.floor((SX[i] - UB.x0) / cell), iy = Math.floor((SY[i] - UB.y0) / cell);
-    for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) { const x = ix + dx, y = iy + dy; if (x < 0 || y < 0 || x >= nx || y >= ny) continue; const w = Math.exp(-(dx * dx + dy * dy) / 8); D[y * nx + x] += w; } } });
-  const band = doc.createElement("canvas"); band.width = COORDCV.width; band.height = COORDCV.height; const bc = band.getContext("2d");
-  for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) { let best = -1, bv = .35; for (let q = 0; q < dens.length; q++) { const v = dens[q][y * nx + x]; if (v > bv) { bv = v; best = q; } } if (best < 0) continue;
-    bc.globalAlpha = Math.min(.5, .16 + bv * .04); bc.fillStyle = A.regs[best].col; bc.fillRect(Math.floor(x * cell * gs), Math.floor(y * cell * gs), Math.ceil(cell * gs) + 1, Math.ceil(cell * gs) + 1); }
-  c.filter = `blur(${Math.max(3, cell * gs * 1.4)}px)`; c.drawImage(band, 0, 0); c.filter = "none"; return COORDCV; }
-function drawCoordArt(bgDim){ const cvA = buildCoordArt(); if (!cvA) return; ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = Math.min(1, .9 * Math.max(.35, bgDim));
-  ctx.drawImage(cvA, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0) * k, (UB.y1 - UB.y0) * k); ctx.globalAlpha = 1; }
-/* the routes, bright and thin over the bands, a soft glow under each; drawn every frame so they stay sharp at any zoom */
-function drawCoordRoutes(bgDim){ const A = COORDART; if (!A || !A.routes.length) return; ctx.save(); ctx.lineJoin = "round"; ctx.lineCap = "round";
-  if (RUN) { ctx.lineWidth = 2.4; ctx.strokeStyle = "rgba(255,214,110,.85)"; ctx.beginPath(); RUN.r.path.forEach((j, q) => { const x = sx(SX[j]), y = sy(SY[j]); if (q) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); runBanner(ctx, W, 44); }
-  const smooth = (path, PW) => { const P = PW.map(([x, y]) => [sx(x), sy(y)]); ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); for (let q = 1; q < P.length - 1; q++) { const mx = (P[q][0] + P[q + 1][0]) / 2, my = (P[q][1] + P[q + 1][1]) / 2; ctx.quadraticCurveTo(P[q][0], P[q][1], mx, my); } const L = P[P.length - 1]; ctx.lineTo(L[0], L[1]); };
-  for (const major of [false, true]) for (const [lw, al] of major ? [[6, .08], [1.6, .7]] : [[1, .13]]) { ctx.lineWidth = lw; ctx.strokeStyle = `rgba(255,255,255,${al * Math.max(.4, bgDim)})`;
-    for (const r_ of A.routes) { if (r_.major !== major || (!vis[r_.i] && !COORDONLY)) continue; smooth(r_.path, r_.P); ctx.stroke(); } }
-  ctx.restore(); }
+/* extensions (0.9.147): another plugin (an expansion pack's) can lay Starfield out its own way, hide notes there, draw over the Chart and the Ship,
+   always name some notes and add controls. host.exts() lists them; each attach(handle) returns its hooks for this map, or nothing. See docs/extensions.md */
+const XH = {
+  get N(){ return N; }, get n(){ return n; }, get view(){ return view; }, get sel(){ return sel; }, get vis(){ return vis; }, get SX(){ return SX; }, get SY(){ return SY; },
+  get out(){ return out; }, get inn(){ return inn; }, get W(){ return W; }, get H(){ return H; }, get UB(){ return UB; }, get starVer(){ return starVer; }, get fonts(){ return { mono: css.mono, body: css.body }; },
+  win, doc, Menu, hash, sprite: c => sprite(c),
+  select: i => select(i), draw: () => draw(), pref: (k_, v) => pref(k_, v), save: (k_, v) => save(k_, v),
+  relayout: () => { starsDirty = true; glowKey = ""; s3dVer = -1; CKSF.ver = -1; CK.sfIn = false; relayout(false); },
+  refilter: () => { computeVis(); BAC.key = ""; glowKey = ""; relayout(false); },
+  shipOverview: () => ckOverview(), shipHold: on => { CK.hold = !!on; }, shipJump: () => { CK.jumpNext = true; }, shipBusy: () => !!(CK.settle || CK.warp > .05), say: t => { CK.wmsg = t; draw(); } };
+const EXTS = []; for (const e of (host.exts ? host.exts() : [])) { try { const x = e && e.attach && e.attach(XH); if (x) { x.name ||= e.name || "Extension"; EXTS.push(x); } } catch (err) { console.error("Maps of the Ideaverse: an extension failed to attach", err); } }
+const xOn = () => { for (const x of EXTS) { try { if (x.active && x.active()) return x; } catch (_) { /* a broken extension stays off */ } } return null; };
+const xCall = (f, ...a) => { for (const x of EXTS) if (x[f]) { try { x[f](...a); } catch (err) { console.error(`Maps of the Ideaverse: extension ${f}`, err); } } };
+if (EXTS.length) win.setTimeout(() => { try { if (xOn()) { relayout(false); BAC.key = ""; } } catch (_) { /* the map closed first */ } }, 0);   /* the first filter ran before the extensions were attached */
 const UC = {x: WW/2, y: WH/2};
 const SADJ = Array.from({length:n}, () => []);
 for (const [a,b,t] of E) if ((t <= 1 || t === 4) && !ARCH[a] && !ARCH[b]) { SADJ[a].push(b); SADJ[b].push(a); }
@@ -791,13 +689,13 @@ function layoutStars(){
         lx += g1*wdt; ly += g2*wdt; const m = Math.hypot(lx, ly), soft = .75*b.r; if (m > soft) { const m2 = soft + (b.r - soft)*(1 - Math.exp(-(m - soft)/(b.r - soft))); lx *= m2/m; ly *= m2/m; }   // past three-quarters out, ease toward the edge instead of piling up on it
         SX[i] = UC.x + b.x + lx; SY[i] = UC.y + b.y + ly; continue; }
     } }
-  COORDART = null; if (coordOn()) coordPlace(B, web);
+  let xPlaced = false; { const x = xOn(); if (x && x.place) try { xPlaced = !!x.place({ B, web, SX, SY, BOD, COREB, UC, out, inn, hash }); } catch (err) { console.error("Maps of the Ideaverse: extension place", err); } }   /* an extension lays the stars out (0.9.147) */
   for (let i=0;i<n;i++) { const lv = N[i].level;
     SR[i] = (lv === 5 ? 3.4 + Math.min(N[i].score, 30)*.08 : lv === 4 ? 2.4 : lv === 3 ? 1.6 : lv === 2 ? 1 + Math.min(N[i].score, 5)*.1 : .8) * (ARCH[i] ? .85 : 1); }
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const b of B) { x0 = Math.min(x0, UC.x + b.x - b.r); x1 = Math.max(x1, UC.x + b.x + b.r); y0 = Math.min(y0, UC.y + b.y - b.r); y1 = Math.max(y1, UC.y + b.y + b.r); }
   UB = {x0: x0 - 80, y0: y0 - 80, x1: x1 + 80, y1: y1 + 80};
-  if (coordOn()) UB = {x0: UC.x - 1800, y0: UC.y - 1800, x1: UC.x + 1800, y1: UC.y + 1800};
+  if (xPlaced) UB = {x0: UC.x - 1800, y0: UC.y - 1800, x1: UC.x + 1800, y1: UC.y + 1800};
   BODIES = B; BODIES.web = web;
 }
 function colorStars(){
@@ -885,13 +783,13 @@ function starsBg(){
   const bgDim = (sel >= 0 ? .22 : focus >= 0 ? .7 : 1)*GLOWF();   // a selected note dims the galaxies so its links read clearly
   if (S3D) { halos3D(bgDim); if (chx("gas")) chartGas(bgDim); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; galNames(); return; }
   buildGlow();
-  if (coordOn() && COORDART) drawCoordArt(bgDim);
+  if (EXTS.length) xCall("chartUnder", { ctx, sx, sy, k, W, H, bgDim, UB, starVer });
   ctx.globalCompositeOperation = "lighter";
   for (let a = bgDim; a > .001; a -= 1) { ctx.globalAlpha = Math.min(1, a); ctx.drawImage(GLOW, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
   const wf = Math.max(0, Math.min(1, (.7 - k)/.45));   // the cosmic web fades out as you zoom into a galaxy
   if (wf > 0 && showAll) { ctx.globalAlpha = wf*bgDim; ctx.drawImage(WEB, sx(UB.x0), sy(UB.y0), (UB.x1 - UB.x0)*k, (UB.y1 - UB.y0)*k); }
   if (chx("gas")) chartGas(bgDim);
-  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; if (coordOn() && COORDART) drawCoordRoutes(bgDim); galNames();
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; if (EXTS.length) xCall("chartOver", { ctx, sx, sy, k, W, H, bgDim, UB, starVer }); galNames();
 }
 // Starfield: galaxy names sit behind everything but the Linking Your Thinking mark (0.8.19): drawn with the sky, before links, stars and note names
 const galNames = () => { if (view !== "stars" || expOn() || domeOn()) return; LH = []; ctx.save(); starLabels(); ctx.restore(); };
@@ -929,7 +827,7 @@ function starLabels(){
   ctx.textAlign = "center"; ctx.textBaseline = "top";
   const hasLS = "letterSpacing" in ctx, taken = [];
   for (const b of [...BODIES].sort((p,q2) => q2.r - p.r)) {
-    if (b.kind === "home" || b.coord || (b.kind === "dwarf" && b.members.length < 12) || !galLabelOn(b)) continue;   /* placed by coordinates: the region notes name the regions */
+    if (b.kind === "home" || b.ext || (b.kind === "dwarf" && b.members.length < 12) || !galLabelOn(b)) continue;   /* placed by coordinates: the region notes name the regions */
     let any = false; for (const i of b.members) if (VV(i)) { any = true; break; } if (!any) continue;
     const [bpx, bpy] = bodyPos(b), cx = sx(bpx), cy = sy(bpy), rr = b.r*k*(S3D && B3[b.id] ? B3[b.id].s*B3[b.id].flatK : 1), y = cy + rr*Math.max(b.q || 1, .55)*.92 + 8;
     if (cx < -200 || cx > W + 200 || y < -20 || y > H + 20) continue;
@@ -941,7 +839,7 @@ function starLabels(){
     ctx.lineWidth = 4; ctx.strokeStyle = "rgba(3,4,10,.85)"; ctx.strokeText(nm.toUpperCase(), cx, y);
     ctx.fillStyle = b.kind === "gal" ? "rgba(236,240,255,.92)" : "rgba(200,208,235,.75)"; ctx.fillText(nm.toUpperCase(), cx, y);
     if (hasLS) ctx.letterSpacing = "0px"; ctx.font = `500 9.5px ${css.mono}`; ctx.fillStyle = b.hue;
-    const sub = b.coord ? `${b.members.length.toLocaleString()} notes` : b.kind === "neb" ? `${b.members.length.toLocaleString()} unlinked` : b.kind === "old" ? `${b.members.length.toLocaleString()} notes` : `${b.members.length.toLocaleString()} stars`;
+    const sub = b.ext ? `${b.members.length.toLocaleString()} notes` : b.kind === "neb" ? `${b.members.length.toLocaleString()} unlinked` : b.kind === "old" ? `${b.members.length.toLocaleString()} notes` : `${b.members.length.toLocaleString()} stars`;
     ctx.strokeText(sub, cx, y + 15); ctx.fillText(sub, cx, y + 15); }
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.globalAlpha = 1;
 }
@@ -1278,7 +1176,7 @@ function setView(v){ if (v === "posters" || v === "people") v = "builder"; if (v
   ungrow(); view = v; save("iv-view", v); if (senseT == null) { SSTEPS = senseSteps(); $("#tlrange").max = SSTEPS.length - 1; $("#tlrange").value = SSTEPS.length - 1; }   /* a Timelapse under way keeps its place (Ship ⇄ Chart, 0.8.348) */
   root.querySelectorAll("#vseg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === tabOf())));
   root.dataset.view = view; syncTimebar(); root.dataset.dome = domeOn() || sphOn() || geo3On() ? "1" : "";
-  if (yrNarrow() || (HASTAGS && TMOFF.size) || COORDONLY) { computeVis(); layoutACE(); layoutTime(); layoutProp(); updateCounts(); }
+  if (yrNarrow() || (HASTAGS && TMOFF.size) || EXTS.length) { computeVis(); layoutACE(); layoutTime(); layoutProp(); updateCounts(); }
   syncRange(); legend(); morph(!SFJUMP, () => fitTarget()); SFJUMP = false;   /* the trip back from the Starship lands at once, behind the dark, so the chart can pull back out (0.8.228) */
   { const bb = root.querySelector(`#vseg button[data-v="${view}"]`); if (bb && isPhone()) bb.scrollIntoView({inline:"nearest", block:"nearest"}); }
 }
@@ -2781,7 +2679,7 @@ function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), tu
     if (turn && bi >= 0) { const a_ = ang(bi); if (a_) { const ca = Math.cos(a_), sa = Math.sin(a_), rx = lx * ca - ly * sa; ly = lx * sa + ly * ca; lx = rx; } }
     if (bi >= 0) { const B = B3[bi], M = B.M; x = BODIES[bi].x + M[0][0] * lx + M[0][1] * ly + M[0][2] * lz; y = BODIES[bi].y + M[1][0] * lx + M[1][1] * ly + M[1][2] * lz; z = B.z + M[2][0] * lx + M[2][1] * ly + M[2][2] * lz; }
     else { x = lx; y = ly; z = lz; } P[3 * i] = x * sc; P[3 * i + 1] = y * sc; P[3 * i + 2] = z * sc; }
-  CKSF.B = B3.filter(B => !B.b.coord).map(B => { const b = B.b, M = B.M;   /* coordinate regions are painted per star (ckCoordArt) */ return { b, x: b.x * sc, y: b.y * sc, z: B.z * sc, r: (b.r || 200) * sc, flat: B.flat, u: [M[0][0], M[1][0], M[2][0]], v: [M[0][1], M[1][1], M[2][1]] }; });
+  CKSF.B = B3.filter(B => !B.b.ext).map(B => { const b = B.b, M = B.M;   /* an extension's bodies are its own to draw (0.9.147) */ return { b, x: b.x * sc, y: b.y * sc, z: B.z * sc, r: (b.r || 200) * sc, flat: B.flat, u: [M[0][0], M[1][0], M[2][0]], v: [M[0][1], M[1][1], M[2][1]] }; });
   CKSF.ver = starVer; CKSF.P = P; CKSF.sc = sc;
   if (turn && CKW === "sf") for (const it of CK.items) { it.x = P[3 * it.i]; it.y = P[3 * it.i + 1]; it.z = P[3 * it.i + 2]; }   /* the panels ride along with their stars */
   return CKSF; }
@@ -2796,7 +2694,7 @@ function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let 
 function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 0; CK.auto = false; CK.trav = 0; CK.t0 = win.performance.now();
   const sf = CKW === "sf" ? ckSF() : null;
   let gl = null; if (!sf) { CK.glide = null; if ((CK.arrV || 0) > 150) { ckUpright(); const v = Math.min(CK.arrV, 1500), dur = 1.8, s_ = v * dur / 3, fw = ckFwd(); gl = { P0: CK.P.slice(), fw, s: s_, dur, t0: win.performance.now() }; } else { CK.P = [0, 0, 0]; CK.yaw = 0; CK.pitch = 0; } CK.arrV = 0; }   /* 0.8.169: a flown arrival in Links no longer snaps the ship home; it glides on and the new links gather ahead */
-  else if (c >= 0 && coordOn()) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]];   /* placed by coordinates (0.9.144): the galaxy seen from above, as on the Chart; first the whole of it, then over the note, still looking down */
+  else if (c >= 0 && xOn()) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]];   /* laid out by an extension (0.9.144, 0.9.147): the galaxy seen from above, as on the Chart; first the whole of it, then over the note, still looking down */
     if (!CK.sfIn) { const U = ckUniverse(); CK.P = [U.c[0], U.c[1], U.c[2] - U.r * 1.05]; CK.yaw = 0; CK.pitch = 0; CK.sfIn = true; CK.ov = true; } }   /* a later pick glides there from where the ship is (the settle), no jump (0.9.145) */
   else if (c >= 0) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]];   /* in Starfield the ship stays where it is, unless the note is far off: then it jumps to just outside it, facing it */
     if (!CK.sfIn || Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) > 1600) { const bi = BOD[c], G = bi >= 0 ? sf.B[bi] : { x: 0, y: 0, z: 0 }; let d = [T[0] - G.x, T[1] - G.y, T[2] - G.z]; let l = Math.hypot(...d); if (l < 1) { d = [0, 0, -1]; l = 1; }
@@ -2831,8 +2729,8 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
     const nearL = CK.items.filter(it => !it.none && Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2]) <= d75); let C = [0, 0, 0]; for (const it of nearL) { C[0] += it.x; C[1] += it.y; C[2] += it.z; } if (nearL.length) C = C.map(v => v / nearL.length);
     const away = nearL.length ? [T[0] - C[0], T[1] - C[1], T[2] - C[2]] : [-fw[0], -fw[1], -fw[2]], la = Math.hypot(...away) || 1;
     let dir = [away[0] / la - fw[0] * .3, away[1] / la - fw[1] * .3 - .35, away[2] / la - fw[2] * .3]; const l = Math.hypot(...dir) || 1; dir = dir.map(v => v / l);
-    if (coordOn()) dir = [0, 0, -1];   /* placed by coordinates: settle straight above the note, looking down on the galaxy (0.9.144) */
-    if (CK.ov) CK.ov = false; else CK.settle = { flow: (CK.arrV || 0) > 150, vin: Math.min(CK.arrV || 0, 1800), aF: CK.arrF, _r: (CK.arrV = 0), P0: CK.P.slice(), P1: [T[0] + dir[0] * D, T[1] + dir[1] * D, T[2] + dir[2] * D], T, t0: win.performance.now() }; CK.lookT = null; }
+    if (xOn()) dir = [0, 0, -1];   /* laid out by an extension: settle straight above the note, looking down on the galaxy (0.9.144) */
+    if (CK.ov) CK.ov = false; else if (!CK.hold) CK.settle = { flow: (CK.arrV || 0) > 150, vin: Math.min(CK.arrV || 0, 1800), aF: CK.arrF, _r: (CK.arrV = 0), P0: CK.P.slice(), P1: [T[0] + dir[0] * D, T[1] + dir[1] * D, T[2] + dir[2] * D], T, t0: win.performance.now() }; CK.lookT = null; }
   CK.kind = new Map(); for (const [k_, key] of [["above", "up"], ["below", "down"], ["up", "upp"], ["related", "rel"]]) for (const j of L[k_]) CK.kind.set(j, key);
   try { CK.SL = SPACELINK(); } catch (_) { CK.SL = { up: "#6fbcff", down: "#ff7a6b", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }; }
   CK.sOff = [0, 0]; CK.upL = L.up.filter(j => vis[j]); if (view === "cockpit") win.setTimeout(() => { if (!dead && view === "cockpit") legend(); }, 0);
@@ -2850,10 +2748,9 @@ const ckLy = d => { const ly = d / 400; return (ly < 10 ? ly.toFixed(1) : String
 function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devicePixelRatio || 1, P = sf.P;
   g.save(); g.beginPath(); g.rect(0, 0, W, VH); g.clip(); g.globalCompositeOperation = "lighter";
   const pr = (x, y, z) => { const [xc, yc, zc] = ckCam(x, y, z); return zc > 12 ? [cx + F * xc / zc, cy + F * yc / zc, zc] : null; };
-  if (coordOn() && COORDART) ckCoordArt(g, pr, sf, F);
-  if (CK.galBtn) { const on_ = coordOn(); if (CK.galBtn.hidden === on_) CK.galBtn.hidden = !on_; if (CK.runBtn && CK.runBtn.hidden === on_) CK.runBtn.hidden = !on_; if (CK.runBtn) CK.runBtn.toggleClass("on", !!RUN); }
-  if (RUN) runBanner(g, W, 46);
-  for (const B of sf.B) { const b = B.b; if (b.coord) continue; p0 = pr(B.x, B.y, B.z); const dist = Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]); if (!p0 && dist > B.r) continue;
+  if (EXTS.length) xCall("shipDraw", { g, pr, P: sf.P, sc: sf.sc, F, W, H, c: CK.c, UC });
+  if (CK.galBtn) { const on_ = !!xOn(); if (CK.galBtn.hidden === on_) CK.galBtn.hidden = !on_; }
+  for (const B of sf.B) { const b = B.b; if (b.ext) continue; p0 = pr(B.x, B.y, B.z); const dist = Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]); if (!p0 && dist > B.r) continue;
     const lay = b.kind === "gal" ? [[1.15, b.hue, .3], [.65, b.hue, .26], [.3, "#fff1d6", .6], [.1, "#ffffff", .85]] : b.kind === "neb" ? [[1, b.hue, .22], [.55, b.hue, .14]] : b.kind === "dwarf" ? [[1.1, b.hue, .26], [.25, "#fff1d6", .35]] : [[1.05, b.hue || "#ffb380", .28], [.4, "#fff1d6", .4]];
     const near = Math.min(1, Math.max(.15, dist / (B.r * 3)));   /* inside a galaxy its glow thins so the stars stay clear */
     /* Starfield's own settings carry over (0.8.92): Galaxy glow (Clear keeps only a faint tint, no white cores), and Star Chart's folder gas */
@@ -3004,7 +2901,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
       const tw = g.measureText(nm).width + 8, box = [p0[0] - tw / 2, y - 2, tw, 30]; if (taken.some(q => box[0] < q[0] + q[2] && box[0] + box[2] > q[0] && box[1] < q[1] + q[3] && box[1] + box[3] > q[1])) { if (hasLS) g.letterSpacing = "0px"; continue; } taken.push(box);
       g.globalAlpha = Math.max(.25, Math.min(1, 14000 / d)) * (CK.c >= 0 ? .38 : 1); if (CK.noteBox && Math.abs(p0[0] - CK.noteBox[0]) < 140 && Math.abs(y - CK.noteBox[1]) < 50) g.globalAlpha *= .4; g.lineWidth = 4;   /* names step back while a note is the cockpit, as Starfield's do while a note is picked (0.8.126); fainter still beside the note */ g.strokeStyle = "rgba(3,4,10,.85)"; g.strokeText(nm, p0[0], y); g.fillStyle = b.kind === "gal" ? "rgba(236,240,255,.92)" : "rgba(200,208,235,.75)"; g.fillText(nm, p0[0], y);
       if (hasLS) g.letterSpacing = "0px"; g.font = `500 9.5px ${css.mono || font}`; g.fillStyle = b.hue || "#9fb0ff"; const m_ = (b.members || []).length;
-      const sub = b.coord ? `${m_.toLocaleString()} notes` : b.kind === "neb" ? `${m_.toLocaleString()} unlinked` : b.kind === "old" ? `${m_.toLocaleString()} notes` : `${m_.toLocaleString()} stars`; g.strokeText(sub, p0[0], y + 15); g.fillText(sub, p0[0], y + 15); }
+      const sub = b.ext ? `${m_.toLocaleString()} notes` : b.kind === "neb" ? `${m_.toLocaleString()} unlinked` : b.kind === "old" ? `${m_.toLocaleString()} notes` : `${m_.toLocaleString()} stars`; g.strokeText(sub, p0[0], y + 15); g.fillText(sub, p0[0], y + 15); }
     g.textBaseline = "alphabetic"; }
   // twinkle (0.8.95), when it's on in Starfield: now and then one star glints and fades
   if (CKX.twinkle) { const now = win.performance.now(); CK.tw = (CK.tw || []).filter(q => now - q.t0 < 1400); if (!CK.twN || now > CK.twN) { CK.twN = now + 900 + Math.random() * 2600; const j = Math.floor(Math.random() * n); if (vis[j] && N[j].level >= 2) CK.tw.push({ i: j, t0: now }); }
@@ -3031,16 +2928,16 @@ function ckRebase(){ /* items into the ship's own frame, ship back home: nothing
 function ckFwd(){ const cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch); return [sy_ * cp, sp, cy * cp]; }
 function ckCam(x, y, z){ const dx = x - CK.P[0], dy = y - CK.P[1], dz = z - CK.P[2], cy = Math.cos(CK.yaw), sy_ = Math.sin(CK.yaw), cp = Math.cos(CK.pitch), sp = Math.sin(CK.pitch);
   const xc = cy * dx - sy_ * dz, z1 = sy_ * dx + cy * dz, yc = cp * dy - sp * z1, zc = sp * dy + cp * z1; return [xc, yc, zc]; }
-function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); const rj = CK.runJump; CK.runJump = false; if (!(CK.settle && CK.settle.flow) && !CK.glide && (!(coordOn() && CKW === "sf") || rj)) CK.warp = 1;   /* placed by coordinates: you see the galaxy go by instead of a hyperspace flash (0.9.145) */ else CK.fadeT = win.performance.now(); if (CKG && !CK.gj) win.setTimeout(() => { if (!dead && CKG && (!CK.gq || CK.gq.j === CK.c || !CK.items.find(it => it.i === CK.gq.j))) ckGameNew(); }, 700); } }
+function ckSync(){ if (!CK.on) return; const c = ckCentre(); if (c !== CK.c) { ckBuild(c); const jn = CK.jumpNext; CK.jumpNext = false; if (!(CK.settle && CK.settle.flow) && !CK.glide && !CK.hold && (!(xOn() && CKW === "sf") || jn)) CK.warp = 1;   /* laid out by an extension: you see the galaxy go by instead of a hyperspace flash, unless it asks for a jump (0.9.145, 0.9.147) */ else CK.fadeT = win.performance.now(); if (CKG && !CK.gj) win.setTimeout(() => { if (!dead && CKG && (!CK.gq || CK.gq.j === CK.c || !CK.items.find(it => it.i === CK.gq.j))) ckGameNew(); }, 700); } }
 function ckEl(){ if (CK.el) return; const m = cv.parentElement; const el = doc.createElement("div"); el.className = "ivm-cockpit"; el.hidden = true; m.appendChild(el);
   const c_ = doc.createElement("canvas"); el.appendChild(c_); CK.el = el; CK.cv = c_; CK.g = c_.getContext("2d");
   const bar = el.createDiv({ cls: "ckbtns" });
   const back = bar.createEl("button", { text: "Back", attr: { type: "button", "aria-label": "Fly back to the note before (B)" } }); back.onclick = e => { e.stopPropagation(); ckBack(); };
   const ej = bar.createEl("button", { cls: "ckeject", text: "Eject", attr: { type: "button", "aria-label": "Unpin the editor's note" } }); ej.onclick = e => { e.stopPropagation(); try { if (TABS[TCUR] && TABS[TCUR].pin) tabPin(); } catch (_) { /* no editor */ } };
   CK.ej = ej;
-  /* placed by coordinates: back up to see the whole galaxy from above (0.9.145) */
+  /* laid out by an extension: back up to see the whole galaxy from above (0.9.145) */
   const gv = bar.createEl("button", { text: "Galaxy", attr: { type: "button", "aria-description": "See the whole galaxy from above" } }); gv.onclick = e => { e.stopPropagation(); ckOverview(); }; gv.hidden = true; CK.galBtn = gv;
-  const rb = bar.createEl("button", { text: "Runs", attr: { type: "button", "aria-description": "Fly a hyperspace route stop by stop" } }); rb.onclick = e => { e.stopPropagation(); runMenu(e, rb); }; rb.hidden = true; CK.runBtn = rb;
+  xCall("shipBar", bar);
   // True or false (0.8.104): a card at the top of the view
   { const gc = el.createDiv({ cls: "ckgame" }); gc.hidden = true; const hd = gc.createDiv({ cls: "ckghd" }), tx = gc.createDiv({ cls: "ckgtx" }), row = gc.createDiv({ cls: "ckgrow" });
     const bt = row.createEl("button", { cls: "ckgt", text: "1 · True", attr: { type: "button" } }), bf = row.createEl("button", { cls: "ckgf", text: "2 · False", attr: { type: "button" } });
@@ -3304,7 +3201,7 @@ function ckTick(t){ if (!CK.on || dead) return; const dt = Math.min(.05, (t - CK
   if (CK.glide) { const G_ = CK.glide, f = Math.min(1, (win.performance.now() - G_.t0) / 1000 / G_.dur), h = G_.s * (1 - Math.pow(1 - f, 3)); if (K.size || CK.drag || CK.auto || CKW === "sf") ckRebase(); else { CK.P = [0, 1, 2].map(q => G_.P0[q] + G_.fw[q] * h); CK.v = 0; CK.roll *= .9; if (f >= 1) ckRebase(); } }   /* Links: the flown arrival eases to a stop, then the view quietly becomes the usual one */   /* Wander lets the arrival swing play out (0.8.165) */
   /* the settle (0.8.133): the ship swings round the note on an arc (never through it),
      always upright, its gaze easing from where it looked onto the note; no roll */
-  if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / (S_.flow ? 3 : coordOn() && CKW === "sf" ? 3.4 : 2.4)), e = S_.flow ? 1 - Math.pow(1 - f, 3) : f < .5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2, T = S_.T;
+  if (CK.settle) { const S_ = CK.settle, el = (win.performance.now() - S_.t0) / 1000, f = Math.min(1, el / (S_.flow ? 3 : xOn() && CKW === "sf" ? 3.4 : 2.4)), e = S_.flow ? 1 - Math.pow(1 - f, 3) : f < .5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2, T = S_.T;
     if (!S_.u0) { const v0 = [0, 1, 2].map(q => S_.P0[q] - T[q]), r0 = Math.hypot(...v0) || 1, v1 = [0, 1, 2].map(q => S_.P1[q] - T[q]), r1 = Math.hypot(...v1) || 1; S_.u0 = v0.map(v => v / r0); S_.u1 = v1.map(v => v / r1); S_.r0 = r0; S_.r1 = r1; S_.f0 = ckFwd();
       if (S_.flow && S_.aF) { const dur = 3, vr = Math.max(0, S_.vin * -(S_.aF[0] * S_.u0[0] + S_.aF[1] * S_.u0[1] + S_.aF[2] * S_.u0[2])), floor = .55 * Math.min(r0, r1); let m = -vr * dur;   /* 0.8.168: the ship doesn't stop dead and back away; it carries its speed in, swings round and eases out */
         const rr = (q, m_) => (2 * q * q * q - 3 * q * q + 1) * r0 + (q * q * q - 2 * q * q + q) * m_ + (-2 * q * q * q + 3 * q * q) * r1;
@@ -4527,7 +4424,7 @@ function build3D(){
   SPAN3 = Math.max(UB.x1 - UB.x0, UB.y1 - UB.y0, 1);
   B3 = BODIES.map(b => { const nm = (b.name || "") + b.kind, h1 = hash(nm, 31), h2 = hash(nm, 32), h3 = hash(nm, 33);
     const flat = b.kind === "gal" || b.kind === "dwarf" || b.kind === "home";
-    const z = b.kind === "home" || b.coord ? 0 : (h1 - .5)*SPAN3*.75, inc = b.kind === "home" ? .3 : (h2 - .5)*Math.PI*.9, phi = h3*2*Math.PI;
+    const z = b.kind === "home" || b.ext ? 0 : (h1 - .5)*SPAN3*.75, inc = b.kind === "home" ? .3 : (h2 - .5)*Math.PI*.9, phi = h3*2*Math.PI;
     // tilt the disk by inc around an axis lying in its plane at angle phi:  M = Rz(phi) · Rx(inc) · Rz(-phi)
     const cf = Math.cos(phi), sf = Math.sin(phi), ci = Math.cos(inc), si = Math.sin(inc);
     const Rz = (c, s) => [[c,-s,0],[s,c,0],[0,0,1]], Rx = [[1,0,0],[0,ci,-si],[0,si,ci]];
@@ -5180,7 +5077,7 @@ function labels(lit){ let PICKDRAW = null;   // the picked note's name is drawn 
   const must = [];
   if (sel >= 0) must.push(sel); if (hover >= 0) must.push(hover);
   if (expOn() && EXP[view].mustLabel) for (const j of EXP[view].mustLabel()) must.push(j);
-  if (view === "stars" && coordOn()) { if (RUN) must.push(RUN.r.path[RUN.q]); for (const j of landmarks()) if (vis[j]) must.push(j); }   /* a coordinate world's landmarks, always named (0.9.146) */
+  if (view === "stars") for (const x of EXTS) if (x.labels) { try { for (const j of x.labels(view) || []) if (vis[j]) must.push(j); } catch (_) { /* skip it */ } }   /* notes an extension always names (0.9.147) */
   const hl = sel >= 0 ? sel : hover;
   if (lit) [...lit].filter(j => j !== hl).sort((a,b) => (N[b].level-N[a].level) || (N[b].score-N[a].score)).forEach(j => must.push(j));
   const seen = new Set(), list = [...must, ...order];
@@ -7712,7 +7609,7 @@ function drawMini(){ if (!miniOn() || !BODIES.length) { miniCv.hidden = true; re
   const mw = 196, mh = 128, d = Math.min(2, win.devicePixelRatio || 1); if (miniCv.width !== mw*d) { miniCv.width = mw*d; miniCv.height = mh*d; miniCv.style.width = mw + "px"; miniCv.style.height = mh + "px"; }
   miniCv.style.left = Math.max(0, cv.offsetLeft + W - sideW() - 62 - mw) + "px"; miniCv.style.top = (cv.offsetTop + H - mh - (doc.body.classList.contains("is-mobile") ? 14 : 42)) + "px";   // beside the zoom buttons, in the part of the map you can see
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const b of BODIES) { const bx = UC.x + b.x, by = UC.y + b.y; x0 = Math.min(x0, bx - b.r); x1 = Math.max(x1, bx + b.r); y0 = Math.min(y0, by - b.r); y1 = Math.max(y1, by + b.r); }
-  if (!BODIES.length) { x0 = UB.x0; y0 = UB.y0; x1 = UB.x1; y1 = UB.y1; }   /* Place by coordinates has no bodies (0.9.139) */
+  if (!BODIES.length) { x0 = UB.x0; y0 = UB.y0; x1 = UB.x1; y1 = UB.y1; }   /* an extension's layout may have no bodies (0.9.139) */
   const pad = 8, sc = Math.min((mw - 2*pad)/(x1 - x0), (mh - 2*pad)/(y1 - y0)), ox = (mw - (x1 - x0)*sc)/2 - x0*sc, oy = (mh - (y1 - y0)*sc)/2 - y0*sc; MB = { sc, ox, oy };
   const mx = x => x*sc + ox, my = y => y*sc + oy;
   mctx.setTransform(d, 0, 0, d, 0, 0); mctx.clearRect(0, 0, mw, mh);
@@ -8152,10 +8049,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     const tog = (label, get, set) => { const r = $("#starpop").createEl("label", { cls: "mini lcemo sfsw" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = get(); r.createEl("i", { cls: "sw" }); r.createSpan({ text: label });
       cb.onchange = () => set(cb.checked); };
     tog("Twinkle", () => twOn, v => { twOn = v; save("iv-twinkle", v); twWake(); });
-    if (coordCount() >= 20) tog("Place by coordinates", () => COORDS, v => { COORDS = v; save("iv-sfcoord", v); starsDirty = true; glowKey = ""; s3dVer = -1; CKSF.ver = -1; morph(true); });   /* (0.9.139) */
-    if (coordCount() >= 20) tog("Places only", () => COORDONLY, v => { COORDONLY = v; save("iv-sfplaces", v); computeVis(); BAC.key = ""; glowKey = ""; morph(true); });   /* (0.9.143) notes without coordinates step out */
-    if (coordCount() >= 20) { const rb = $("#starpop").createEl("button", { text: RUN ? `Stop the run · ${RUN.name}` : "Fly a run…", cls: "mini sfrun", attr: { type: "button", "aria-description": "Travel a hyperspace route stop by stop" } });
-      rb.onclick = e => { e.stopPropagation(); if (RUN) { runStop(); rb.textContent = "Fly a run…"; } else runMenu(e, rb); }; }   /* (0.9.146) */
+    xCall("chartMenu", { el: $("#starpop"), tog });   /* an extension's switches (0.9.147) */
     tog("Turning galaxies", () => sTurn, v => { sTurn = v; save("iv-sturn", v); turnSync(); if (!v && view === "stars") { glowKey = ""; morph(true); } }); }
   // a tighter Starfield menu (0.8.9, with Filter as the reference): the three ways to see it as one row, the chosen one's line beneath,
   // Star Chart's layers two to a row under it, then Galaxy glow, then the switches in one list
@@ -8236,10 +8130,9 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
           c_.onchange = () => { if (k_ === "frame") { CKFRAME = c_.checked; save("iv-ckframe", CKFRAME); return; } CKX = { ...CKX, [k_]: c_.checked }; save("iv-ckx", CKX); if (k_ === "turn") CKSF.ver = -1; if (k_ === "emo" && c_.checked && !EMOI) void loadEmo(); }; } };
       grp("HUD artifacts", ["rings", "read", "posts", "dial", "mini", "card", "rear", "mirror", "frame"]);   /* Relevance scores follows Display → HUD links now (0.8.309) */
       grp("Cosmotic elements", ["names", "gas", "gasp", "orb", "lines", "twinkle", "turn", "haze", "emo"]);
-      if (coordCount() >= 20) { fa.createDiv({ cls: "ckmh", text: "Coordinates" }); const grid = fa.createDiv({ cls: "ckxgrid" });   /* the Star Chart gear's two switches, here too (0.9.145) */
-        for (const [lab, get, set, tip] of [["Place by coordinates", () => COORDS, v => { COORDS = v; save("iv-sfcoord", v); starsDirty = true; glowKey = ""; s3dVer = -1; CKSF.ver = -1; CK.sfIn = false; relayout(false); }, "Lay the stars out by the notes' x and y properties (Settings → Coordinate properties) instead of by links."],
-          ["Places only", () => COORDONLY, v => { COORDONLY = v; save("iv-sfplaces", v); computeVis(); BAC.key = ""; glowKey = ""; relayout(false); }, "Only notes with coordinates: overview notes (regions, routes, the home note) leave the sky, so paths run place to place."]]) {
-          const l_ = grid.createEl("label", { cls: "mini lcemo" }), c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = get(); l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: lab }); qHelp(l_, tip); c_.onchange = () => set(c_.checked); } } }
+      for (const x of EXTS) if (x.shipMenu) { let grid = null; const tog = (lab, get, set, tip) => { if (!grid) { fa.createDiv({ cls: "ckmh", text: x.name }); grid = fa.createDiv({ cls: "ckxgrid" }); }   /* an extension's switches, under its name (0.9.147) */
+        const l_ = grid.createEl("label", { cls: "mini lcemo" }), c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = get(); l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: lab }); if (tip) qHelp(l_, tip); c_.onchange = () => set(c_.checked); };
+        try { x.shipMenu({ el: fa, tog }); } catch (err) { console.error("Maps of the Ideaverse: extension shipMenu", err); } } }
     /* the game, near the bottom (0.8.302) */
     { const box = fa.createDiv({ cls: "ckkeys" }); box.createDiv({ cls: "eol", text: "Controls" });
       for (const [k_, v_] of [["R W  ↑ ↓", "forward, back"], ["T", "impulse: a slow, steady cruise"], ["X V  ← →", "pan left, right"], ["S F", "orbit left, right round the note"], ["G", "Orbit on or off: circle the note, climbing and diving now and then"], ["ly", "distances in light-years: the whole Ideaverse is 100 ly across"], ["E D", "orbit over, under the note"], ["Two fingers", "steer (trackpad)"], ["Pinch", "fly (trackpad)"], ["Drag", "steer"], ["Click", "lock on a panel or a name"], ["Space", "autopilot to the lock (or click it again)"], ["Tab", "next panel"], ["B", "fly back"], ["I  O", "only links in, only links out"], ["P", "Wander Mode on or off"], ["1  2", "true, false (the game)"], ["Esc", "stop"]]) {
@@ -8906,7 +8799,7 @@ let scopeSig = null, baseSig = null, baseDirty = false;
 if (following) win.setTimeout(() => followPath(host.activePath && host.activePath(), true), 400);   // opened while following: start on the active note
 
 return {
-  destroy(){ dead = true; closeEds(); for (const o of Object.values(EDS)) o.el.remove(); pvLayer.remove(); ro.disconnect(); popObs.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
+  destroy(){ dead = true; xCall("destroy"); closeEds(); for (const o of Object.values(EDS)) o.el.remove(); pvLayer.remove(); ro.disconnect(); popObs.disconnect(); for (const id of frames) win.cancelAnimationFrame(id); frames.clear();
     win.clearTimeout(senseTimer); win.clearTimeout(pTimer); driftStop(); tip.remove(); },
   openNote(path){ const i = PIDX.get(path); if (i != null) navTo(i); },
   // a map embedded in a note (0.8.171): show a saved view, by name or as the view itself (from a .moti file)
