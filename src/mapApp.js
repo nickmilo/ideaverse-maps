@@ -605,7 +605,20 @@ function coordPlace(B, web){
     const P0 = path.map(j => [SX[j], SY[j]]), K = Math.max(1, Math.round(P0.length / 8)), P = P0.map((_, q) => { let x = 0, y = 0, c_ = 0; for (let z = Math.max(0, q - K); z <= Math.min(P0.length - 1, q + K); z++) { x += P0[z][0]; y += P0[z][1]; c_++; } return [x / c_, y / c_]; });   /* a running mean along the lane: a smooth stroke through where its stops lie */
     P[0] = P0[0]; P[P.length - 1] = P0[P0.length - 1]; routes.push({ i, path, P, w: st.length }); }
   routes.sort((p, q) => q.w - p.w); routes.forEach((r_, q) => { r_.major = q < 6; });
-  COORDART = { regs, routes, cx: cx0, cy: cy0, ver: -1 }; }
+  const colOf = new Array(n).fill(null); for (const r_ of regs) for (const i of r_.mem) colOf[i] = r_.col;
+  let R0 = 0; for (const i of pts) R0 = Math.max(R0, Math.hypot(SX[i] - cx0, SY[i] - cy0)); R0 = R0 || 1000; let a_ = 131; const rnd = () => { a_ = (a_ * 16807) % 2147483647; return a_ / 2147483647; }, dust = [];
+  for (let q = 0; q < 4200; q++) { const arm = q % 3, t = Math.pow(rnd(), .85), r = R0 * (.1 + 1.2 * t), ang = arm * 2.0944 + 5.2 * Math.log(1 + 2.2 * t) + (rnd() - .5) * (.35 + .25 * t); dust.push([cx0 + Math.cos(ang) * r, cy0 + Math.sin(ang) * r, (rnd() - .5) * 60, rnd()]); }
+  COORDART = { regs, routes, cx: cx0, cy: cy0, ver: -1, colOf, dust }; }
+/* the same picture in the Ship (0.9.144): each placed star lights a soft patch in its region's colour, the dust spiral as faint points, the routes as lines, all in the galaxy's plane */
+function ckCoordArt(g, pr, sf, F){ const A = COORDART, P = sf.P, sc = sf.sc; if (!A) return;
+  g.globalCompositeOperation = "lighter";
+  for (const [x, y, z, w] of A.dust) { const p = pr((x - UC.x) * sc, (y - UC.y) * sc, z * sc); if (!p) continue; const r = Math.max(.6, Math.min(3, F * 5 * sc / p[2])); g.globalAlpha = .1 + .18 * w; g.fillStyle = w < .55 ? "#5fd0d8" : "#8fa8ff"; g.fillRect(p[0] - r / 2, p[1] - r / 2, r, r); }
+  const rw = 140 * sc; for (let i = 0; i < n; i++) { const col = A.colOf[i]; if (!col || !vis[i]) continue; const p = pr(P[3 * i], P[3 * i + 1], P[3 * i + 2]); if (!p) continue; const r = F * rw / p[2]; if (r < 1.5) continue;
+    const rr = Math.min(320, r); g.globalAlpha = .055 * Math.min(1, 200 / rr); g.drawImage(sprite(col), p[0] - rr, p[1] - rr, rr * 2, rr * 2); }
+  g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.lineJoin = "round"; g.lineCap = "round";
+  for (const major of [false, true]) { g.lineWidth = major ? 1.5 : 1; g.strokeStyle = major ? "rgba(255,255,255,.6)" : "rgba(255,255,255,.12)";
+    for (const r_ of A.routes) { if (r_.major !== major) continue; g.beginPath(); let on = false; for (const [x, y] of r_.P) { const p = pr((x - UC.x) * sc, (y - UC.y) * sc, 0); if (!p) { on = false; continue; } if (on) g.lineTo(p[0], p[1]); else { g.moveTo(p[0], p[1]); on = true; } } g.stroke(); } }
+  g.globalCompositeOperation = "lighter"; }
 let COORDART = null, COORDCV = null;
 /* one picture in map space, drawn once per layout: a spiral of faint dust round the middle, then each region as a soft band in its colour (a fine grid,
    each cell given to the region whose notes are densest there, then blurred) */
@@ -2741,7 +2754,7 @@ function ckSF(){ layoutStars(); build3D(); const now = win.performance.now(), tu
     if (turn && bi >= 0) { const a_ = ang(bi); if (a_) { const ca = Math.cos(a_), sa = Math.sin(a_), rx = lx * ca - ly * sa; ly = lx * sa + ly * ca; lx = rx; } }
     if (bi >= 0) { const B = B3[bi], M = B.M; x = BODIES[bi].x + M[0][0] * lx + M[0][1] * ly + M[0][2] * lz; y = BODIES[bi].y + M[1][0] * lx + M[1][1] * ly + M[1][2] * lz; z = B.z + M[2][0] * lx + M[2][1] * ly + M[2][2] * lz; }
     else { x = lx; y = ly; z = lz; } P[3 * i] = x * sc; P[3 * i + 1] = y * sc; P[3 * i + 2] = z * sc; }
-  CKSF.B = B3.map(B => { const b = B.b, M = B.M; return { b, x: b.x * sc, y: b.y * sc, z: B.z * sc, r: (b.r || 200) * sc, flat: B.flat, u: [M[0][0], M[1][0], M[2][0]], v: [M[0][1], M[1][1], M[2][1]] }; });
+  CKSF.B = B3.filter(B => !B.b.coord).map(B => { const b = B.b, M = B.M;   /* coordinate regions are painted per star (ckCoordArt) */ return { b, x: b.x * sc, y: b.y * sc, z: B.z * sc, r: (b.r || 200) * sc, flat: B.flat, u: [M[0][0], M[1][0], M[2][0]], v: [M[0][1], M[1][1], M[2][1]] }; });
   CKSF.ver = starVer; CKSF.P = P; CKSF.sc = sc;
   if (turn && CKW === "sf") for (const it of CK.items) { it.x = P[3 * it.i]; it.y = P[3 * it.i + 1]; it.z = P[3 * it.i + 2]; }   /* the panels ride along with their stars */
   return CKSF; }
@@ -2756,6 +2769,9 @@ function ckCentre(){ if (sel >= 0 && vis[sel]) return sel; let b = -1; for (let 
 function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 0; CK.auto = false; CK.trav = 0; CK.t0 = win.performance.now();
   const sf = CKW === "sf" ? ckSF() : null;
   let gl = null; if (!sf) { CK.glide = null; if ((CK.arrV || 0) > 150) { ckUpright(); const v = Math.min(CK.arrV, 1500), dur = 1.8, s_ = v * dur / 3, fw = ckFwd(); gl = { P0: CK.P.slice(), fw, s: s_, dur, t0: win.performance.now() }; } else { CK.P = [0, 0, 0]; CK.yaw = 0; CK.pitch = 0; } CK.arrV = 0; }   /* 0.8.169: a flown arrival in Links no longer snaps the ship home; it glides on and the new links gather ahead */
+  else if (c >= 0 && coordOn()) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]];   /* placed by coordinates (0.9.144): the galaxy seen from above, as on the Chart; first the whole of it, then over the note, still looking down */
+    if (!CK.sfIn) { const U = ckUniverse(); CK.P = [U.c[0], U.c[1], U.c[2] - U.r * 1.05]; CK.yaw = 0; CK.pitch = 0; CK.sfIn = true; CK.ov = true; }
+    else if (Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) > 1600) { CK.P = [T[0], T[1], T[2] - 1300]; CK.yaw = 0; CK.pitch = 0; } }
   else if (c >= 0) { const T = [sf.P[3 * c], sf.P[3 * c + 1], sf.P[3 * c + 2]];   /* in Starfield the ship stays where it is, unless the note is far off: then it jumps to just outside it, facing it */
     if (!CK.sfIn || Math.hypot(T[0] - CK.P[0], T[1] - CK.P[1], T[2] - CK.P[2]) > 1600) { const bi = BOD[c], G = bi >= 0 ? sf.B[bi] : { x: 0, y: 0, z: 0 }; let d = [T[0] - G.x, T[1] - G.y, T[2] - G.z]; let l = Math.hypot(...d); if (l < 1) { d = [0, 0, -1]; l = 1; }
       let nn = [0, -1, 0]; if (bi >= 0 && G.u) { const u = G.u, v = G.v; nn = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]; if (nn[1] > 0) nn = nn.map(q => -q); }   /* from above its galaxy's disk, a little outside, so the disk opens up */
@@ -2789,7 +2805,8 @@ function ckBuild(c){ CK.c = c; CK.items = []; CK.lock = -1; CK.sug = -1; CK.v = 
     const nearL = CK.items.filter(it => !it.none && Math.hypot(it.x - T[0], it.y - T[1], it.z - T[2]) <= d75); let C = [0, 0, 0]; for (const it of nearL) { C[0] += it.x; C[1] += it.y; C[2] += it.z; } if (nearL.length) C = C.map(v => v / nearL.length);
     const away = nearL.length ? [T[0] - C[0], T[1] - C[1], T[2] - C[2]] : [-fw[0], -fw[1], -fw[2]], la = Math.hypot(...away) || 1;
     let dir = [away[0] / la - fw[0] * .3, away[1] / la - fw[1] * .3 - .35, away[2] / la - fw[2] * .3]; const l = Math.hypot(...dir) || 1; dir = dir.map(v => v / l);
-    CK.settle = { flow: (CK.arrV || 0) > 150, vin: Math.min(CK.arrV || 0, 1800), aF: CK.arrF, _r: (CK.arrV = 0), P0: CK.P.slice(), P1: [T[0] + dir[0] * D, T[1] + dir[1] * D, T[2] + dir[2] * D], T, t0: win.performance.now() }; CK.lookT = null; }
+    if (coordOn()) dir = [0, 0, -1];   /* placed by coordinates: settle straight above the note, looking down on the galaxy (0.9.144) */
+    if (CK.ov) CK.ov = false; else CK.settle = { flow: (CK.arrV || 0) > 150, vin: Math.min(CK.arrV || 0, 1800), aF: CK.arrF, _r: (CK.arrV = 0), P0: CK.P.slice(), P1: [T[0] + dir[0] * D, T[1] + dir[1] * D, T[2] + dir[2] * D], T, t0: win.performance.now() }; CK.lookT = null; }
   CK.kind = new Map(); for (const [k_, key] of [["above", "up"], ["below", "down"], ["up", "upp"], ["related", "rel"]]) for (const j of L[k_]) CK.kind.set(j, key);
   try { CK.SL = SPACELINK(); } catch (_) { CK.SL = { up: "#6fbcff", down: "#ff7a6b", rel: "#c9a2ff", upp: "#ffcf6e", prop: "#a9b4c8" }; }
   CK.sOff = [0, 0]; CK.upL = L.up.filter(j => vis[j]); if (view === "cockpit") win.setTimeout(() => { if (!dead && view === "cockpit") legend(); }, 0);
@@ -2807,7 +2824,8 @@ const ckLy = d => { const ly = d / 400; return (ly < 10 ? ly.toFixed(1) : String
 function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devicePixelRatio || 1, P = sf.P;
   g.save(); g.beginPath(); g.rect(0, 0, W, VH); g.clip(); g.globalCompositeOperation = "lighter";
   const pr = (x, y, z) => { const [xc, yc, zc] = ckCam(x, y, z); return zc > 12 ? [cx + F * xc / zc, cy + F * yc / zc, zc] : null; };
-  for (const B of sf.B) { const b = B.b, p0 = pr(B.x, B.y, B.z); const dist = Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]); if (!p0 && dist > B.r) continue;
+  if (coordOn() && COORDART) ckCoordArt(g, pr, sf, F);
+  for (const B of sf.B) { const b = B.b; if (b.coord) continue; p0 = pr(B.x, B.y, B.z); const dist = Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]); if (!p0 && dist > B.r) continue;
     const lay = b.kind === "gal" ? [[1.15, b.hue, .3], [.65, b.hue, .26], [.3, "#fff1d6", .6], [.1, "#ffffff", .85]] : b.kind === "neb" ? [[1, b.hue, .22], [.55, b.hue, .14]] : b.kind === "dwarf" ? [[1.1, b.hue, .26], [.25, "#fff1d6", .35]] : [[1.05, b.hue || "#ffb380", .28], [.4, "#fff1d6", .4]];
     const near = Math.min(1, Math.max(.15, dist / (B.r * 3)));   /* inside a galaxy its glow thins so the stars stay clear */
     /* Starfield's own settings carry over (0.8.92): Galaxy glow (Clear keeps only a faint tint, no white cores), and Star Chart's folder gas */
