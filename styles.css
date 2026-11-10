@@ -2442,3 +2442,13 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivm .ivm-recents.paired:not(.ivm-lkhud) .rcl.rcrec{max-height:calc(17.5px * var(--rcrows,10) + 15px)}
 /* 0.9.133, Nick: a pane's title in the theme's own text color, not gold, and no icon before it (the HUD keeps both) */
 .ivd.ivd-links .ivd-lkhd .ivd-h{color:var(--text-normal)}
+/* Book cover shapes (0.9.149): Level 5 a crisp square, Level 4 an upright triangle, as on the Linking Your Thinking cover. A triangle needs a wider box than the diamond to read the same size */
+body.iv-cover .ivm .trail .lv.l5, body.iv-cover .ivm #efflist .lv.l5, body.iv-cover .ivm #calllist .lv.l5, body.iv-cover .ivm .ivm-recents .lkorb.lv5, body.iv-cover .ivd-links .ivd-orb.lv5, body.iv-cover .ivd-mhx .ivd-orb.lv5, body.iv-cover .ivd .ivd-orb[data-l="5"], body.iv-cover .ivm .ivm-orb.lv5 .orbd{border-radius:0}
+body.iv-cover .ivm .trail .lv.l4, body.iv-cover .ivm #efflist .lv.l4, body.iv-cover .ivm #calllist .lv.l4, body.iv-cover .ivd .ivd-orb[data-l="4"]{border-radius:0;transform:none;width:10px;height:9px;clip-path:polygon(50% 0,100% 100%,0 100%)}
+body.iv-cover .ivm .ivm-recents .lkorb.lv4{border-radius:0;transform:none;width:9px;height:8px;margin:0;clip-path:polygon(50% 0,100% 100%,0 100%)}
+body.iv-cover .ivd-links .ivd-orb.lv4, body.iv-cover .ivd.ivd-links .ivd-orb.lv4, body.iv-cover .ivd-mhx .ivd-orb.lv4{border-radius:0;transform:none;width:10px;height:9px;margin:0 .25px;clip-path:polygon(50% 0,100% 100%,0 100%)}
+body.iv-cover .ivm .ivm-orb.lv4 .orbd{border-radius:0;inset:2.5px 2px 3.5px;transform:none;clip-path:polygon(50% 0,100% 100%,0 100%)}
+body.iv-cover .ivm .ivm-orb.lv4:hover .orbd{transform:scale(1.18)}
+body.iv-cover .ivm .ivm-orb.lv4.drag .orbd{transform:scale(1.25)}
+body.iv-cover .ivm .ivm-orbs.holo .ivm-orb.lv4 .orbd{width:14px;height:12px;left:12px}
+body.iv-cover .ivm .ivm-orbs.holo .ivm-orb.lv4:hover .orbd{transform:none}

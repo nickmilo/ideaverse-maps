@@ -2,7 +2,7 @@
    the page's code runs inside the plugin's view, scoped to `root`, with Obsidian handling storage, events and notes. */
 import { Menu, Notice, Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
-import { LEAD_EMO, LINKHELP, LVGRAD } from "./spot.js";
+import { LEAD_EMO, LINKHELP, LVGRAD, setCover } from "./spot.js";
 import { MK_CLASSIC, MK_DEFAULT, mkDefs, mkRender, mkSvg, mkValid } from "./mark.js";
 
 export const VIEWS_ON = ["cockpit", "kandinsky", "arena", "compass", "emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
@@ -36,7 +36,7 @@ const FOLD = (() => { const seen = new Set(N.filter(d => !d.archive && d.ace && 
   return [...ACE.filter(a => seen.has(a)), ...[...seen].filter(a => !ACE.includes(a)).sort((a,b) => a.localeCompare(b))]; })();
 // "+" and "x" are shown as the symbol, large, with their name small in parentheses
 const ACE_SYM = {"+":["+","(Inbox)"], "x":["x","(Xtras)"]};
-const GRAD = {5:["#f7c948","#e8538a"], 4:["#8a5bd6","#3466d6"], 3:["#4fc3ef","#5b2e91"]};
+const GRAD = LVGRAD;   /* one set of level gradients, so Book cover shapes recolors everything (0.9.149) */
 
 // ---------- adjacency ----------
 const out = Array.from({length:n}, () => []), inn = Array.from({length:n}, () => []);
@@ -115,6 +115,8 @@ let EMOI = null;   // note index → its emoji
 /* collection links on the map (0.8.296): a picked note's collections (Concepts, Things…) draw as coral links,
    as the editors color them; Display → Collection links. They're drawn only, never counted: scores, levels and layouts don't change */
 let COLLON = pref("iv-colllinks", true) !== false;
+let COVER = pref("iv-cover", false) === true; setCover(COVER);   /* Book cover shapes (0.9.149) */
+const lvSw = lv => lv === 5 ? (COVER ? "border-radius:0;" : "border-radius:3px;") : lv === 4 ? (COVER ? "border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);" : "border-radius:1px;transform:rotate(45deg) scale(.8);") : "";   /* a legend swatch's shape */
 const CIDX = new Map(); N.forEach((d, i) => { if (d.archive) return; const k_ = String(d.title).toLowerCase(); if (!CIDX.has(k_)) CIDX.set(k_, i); });
 const collOf = (i, any) => { if (!(COLLON || any) || i < 0) return []; const r_ = []; for (const c of N[i].collections || []) { const j = CIDX.get(String(c).replace(/^\[\[|\]\]$/g, "").split("/").pop().toLowerCase()); if (j != null && j !== i && !r_.includes(j)) r_.push(j); } return r_; };
 let COLLS = { i: -2, s: new Set() }; const collSet = i => { if (COLLS.i !== i) COLLS = { i, s: new Set(collOf(i, true)) }; return COLLS.s; };
@@ -4551,7 +4553,7 @@ function applySfLinks(){ const th = root.dataset.theme, dark = th === "lyt" || t
 function readCss(){ applySfLinks(); const s = win.getComputedStyle(root);
   if (!probe) { probe = root.createSpan({ cls: "ivm-probe" }); }
   for (const v of ["qa","display","mono","body","dw"]) css[v] = s.getPropertyValue("--"+v).trim();
-  for (const lv of [5, 4, 3]) for (const [j, ab] of ["a", "b"].entries()) { probe.setCssProps({ "--probe": s.getPropertyValue(`--g${lv}${ab}`).trim() }); GRAD[lv][j] = win.getComputedStyle(probe).color || GRAD[lv][j]; }   // level colors come from the theme
+  if (!COVER) for (const lv of [5, 4, 3]) for (const [j, ab] of ["a", "b"].entries()) { probe.setCssProps({ "--probe": s.getPropertyValue(`--g${lv}${ab}`).trim() }); GRAD[lv][j] = win.getComputedStyle(probe).color || GRAD[lv][j]; }   // level colors come from the theme, unless Book cover shapes sets them (0.9.149)
   for (const v of COLORS) { const raw = s.getPropertyValue("--"+v).trim(); probe.setCssProps({ "--probe": raw }); css[v] = win.getComputedStyle(probe).color || raw; } }
 const isPhone = () => (root.clientWidth || win.innerWidth) <= 760;
 // state classes the stylesheet keys off (instead of :has, which is slow to re-match): panel open, legend open, focus bar shown, a clear-× showing
@@ -5056,6 +5058,8 @@ function timeGuides(){
   }
 }
 function shape(lv, x, y, r){
+  if (COVER && lv === 5) { const h = r*.94; ctx.rect(x-h, y-h, 2*h, 2*h); return; }   // Book cover shapes (0.9.149): a crisp square, a touch narrower than the circle so it doesn't read bigger
+  if (COVER && lv === 4) { const R = r*1.42; ctx.moveTo(x, y-R); ctx.lineTo(x+R*.866, y+R*.5); ctx.lineTo(x-R*.866, y+R*.5); ctx.closePath(); return; }   // an upright equilateral triangle on its centroid
   if (lv === 5) { ctx.roundRect ? ctx.roundRect(x-r, y-r, 2*r, 2*r, r*.28) : ctx.rect(x-r,y-r,2*r,2*r); }       // org-like rounded square: home & hubs
   else if (lv === 4) { ctx.moveTo(x, y-r*1.1); ctx.lineTo(x+r*1.1, y); ctx.lineTo(x, y+r*1.1); ctx.lineTo(x-r*1.1, y); ctx.closePath(); }  // diamond
   else { ctx.arc(x, y, r, 0, 6.2832); }
@@ -7193,12 +7197,12 @@ function starLegend(){
 function legend(){
   if (view === "stars") { html($("#legend")).v = starLegend(); return; }
   if (view === "sense") { html($("#legend")).v = `<div class="lh"><span>Legend · Sensemakers</span><span class="lc" id="legclose" aria-hidden="true" title="Click anywhere to collapse">‹</span></div>`
-    + LEVELS.slice(0,3).map(L => `<div><i style="background:linear-gradient(135deg,${GRAD[L.lv][0]},${GRAD[L.lv][1]});${L.lv===5?"border-radius:3px;":L.lv===4?"border-radius:1px;transform:rotate(45deg) scale(.8);":""}"></i>${L.lv} · ${L.name}</div>`).join("")
+    + LEVELS.slice(0,3).map(L => `<div><i style="background:linear-gradient(135deg,${GRAD[L.lv][0]},${GRAD[L.lv][1]});${lvSw(L.lv)}"></i>${L.lv} · ${L.name}</div>`).join("")
     + `<div><i style="background:${css.sl2}"></i>2 · Linked notes</div><div><i style="background:${css.sl1}"></i>1 · Unlinked notes</div>`
     + `<div style="margin-top:4px;color:var(--ink)">${senseSrc === "ai" ? `Placed by a one-time AI pass${SAI && SAI.date ? ` (${esc(SAI.date)})` : ""}` : "Placed by rules, no AI"}${syFull() ? "" : ` · ${SY0}–${SY1}`}</div><div style="opacity:.85">Left–right: reflection → expression</div><div style="opacity:.85">Up–down: bottom-up → top-down</div>`
     + `<div style="margin-top:4px;opacity:.85">▶ plays by month or week: each new note pops, streaks, drops or spirals to its spot</div>`; return; }
   html($("#legend")).v = `<div class="lh"><span>${view === "spacetime" ? "Legend · Space-Time" : "Legend"}</span><span class="lc" id="legclose" aria-hidden="true" title="Click anywhere to collapse">‹</span></div>` + LEVELS.map(L => {
-    const sw = L.lv >= 3 ? `background:linear-gradient(135deg,${GRAD[L.lv][0]},${GRAD[L.lv][1]});${L.lv===5?"border-radius:3px;":L.lv===4?"border-radius:1px;transform:rotate(45deg) scale(.8);":""}` : `background:${L.lv===2?css.l2:css.l1}`;
+    const sw = L.lv >= 3 ? `background:linear-gradient(135deg,${GRAD[L.lv][0]},${GRAD[L.lv][1]});${lvSw(L.lv)}` : `background:${L.lv===2?css.l2:css.l1}`;
     return `<div><i style="${sw}"></i>${L.lv} · ${L.name} <span style="margin-left:auto;padding-left:10px">${(cnt[L.lv]||0).toLocaleString()}</span></div>`;
   }).join("") + (showArch && hasArch ? `<div><i style="background:none;border:1.5px solid ${css.muted}"></i>Archive (rings)</div>` : "") + `<div style="margin-top:4px"><i class="ln" style="border-color:${css.up}"></i>links above</div><div><i class="ln" style="border-color:${css.down}"></i>links below</div>` + (`<div><i class="ln" style="border-color:${css.upp}"></i>up property</div><div><i class="ln" style="border-color:${css.rel}"></i>related property</div><div><i class="ln" style="border-color:${css.prop}"></i>other properties (actors, director, by, next…)</div>`) + (focus >= 0 ? `<div><i class="ln" style="border-color:${css.muted};opacity:.5;border-top-width:1px"></i>links between the other notes in focus</div>` : "");
   if (view === "spacetime" && !domeOn()) $("#legend").createDiv({ text: "Time is on the x-axis. \u201cSpace,\u201d as represented by folder structure, is on the y-axis. In each row, higher levels sit higher.", attr: { style: "margin-top:4px;opacity:.85;max-width:300px;white-space:normal" } });
@@ -8351,6 +8355,8 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
       for (const [v, t_] of [["off", "Off"], ["one", "One"], ["fewer", "Fewer"], ["natural", "Natural"], ["max", "Max"]]) { const b = seg.createEl("button", { text: t_, attr: { type: "button", "aria-pressed": String(PVLV === v) } });
         b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
     { const l_ = g.createEl("label", { cls: "mini lcemo ctrrk top" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = ORBN; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Show orb tab names" }); c_.onchange = () => { ORBN = c_.checked; save("iv-orbn", ORBN); syncOrbs(); }; } }
+  { const l = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-description": "Idea Emergence marks as on the Linking Your Thinking cover: Level 5 a square, Level 4 a triangle, Level 3 a circle" } }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = COVER; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Book cover shapes" });   /* (0.9.149) */
+    cb.onchange = () => { COVER = cb.checked; save("iv-cover", COVER); setCover(COVER); readCss(); legend(); syncOrbs(); draw(); if (host.linkColors) host.linkColors(); }; }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
     { const l2 = DI.p.createEl("label", { cls: "pmaps drow" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = COLLON;   /* its own switch, not under Starfield link colors (0.8.343) */ l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Collection links in coral" });
       c2.onchange = () => { COLLON = c2.checked; save("iv-colllinks", COLLON); RECKEY = ""; draw(); }; }   /* the picked note's collections as coral links (0.8.296) */

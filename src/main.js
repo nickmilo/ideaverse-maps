@@ -5,12 +5,14 @@ import { registerEmbeds } from "./embed.js";
 import { registerLinkColors } from "./linkcolor.js";
 import { registerDeck } from "./deck.js";
 import { MapsSettingTab, detectDefaults } from "./settings.js";
+import { setCover } from "./spot.js";
 import { DEFAULTS, EXTRACT_VERSION, scanVault } from "./scan.js";
 
 export default class IdeaverseMapsPlugin extends Plugin {
   async onload() {
     const saved = (await this.loadData()) || {};
     this.data = { settings: saved.settings || null, state: saved.state || {} };
+    setCover(this.data.state["iv-cover"] === true);   // Book cover shapes, for the panes too, before any map opens (0.9.149)
     this.graph = null;          // the last scan, shared by every open map
     this.dirty = false;         // notes changed since the last scan
 
@@ -71,7 +73,7 @@ export default class IdeaverseMapsPlugin extends Plugin {
     });
   }
 
-  onunload() {}
+  onunload() { activeDocument.body.removeClass("iv-cover"); }
 
   /** Settings, with defaults detected from the vault the first time. */
   get settings() {
