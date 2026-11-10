@@ -76,6 +76,26 @@
 .ivm .duo i{width:11px;height:11px;border-radius:50%;display:block}
 .ivm .duo i:first-child{background:linear-gradient(135deg,#5ec8f2,#2fae78)}
 .ivm .duo i:last-child{background:linear-gradient(135deg,#f7c948,#e8538a);border-radius:3px;margin-left:-3px}
+/* the mark and its picker (0.9.148) */
+.ivm .duo .mk{display:block}
+.ivm .mkdefs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
+.ivm .mkms{position:relative;display:inline-flex;flex:none}
+.ivm .mkbtn{all:unset;cursor:pointer;display:inline-flex;align-items:center;border-radius:6px;padding:3px}
+.ivm .mkbtn:hover{background:var(--accent-soft)}
+.ivm .mkbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ivm .mkpop{width:min(300px,calc(100vw - 32px));max-height:none;gap:8px;padding:10px}
+.ivm .mkgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ivm .mkopt,.ivm .mkchip{all:unset;box-sizing:border-box;cursor:pointer;display:grid;place-items:center;border:1px solid var(--line);background:var(--panel);color:var(--muted)}
+.ivm .mkopt{height:34px;border-radius:8px}
+.ivm .mkchip{width:26px;height:26px;border-radius:7px}
+.ivm .mkopt:hover,.ivm .mkchip:hover{border-color:var(--muted)}
+.ivm .mkopt[aria-pressed="true"],.ivm .mkchip[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.ivm .mkopt:focus-visible,.ivm .mkchip:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.ivm .mkside{display:grid;grid-template-columns:40px 1fr;gap:6px 8px;align-items:center}
+.ivm .mklab{font:500 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ivm .mkrow{display:flex;gap:5px;flex-wrap:wrap}
+.ivm .mkfoot{display:flex;gap:8px;align-items:center;justify-content:space-between;padding-top:2px}
+.ivm .mknow{font:11px var(--mono);color:var(--muted);text-align:center;flex:1;min-width:0}
 .ivm h1{color:var(--title,var(--ink));margin:2px 0 0;font:var(--dw) 26px/1 var(--display);letter-spacing:-.02em;white-space:nowrap}
 .ivm h1 em{font-style:normal;color:var(--accent)}
 .ivm .stats{display:flex;gap:12px;font:500 11.5px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;flex:none}

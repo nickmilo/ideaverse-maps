@@ -3,6 +3,7 @@
 import { Menu, Notice, Platform, sanitizeHTMLToDom, setIcon } from "obsidian";
 import { parseDay } from "./scan.js";
 import { LEAD_EMO, LINKHELP, LVGRAD } from "./spot.js";
+import { MK_CLASSIC, MK_DEFAULT, mkDefs, mkRender, mkSvg, mkValid } from "./mark.js";
 
 export const VIEWS_ON = ["cockpit", "kandinsky", "arena", "compass", "emergence", "spacetime", "gravity", "stars", "sense", "chord", "quincunx", "shelf", "tree", "treemap", "skyline", "planet", "lincal", "spiral", "lifeline", "posters", "builder", "graph", "mosaic", "people", "ideaverse"];   // Space-Time, the domes and Chord are reached through ⋯ → Experimental; ARC stays in the lab
 
@@ -7881,7 +7882,24 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     star: [["path", { d: "M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z" }]],
   };
   const left = hd.createDiv({ cls: "tbl" }), right = hd.createDiv({ cls: "tbr" });
-  left.appendChild(root.querySelector(".brand .duo")); left.appendChild($("#vsegms")); { const fbar = $("#focusbar"); fbar.classList.add("mapfb"); cv.parentElement.appendChild(fbar); }   // the focus bar floats at the top of the map
+  left.appendChild(root.querySelector(".brand .duo"));
+  // the mark (0.9.148): click it to choose a pair of shapes; the watermark follows
+  { const duo = left.querySelector(".duo"), uid = "ivmk" + Math.random().toString(36).slice(2, 8);
+    mkDefs(doc, root, uid);
+    let MK = pref("iv-mark", MK_DEFAULT); if (!mkValid(MK)) MK = MK_DEFAULT;
+    const ms = doc.createElement("div"); ms.className = "mkms"; ms.id = "mkms"; duo.before(ms);
+    const b = doc.createElement("button"); b.type = "button"; b.id = "mkbtn"; b.className = "mkbtn";
+    b.setAttribute("aria-haspopup", "true"); b.setAttribute("aria-expanded", "false"); b.setAttribute("aria-description", "Choose the mark");
+    ms.appendChild(b); b.appendChild(duo);
+    const pop = doc.createElement("div"); pop.className = "mspop mkpop"; pop.id = "mkpop"; pop.hidden = true; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-description", "Choose the mark");
+    ms.appendChild(pop);
+    const paint = () => root.querySelectorAll(".duo").forEach(d => d.replaceChildren(mkSvg(doc, uid, MK, d.closest(".wm") ? 11 : 12)));
+    const render = () => mkRender(doc, uid, pop, () => MK, m => { MK = m; save("iv-mark", m === MK_CLASSIC ? m : JSON.parse(JSON.stringify(m))); paint(); render(); }, () => { closePops(); b.focus(); });
+    paint();
+    POPS.push(["#mkbtn", "#mkpop", "#mkms"]);
+    b.onclick = e => { e.stopPropagation(); const open = pop.hidden; closePops("#mkpop"); pop.hidden = !open; b.setAttribute("aria-expanded", String(open)); if (open) render(); };
+  }
+  left.appendChild($("#vsegms")); { const fbar = $("#focusbar"); fbar.classList.add("mapfb"); cv.parentElement.appendChild(fbar); }   // the focus bar floats at the top of the map
   // the note and link counts sit at the map's top left (the plugin's name sits at the top right, clear of the note panel)
   { const st = $("#stats"); st.classList.add("mapstats"); cv.parentElement.appendChild(st); }
   // the main tabs: Emergence, Ideaverse, Starfield, Sensemakers. Gravity and Tesla live in More
