@@ -36,7 +36,7 @@ const FOLD = (() => { const seen = new Set(N.filter(d => !d.archive && d.ace && 
   return [...ACE.filter(a => seen.has(a)), ...[...seen].filter(a => !ACE.includes(a)).sort((a,b) => a.localeCompare(b))]; })();
 // "+" and "x" are shown as the symbol, large, with their name small in parentheses
 const ACE_SYM = {"+":["+","(Inbox)"], "x":["x","(Xtras)"]};
-const GRAD = LVGRAD;   /* one set of level gradients, so Book cover shapes recolors everything (0.9.149) */
+const GRAD = {5:["#f7c948","#e8538a"], 4:["#8a5bd6","#3466d6"], 3:["#4fc3ef","#5b2e91"]};
 
 // ---------- adjacency ----------
 const out = Array.from({length:n}, () => []), inn = Array.from({length:n}, () => []);
@@ -4553,7 +4553,7 @@ function applySfLinks(){ const th = root.dataset.theme, dark = th === "lyt" || t
 function readCss(){ applySfLinks(); const s = win.getComputedStyle(root);
   if (!probe) { probe = root.createSpan({ cls: "ivm-probe" }); }
   for (const v of ["qa","display","mono","body","dw"]) css[v] = s.getPropertyValue("--"+v).trim();
-  if (!COVER) for (const lv of [5, 4, 3]) for (const [j, ab] of ["a", "b"].entries()) { probe.setCssProps({ "--probe": s.getPropertyValue(`--g${lv}${ab}`).trim() }); GRAD[lv][j] = win.getComputedStyle(probe).color || GRAD[lv][j]; }   // level colors come from the theme, unless Book cover shapes sets them (0.9.149)
+  for (const lv of [5, 4, 3]) for (const [j, ab] of ["a", "b"].entries()) { probe.setCssProps({ "--probe": s.getPropertyValue(`--g${lv}${ab}`).trim() }); GRAD[lv][j] = win.getComputedStyle(probe).color || GRAD[lv][j]; }   // level colors come from the theme
   for (const v of COLORS) { const raw = s.getPropertyValue("--"+v).trim(); probe.setCssProps({ "--probe": raw }); css[v] = win.getComputedStyle(probe).color || raw; } }
 const isPhone = () => (root.clientWidth || win.innerWidth) <= 760;
 // state classes the stylesheet keys off (instead of :has, which is slow to re-match): panel open, legend open, focus bar shown, a clear-× showing
@@ -8356,7 +8356,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
         b.onclick = e => { e.stopPropagation(); PVLV = v; save("iv-pvl", v); seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }; } }
     { const l_ = g.createEl("label", { cls: "mini lcemo ctrrk top" }); const c_ = l_.createEl("input", { type: "checkbox" }); c_.checked = ORBN; l_.createEl("i", { cls: "sw" }); l_.createSpan({ text: "Show orb tab names" }); c_.onchange = () => { ORBN = c_.checked; save("iv-orbn", ORBN); syncOrbs(); }; } }
   { const l = DI.p.createEl("label", { cls: "pmaps drow", attr: { "aria-description": "Idea Emergence marks as on the Linking Your Thinking cover: Level 5 a square, Level 4 a triangle, Level 3 a circle" } }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = COVER; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Book cover shapes" });   /* (0.9.149) */
-    cb.onchange = () => { COVER = cb.checked; save("iv-cover", COVER); setCover(COVER); readCss(); legend(); syncOrbs(); draw(); if (host.linkColors) host.linkColors(); }; }
+    cb.onchange = () => { COVER = cb.checked; save("iv-cover", COVER); setCover(COVER); legend(); syncOrbs(); draw(); if (host.linkColors) host.linkColors(); }; }
   { const l = DI.p.createEl("label", { cls: "pmaps drow sflinks" }); const cb = l.createEl("input", { type: "checkbox" }); cb.checked = SFLINKS; l.createEl("i", { cls: "sw" }); l.createSpan({ text: "Starfield link colors" });
     { const l2 = DI.p.createEl("label", { cls: "pmaps drow" }); const c2 = l2.createEl("input", { type: "checkbox" }); c2.checked = COLLON;   /* its own switch, not under Starfield link colors (0.8.343) */ l2.createEl("i", { cls: "sw" }); l2.createSpan({ text: "Collection links in coral" });
       c2.onchange = () => { COLLON = c2.checked; save("iv-colllinks", COLLON); RECKEY = ""; draw(); }; }   /* the picked note's collections as coral links (0.8.296) */

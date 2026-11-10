@@ -7,12 +7,9 @@ export const LEAD_EMO = /^((?:\p{Extended_Pictographic}|\p{Regional_Indicator}{2
 
 /* the map's level gradients (GRAD in mapApp.js) */
 export const LVGRAD = { 5: ["#f7c948", "#e8538a"], 4: ["#8a5bd6", "#3466d6"], 3: ["#4fc3ef", "#5b2e91"] };
-/* Book cover shapes (0.9.149): the Idea Emergence marks as on the Linking Your Thinking cover. Level 5 a square, yellow to pink;
-   Level 4 an upright triangle, blue to violet; Level 3 a circle, blue to green. Swapped in place, so every reader of LVGRAD follows;
-   the shapes themselves follow the body class iv-cover */
-const LVGRAD_ORIG = { 5: LVGRAD[5].slice(), 4: LVGRAD[4].slice(), 3: LVGRAD[3].slice() };
-const LVGRAD_COVER = { 5: ["#FFD43B", "#EC3F82"], 4: ["#58CBF2", "#6A2C91"], 3: ["#7ED3FA", "#14AC54"] };
-export function setCover(on) { const src = on ? LVGRAD_COVER : LVGRAD_ORIG; for (const k of [5, 4, 3]) { LVGRAD[k][0] = src[k][0]; LVGRAD[k][1] = src[k][1]; } activeDocument.body.toggleClass("iv-cover", !!on); }
+/* Book cover shapes (0.9.149, colors kept in 0.9.150): Level 5 a crisp square, Level 4 an upright triangle, as on the Linking Your Thinking cover,
+   in the usual level colors. The CSS orbs follow the body class iv-cover */
+export function setCover(on) { activeDocument.body.toggleClass("iv-cover", !!on); }
 
 /* what the three orders mean, from the map's own explanations (Starship → relevance "?", Display → How notes are scored) */
 export const LINKHELP = {
