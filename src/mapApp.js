@@ -3452,7 +3452,7 @@ EXP.cockpit = {
 // Size: a number (your rank). Each note is a card, and when the note has an image property (a poster, a cover),
 // the card shows it once you zoom in. The map reads the properties itself, so it works on any dataset.
 // Posters and Base Builder share this engine, each with its own settings (iv-p… and iv-b…)
-const mkPST = c => ({ across: pref(`iv-${c}across`, null), lanes: pref(`iv-${c}lanes`, null), size: pref(`iv-${c}size`, null), height: pref(`iv-${c}height`, null), mosaic: !!pref(`iv-${c}mosaic`, false), con: c === "b" && pref("iv-bcon", false) === true, tl: c === "b" && pref("iv-btl", false) === true, tlp: c === "b" ? pref("iv-btlp", "") || "" : "", conSel: c === "b" ? pref("iv-bconsel", null) : null, conMax: c === "b" ? +pref("iv-bconmax", 40) || 40 : 40, mbox: [], mosaicOn: false, rng: pref(`iv-${c}rng`, null) || {}, lhide: pref(`iv-${c}lhide`, null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" });
+const mkPST = c => ({ across: pref(`iv-${c}across`, null), lanes: pref(`iv-${c}lanes`, null), size: pref(`iv-${c}size`, null), height: pref(`iv-${c}height`, null), mosaic: !!pref(`iv-${c}mosaic`, false), con: c === "b" && pref("iv-bcon", false) === true, tl: c === "b" && pref("iv-btl", false) === true, ty: c === "b" && pref("iv-bty", false) === true, tlp: c === "b" ? pref("iv-btlp", "") || "" : "", conSel: c === "b" ? pref("iv-bconsel", null) : null, conMax: c === "b" ? +pref("iv-bconmax", 40) || 40 : 40, mbox: [], mosaicOn: false, rng: pref(`iv-${c}rng`, null) || {}, lhide: pref(`iv-${c}lhide`, null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" });
 const PSTP = mkPST("p"), PSTB = mkPST("b"), PSC = () => view === "builder" ? PSTB : PSTP, PK = key => "iv-" + (PSC() === PSTB ? "b" : "p") + key;
 let BASEINFO = null;   // from a base: its sort property and each note's group
 // (a note whose properties Obsidian hasn't read yet, right after it starts, is asked again next time instead of remembered as empty)
@@ -3533,7 +3533,8 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
     for (const it of list) sel_.createEl("option", { value: it.id, text: it.name }); sel_.value = list.some(it => it.id === cur) ? cur : list[0].id; };
   const cu = PSC().cur; fill($("#pacross"), o.across, cu ? cu.acrossId : PSC().across ?? o.across[0].id); fill($("#pheight"), o.across.filter(a => !cu || a.id !== cu.acrossId), cu ? cu.heightId : "");
   { const sc_ = !!(cu && cu.heightId); box.querySelectorAll('[data-k="lanes"]').forEach(el => el.hidden = sc_); box.querySelectorAll('[data-k="height"]').forEach(el => el.hidden = !sc_);
-    const con = view === "builder" && PSTB.con && PSTB.conProps && PSTB.conProps.ids.length, tl = view === "builder" && !con && !!PSTB.spans, md = con ? "constellation" : tl ? "timeline" : cu && cu.mosaic ? "mosaic" : sc_ ? "scatter" : "rows"; box.querySelectorAll("#pmode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pm === md)));
+    const con = view === "builder" && PSTB.con && PSTB.conProps && PSTB.conProps.ids.length, tl = view === "builder" && !con && !!PSTB.spans, md = con ? "constellation" : tl ? "timeline" : view === "builder" && PSTB.ty ? "tally" : cu && cu.mosaic ? "mosaic" : sc_ ? "scatter" : "rows"; box.querySelectorAll("#pmode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pm === md)));
+    { const ty_ = box.querySelector('#pmode button[data-pm="tally"]'); if (ty_) ty_.hidden = view !== "builder"; }
     { const cb_ = box.querySelector('#pmode button[data-pm="constellation"]'); if (cb_) { cb_.hidden = view !== "builder"; const has = peopleDetect().length > 0; cb_.disabled = !has; cb_.title = has ? "" : "No property here lists people (director, cast, author…)"; } }
     box.classList.toggle("pcon", !!con); box.classList.toggle("ptl", tl); tlUI();
     { const tb_ = box.querySelector('#pmode button[data-pm="timeline"]'); if (tb_) { tb_.hidden = view !== "builder"; const has = o.across.some(a => a.id.endsWith("@end")) || tlCands().length > 0; tb_.disabled = !has; tb_.title = has ? "" : "No property here holds a span of years (a lifespan like 1879 – 1955)"; } }
@@ -3541,9 +3542,9 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
     { const sb_ = box.querySelector('#pmode button[data-pm="scatter"]'); if (sb_) { const cu_ = PSC().cur || {}, has = o.across.some(a => a.id !== cu_.acrossId && a.id !== "@created" && !a.id.endsWith("@end")); sb_.disabled = !has && !PSC().height; sb_.title = sb_.disabled ? "Scatter needs a second number property (a rank, a rating, a year)" : ""; } }
     { const bc = box.querySelector(".bcon"); if (bc) { bc.hidden = !con; if (con) builderConUI(bc); } }
     const ar = box.querySelector('.prow[data-k="across"] > span'), ah = box.querySelector('.phint[data-k="across"]');
-    if (ar) ar.setText(md === "mosaic" ? "Narrow by" : "Left to right"); if (ah) ah.setText(md === "timeline" ? "Years shown: keeps every life that overlaps them." : md === "mosaic" ? "A date or number. Use its slider to keep part of the set." : "A date or number. Places each card left to right.");
+    if (ar) ar.setText(md === "mosaic" ? "Narrow by" : md === "tally" ? "Dated by" : "Left to right"); if (ah) ah.setText(md === "tally" ? "A date. Each row is a day, week or month, the oldest at the bottom. Not a date? Created date." : md === "timeline" ? "Years shown: keeps every life that overlaps them." : md === "mosaic" ? "A date or number. Use its slider to keep part of the set." : "A date or number. Places each card left to right.");
     const lr = box.querySelector('.prow[data-k="lanes"] > span'), lh_ = box.querySelector('.phint[data-k="lanes"]');
-    if (lr) lr.setText(md === "mosaic" ? "Blocks by" : md === "timeline" ? "Color by" : "Rows by"); if (lh_) lh_.setText(md === "mosaic" ? "A category. Each value gets its own block." : md === "timeline" ? "A category. Each value gets its own color." : "A category. Each value gets its own row."); }
+    if (lr) lr.setText(md === "mosaic" ? "Blocks by" : md === "timeline" ? "Color by" : md === "tally" ? "Columns by" : "Rows by"); if (lh_) lh_.setText(md === "tally" ? "A category. Each value gets its own column, glyph and color." : md === "mosaic" ? "A category. Each value gets its own block." : md === "timeline" ? "A category. Each value gets its own color." : "A category. Each value gets its own row."); }
   for (const key of ["across", "height", "size"]) postersSlider(key); postersLaneChips(); fill($("#planes"), o.lanes, cu ? cu.laneId : o.defLane);
   fill($("#psize"), o.size, cu ? cu.sizeId : "");
   $("#pimg").setText(o.img ? `Pictures from ${o.img}` : view === "builder" ? "No picture property, so each note is a dot" : "No image property found");
@@ -3551,7 +3552,7 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
   { const bh = $("#bhint"); if (bh) { bh.hidden = view !== "builder"; if (view === "builder" && cu) { const nm = (list, id) => (list.find(x => x.id === id) || {}).name;
       const parts = [["Left to right", nm(o.across, cu.acrossId)], cu.heightId ? ["Bottom to top", nm(o.across, cu.heightId)] : ["Rows", cu.laneId ? nm(o.lanes, cu.laneId) : ""], ["Size", cu.sizeId ? nm(o.size, cu.sizeId) : ""]].filter(p_ => p_[1]);
       const cp = PSTB.con && PSTB.conProps && PSTB.conProps.ids.length ? PSTB.conProps : null;
-      const tsp = PSTB.spans; if (tsp && !cp) { const lnm = cu && cu.laneId ? nm(o.lanes, cu.laneId) : ""; bh.setText(`Timeline: ${tsp.key}, start to end${lnm ? " · Color by " + lnm : ""}${tsp.miss ? ` · ${tsp.miss} without one` : ""}`); } else
+      const tsp = PSTB.spans, tyx = PSTB.ty && PSTB.tally; if (tyx && !cp) { const lnm = cu && cu.laneId ? nm(o.lanes, cu.laneId) : ""; bh.setText(`Tally: ${lnm ? "a column per " + lnm : "one column"}, a row per ${tyx.unit} of ${tyx.date}${tyx.miss ? ` · ${tyx.miss} without one` : ""}`); } else if (tsp && !cp) { const lnm = cu && cu.laneId ? nm(o.lanes, cu.laneId) : ""; bh.setText(`Timeline: ${tsp.key}, start to end${lnm ? " · Color by " + lnm : ""}${tsp.miss ? ` · ${tsp.miss} without one` : ""}`); } else
       bh.setText(cp ? (cp.own ? "Your pick: " : cp.cols ? "From this base's columns: " : "From these notes' properties: ") + "Stars from " + cp.ids.join(" · ") : (o.cols ? "From this base's columns: " : "From these notes' properties: ") + parts.map(p_ => p_[0] + " " + p_[1]).join(" · ")); } }
     const sz = box.querySelector('.prow[data-k="size"] > span'); if (sz) sz.setText(PSC().dots && !(cu && cu.mosaic) ? "Dot size" : "Card size"); } }
 function layoutPosters(){
@@ -3560,7 +3561,7 @@ function layoutPosters(){
   const o = postersDetect(), acrossId = (o.across.find(a => a.id === PSC().across) || o.across.find(a => a.id === (BASEINFO && BASEINFO.sort)) || o.across[0]).id;
   const ac = o.across.find(a => a.id === acrossId);
   const laneId = PSC().lanes != null && o.lanes.some(l => l.id === PSC().lanes) ? PSC().lanes : o.defLane;
-  const tlOn = view === "builder" && PSTB.tl && o.across.some(a => a.id.endsWith("@end")), hgt = !tlOn && !PSC().mosaic && PSC().height ? o.across.find(a => a.id === PSC().height && a.id !== acrossId) : null, heightId = hgt ? hgt.id : "";
+  const tlOn = view === "builder" && PSTB.tl && o.across.some(a => a.id.endsWith("@end")), hgt = !tlOn && !(view === "builder" && PSTB.ty) && !PSC().mosaic && PSC().height ? o.across.find(a => a.id === PSC().height && a.id !== acrossId) : null, heightId = hgt ? hgt.id : "";
   const sizeId = PSC().size != null && o.size.some(s_ => s_.id === PSC().size) ? PSC().size : o.defSize && o.defSize !== acrossId ? o.defSize : (o.size.find(s_ => /^(rank|rating|stars|score|my.?rating|runtime|pages|length)$/i.test(s_.id) && s_.id !== heightId && s_.id !== acrossId) || o.size[0]).id;
   PSC().cur = { acrossId, laneId, sizeId, heightId, kind: ac.kind, mosaic: PSC().mosaic };
   const valBy = (id, kind, i) => { if (id === "@created") return isNaN(TV[i]) ? null : yOf(TV[i]) + yFrac(TV[i]); if (id === "@score") return N[i].score;
@@ -3588,7 +3589,7 @@ function layoutPosters(){
     const v = AV ? AV[i] : NaN; if (!isNaN(v)) { V[i] = v; if (v < v0) v0 = v; if (v > v1) v1 = v; }
     const z = AS ? AS[i] : NaN; if (!isNaN(z)) { S[i] = z; if (z < s0) s0 = z; if (z > s1) s1 = z; } if (!heightId) cnt.set(lab[i], (cnt.get(lab[i]) || 0) + 1); }
   if (!isFinite(v0)) { v0 = 0; v1 = 1; } if (v1 - v0 < 1e-9) v1 = v0 + 1;
-  PSC().scatter = !!heightId; PSC().mosaicOn = false; PSC().diag = PSC().rings = null; PSC().yticks = [];
+  PSC().scatter = !!heightId; PSC().mosaicOn = false; PSC().tally = null; PSC().diag = PSC().rings = null; PSC().yticks = [];
   PSC().dots = view === "builder" && !o.img; PSC().lab = heightId ? null : lab; PSC().order = null;
   if (heightId) { layoutPostersXY(ids, V, S, v0, v1, s0, s1, ac, hgt, i => AH[i], o); postersOptsUI(); return; }
   // lanes: the base's own order, else biggest first; past 14, the rest share "Other"
@@ -3597,6 +3598,7 @@ function layoutPosters(){
   PSC().order = order; PSC().spans = null;
   // Timeline keeps its own years slider (lives that overlap the years kept), so only the hidden rows filter here
   if (tlOn) { layoutSpans(all.filter(i => !(lh.size && lh.has(lab[i]))), o, lab, order); postersOptsUI(); return; }
+  if (view === "builder" && PSTB.ty) { layoutTally(ids, lab, order, acrossId, ac, laneId); postersOptsUI(); return; }
   if (PSC().mosaic) { layoutMosaic(ids, S, s0, s1, lab, order, laneId, o); postersOptsUI(); return; }
   const dots = PSC().dots; PSC().order = order;
   const WD = Math.max(520, Math.min(5200, Math.sqrt(ids.length) * 90)), PW = dots ? 12 : 16, PH = dots ? 12 : 24, STK = dots ? PH * 1.05 : PH * .42, NOV = -90, xOf = v => (v - v0) / (v1 - v0) * WD;
@@ -3615,6 +3617,51 @@ function layoutPosters(){
   for (let t = Math.ceil(v0 / tk) * tk; t <= v1 + 1e-9; t += tk) ticks.push({ x: xOf(ac.kind === "year" || ac.kind === "date" ? t : t), t: ac.kind === "year" || ac.kind === "date" ? String(Math.round(t)) : String(+t.toFixed(2)) });
   PSC().lanesOut = lanesOut; PSC().ticks = ticks; PSC().WD = WD; PSC().H = y; PSC().img = o.img; PSC().hasNo = ids.some(i => isNaN(V[i]));
   expBox = { x0: (PSC().hasNo ? NOV - 40 : -40) - 150, y0: -60, x1: WD + 40, y1: y + 20 }; postersOptsUI(); }
+// ---------- Base Builder · Tally (0.9.151): a calendar grid, one column per category, one row per day, week or month, the oldest at the bottom ----------
+// Each note is a small mark in its cell, so a busy day becomes a little cluster and a column reads like a habit tracker: streaks, gaps, bursts.
+// Each column keeps its own glyph (ring, square, triangle, asterisk…) and color. Switching to it, the notes fly in from where they were.
+const TALLYG = ["ring", "square", "tri", "star", "disc", "x", "plus", "diamond", "half"];
+function tallyGlyph(g, sh, x, y, r, col){ g.fillStyle = col; g.strokeStyle = col; g.lineCap = "round"; g.beginPath();
+  switch (sh) {
+    case "ring": g.lineWidth = r * .55; g.arc(x, y, r * .72, 0, 6.2832); g.stroke(); break;
+    case "square": g.rect(x - r * .86, y - r * .86, r * 1.72, r * 1.72); g.fill(); break;
+    case "tri": g.moveTo(x - r * .9, y - r * .9); g.lineTo(x + r * .9, y + r * .9); g.lineTo(x - r * .9, y + r * .9); g.closePath(); g.fill(); break;
+    case "diamond": g.moveTo(x, y - r * 1.05); g.lineTo(x + r * 1.05, y); g.lineTo(x, y + r * 1.05); g.lineTo(x - r * 1.05, y); g.closePath(); g.fill(); break;
+    case "half": g.moveTo(x + r * .86, y - r * .86); g.lineTo(x + r * .86, y + r * .86); g.lineTo(x - r * .86, y + r * .86); g.closePath(); g.fill(); g.beginPath(); g.lineWidth = Math.max(1, r * .18); g.rect(x - r * .86, y - r * .86, r * 1.72, r * 1.72); g.stroke(); break;
+    case "x": case "plus": case "star": { g.lineWidth = r * .4; const arms = sh === "star" ? 3 : 2, rot = sh === "x" ? Math.PI / 4 : 0;
+      for (let q = 0; q < arms; q++) { const an = rot + q * Math.PI / arms; g.moveTo(x - Math.cos(an) * r, y - Math.sin(an) * r); g.lineTo(x + Math.cos(an) * r, y + Math.sin(an) * r); } g.stroke(); break; }
+    case "dot": g.arc(x, y, r * .5, 0, 6.2832); g.fill(); break;
+    default: g.arc(x, y, r, 0, 6.2832); g.fill(); } }
+function layoutTally(ids, lab, order, acrossId, ac, laneId){
+  // the date each note sits on: the Left to right property when it's a date or a year, else when the note was created
+  const dateId = ac.kind === "date" || ac.kind === "year" ? acrossId : "@created";
+  const tOf = i => { if (dateId === "@created") return isNaN(TV[i]) ? null : TV[i]; const v = fmOf(i) && fmOf(i)[dateId], f = Array.isArray(v) ? v[0] : v; if (f == null || f === "") return null;
+    if (ac.kind === "year") { const sp = yspan(f); const y = sp ? sp[0] : asNum(f); return y == null ? null : Date.UTC(y, 0, 1); } const d = parseDay(f); return d ? Date.parse(d) : null; };
+  const T = new Map(); let t0 = Infinity, t1 = -Infinity; for (const i of ids) { const t = tOf(i); if (t == null || !isFinite(t)) continue; T.set(i, t); if (t < t0) t0 = t; if (t > t1) t1 = t; }
+  for (let i = 0; i < n; i++) RW[i] = RH[i] = 0;
+  const DAY = 864e5, d0 = new Date(isFinite(t0) ? t0 : Date.now()); d0.setUTCHours(0, 0, 0, 0);
+  const spanD = isFinite(t0) ? (t1 - d0.getTime()) / DAY : 0, unit = ac.kind === "year" ? "year" : spanD <= 62 ? "day" : spanD <= 800 ? "week" : spanD <= 365 * 12 ? "month" : "year";
+  const y0 = d0.getUTCFullYear(), m0 = d0.getUTCMonth(), dow0 = (d0.getUTCDay() + 6) % 7, wk0 = d0.getTime() - dow0 * DAY;   // weeks start on Monday
+  const rowOf = t => { const d = new Date(t); if (unit === "day") return Math.floor((t - d0.getTime()) / DAY); if (unit === "week") return Math.floor((t - wk0) / (7 * DAY));
+    if (unit === "month") return (d.getUTCFullYear() - y0) * 12 + d.getUTCMonth() - m0; return d.getUTCFullYear() - y0; };
+  const startOf = r => unit === "day" ? new Date(d0.getTime() + r * DAY) : unit === "week" ? new Date(wk0 + r * 7 * DAY) : unit === "month" ? new Date(Date.UTC(y0, m0 + r, 1)) : new Date(Date.UTC(y0 + r, 0, 1));
+  const nRows = isFinite(t0) ? rowOf(t1) + 1 : 0, C = 24, nc = order.length, colI = new Map(order.map((l, j) => [l, j]));
+  const cells = new Map(), cnt = new Array(nc).fill(0);
+  for (const [i, t] of T) { const j = colI.get(lab[i]); if (j == null) continue; const key = j + "|" + rowOf(t); let a = cells.get(key); if (!a) cells.set(key, a = []); a.push(i); cnt[j]++; }
+  for (const [key, a] of cells) { const [j, r] = key.split("|").map(Number); a.sort((p, q) => T.get(p) - T.get(q)); const m = Math.min(6, Math.ceil(Math.sqrt(a.length))), sub = C * .86 / m, cx0 = j * C + (C - m * sub) / 2, cy0 = (nRows - 1 - r) * C + (C - m * sub) / 2;
+    a.forEach((i, q) => { const qq = Math.min(q, m * m - 1), gx = qq % m, gy = Math.floor(qq / m), w = sub * .86; RX[i] = cx0 + gx * sub + (sub - w) / 2; RY[i] = cy0 + (m - 1 - gy) * sub + (sub - w) / 2; RW[i] = RH[i] = w; EX[i] = RX[i] + w / 2; EY[i] = RY[i] + w / 2; }); }
+  // the row labels down the left: a day's number each week (and the month at its 1st), a week's month when it starts, a month's name, a year
+  const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], rowLab = [];
+  for (let r = 0; r < nRows; r++) { const d = startOf(r), dd = d.getUTCDate(), mm = d.getUTCMonth(); let t = "";
+    if (unit === "day") t = dd === 1 || r === 0 ? `${MN[mm]} ${dd}` : (dd - 1) % 7 === 0 ? String(dd) : "";
+    else if (unit === "week") { const e = new Date(d.getTime() + 6 * DAY), em = e.getUTCMonth(), prev = r ? new Date(startOf(r - 1).getTime() + 6 * DAY).getUTCMonth() : -1; t = em !== prev ? (em === 0 || r === 0 ? `${MN[em]} ${e.getUTCFullYear()}` : MN[em]) : ""; }   /* a week belongs to the month it ends in */
+    else if (unit === "month") t = mm === 0 || r === 0 ? `${MN[mm]} ${d.getUTCFullYear()}` : mm % 3 === 0 ? MN[mm] : "";
+    else t = r === 0 || (y0 + r) % 5 === 0 ? String(y0 + r) : "";
+    if (t) rowLab.push({ y: (nRows - 1 - r) * C + C / 2, t }); }
+  const dname = dateId === "@created" ? "Created date" : dateId;
+  PSC().tally = { cols: order.map(l => l === "" ? "All" : l), cnt, nRows, C, rowLab, unit, miss: ids.length - T.size, date: dname, lane: laneId };
+  PSC().lanesOut = []; PSC().ticks = []; PSC().WD = nc * C; PSC().H = nRows * C; PSC().hasNo = false; PSC().img = ""; PSC().lab = lab; PSC().order = order; PSC().dots = true;
+  expBox = { x0: -90, y0: -30, x1: nc * C + 30, y1: nRows * C + 130 }; }
 /* where a pinned axis may draw (0.8.345): below the orb tabs and the counts at the top, right of the tucked primary note tab on the left */
 function axisPads(){ let top = 22, left = 0; try { const cb = cv.getBoundingClientRect(); if (orbBar && !orbBar.hidden && orbBar.childElementCount) { const ob = orbBar.getBoundingClientRect(); if (ob.height) top = Math.max(top, Math.round(ob.bottom - cb.top + 18)); }
     const st = root.querySelector(".mapstats"); if (st && st.offsetParent) { const q = st.getBoundingClientRect(); if (q.height) top = Math.max(top, Math.round(q.bottom - cb.top + 14)); }
@@ -3749,6 +3796,16 @@ EXP.posters = {
   layout: layoutPosters, pick: (x, y) => rectPick(x, y), ownLabels: true,
   guides(){ const gd = sel >= 0 ? .55 : 1;
     ctx.textBaseline = "middle"; ctx.lineWidth = 1;
+    if (PSC().tally) { const T_ = PSC().tally, C = T_.C, nc = T_.cols.length, gx0 = sx(0), gy0 = sy(0), gx1 = sx(nc * C), gy1 = sy(T_.nRows * C);   // Tally: the grid, the dates, the columns
+      ctx.strokeStyle = css.line; ctx.globalAlpha = .7 * gd; ctx.beginPath();
+      for (let j = 0; j <= nc; j++) { const x = Math.round(sx(j * C)) + .5; ctx.moveTo(x, gy0); ctx.lineTo(x, gy1); }
+      if (C * k >= 5) for (let r = 0; r <= T_.nRows; r++) { const y = Math.round(sy(r * C)) + .5; if (y < -2 || y > H + 2) continue; ctx.moveTo(gx0, y); ctx.lineTo(gx1, y); } else { ctx.moveTo(gx0, gy0 + .5); ctx.lineTo(gx1, gy0 + .5); ctx.moveTo(gx0, gy1 + .5); ctx.lineTo(gx1, gy1 + .5); }
+      ctx.stroke(); ctx.globalAlpha = gd; ctx.font = `400 10.5px ${css.mono}`; ctx.fillStyle = css.muted; ctx.textAlign = "right"; let lastY = 1e9;
+      for (const L_ of T_.rowLab) { const y = sy(L_.y); if (y < -10 || y > H + 10 || lastY - y < 13) continue; lastY = y; ctx.fillText(L_.t, gx0 - 8, y); }
+      ctx.textAlign = "left"; const ly = gy1 + 10;
+      const fs_ = Math.min(11, C * k * .75); if (fs_ >= 6) for (let j = 0; j < nc; j++) { const x = sx(j * C + C / 2); if (x < -60 || x > W + 60) continue; ctx.save(); ctx.translate(x - fs_ * .38, ly); ctx.rotate(Math.PI / 2);   /* down its own column, so neighbors never collide */ ctx.fillStyle = css.ink; ctx.font = `600 ${fs_}px ${css.mono}`; const t = String(T_.cols[j]).toUpperCase(); ctx.fillText(t, 0, 0);
+        ctx.fillStyle = css.muted; ctx.font = `400 ${fs_ * .95}px ${css.mono}`; ctx.fillText(" " + T_.cnt[j].toLocaleString(), ctx.measureText(t).width + 2, 0); ctx.restore(); }
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.globalAlpha = 1; return; }
     if (PSC().mosaicOn) { ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
       for (const b of PSC().mbox) { const x = sx(b.x), y = sy(b.y), w = b.w * k, h = b.h * k; if (x > W || y > H || x + w < 0 || y + h < 0) continue;
         ctx.globalAlpha = .9 * gd; ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.strokeRect(x + .5, y + .5, w - 1, h - 1);
@@ -3786,6 +3843,10 @@ EXP.posters = {
         if (open) { const g = ctx.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, col); g.addColorStop(.6, col); g.addColorStop(1, /^rgb\(/.test(col) ? col.replace(/^rgb\((.*)\)$/, "rgba($1, 0)") : col + "00"); ctx.fillStyle = g; } else ctx.fillStyle = col;   /* an rgb() color fades too (0.8.325) */
         ctx.fillRect(x, y + (h - h_) / 2, w, h_); if (i === sel) { ctx.strokeStyle = css.accent; ctx.lineWidth = 2; ctx.strokeRect(x - 2, y - 2, w + 4, h + 4); }
         if (h >= 4.5 || i === sel) { ctx.fillStyle = css.ink; ctx.font = `500 ${Math.max(9, Math.min(12, h * 1.6))}px ${css.body}`; ctx.textBaseline = "middle"; ctx.fillText(N[i].title, x + w + 5, y + h / 2); ctx.textBaseline = "alphabetic"; }
+        continue; }
+      if (P_.tally) { const j = P_.order.indexOf(P_.lab[i]), other = P_.lab[i] === "Other" || P_.lab[i] === "—", r = Math.max(1.2, w / 2 * .92), cx = x + w / 2, cy = y + h / 2;   // Tally: the column's own glyph
+        tallyGlyph(ctx, other ? "dot" : TALLYG[j % TALLYG.length], cx, cy, r, other ? css.muted : PPAL[j % PPAL.length]);
+        if (i === sel) { ctx.strokeStyle = css.accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, r + 4, 0, 6.2832); ctx.stroke(); }
         continue; }
       if (P_.dots && !P_.mosaicOn) { const r = Math.max(1.5, Math.min(w, h) / 2 * .85), cx = x + w / 2, cy = y + h / 2;   // Base Builder without pictures: a dot, colored by its row
         ctx.fillStyle = builderHue(i); ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
@@ -3833,7 +3894,7 @@ EXP.builder = { ownLabels: true,
   get labels(){ return PSTB.con ? EXP.people.labels : BPOST.labels; },
   guides(){ return (PSTB.con ? EXP.people : BPOST).guides(); },
   notes(lit, dim){ return (PSTB.con ? EXP.people : BPOST).notes(lit, dim); },
-  get legend(){ return PSTB.con ? "Base Builder · Constellation: the people this base's notes name (director, cast, author…) as stars, sized by how many notes name them, joined by the notes they share. Each note orbits its main person. Click a person to light up their notes." : "Base Builder: the notes in this base, laid out by the base's own columns. Left to right is a date or number, rows are a category (or the base's groups), size is a number; pick a second number for Bottom to top and the rows give way to a scatter. Notes with a picture show as cards; the rest are dots, colored by their row. Click the map's tab to change any of it."; },
+  get legend(){ return PSTB.ty && !PSTB.con ? "Base Builder · Tally: a calendar grid. Each column is a category (Columns by), each row a day, week or month of a date (Dated by), the oldest at the bottom, so a column reads like a habit tracker: streaks, gaps, bursts. Each note is a mark in its cell in its column's own glyph and color; a busy day becomes a little cluster. Click a mark to open its note." : PSTB.con ? "Base Builder · Constellation: the people this base's notes name (director, cast, author…) as stars, sized by how many notes name them, joined by the notes they share. Each note orbits its main person. Click a person to light up their notes." : "Base Builder: the notes in this base, laid out by the base's own columns. Left to right is a date or number, rows are a category (or the base's groups), size is a number; pick a second number for Bottom to top and the rows give way to a scatter. Notes with a picture show as cards; the rest are dots, colored by their row. Click the map's tab to change any of it."; },
 };
 
 // ---------- People: a constellation of the people your notes name ----------
@@ -8032,10 +8093,11 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
       let t_ = 0; r.oninput = () => { PSTB.conMax = +r.value; bc.querySelector(".bcv").setText(r.value); win.clearTimeout(t_); t_ = win.setTimeout(() => { save("iv-bconmax", PSTB.conMax); morph(true, () => fitTarget()); }, 180); }; }
     // Rows (a category per row) or Scatter (a second number bottom to top)
     const pm = pc.createDiv({ cls: "pmode" }); pm.createSpan({ text: "Layout" }); const pseg = pm.createDiv({ cls: "seg", attr: { id: "pmode", role: "group", "aria-label": "Posters layout" } });
-    for (const [m, t, tip] of [["rows", "Rows", "One row per value of a category (genre, status, director)"], ["scatter", "Scatter", "Two numbers: one left to right, one bottom to top (your rating against the crowd's)"], ["mosaic", "Mosaic", "Every card as a tile, no gaps: a block per category, each tile sized by Card size"], ["constellation", "Constellation", "The people the notes name (director, cast, author…) as stars, joined by the notes they share"], ["timeline", "Timeline", "Each note a thin bar from its start to its end (a lifespan): the earliest at the bottom left, the latest at the top right"]]) {
+    for (const [m, t, tip] of [["rows", "Rows", "One row per value of a category (genre, status, director)"], ["scatter", "Scatter", "Two numbers: one left to right, one bottom to top (your rating against the crowd's)"], ["mosaic", "Mosaic", "Every card as a tile, no gaps: a block per category, each tile sized by Card size"], ["constellation", "Constellation", "The people the notes name (director, cast, author…) as stars, joined by the notes they share"], ["timeline", "Timeline", "Each note a thin bar from its start to its end (a lifespan): the earliest at the bottom left, the latest at the top right"], ["tally", "Tally", "A calendar grid: a column per category, a row per day, week or month, the oldest at the bottom. Each note is a mark in its cell"]]) {
       const b = pseg.createEl("button", { text: t, attr: { type: "button", "data-pm": m, "aria-label": tip } });
       b.onclick = e => { e.stopPropagation(); let h = "";
-        if (view === "builder") { const on = m === "constellation", tl = m === "timeline", wasTl = PSTB.tl && !!PSTB.tlp; if (on !== PSTB.con) { PSTB.con = on; save("iv-bcon", on); } if (tl !== PSTB.tl) { PSTB.tl = tl; save("iv-btl", tl); }
+        if (view === "builder") { const on = m === "constellation", tl = m === "timeline", ty = m === "tally", wasTl = PSTB.tl && !!PSTB.tlp; if (on !== PSTB.con) { PSTB.con = on; save("iv-bcon", on); } if (tl !== PSTB.tl) { PSTB.tl = tl; save("iv-btl", tl); } if (ty !== PSTB.ty) { PSTB.ty = ty; save("iv-bty", ty); }
+          if (ty) { PSC().mosaic = false; save(PK("mosaic"), false); PSC().height = ""; save(PK("height"), ""); morph(true, () => fitTarget()); legend(); return; }   /* Tally (0.9.151): the notes fly into their cells */
           if (tl && (!PSTB.tlp || !tlCands().some(c_ => c_.key === PSTB.tlp))) { const c0 = tlCands()[0]; PSTB.tlp = c0 ? c0.key : ""; save("iv-btlp", PSTB.tlp); }
           if (on) { PPL.pick = -1; relayout(true, false, () => fitTarget()); legend(); return; } if (tl) { relayout(true, false, () => fitTarget()); legend(); return; } if (wasTl) { win.setTimeout(() => { if (!dead) relayout(true, false, () => fitTarget()); }, 0); } }   /* leaving Timeline brings back the notes it set aside */ PSC().mosaic = m === "mosaic"; save(PK("mosaic"), PSC().mosaic);
         if (m === "mosaic") { morph(true, () => fitTarget()); legend(); return; }
