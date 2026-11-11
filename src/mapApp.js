@@ -147,13 +147,15 @@ let YR0 = Math.max(SLMIN, Math.min(NOW_Y, +pref("iv-yr0", SLMIN))), YR1 = Math.m
 fromY = fullY = YR0;
 // every map of the whole vault shares it; Posters and People have their own sliders, Linear its own years
 const YRV = new Set(["emergence", "spacetime", "gravity", "stars", "sense", "graph", "ideaverse", "chord", "treemap", "mosaic", "tree", "shelf", "skyline", "planet", "quincunx", "arc"]);
+/* Base Builder · Tally by Created date takes the Years filter too: the range, the Recent windows, fixed dates, by modified (0.9.152) */
+const yrv = v => { if (YRV.has(v)) return true; try { return v === "builder" && PSTB.ty && !PSTB.con && (PSTB.across == null || PSTB.across === "@created"); } catch (_) { return false; } };
 // "Show notes outside the date range": off by default, so these maps show only the years picked, and no undated notes;
 // on, notes with no date sit in the No date strip, older ones in a Before strip, newer ones in an After strip
 let YRALL = pref("iv-yrall", true) !== false;   // on by default
 // (the first layout runs before the map's view is set up, so it reads the saved one)
 const curV = () => { try { return view; } catch (e) { return pref("iv-view", "emergence"); } };
-const yrEnd = () => YRV.has(curV()) ? YR1 : NOW_Y;
-const yrNarrow = () => !BYMT && !winSpan() && (YR0 > SLMIN || YR1 < NOW_Y), yrOn = () => YRV.has(curV()) && yrNarrow();
+const yrEnd = () => yrv(curV()) ? YR1 : NOW_Y;
+const yrNarrow = () => !BYMT && !winSpan() && (YR0 > SLMIN || YR1 < NOW_Y), yrOn = () => yrv(curV()) && yrNarrow();
 let subOff = new Set(Array.isArray(pref("iv-subsoff", null)) ? pref("iv-subsoff", null) : []);   // subfolders switched off inside a shown folder (the buried › in Folders)
 let folders = pref("iv-folders", null); if (!Array.isArray(folders)) folders = [...FOLD]; folders = folders.filter(f => FOLD.includes(f));
 // Bases (Filter → Bases): the base views picked, as "path::view name"; BQS marks the notes they hold (null: no base filter)
@@ -228,8 +230,8 @@ function computeVis(){ VISV++; const fs = new Set(folders);
   if (tagHide.on()) for (let i=0;i<n;i++) if (vis[i] && tagHide.hid(i)) vis[i] = 0;
   /* an extension may hide notes in Starfield (0.9.147) */
   try { const x = (view === "stars" || view === "cockpit") && xOn(); if (x && x.hide) for (let i = 0; i < n; i++) if (vis[i] && x.hide(i)) vis[i] = 0; } catch (_) { /* not set up yet */ }
-  if (YRV.has(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
-  if (winSpan() && YRV.has(curV()) && !YRALL) { const w0 = winStart(), w1 = winEnd(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0 && TV[i] < w1)) vis[i] = 0; }   /* both ends: fixed dates end before today (0.9.17) */
+  if (yrv(curV()) && !(YRALL && curV() !== "builder")) for (let i=0;i<n;i++) {   /* Tally has no edge strips, so it always narrows */ if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
+  if (winSpan() && yrv(curV()) && !(YRALL && curV() !== "builder")) { const w0 = winStart(), w1 = winEnd(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0 && TV[i] < w1)) vis[i] = 0; }   /* both ends: fixed dates end before today (0.9.17) */
   if (BYMT) capDays();
   try { tlFilter(); } catch (_) { /* Base Builder not set up yet */ }
   if (focus >= 0) vis[focus] = 1;
@@ -391,7 +393,7 @@ function layoutTime(){ const WIN = winTL();
   TF = WIN ? winStart() : Date.UTC(fromY,0,1); TS = WIN ? TF : Date.UTC(fullY,0,1);
   let tmin = Infinity; for (let i=0;i<n;i++) if (TV[i] < tmin && (vis[i] || !(yrOn() || (WIN && !YRALL)))) tmin = TV[i];
   ER = tmin < TF ? [140, 300] : null; X0T = ER ? 340 : 170;
-  const TE = WIN ? winEnd() : YRV.has(curV()) && YR1 < NOW_Y ? Date.UTC(YR1 + 1, 0, 1) : T1; UT = WIN ? Math.max(units(TE), 1e-9) : Math.max(units(TE), .5);
+  const TE = WIN ? winEnd() : yrv(curV()) && YR1 < NOW_Y ? Date.UTC(YR1 + 1, 0, 1) : T1; UT = WIN ? Math.max(units(TE), 1e-9) : Math.max(units(TE), .5);
   let tmax = -Infinity; if (TE < T1) for (let i=0;i<n;i++) if (vis[i] && TV[i] >= TE && TV[i] > tmax) tmax = TV[i];
   AR = isFinite(tmax) ? [WW - 160, WW] : null; AFW = AR ? 190 : 0;
   const d1 = dayFull();
@@ -3454,6 +3456,7 @@ EXP.cockpit = {
 // Posters and Base Builder share this engine, each with its own settings (iv-p… and iv-b…)
 const mkPST = c => ({ across: pref(`iv-${c}across`, null), lanes: pref(`iv-${c}lanes`, null), size: pref(`iv-${c}size`, null), height: pref(`iv-${c}height`, null), mosaic: !!pref(`iv-${c}mosaic`, false), con: c === "b" && pref("iv-bcon", false) === true, tl: c === "b" && pref("iv-btl", false) === true, ty: c === "b" && pref("iv-bty", false) === true, tlp: c === "b" ? pref("iv-btlp", "") || "" : "", conSel: c === "b" ? pref("iv-bconsel", null) : null, conMax: c === "b" ? +pref("iv-bconmax", 40) || 40 : 40, mbox: [], mosaicOn: false, rng: pref(`iv-${c}rng`, null) || {}, lhide: pref(`iv-${c}lhide`, null) || {}, ext: {}, laneAll: [], yticks: [], diag: null, rings: null, scatter: false, opts: null, key: "", lanesOut: [], ticks: [], img: "" });
 const PSTP = mkPST("p"), PSTB = mkPST("b"), PSC = () => view === "builder" ? PSTB : PSTP, PK = key => "iv-" + (PSC() === PSTB ? "b" : "p") + key;
+if (curV() === "builder" && PSTB.ty) win.setTimeout(() => { try { if (!dead) { computeVis(); relayout(true, false, () => fitTarget()); } } catch (_) { /* closed first */ } }, 0);   /* the first filter ran before Tally could ask for the Years filter (0.9.152) */
 let BASEINFO = null;   // from a base: its sort property and each note's group
 // (a note whose properties Obsidian hasn't read yet, right after it starts, is asked again next time instead of remembered as empty)
 // a property's values as plain text: lists split, [[links]] and their aliases read as the note's name
@@ -3542,10 +3545,11 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
     { const sb_ = box.querySelector('#pmode button[data-pm="scatter"]'); if (sb_) { const cu_ = PSC().cur || {}, has = o.across.some(a => a.id !== cu_.acrossId && a.id !== "@created" && !a.id.endsWith("@end")); sb_.disabled = !has && !PSC().height; sb_.title = sb_.disabled ? "Scatter needs a second number property (a rank, a rating, a year)" : ""; } }
     { const bc = box.querySelector(".bcon"); if (bc) { bc.hidden = !con; if (con) builderConUI(bc); } }
     const ar = box.querySelector('.prow[data-k="across"] > span'), ah = box.querySelector('.phint[data-k="across"]');
-    if (ar) ar.setText(md === "mosaic" ? "Narrow by" : md === "tally" ? "Dated by" : "Left to right"); if (ah) ah.setText(md === "tally" ? "A date. Each row is a day, week or month, the oldest at the bottom. Not a date? Created date." : md === "timeline" ? "Years shown: keeps every life that overlaps them." : md === "mosaic" ? "A date or number. Use its slider to keep part of the set." : "A date or number. Places each card left to right.");
+    if (ar) ar.setText(md === "mosaic" ? "Narrow by" : md === "tally" ? "Dated by" : "Left to right"); if (ah) ah.setText(md === "tally" ? (yrv("builder") ? "Each row is a day, week or month, the oldest at the bottom. Narrow it with Years below: a range, Recent, fixed dates or by modified." : "A date. Each row is a day, week or month, the oldest at the bottom. Not a date? Created date.") : md === "timeline" ? "Years shown: keeps every life that overlaps them." : md === "mosaic" ? "A date or number. Use its slider to keep part of the set." : "A date or number. Places each card left to right.");
     const lr = box.querySelector('.prow[data-k="lanes"] > span'), lh_ = box.querySelector('.phint[data-k="lanes"]');
     if (lr) lr.setText(md === "mosaic" ? "Blocks by" : md === "timeline" ? "Color by" : md === "tally" ? "Columns by" : "Rows by"); if (lh_) lh_.setText(md === "tally" ? "A category. Each value gets its own column, glyph and color." : md === "mosaic" ? "A category. Each value gets its own block." : md === "timeline" ? "A category. Each value gets its own color." : "A category. Each value gets its own row."); }
-  for (const key of ["across", "height", "size"]) postersSlider(key); postersLaneChips(); fill($("#planes"), o.lanes, cu ? cu.laneId : o.defLane);
+  for (const key of ["across", "height", "size"]) postersSlider(key); postersLaneChips();
+  { const ra = $("#rng-across"); if (ra && view === "builder" && yrv("builder")) ra.hidden = true; }   /* Tally by Created date: the Years filter does this job */ fill($("#planes"), o.lanes, cu ? cu.laneId : o.defLane);
   fill($("#psize"), o.size, cu ? cu.sizeId : "");
   $("#pimg").setText(o.img ? `Pictures from ${o.img}` : view === "builder" ? "No picture property, so each note is a dot" : "No image property found");
   // Base Builder says what it picked, and from where
@@ -6488,7 +6492,7 @@ function syncRange(){
   fromIn.value = fromY; $("#fromv").textContent = fromY;
   $("#archtog").checked = showArch; $("#archrow").hidden = $("#specialt").hidden = !hasArch;
   $("#subctl").hidden = mode !== "ace";
-  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters" || view === "builder", msv = view === "mosaic", ppv = view === "people", gv = GRV(), lay = gv || sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || YRV.has(view)));   // the Layout section shows only where there are layout settings
+  const sv = view === "sense", shv = view === "shelf", tmv = view === "treemap", chv = view === "chord", lcv = view === "lincal", lrv = view === "spiral" || view === "lifeline", pgv = view === "planet", csv = csphOn(), ptv = view === "posters" || view === "builder", msv = view === "mosaic", ppv = view === "people", gv = GRV(), lay = gv || sv || shv || tmv || chv || lcv || lrv || pgv || csv || ptv || msv || ppv || (!expOn() && (mode === "time" || mode === "ace" || yrv(view)));   // the Layout section shows only where there are layout settings
   root.querySelectorAll("#laygrp > *").forEach(el => el.hidden = !lay); if (!lay) for (const id of ["#shelfsort", "#chordby", "#tmsubs", "#tmby", "#tmtags"]) { const el_ = $(id); if (el_) el_.hidden = true; } { const pc = $("#postctl"); if (pc) { pc.hidden = !ptv; if (ptv) postersOptsUI(); } const mz = $("#mosseg"); if (mz) mz.hidden = !msv;  const pp = $("#pplctl"); if (pp) { pp.hidden = !ppv; if (ppv) pplOptsUI(); } const gf = $("#gfctl"); if (gf) gf.hidden = !gv; }
   if (lay) { $("#startms").hidden = true; $("#sensems").hidden = true; $("#subctl").hidden = ppv || msv || ptv || sv || shv || tmv || pgv || csv || chv || lcv || lrv || expOn() || mode !== "ace"; $("#planetseg").hidden = !pgv; $("#lcctl").hidden = !lcv; $("#chordby").hidden = !chv; $("#lrctl").hidden = !lrv; if (lrv) syncLR(); $("#csbands").hidden = !csv; { const tl = $("#tclook"); if (tl) { tl.hidden = !csv; syncTL(); } } $("#sensems").hidden = true; $("#shelfsort").hidden = !shv; $("#callbtn").hidden = !shv; $("#tmsubs").hidden = !tmv || tmTagsOn(); { const tb_ = $("#tmby"); if (tb_) { tb_.hidden = !tmv || !HASTAGS; syncTmBy(); } } if (!shv && !$("#callpanel").hidden) closeCall(); } syncTB();
   $("#sensebtn").textContent = syFull() ? "All years" : SY0 === SY1 ? `${SY0} only` : SY0 <= SLMIN ? `Through ${SY1}` : `${SY0}–${SY1}`;
@@ -8096,8 +8100,8 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     for (const [m, t, tip] of [["rows", "Rows", "One row per value of a category (genre, status, director)"], ["scatter", "Scatter", "Two numbers: one left to right, one bottom to top (your rating against the crowd's)"], ["mosaic", "Mosaic", "Every card as a tile, no gaps: a block per category, each tile sized by Card size"], ["constellation", "Constellation", "The people the notes name (director, cast, author…) as stars, joined by the notes they share"], ["timeline", "Timeline", "Each note a thin bar from its start to its end (a lifespan): the earliest at the bottom left, the latest at the top right"], ["tally", "Tally", "A calendar grid: a column per category, a row per day, week or month, the oldest at the bottom. Each note is a mark in its cell"]]) {
       const b = pseg.createEl("button", { text: t, attr: { type: "button", "data-pm": m, "aria-label": tip } });
       b.onclick = e => { e.stopPropagation(); let h = "";
-        if (view === "builder") { const on = m === "constellation", tl = m === "timeline", ty = m === "tally", wasTl = PSTB.tl && !!PSTB.tlp; if (on !== PSTB.con) { PSTB.con = on; save("iv-bcon", on); } if (tl !== PSTB.tl) { PSTB.tl = tl; save("iv-btl", tl); } if (ty !== PSTB.ty) { PSTB.ty = ty; save("iv-bty", ty); }
-          if (ty) { PSC().mosaic = false; save(PK("mosaic"), false); PSC().height = ""; save(PK("height"), ""); morph(true, () => fitTarget()); legend(); return; }   /* Tally (0.9.151): the notes fly into their cells */
+        if (view === "builder") { const on = m === "constellation", tl = m === "timeline", ty = m === "tally", wasTl = PSTB.tl && !!PSTB.tlp; if (on !== PSTB.con) { PSTB.con = on; save("iv-bcon", on); } if (tl !== PSTB.tl) { PSTB.tl = tl; save("iv-btl", tl); } if (ty !== PSTB.ty) { PSTB.ty = ty; save("iv-bty", ty); if (!ty) { computeVis(); syncTB(); } }   /* leaving Tally hands the Years filter back */
+          if (ty) { PSC().mosaic = false; save(PK("mosaic"), false); PSC().height = ""; save(PK("height"), ""); computeVis(); syncTB(); morph(true, () => fitTarget()); legend(); return; }   /* Tally (0.9.151): the notes fly into their cells */
           if (tl && (!PSTB.tlp || !tlCands().some(c_ => c_.key === PSTB.tlp))) { const c0 = tlCands()[0]; PSTB.tlp = c0 ? c0.key : ""; save("iv-btlp", PSTB.tlp); }
           if (on) { PPL.pick = -1; relayout(true, false, () => fitTarget()); legend(); return; } if (tl) { relayout(true, false, () => fitTarget()); legend(); return; } if (wasTl) { win.setTimeout(() => { if (!dead) relayout(true, false, () => fitTarget()); }, 0); } }   /* leaving Timeline brings back the notes it set aside */ PSC().mosaic = m === "mosaic"; save(PK("mosaic"), PSC().mosaic);
         if (m === "mosaic") { morph(true, () => fitTarget()); legend(); return; }
@@ -8116,7 +8120,7 @@ let twOn = pref("iv-twinkle", true) !== false, twWake = () => {};
     for (const [id, lab_, pk, key] of [["pacross", "Left to right", "iv-pacross", "across"], ["pheight", "Bottom to top", "iv-pheight", "height"], ["planes", "Rows by", "iv-planes", "lanes"], ["psize", "Card size", "iv-psize", "size"]]) {
       const row = pc.createEl("label", { cls: "prow", attr: { "data-k": key } }); row.createSpan({ text: lab_ }); const sel_ = row.createEl("select", { attr: { id } });
       pc.createDiv({ cls: "phint", text: HINT[key], attr: { "data-k": key } });
-      sel_.onchange = () => { PSC()[key] = sel_.value; if (key === "height" && sel_.value) PSC().lastHeight = sel_.value; save(PK(key), sel_.value); morph(true, () => fitTarget()); legend(); };
+      sel_.onchange = () => { PSC()[key] = sel_.value; if (key === "height" && sel_.value) PSC().lastHeight = sel_.value; save(PK(key), sel_.value); if (key === "across" && view === "builder" && PSTB.ty) { computeVis(); syncTB(); }   /* Tally: Created date takes the Years filter, another date its own slider */ morph(true, () => fitTarget()); legend(); };
       const rg = pc.createDiv({ cls: key === "lanes" ? "plchips" : "prng", attr: { id: "rng-" + key } }); rg.hidden = true; }
     pc.createDiv({ cls: "pn", attr: { id: "pimg" } }); }
   const VN = () => view === "cockpit" && SFSHIP ? "Starfield" : view === "stars" ? "Star Chart" : ({ cockpit: "Starfield", kandinsky: "Kandinsky", arena: "Arena", compass: "Compass", emergence: "Emergence", spacetime: "Space-Time", gravity: "Gravity", stars: "Starfield", sense: "Sensemakers", arc: "Arc",
@@ -8377,7 +8381,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     // the whole header row folds it (its own buttons, like Clear, still do their own thing)
     const hd_ = fc.querySelector(".fhd"); hd_.classList.add("fhdt"); hd_.addEventListener("click", e => { if (e.target.closest("button, input, select, label")) return; flip(e); }); }
   // a dot before each list's name while it's narrowing the map: Years when not every year shows, Folders when some are off, and so on
-  { const live = { years: () => YRV.has(view) && (yrNarrow() || winSpan() > 0), folders: () => !$("#foldx").hidden, collections: () => colls.length > 0, mocs: () => !!MS, properties: () => !!PRS, bases: () => BQ.length > 0 };
+  { const live = { years: () => yrv(view) && (yrNarrow() || winSpan() > 0), folders: () => !$("#foldx").hidden, collections: () => colls.length > 0, mocs: () => !!MS, properties: () => !!PRS, bases: () => BQ.length > 0 };
     const dots = () => { for (const hb of fheads.querySelectorAll(".fhb")) { const f_ = live[hb.dataset.f]; const on_ = !!(f_ && f_()); hb.classList.toggle("live", on_); } };
     fDots = dots; dots(); }
   $("#foldms").hidden = true; $("#collms").hidden = true; $("#foldms").classList.add("gone"); $("#collms").classList.add("gone"); $("#effbtn").setText("Light up areas and projects");
@@ -8729,8 +8733,8 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     thSec.hidden = true;
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }
-    { const yc_ = $("#ycol"); if (yc_) yc_.hidden = !YRV.has(view); } $("#yrctl").hidden = !YRV.has(view); syncYr();
-    const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (BQ.length ? 1 : 0) + (MS ? 1 : 0) + (PRS ? 1 : 0) + (YRV.has(view) && (yrNarrow() || winSpan() > 0) ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0); fDots();
+    { const yc_ = $("#ycol"); if (yc_) yc_.hidden = !yrv(view); } $("#yrctl").hidden = !yrv(view); { const ya = $("#yrall"); if (ya && ya.parentElement) ya.parentElement.hidden = view === "builder"; } syncYr();
+    const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (BQ.length ? 1 : 0) + (MS ? 1 : 0) + (PRS ? 1 : 0) + (yrv(view) && (yrNarrow() || winSpan() > 0) ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0); fDots();
   };
   // the maps menu: every map (an icon before each name), and this map's settings to its right (below it on a narrow pane or a phone)
   { const MP = $("#vmorepop"), MB = $("#vmore"), SM = $("#vsegms");
