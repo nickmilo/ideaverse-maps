@@ -147,8 +147,9 @@ let YR0 = Math.max(SLMIN, Math.min(NOW_Y, +pref("iv-yr0", SLMIN))), YR1 = Math.m
 fromY = fullY = YR0;
 // every map of the whole vault shares it; Posters and People have their own sliders, Linear its own years
 const YRV = new Set(["emergence", "spacetime", "gravity", "stars", "sense", "graph", "ideaverse", "chord", "treemap", "mosaic", "tree", "shelf", "skyline", "planet", "quincunx", "arc"]);
-/* Base Builder · Tally by Created date takes the Years filter too: the range, the Recent windows, fixed dates, by modified (0.9.152) */
-const yrv = v => { if (YRV.has(v)) return true; try { return v === "builder" && PSTB.ty && !PSTB.con && (PSTB.across == null || PSTB.across === "@created"); } catch (_) { return false; } };
+const yrv = v => YRV.has(v) || v === "builder";   /* Base Builder takes the Years filter on every layout (0.9.153; Tally first, 0.9.152) */
+const tallyYr = () => { try { return curV() === "builder" && PSTB.ty && !PSTB.con && (PSTB.across == null || PSTB.across === "@created"); } catch (_) { return false; } };   /* Tally dated by Created date: the Years filter is its only date control */
+let OUTD = null; const OUTL = "Outside the dates";   /* Base Builder with "Show notes outside the date range": the notes outside it, kept and set aside (0.9.153) */
 // "Show notes outside the date range": off by default, so these maps show only the years picked, and no undated notes;
 // on, notes with no date sit in the No date strip, older ones in a Before strip, newer ones in an After strip
 let YRALL = pref("iv-yrall", true) !== false;   // on by default
@@ -230,8 +231,10 @@ function computeVis(){ VISV++; const fs = new Set(folders);
   if (tagHide.on()) for (let i=0;i<n;i++) if (vis[i] && tagHide.hid(i)) vis[i] = 0;
   /* an extension may hide notes in Starfield (0.9.147) */
   try { const x = (view === "stars" || view === "cockpit") && xOn(); if (x && x.hide) for (let i = 0; i < n; i++) if (vis[i] && x.hide(i)) vis[i] = 0; } catch (_) { /* not set up yet */ }
-  if (yrv(curV()) && !(YRALL && curV() !== "builder")) for (let i=0;i<n;i++) {   /* Tally has no edge strips, so it always narrows */ if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
-  if (winSpan() && yrv(curV()) && !(YRALL && curV() !== "builder")) { const w0 = winStart(), w1 = winEnd(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0 && TV[i] < w1)) vis[i] = 0; }   /* both ends: fixed dates end before today (0.9.17) */
+  OUTD = null; if (yrv(curV()) && YRALL && curV() === "builder" && (yrNarrow() || winSpan())) { const w0 = winSpan() ? winStart() : 0, w1 = winSpan() ? winEnd() : 0; OUTD = new Uint8Array(n);   /* kept, but marked: they stack in their own row, block or column */
+    for (let i = 0; i < n; i++) { if (!vis[i]) continue; const t = TV[i]; if (isNaN(t)) { OUTD[i] = 1; continue; } if (yrNarrow()) { const y = new Date(t).getUTCFullYear(); if (y < YR0 || y > YR1) { OUTD[i] = 1; continue; } } if (winSpan() && !(t >= w0 && t < w1)) OUTD[i] = 1; } }
+  if (yrv(curV()) && !YRALL) for (let i=0;i<n;i++) { if (!vis[i]) continue; if (isNaN(TV[i])) { vis[i] = 0; continue; } if (yrNarrow()) { const y = new Date(TV[i]).getUTCFullYear(); if (y < YR0 || y > YR1) vis[i] = 0; } }
+  if (winSpan() && yrv(curV()) && !YRALL) { const w0 = winStart(), w1 = winEnd(); for (let i=0;i<n;i++) if (vis[i] && !(TV[i] >= w0 && TV[i] < w1)) vis[i] = 0; }   /* both ends: fixed dates end before today (0.9.17) */
   if (BYMT) capDays();
   try { tlFilter(); } catch (_) { /* Base Builder not set up yet */ }
   if (focus >= 0) vis[focus] = 1;
@@ -3545,11 +3548,11 @@ function postersOptsUI(){ const box = $("#postctl"); if (!box) return; const o =
     { const sb_ = box.querySelector('#pmode button[data-pm="scatter"]'); if (sb_) { const cu_ = PSC().cur || {}, has = o.across.some(a => a.id !== cu_.acrossId && a.id !== "@created" && !a.id.endsWith("@end")); sb_.disabled = !has && !PSC().height; sb_.title = sb_.disabled ? "Scatter needs a second number property (a rank, a rating, a year)" : ""; } }
     { const bc = box.querySelector(".bcon"); if (bc) { bc.hidden = !con; if (con) builderConUI(bc); } }
     const ar = box.querySelector('.prow[data-k="across"] > span'), ah = box.querySelector('.phint[data-k="across"]');
-    if (ar) ar.setText(md === "mosaic" ? "Narrow by" : md === "tally" ? "Dated by" : "Left to right"); if (ah) ah.setText(md === "tally" ? (yrv("builder") ? "Each row is a day, week or month, the oldest at the bottom. Narrow it with Years below: a range, Recent, fixed dates or by modified." : "A date. Each row is a day, week or month, the oldest at the bottom. Not a date? Created date.") : md === "timeline" ? "Years shown: keeps every life that overlaps them." : md === "mosaic" ? "A date or number. Use its slider to keep part of the set." : "A date or number. Places each card left to right.");
+    if (ar) ar.setText(md === "mosaic" ? "Narrow by" : md === "tally" ? "Dated by" : "Left to right"); if (ah) ah.setText(md === "tally" ? (tallyYr() ? "Each row is a day, week or month, the oldest at the bottom. Narrow it with Years below: a range, Recent, fixed dates or by modified." : "A date. Each row is a day, week or month, the oldest at the bottom. Not a date? Created date.") : md === "timeline" ? "Years shown: keeps every life that overlaps them." : md === "mosaic" ? "A date or number. Use its slider to keep part of the set." : "A date or number. Places each card left to right.");
     const lr = box.querySelector('.prow[data-k="lanes"] > span'), lh_ = box.querySelector('.phint[data-k="lanes"]');
     if (lr) lr.setText(md === "mosaic" ? "Blocks by" : md === "timeline" ? "Color by" : md === "tally" ? "Columns by" : "Rows by"); if (lh_) lh_.setText(md === "tally" ? "A category. Each value gets its own column, glyph and color." : md === "mosaic" ? "A category. Each value gets its own block." : md === "timeline" ? "A category. Each value gets its own color." : "A category. Each value gets its own row."); }
   for (const key of ["across", "height", "size"]) postersSlider(key); postersLaneChips();
-  { const ra = $("#rng-across"); if (ra && view === "builder" && yrv("builder")) ra.hidden = true; }   /* Tally by Created date: the Years filter does this job */ fill($("#planes"), o.lanes, cu ? cu.laneId : o.defLane);
+  { const ra = $("#rng-across"); if (ra && tallyYr()) ra.hidden = true; }   /* Tally by Created date: the Years filter does this job */ fill($("#planes"), o.lanes, cu ? cu.laneId : o.defLane);
   fill($("#psize"), o.size, cu ? cu.sizeId : "");
   $("#pimg").setText(o.img ? `Pictures from ${o.img}` : view === "builder" ? "No picture property, so each note is a dot" : "No image property found");
   // Base Builder says what it picked, and from where
@@ -3585,7 +3588,7 @@ function layoutPosters(){
   const AV = mk("across", acrossId, ac.kind, val), AS = mk("size", sizeId, "num", szOf), AH = heightId ? mk("height", heightId, hgt.kind, i => valBy(heightId, hgt.kind, i)) : null;
   PSC().ext = ext;
   const inR = (key, a, i) => { const e = ext[key], r = e && PSC().rng[e.id]; if (!r || !a || isNaN(a[i])) return true; const v = e.kind === "year" ? Math.floor(a[i]) : a[i]; return v >= r[0] - 1e-9 && v <= r[1] + 1e-9; };
-  const lab = new Array(n), cntAll = new Map(); if (!heightId) for (const i of all) { const L_ = laneOf(i); lab[i] = L_; cntAll.set(L_, (cntAll.get(L_) || 0) + 1); }
+  const lab = new Array(n), cntAll = new Map(); if (!heightId) for (const i of all) { const L_ = OUTD && OUTD[i] ? OUTL : laneOf(i);   /* outside the dates: a row, block or column of their own (0.9.153) */ lab[i] = L_; cntAll.set(L_, (cntAll.get(L_) || 0) + 1); }
   PSC().laneAll = laneId && !heightId ? [...cntAll].sort((a, b) => (a[0] === "—") - (b[0] === "—") || b[1] - a[1]) : [];
   const lh = new Set(laneId && !heightId ? PSC().lhide[laneId] || [] : []);
   const ids = [], V = new Float64Array(n).fill(NaN), S = new Float64Array(n).fill(NaN); let v0 = Infinity, v1 = -Infinity, s0 = Infinity, s1 = -Infinity; const cnt = new Map();
@@ -3598,7 +3601,9 @@ function layoutPosters(){
   if (heightId) { layoutPostersXY(ids, V, S, v0, v1, s0, s1, ac, hgt, i => AH[i], o); postersOptsUI(); return; }
   // lanes: the base's own order, else biggest first; past 14, the rest share "Other"
   let order = [...cnt.keys()]; if (laneId === "@base" && BASEINFO.order) order.sort((a, b) => BASEINFO.order.indexOf(a) - BASEINFO.order.indexOf(b)); else order.sort((a, b) => (a === "—") - (b === "—") || cnt.get(b) - cnt.get(a) || String(a).localeCompare(String(b)));
-  if (order.length > 14) { const keep = new Set(order.slice(0, 13)); for (const i of ids) if (!keep.has(lab[i])) lab[i] = "Other"; order = [...order.slice(0, 13), "Other"]; cnt.set("Other", ids.filter(i => lab[i] === "Other").length); }
+  const hasOut = order.includes(OUTL); if (hasOut) order = order.filter(l => l !== OUTL);   /* outside the dates always comes last */
+  if (order.length > 14) { const keep = new Set(order.slice(0, 13)); for (const i of ids) if (!keep.has(lab[i]) && lab[i] !== OUTL) lab[i] = "Other"; order = [...order.slice(0, 13), "Other"]; cnt.set("Other", ids.filter(i => lab[i] === "Other").length); }
+  if (hasOut) order.push(OUTL);
   PSC().order = order; PSC().spans = null;
   // Timeline keeps its own years slider (lives that overlap the years kept), so only the hidden rows filter here
   if (tlOn) { layoutSpans(all.filter(i => !(lh.size && lh.has(lab[i]))), o, lab, order); postersOptsUI(); return; }
@@ -3641,7 +3646,7 @@ function layoutTally(ids, lab, order, acrossId, ac, laneId){
   const dateId = ac.kind === "date" || ac.kind === "year" ? acrossId : "@created";
   const tOf = i => { if (dateId === "@created") return isNaN(TV[i]) ? null : TV[i]; const v = fmOf(i) && fmOf(i)[dateId], f = Array.isArray(v) ? v[0] : v; if (f == null || f === "") return null;
     if (ac.kind === "year") { const sp = yspan(f); const y = sp ? sp[0] : asNum(f); return y == null ? null : Date.UTC(y, 0, 1); } const d = parseDay(f); return d ? Date.parse(d) : null; };
-  const T = new Map(); let t0 = Infinity, t1 = -Infinity; for (const i of ids) { const t = tOf(i); if (t == null || !isFinite(t)) continue; T.set(i, t); if (t < t0) t0 = t; if (t > t1) t1 = t; }
+  const T = new Map(); let t0 = Infinity, t1 = -Infinity; for (const i of ids) { if (OUTD && OUTD[i]) continue; const t = tOf(i); if (t == null || !isFinite(t)) continue; T.set(i, t); if (t < t0) t0 = t; if (t > t1) t1 = t; }
   for (let i = 0; i < n; i++) RW[i] = RH[i] = 0;
   const DAY = 864e5, d0 = new Date(isFinite(t0) ? t0 : Date.now()); d0.setUTCHours(0, 0, 0, 0);
   const spanD = isFinite(t0) ? (t1 - d0.getTime()) / DAY : 0, unit = ac.kind === "year" ? "year" : spanD <= 62 ? "day" : spanD <= 800 ? "week" : spanD <= 365 * 12 ? "month" : "year";
@@ -3654,6 +3659,9 @@ function layoutTally(ids, lab, order, acrossId, ac, laneId){
   for (const [i, t] of T) { const j = colI.get(lab[i]); if (j == null) continue; const key = j + "|" + rowOf(t); let a = cells.get(key); if (!a) cells.set(key, a = []); a.push(i); cnt[j]++; }
   for (const [key, a] of cells) { const [j, r] = key.split("|").map(Number); a.sort((p, q) => T.get(p) - T.get(q)); const m = Math.min(6, Math.ceil(Math.sqrt(a.length))), sub = C * .86 / m, cx0 = j * C + (C - m * sub) / 2, cy0 = (nRows - 1 - r) * C + (C - m * sub) / 2;
     a.forEach((i, q) => { const qq = Math.min(q, m * m - 1), gx = qq % m, gy = Math.floor(qq / m), w = sub * .86; RX[i] = cx0 + gx * sub + (sub - w) / 2; RY[i] = cy0 + (m - 1 - gy) * sub + (sub - w) / 2; RW[i] = RH[i] = w; EX[i] = RX[i] + w / 2; EY[i] = RY[i] + w / 2; }); }
+  { const jo = colI.get(OUTL); if (jo != null) { const os = ids.filter(i => OUTD && OUTD[i]); cnt[jo] = os.length; const m = Math.max(3, Math.min(8, Math.ceil(Math.sqrt(os.length / Math.max(1, nRows))))), per = m * m, sub = C * .86 / m;   /* outside the dates: a pile from the bottom of its own column, packed tighter when there are many */
+      os.forEach((i, q) => { const r = Math.floor(q / per), qq = q % per, gx = qq % m, gy = Math.floor(qq / m), w = sub * .86, cx0 = jo * C + (C - m * sub) / 2, cy0 = (Math.max(nRows, 1) - 1 - Math.min(r, Math.max(nRows, 1) - 1)) * C + (C - m * sub) / 2;
+        RX[i] = cx0 + gx * sub + (sub - w) / 2; RY[i] = cy0 + (m - 1 - gy) * sub + (sub - w) / 2; RW[i] = RH[i] = w; EX[i] = RX[i] + w / 2; EY[i] = RY[i] + w / 2; }); } }
   // the row labels down the left: a day's number each week (and the month at its 1st), a week's month when it starts, a month's name, a year
   const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], rowLab = [];
   for (let r = 0; r < nRows; r++) { const d = startOf(r), dd = d.getUTCDate(), mm = d.getUTCMonth(); let t = "";
@@ -3663,7 +3671,7 @@ function layoutTally(ids, lab, order, acrossId, ac, laneId){
     else t = r === 0 || (y0 + r) % 5 === 0 ? String(y0 + r) : "";
     if (t) rowLab.push({ y: (nRows - 1 - r) * C + C / 2, t }); }
   const dname = dateId === "@created" ? "Created date" : dateId;
-  PSC().tally = { cols: order.map(l => l === "" ? "All" : l), cnt, nRows, C, rowLab, unit, miss: ids.length - T.size, date: dname, lane: laneId };
+  PSC().tally = { cols: order.map(l => l === "" ? "All" : l), cnt, nRows, C, rowLab, unit, miss: ids.length - T.size - (OUTD ? ids.filter(i => OUTD[i]).length : 0), date: dname, lane: laneId };
   PSC().lanesOut = []; PSC().ticks = []; PSC().WD = nc * C; PSC().H = nRows * C; PSC().hasNo = false; PSC().img = ""; PSC().lab = lab; PSC().order = order; PSC().dots = true;
   expBox = { x0: -90, y0: -30, x1: nc * C + 30, y1: nRows * C + 130 }; }
 /* where a pinned axis may draw (0.8.345): below the orb tabs and the counts at the top, right of the tucked primary note tab on the left */
@@ -3841,14 +3849,14 @@ EXP.posters = {
   notes(lit, dim){
     const ord = []; for (let i=0;i<n;i++) if (RW[i] && VV(i)) ord.push(i); ord.sort((a, b) => RY[b] - RY[a]);   // lower cards first, so each pile reads top-down
     for (const i of ord) { const x = sx(RX[i]), y = sy(RY[i]), w = RW[i] * k, h = RH[i] * k; if (x > W || y > H || x + w < 0 || y + h < 0) continue;
-      ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .22 : .65) : 1;
+      ctx.globalAlpha = (lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .22 : .65) : 1) * (OUTD && OUTD[i] && i !== sel ? .4 : 1);   /* outside the dates: faded (0.9.153) */
       const P_ = PSC();
       if (P_.spans) { const col = builderHue(i), open = P_.spans.open.has(i), h_ = Math.max(1.5, h);   // Timeline: a bar, fading out where its end is still open
         if (open) { const g = ctx.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, col); g.addColorStop(.6, col); g.addColorStop(1, /^rgb\(/.test(col) ? col.replace(/^rgb\((.*)\)$/, "rgba($1, 0)") : col + "00"); ctx.fillStyle = g; } else ctx.fillStyle = col;   /* an rgb() color fades too (0.8.325) */
         ctx.fillRect(x, y + (h - h_) / 2, w, h_); if (i === sel) { ctx.strokeStyle = css.accent; ctx.lineWidth = 2; ctx.strokeRect(x - 2, y - 2, w + 4, h + 4); }
         if (h >= 4.5 || i === sel) { ctx.fillStyle = css.ink; ctx.font = `500 ${Math.max(9, Math.min(12, h * 1.6))}px ${css.body}`; ctx.textBaseline = "middle"; ctx.fillText(N[i].title, x + w + 5, y + h / 2); ctx.textBaseline = "alphabetic"; }
         continue; }
-      if (P_.tally) { const j = P_.order.indexOf(P_.lab[i]), other = P_.lab[i] === "Other" || P_.lab[i] === "—", r = Math.max(1.2, w / 2 * .92), cx = x + w / 2, cy = y + h / 2;   // Tally: the column's own glyph
+      if (P_.tally) { const j = P_.order.indexOf(P_.lab[i]), other = P_.lab[i] === "Other" || P_.lab[i] === "—" || P_.lab[i] === OUTL, r = Math.max(1.2, w / 2 * .92), cx = x + w / 2, cy = y + h / 2;   // Tally: the column's own glyph
         tallyGlyph(ctx, other ? "dot" : TALLYG[j % TALLYG.length], cx, cy, r, other ? css.muted : PPAL[j % PPAL.length]);
         if (i === sel) { ctx.strokeStyle = css.accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, r + 4, 0, 6.2832); ctx.stroke(); }
         continue; }
@@ -3875,7 +3883,7 @@ EXP.posters = {
 // The same engine as Posters, with its own settings. Its first guesses come from the base: Left to right is the first date
 // or number column, Rows the base's groups (else its first category column), Size the next number column. Notes with a
 // picture are cards; without one, dots colored by their row. A base opens on this map until you pick another.
-function builderHue(i){ const P_ = PSC(), lab = P_.lab, ord = P_.order; if (!lab || !ord || ord.length < 2) return css.accent; const j = ord.indexOf(lab[i]); return j < 0 || lab[i] === "—" ? css.muted : PPAL[j % PPAL.length]; }
+function builderHue(i){ const P_ = PSC(), lab = P_.lab, ord = P_.order; if (!lab || !ord || ord.length < 2) return css.accent; const j = ord.indexOf(lab[i]); return j < 0 || lab[i] === "—" || lab[i] === OUTL ? css.muted : PPAL[j % PPAL.length]; }
 function builderConUI(bc){ const bp = PSTB.conProps || { ids: [], cand: [] }, list = bc.querySelector(".bcchips"), on = new Set(bp.ids);
   const sig = bp.cand.map(c => c.id).join(",") + "|" + bp.ids.join(","); if (list.dataset.sig !== sig) { list.dataset.sig = sig; list.empty();
     for (const c of bp.cand) { const ch = list.createEl("button", { cls: "pchip" + (on.has(c.id) ? "" : " off"), attr: { type: "button", title: `${c.n} notes name people in ${c.id}` } }); ch.createSpan({ text: c.id }); ch.createEl("b", { text: String(c.n) });
@@ -8733,7 +8741,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     thSec.hidden = true;
     { const m = cv.parentElement.getBoundingClientRect(), c = cv.getBoundingClientRect(), off = Math.max(0, m.right - c.right) + sideW(); const wn = root.querySelector(".wm-name"); if (wn) wn.style.right = (off + 16) + "px";
       const fbar = $("#focusbar"); if (fbar) fbar.style.left = ((c.left - m.left) + (c.width - sideW())/2) + "px"; }
-    { const yc_ = $("#ycol"); if (yc_) yc_.hidden = !yrv(view); } $("#yrctl").hidden = !yrv(view); { const ya = $("#yrall"); if (ya && ya.parentElement) ya.parentElement.hidden = view === "builder"; } syncYr();
+    { const yc_ = $("#ycol"); if (yc_) yc_.hidden = !yrv(view); } $("#yrctl").hidden = !yrv(view); syncYr();
     const nf = (!$("#foldx").hidden ? 1 : 0) + (!$("#collx").hidden ? 1 : 0) + (BQ.length ? 1 : 0) + (MS ? 1 : 0) + (PRS ? 1 : 0) + (yrv(view) && (yrNarrow() || winSpan() > 0) ? 1 : 0); badge.setText(nf ? String(nf) : ""); badge.hidden = !nf; FI.b.classList.toggle("lit", nf > 0); fDots();
   };
   // the maps menu: every map (an icon before each name), and this map's settings to its right (below it on a narrow pane or a phone)
