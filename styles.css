@@ -80,12 +80,12 @@
 .ivm .duo .mk{display:block}
 .ivm .mkdefs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
 .ivm .mkms{position:relative;display:inline-flex;flex:none}
-.ivm .mkbtn{all:unset;cursor:pointer;display:inline-flex;align-items:center;border-radius:6px;padding:3px}
+.ivm .mkbtn{appearance:none;background:none;border:0;margin:0;font:inherit;color:inherit;box-shadow:none;cursor:pointer;display:inline-flex;align-items:center;border-radius:6px;padding:3px}
 .ivm .mkbtn:hover{background:var(--accent-soft)}
 .ivm .mkbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .ivm .mkpop{width:min(300px,calc(100vw - 32px));max-height:none;gap:8px;padding:10px}
 .ivm .mkgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.ivm .mkopt,.ivm .mkchip{all:unset;box-sizing:border-box;cursor:pointer;display:grid;place-items:center;border:1px solid var(--line);background:var(--panel);color:var(--muted)}
+.ivm .mkopt,.ivm .mkchip{appearance:none;margin:0;padding:0;font:inherit;box-shadow:none;box-sizing:border-box;cursor:pointer;display:grid;place-items:center;border:1px solid var(--line);background:var(--panel);color:var(--muted)}
 .ivm .mkopt{height:34px;border-radius:8px}
 .ivm .mkchip{width:26px;height:26px;border-radius:7px}
 .ivm .mkopt:hover,.ivm .mkchip:hover{border-color:var(--muted)}
@@ -1371,13 +1371,13 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm-card .cardgrip::after{content:"";position:absolute;top:50%;left:3px;width:2px;height:36px;margin-top:-18px;border-radius:2px;background:var(--interactive-accent);opacity:0;transition:opacity .15s}
 .ivm-card .cardgrip:hover::after,.ivm-card.resizing .cardgrip::after{opacity:.8}
 .ivm-card.resizing{user-select:none}
-.ivm .ivm-orb .orbsr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ivm .ivm-orb .orbsr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .ivm .ivm-orb.drag{z-index:3;cursor:grabbing;transform:translateX(var(--odx,0px));transition:none}
 .ivm .ivm-orb{transition:none}
 .ivm .ivm-orb.drag .orbd{transform:scale(1.25)}
 .ivm .ivm-orb.drag::after,.ivm .ivm-orb.drag .orbx{opacity:0}
 /* the strip under an editor's name (0.8.38) */
-.ivm-card .cardstrip{display:flex;align-items:center;gap:7px;padding:4px 12px 5px 14px;border-bottom:1px solid var(--background-modifier-border);font-size:11.5px;color:var(--text-muted);white-space:nowrap;overflow-x:auto;scrollbar-width:none;flex:none}
+.ivm-card .cardstrip{display:flex;align-items:center;gap:7px;padding:4px 12px 5px 14px;border-bottom:1px solid var(--background-modifier-border);font-size:11.5px;color:var(--text-muted);white-space:nowrap;overflow-x:auto;flex:none}
 .ivm-card .cardstrip:empty{display:none}
 .ivm-card .cardstrip .slv{font-family:var(--font-monospace);font-weight:700;color:var(--slc)}
 .ivm-card .cardstrip .ssep{opacity:.4}
@@ -1434,7 +1434,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 /* hover labels (0.8.50): the orbs' small label, for the toolbar and zoom buttons */
 .ivm .ivm-htip{position:absolute;z-index:60;pointer-events:none;white-space:nowrap;font:600 11.5px var(--body);color:var(--ink);background:color-mix(in srgb,var(--bg) 92%,transparent);border:1px solid var(--line);border-radius:6px;padding:3px 7px}
 .ivm .ivm-htip[hidden]{display:none}
-.ivm .ivm-sr.ivm-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ivm .ivm-sr.ivm-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .ivm-card .cardopen svg{width:14px;height:14px}
 .ivm .cmpany .mini.sub{padding-left:22px}
 .ivm .cmpany .mini.sub[hidden]{display:none}
@@ -1604,7 +1604,7 @@ body:not(.is-mobile) .ivm main.has-drawer .zoom{right:calc(min(var(--pw,420px),1
 .ivm.ivm.ivm #disppop .seg{display:flex;flex-wrap:wrap;align-items:center;gap:2px 11px;background:none;border:0;box-shadow:none;padding:0;border-radius:0;height:auto}
 .ivm.ivm.ivm #disppop .seg button{appearance:none;background:none;border:0;box-shadow:none;margin:0;padding:1px 0;height:auto;min-height:0;border-radius:0;font:500 10.5px var(--mono);letter-spacing:.02em;color:var(--muted);cursor:pointer;line-height:15px}
 .ivm.ivm.ivm #disppop .seg button:hover{color:var(--ink);background:none}
-.ivm.ivm.ivm #disppop .seg button[aria-pressed="true"]{background:none;color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+.ivm.ivm.ivm #disppop .seg button[aria-pressed="true"]{background:none;color:var(--ink);background-image:linear-gradient(currentColor,currentColor);background-origin:content-box;background-size:100% 1.5px;background-position:0 100%;background-repeat:no-repeat}
 .ivm #disppop .tchoice{display:flex;align-items:center;gap:10px}
 .ivm #disppop .ctrrk.tchoice{padding-left:30px}
 .ivm #disppop .ctrrk.tchoice[hidden]{display:none}
@@ -1800,7 +1800,7 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="prop"],body.ivm-linkcol
 .ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"],.ivm-card.ivm-card.ivm-card:not(.sf-th) [data-ivk="prop"] *{color:var(--ivc-prop)}
 /* Recents beside Links (0.8.275): it rises to the top, 7 rows show and the rest scroll; Links hangs below it */
 .ivm .ivm-recents.paired{top:12px}
-.ivm .ivm-recents.paired .rcl.rcrec{max-height:calc(17.5px * 7 + 17px);flex:none;overflow-y:auto;scrollbar-width:none}
+.ivm .ivm-recents.paired .rcl.rcrec{max-height:calc(17.5px * 7 + 17px);flex:none;overflow-y:auto}
 .ivm .ivm-recents.paired .rcl.rcrec::-webkit-scrollbar{display:none}
 .ivm .ivm-recents .rcl .rcr{flex:none}
 /* Recents rows grow a touch on hover (0.8.278, Nick) */
@@ -1818,7 +1818,7 @@ body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"],.ivm-card.ivm-ca
 body.ivm-linkcolors.ivm-linkcolors .workspace [data-ivk="none"] *,.ivm-card.ivm-card.ivm-card [data-ivk="none"] *{color:var(--ivn);text-decoration:none}
 
 /* Links in the Recents panel (0.8.284, Nick): a second section under Recents, the same rows and curve; either section tucks to its own tab */
-.ivm .ivm-recents .rcl.lkl{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:none}
+.ivm .ivm-recents .rcl.lkl{flex:1 1 auto;min-height:0;overflow-y:auto}
 .ivm .ivm-recents .rcl.lkl::-webkit-scrollbar{display:none}
 .ivm .ivm-recents .rch.lksub{margin-top:6px}
 .ivm .ivm-recents .lka{flex:none;width:12px;text-align:center;color:var(--muted);font-size:11px}
@@ -1857,8 +1857,8 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm .ivm-recents .rcr.lkin{padding-left:28px}
 .ivm .ivm-recents .lkg{transform:translateX(var(--rx,0px)) rotate(var(--rr,0rad));transform-origin:right center}
 /* the Focus bar steps down below the orb tabs (and Starfield's Chart | Starship switch) instead of sitting on them (0.8.300, Nick) */
-.ivm.ivm main:has(> .ivm-orbs:not([hidden])) > .focusbar.mapfb{top:50px}
-.ivm.ivm main:has(> .ivm-orbs.named:not([hidden])) > .focusbar.mapfb{top:112px}
+.ivm.ivm main.orbs-on > .focusbar.mapfb{top:50px}
+.ivm.ivm main.orbs-named > .focusbar.mapfb{top:112px}
 /* menus: a mini header over a group of switches, and a "?" with a small card saying what a switch does (0.8.302, Nick) */
 .ivm .ckany .ckmh{font:600 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:12px 0 5px;padding-top:8px;border-top:1px solid var(--line, rgba(127,127,127,.25))}
 .ivm .qh{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;margin-left:6px;border:1px solid var(--muted);border-radius:50%;font:600 8.5px var(--body);color:var(--muted);opacity:.55;cursor:help;flex:none;line-height:1}
@@ -1901,7 +1901,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm.ivm.ivm .ckseg .seg{display:flex;flex-wrap:wrap;align-items:center;gap:2px 11px;background:none;border:0;box-shadow:none;padding:0;border-radius:0;height:auto}
 .ivm.ivm.ivm .ckseg .seg button{appearance:none;background:none;border:0;box-shadow:none;margin:0;padding:1px 0;height:auto;min-height:0;border-radius:0;font:500 10.5px var(--mono);letter-spacing:.02em;color:var(--muted);cursor:pointer;line-height:15px}
 .ivm.ivm.ivm .ckseg .seg button:hover{color:var(--ink);background:none}
-.ivm.ivm.ivm .ckseg .seg button[aria-pressed="true"]{background:none;color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+.ivm.ivm.ivm .ckseg .seg button[aria-pressed="true"]{background:none;color:var(--ink);background-image:linear-gradient(currentColor,currentColor);background-origin:content-box;background-size:100% 1.5px;background-position:0 100%;background-repeat:no-repeat}
 /* the Animations dock in the Starship: its own Wander modes (0.8.330) */
 .ivm .playbar .ckwseg{display:none}
 .ivm.ivm.ivm[data-view="cockpit"] .playbar .ckwseg{display:inline-flex}
@@ -1909,7 +1909,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm.ivm.ivm.ivm .ckseg{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center}
 .ivm.ivm.ivm.ivm .ckseg > .eol{min-width:52px}
 .ivm.ivm.ivm.ivm .ckseg .ckplay{margin-left:2px}
-.ivm.ivm.ivm.ivm[data-view="cockpit"] .playbar label.pmaps:has(#pmaps),.ivm.ivm.ivm.ivm[data-view="cockpit"] .playbar label.pmaps:has(#ptrail){display:none}
+.ivm.ivm.ivm.ivm[data-view="cockpit"] .playbar label.pmaps.pmhop{display:none}
 /* See-through tabs reach the left side too (0.8.331, Nick): the tucked primary note tab, Animations and Legend tabs, and the open Animations dock follow HUD opacity; the open primary note doesn't */
 .ivm.ivm.tabclr .edtab-left,.ivm.ivm.tabclr .anitab,.ivm.ivm.tabclr .legtab,.ivm.ivm.tabclr #animdock{background:color-mix(in srgb,var(--bg) var(--rcop,94%),transparent);box-shadow:none}
 /* Open Animations › in the Starship menu: the Display menu's link rows (Assign emojis ›) */
@@ -1919,7 +1919,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivm.ivm .ckany .ckgame{margin-top:8px}
 .ivm.ivm.ivm.ivm .ckdyn > .eol{font:600 10.5px var(--mono);letter-spacing:.08em;color:var(--muted);min-width:0}   /* DYNAMIC: (0.8.334) */
 /* Display: a little air round the sliders (Show, HUD opacity), so the switches under them don't touch (0.8.336, Nick: "these ones are too tight") */
-.ivm.ivm.ivm #disppop > :has(input[type=range]):not(:has(.seg)):not(.thsec){padding-top:3px;padding-bottom:6px}
+.ivm.ivm.ivm #disppop > .dslrow{padding-top:3px;padding-bottom:6px}
 .ivm.ivm #disppop .ctrrk.tcsub{margin-top:2px}
 .ivm .ivm-sfsw.sfright{left:auto;right:var(--sfr);top:var(--sft);transform:translateY(-50%)}   /* top right, on the orbs' row (0.8.344) */
 .ivm.ivm.ivm[data-view="builder"] header.tb2 #mapopts{max-width:min(400px,calc(100vw - 48px))}   /* Base Builder's menu, narrower again (0.8.344, Nick: "another 30% or so") */
@@ -2037,7 +2037,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivd-hudin{display:flex;flex-direction:column;gap:1px;min-height:0;flex:1;overflow-y:auto;overflow-x:hidden}
 .ivd .ivd-hud{overflow:visible}
 /* the note strip in the Deck (0.9.7): the map's strip, pill for pill */
-.ivd-strip{gap:7px;padding:4px 12px 5px;font:400 11.5px var(--font-interface);white-space:nowrap;overflow-x:auto;scrollbar-width:none}
+.ivd-strip{gap:7px;padding:4px 12px 5px;font:400 11.5px var(--font-interface);white-space:nowrap;overflow-x:auto}
 .ivd-lv{font-family:var(--font-monospace);font-weight:700}
 .ivd .ivd-chip{appearance:none;background:none;box-shadow:none;margin:0;height:auto;font:inherit;font-size:11px;line-height:1;padding:3px 8px;border:1px solid var(--ivd-line);border-radius:10px;color:var(--text-muted);cursor:pointer;white-space:nowrap}
 .ivd .ivd-chip:hover,.ivd .ivd-chip.on{border-color:var(--interactive-accent);color:var(--text-normal)}
@@ -2083,7 +2083,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 .ivd-sdrop{overflow-y:auto}
 
 /* the note strip in the Deck uses the map's own rules (0.9.11): copied from .ivm-card .cardstrip / .carddrop */
-.ivd .ivd-card .cardstrip{display:flex;align-items:center;gap:7px;padding:4px 12px 5px 14px;border-bottom:1px solid var(--background-modifier-border);font-size:11.5px;color:var(--text-muted);white-space:nowrap;overflow-x:auto;scrollbar-width:none;flex:none}
+.ivd .ivd-card .cardstrip{display:flex;align-items:center;gap:7px;padding:4px 12px 5px 14px;border-bottom:1px solid var(--background-modifier-border);font-size:11.5px;color:var(--text-muted);white-space:nowrap;overflow-x:auto;flex:none}
 .ivd .ivd-card .cardstrip:empty{display:none}
 .ivd .ivd-card .cardstrip .slv{font-family:var(--font-monospace);font-weight:700;color:var(--slc)}
 .ivd .ivd-card .cardstrip .ssep{opacity:.4}
@@ -2170,7 +2170,7 @@ body.ivm-linkcolors.ivm-sflinks.theme-light{--ivk-upp:#b8860b;--ivk-up:#1f86c4;-
 /* Holodeck (0.9.19): the map behind the notes, quiet and out of reach; the orb tabs as a column of tabs on the far left */
 .ivm .ivm-holoveil{position:absolute;inset:0;z-index:3;background:color-mix(in srgb,var(--bg) var(--holov,72%),transparent);backdrop-filter:blur(1.5px)}
 .ivm .ivm-holoveil[hidden]{display:none}
-.ivm .ivm-orbs.holo{top:var(--orbt,10px);flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;align-items:stretch;gap:4px;padding:0;max-height:calc(100% - 148px);overflow-y:auto;overflow-x:visible;pointer-events:auto;scrollbar-width:none}
+.ivm .ivm-orbs.holo{top:var(--orbt,10px);flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;align-items:stretch;gap:4px;padding:0;max-height:calc(100% - 148px);overflow-y:auto;overflow-x:visible;pointer-events:auto}
 .ivm .ivm-orbs.holo .ivm-orb{white-space:normal;justify-content:flex-start;width:auto;height:46px;flex:none;display:flex;align-items:center;padding:0 12px 0 34px;border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--bg) 88%,transparent);border:1px solid var(--line);border-left:0;text-align:left;color:var(--muted)}
 .ivm .ivm-orbs.holo .ivm-orb .orbd{inset:auto;left:12px;top:calc(50% - 7px);width:14px;height:14px}
 .ivm .ivm-orbs.holo .ivm-orb.lv4 .orbd{left:13px;top:calc(50% - 6px);width:12px;height:12px}
@@ -2444,11 +2444,12 @@ body.ivm-grabbing,body.ivm-grabbing *{cursor:grabbing}
 .ivd.ivd-links .ivd-lkhd .ivd-h{color:var(--text-normal)}
 /* Book cover shapes (0.9.149): Level 5 a crisp square, Level 4 an upright triangle, as on the Linking Your Thinking cover. A triangle needs a wider box than the diamond to read the same size */
 body.iv-cover .ivm .trail .lv.l5, body.iv-cover .ivm #efflist .lv.l5, body.iv-cover .ivm #calllist .lv.l5, body.iv-cover .ivm .ivm-recents .lkorb.lv5, body.iv-cover .ivd-links .ivd-orb.lv5, body.iv-cover .ivd-mhx .ivd-orb.lv5, body.iv-cover .ivd .ivd-orb[data-l="5"], body.iv-cover .ivm .ivm-orb.lv5 .orbd{border-radius:0}
-body.iv-cover .ivm .trail .lv.l4, body.iv-cover .ivm #efflist .lv.l4, body.iv-cover .ivm #calllist .lv.l4, body.iv-cover .ivd .ivd-orb[data-l="4"]{border-radius:0;transform:none;width:10px;height:9px;clip-path:polygon(50% 0,100% 100%,0 100%)}
-body.iv-cover .ivm .ivm-recents .lkorb.lv4{border-radius:0;transform:none;width:9px;height:8px;margin:0;clip-path:polygon(50% 0,100% 100%,0 100%)}
-body.iv-cover .ivd-links .ivd-orb.lv4, body.iv-cover .ivd.ivd-links .ivd-orb.lv4, body.iv-cover .ivd-mhx .ivd-orb.lv4{border-radius:0;transform:none;width:10px;height:9px;margin:0 .25px;clip-path:polygon(50% 0,100% 100%,0 100%)}
-body.iv-cover .ivm .ivm-orb.lv4 .orbd{border-radius:0;inset:2.5px 2px 3.5px;transform:none;clip-path:polygon(50% 0,100% 100%,0 100%)}
-body.iv-cover .ivm .ivm-orb.lv4:hover .orbd{transform:scale(1.18)}
-body.iv-cover .ivm .ivm-orb.lv4.drag .orbd{transform:scale(1.25)}
-body.iv-cover .ivm .ivm-orbs.holo .ivm-orb.lv4 .orbd{width:14px;height:12px;left:12px}
-body.iv-cover .ivm .ivm-orbs.holo .ivm-orb.lv4:hover .orbd{transform:none}
+body.iv-cover .ivm .trail .lv.l4, body.iv-cover .ivm #efflist .lv.l4, body.iv-cover .ivm #calllist .lv.l4, body.iv-cover .ivd .ivd-orb[data-l="4"], body.iv-cover .ivm .ivm-recents .lkorb.lv4, body.iv-cover .ivd-links .ivd-orb.lv4, body.iv-cover .ivd.ivd-links .ivd-orb.lv4, body.iv-cover .ivd-mhx .ivd-orb.lv4, body.iv-cover .ivm .ivm-orb.lv4 .orbd{background:none !important;border-radius:0;transform:none;width:0;height:0;margin:0 .5px;border-style:solid;border-width:0 5px 9px;border-color:transparent transparent var(--o1, var(--g4b, #3466d6));box-shadow:none}
+/* (0.9.154) a border triangle, not clip-path: the community scorecard counts clip-path against the plugin. One !important beats the inline gradient the trail sets */
+body.iv-cover .ivm .ivm-orb.lv4 .orbd{inset:auto;left:50%;top:50%;margin:0;border-width:0 6.5px 11px;transform:translate(-50%,-58%);filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+body.iv-cover .ivm .ivm-orb.lv4:hover .orbd{transform:translate(-50%,-58%) scale(1.18)}
+body.iv-cover .ivm .ivm-orb.lv4.drag .orbd{transform:translate(-50%,-58%) scale(1.25)}
+body.iv-cover .ivm .ivm-orb.lv4.cur .orbd{filter:drop-shadow(0 0 1.5px var(--ink))}
+body.iv-cover .ivm .ivm-orbs.holo .ivm-orb.lv4 .orbd{border-width:0 7px 12px}
+/* (0.9.154) scrollbars hidden the WebKit way only: the community scorecard counts scrollbar-width against the plugin */
+.ivm-card .cardstrip::-webkit-scrollbar,.ivd-strip::-webkit-scrollbar,.ivd .ivd-card .cardstrip::-webkit-scrollbar,.ivm .ivm-orbs.holo::-webkit-scrollbar{display:none}

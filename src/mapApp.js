@@ -6309,7 +6309,7 @@ const orbBar = $("#main").createDiv({ cls: "ivm-orbs" }); orbBar.hidden = true; 
   function dropDone(S_){ if (S_.leaf && host.dragMoved) host.dragMoved(S_.leaf); } }
 let orbKey = "", orbDragged = false;
 function syncOrbs(){ newTabSync(); { const fb = EDS.left.el.querySelector(".cardfoc"); if (fb) fb.setAttribute("aria-pressed", String(focus >= 0 && EDS.left.path != null && (PIDX.get(EDS.left.path) === focus || (HUDI >= 0 && HUDI === focus)))); } for (const o of [EDS.left]) if (o.pb) { const on = !!(TABS[TCUR] && TABS[TCUR].pin && o.path === TABS[TCUR].path); o.pb.setAttribute("aria-pressed", String(on)); o.pb.title = on ? "Unpin" : "Pin this note"; o.el.classList.toggle("pinned", on); }
-  const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); orbBar.classList.toggle("sky", view === "stars"); const HO = holoOn(); orbBar.classList.toggle("holo", HO); if (!on) { orbKey = ""; return; } sortApply();
+  const on = ORBS && edOn() && TABS.length > 0; orbBar.hidden = !on; orbBar.classList.toggle("named", ORBN); $("#main").classList.toggle("orbs-on", on); $("#main").classList.toggle("orbs-named", on && ORBN);   /* the focus bar moves down below the tabs (was :has, 0.9.154) */ orbBar.classList.toggle("sky", view === "stars"); const HO = holoOn(); orbBar.classList.toggle("holo", HO); if (!on) { orbKey = ""; return; } sortApply();
   const bes = HO && !EDS.right.el.hidden ? EDS.right.path : null;
   const key = TABS.map(t => t.path + (t.pin ? "*" : "")).join("|") + "#" + TCUR + (ORBN ? "n" : "") + (HO ? "h" + bes + TSORT : ""); if (key !== orbKey) { orbKey = key; orbBar.empty();
     let lastF = null;
@@ -7188,6 +7188,7 @@ root.querySelectorAll("#playseg button").forEach(b => b.onclick = () => { playMo
 $("#pint").addEventListener("input", e => { playSec = +e.target.value; save("iv-psec", playSec); syncPlay(); if (playing) schedule(); });
 $("#pplay").onclick = () => setPlaying(!playing);
 $("#ptrail").checked = playTrail; $("#ptrail").onchange = () => { playTrail = $("#ptrail").checked; save("iv-ptrail", playTrail); if (!playTrail) win.clearTimeout(trTimer); };
+for (const id_ of ["#pmaps", "#ptrail"]) { const l_ = $(id_) && $(id_).closest("label"); if (l_) l_.classList.add("pmhop"); }   /* the Ship hides these two (was :has, 0.9.154) */
 $("#pmaps").checked = playMaps; $("#pmaps").onchange = () => { playMaps = $("#pmaps").checked; save("iv-pmaps", playMaps); hopIn = 0; };
 onKey(e => { if (e.key === "Escape" && playing) setPlaying(false); });
 root.querySelectorAll("#playseg button").forEach(b => b.addEventListener("click", () => { if (tourRun) { tourRun = null; syncTour(); } }));   // picking Random/Thread leaves the tour
@@ -8555,7 +8556,7 @@ function qHelp(el, text){ if (!text) return; const q = el.createSpan({ cls: "qh"
     render(); }
   DI.p.appendChild($("#scorebtn")); $("#scorebtn").className = "drow dlink"; $("#scorebtn").setText("How notes are scored ›");
   $("#scorebtn").addEventListener("click", () => closePops());
-  opener(DI, () => { alCb.checked = showAll; syncBac(); DI.p.classList.remove("emomode"); }); syncBac();
+  opener(DI, () => { alCb.checked = showAll; syncBac(); DI.p.classList.remove("emomode"); for (const c of DI.p.children) c.classList.toggle("dslrow", !c.classList.contains("thsec") && !!c.querySelector("input[type=range]") && !c.querySelector(".seg")); }); syncBac();   /* rows with a slider get their spacing from a class, not :has (0.9.154) */
   // Find, Follow note (an icon), Saved, and the ︿ that tucks the bar away
   right.appendChild(root.querySelector("header .search"));
   // on a narrow pane Find is a magnifying glass that opens the search box
