@@ -2758,7 +2758,7 @@ function ckSFDraw(g, W, VH, cx, cy, F, font){ const sf = ckSF(), dpr = win.devic
   const pr = (x, y, z) => { const [xc, yc, zc] = ckCam(x, y, z); return zc > 12 ? [cx + F * xc / zc, cy + F * yc / zc, zc] : null; };
   if (EXTS.length) xCall("shipDraw", { g, pr, P: sf.P, sc: sf.sc, F, W, H, c: CK.c, UC });
   if (CK.galBtn) { const on_ = !!xOn(); if (CK.galBtn.hidden === on_) CK.galBtn.hidden = !on_; }
-  for (const B of sf.B) { const b = B.b; if (b.ext) continue; p0 = pr(B.x, B.y, B.z); const dist = Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]); if (!p0 && dist > B.r) continue;
+  for (const B of sf.B) { const b = B.b; if (b.ext) continue; const p0 = pr(B.x, B.y, B.z); const dist = Math.hypot(B.x - CK.P[0], B.y - CK.P[1], B.z - CK.P[2]); if (!p0 && dist > B.r) continue;
     const lay = b.kind === "gal" ? [[1.15, b.hue, .3], [.65, b.hue, .26], [.3, "#fff1d6", .6], [.1, "#ffffff", .85]] : b.kind === "neb" ? [[1, b.hue, .22], [.55, b.hue, .14]] : b.kind === "dwarf" ? [[1.1, b.hue, .26], [.25, "#fff1d6", .35]] : [[1.05, b.hue || "#ffb380", .28], [.4, "#fff1d6", .4]];
     const near = Math.min(1, Math.max(.15, dist / (B.r * 3)));   /* inside a galaxy its glow thins so the stars stay clear */
     /* Starfield's own settings carry over (0.8.92): Galaxy glow (Clear keeps only a faint tint, no white cores), and Star Chart's folder gas */
