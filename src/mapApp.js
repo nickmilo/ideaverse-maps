@@ -5149,7 +5149,12 @@ function clockLut(stops, ink){ const st = stops.map(([t, c]) => { const [h, m] =
 let COVLUT = null, COVLUTBG = "";
 function coverCol(i){ if (COVLUTBG !== css.bg) { COVLUTBG = css.bg; const m = /\d+/g, v = (css.bg.match(m) || [255, 255, 255]).slice(0, 3).map(Number), dark = (v[0] * .3 + v[1] * .59 + v[2] * .11) < 128 || css.bg.startsWith("#0") || css.bg.startsWith("#1");
     COVLUT = clockLut(FIELD_CLOCK, dark ? 1 : .8); }
-  const a = Math.atan2(X[i] - WW / 2, -(Y[i] - (TOP + WH * .42))), d = Math.floor(((a * 180 / Math.PI) + 360) % 360); return COVLUT[d]; }
+  const B = CVB, a = Math.atan2((X[i] - B.cx) / B.hw, -(Y[i] - B.cy) / B.hh), d = Math.floor(((a * 180 / Math.PI) + 360) % 360); return COVLUT[d]; }
+// the clock is read in the notes' own frame (0.9.159): offsets are divided by the spread's half-width and half-height, so a wide map
+// gets the whole wheel, 3:00 at its right edge and 9:00 at its left, instead of a third of the clock (yellow, 2:30 to 5:00) across the right half
+const CVB = { cx: WW / 2, cy: TOP + WH * .42, hw: WW / 2, hh: WH / 2 };
+function coverBounds(){ let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for (let i = 0; i < n; i++) { if (!VV(i)) continue; const x = X[i], y = Y[i]; if (!(x === x) || !(y === y)) continue; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (!(x1 > x0) || !(y1 > y0)) return; CVB.cx = (x0 + x1) / 2; CVB.cy = y0 + (y1 - y0) * .42; CVB.hw = (x1 - x0) / 2; CVB.hh = (y1 - y0) / 2; }
 // the strongest links, drawn as chains like the cover's web: each Level 3+ note to its nearest linked Level 3+ neighbour (two for Levels 4 and 5),
 // a two-way link counting double; no note takes more than four of these, so a hub doesn't become a starburst. Computed per layout, drawn every frame
 let COVE = null, COVEKEY = "";
@@ -5169,13 +5174,13 @@ function coverEdges(){ let sxs = 0, cnt = 0; for (let i = 0; i < n; i++) if (CVU
   cand.sort((p, q) => q[0] - p[0]); const deg = new Int16Array(n), seen = new Set(); COVE = [];
   for (const [, i, j] of cand) { const k_ = i < j ? i * n + j : j * n + i; if (seen.has(k_) || deg[i] >= 4 || deg[j] >= 4) continue; seen.add(k_); deg[i]++; deg[j]++; COVE.push([i, j]); }
   return COVE; }
-function coverLinks(){ ctx.lineWidth = Math.max(1, Math.min(2.2, 1.2 * Math.pow(k, .3))); ctx.lineCap = "round"; const a_ = sel >= 0 || hover >= 0 ? .3 : .7;
+function coverLinks(){ coverBounds(); ctx.lineWidth = Math.max(1, Math.min(2.2, 1.2 * Math.pow(k, .3))); ctx.lineCap = "round"; const a_ = sel >= 0 || hover >= 0 ? .3 : .7;
   for (const [i, j] of coverEdges()) { if (!VV(i) || !VV(j)) continue; const lo = Math.min(CVU[i], CVU[j]), t = (lo - CVLINK) / (1 - CVLINK); ctx.strokeStyle = coverCol(CVU[i] >= CVU[j] ? i : j); ctx.globalAlpha = a_ * (.3 + .7 * t);   /* fainter lower down */ ctx.beginPath(); ctx.moveTo(sx(X[i]), sy(Y[i])); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); }
   ctx.globalAlpha = 1; }
 // the notes: Levels 1 and 2 a field of small dots (some hollow, like ink that didn't fill); Level 3 and up open rings, bigger with score
 // the notes, one continuous ramp from the bottom up (0.9.158): size grows with rank, the share of open rings grows with it
 // (solid flecks below, more and more hollow higher up, all hollow at the top), and so does the ink. No step where Level 3 starts
-function coverNotes(lit, dim, EMOD){ const vx0 = -30, vx1 = W + 30, vy0 = -30, vy1 = H + 30, zk = Math.pow(k, .55), ss = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+function coverNotes(lit, dim, EMOD){ if (showAll) coverBounds(); const vx0 = -30, vx1 = W + 30, vy0 = -30, vy1 = H + 30, zk = Math.pow(k, .55), ss = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   for (const i of CVORD) { if (!VV(i) || (EMOD && emoAt(i))) continue; const x = sx(X[i]), y = sy(Y[i]); if (!(x >= vx0 && x <= vx1 && y >= vy0 && y <= vy1)) continue;
     const u = CVU[i], r = Math.max(1, (1.1 + 8.5 * Math.pow(u, 3.6)) * zk), col = coverCol(i), hollow = hash(N[i].path, 7) < Math.max(.08, ss(.55, .95, u));
     ctx.globalAlpha = (lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .3 : .75) : 1) * (.5 + .5 * Math.max(u, hash(N[i].path, 13) * .6));
