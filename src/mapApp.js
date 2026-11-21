@@ -512,7 +512,11 @@ function layoutGravity(){
 // Space-Time Dome: time runs around the horizon (a small gap where the start meets today), folder rows stack up the sky.
 // Gravity Dome: Home and the hubs overhead at the zenith, the level rings dropping toward the horizon, time or folders around you.
 const DOME = Object.assign({spacetime: false, gravity: false, emergence: false}, pref("iv-dome", {}) || {});
-const domeOn = () => view === "emergence" && !!DOME.emergence;   // only the Emergence Dome is offered now (the Space-Time and Gravity domes were cut, Oct 23)
+const domeOn = () => view === "emergence" && !!DOME.emergence;
+/* Emergence · Book Cover (0.9.156): the Linking Your Thinking cover as a map. The best-linked notes are open rings joined by only their strongest links;
+   everything else is a field of small dots; colour comes from where a note sits, in the cover's own pattern of colours. Hover or pick a note for all its links */
+let EMCOVER = pref("iv-emcover", false) === true;
+const coverOn = () => view === "emergence" && !DOME.emergence && EMCOVER;   // only the Emergence Dome is offered now (the Space-Time and Gravity domes were cut, Oct 23)
 const domeSphere = () => view !== "gravity";   // Space-Time and Emergence domes are whole spheres; Gravity is a sky overhead
 const DOMECAM = Object.assign({spacetime: [0, 0], gravity: [0, .95], emergence: [0, 0]}, pref("iv-domecam", {}) || {});
 let domeYaw = 0, domePitch = .5;
@@ -4854,7 +4858,7 @@ function render(){
   }
   }
 
-  if ((view === "emergence" && !domeOn()) || view === "arc") levelNames(); else if (view === "spacetime" && !domeOn()) rowNames();
+  if ((view === "emergence" && !domeOn() && !coverOn()) || view === "arc") levelNames(); else if (view === "spacetime" && !domeOn()) rowNames();
   // links
   if (focus >= 0 && !showAll) {   // in focus: every link among the focused notes, faint
     ctx.strokeStyle = css.muted; ctx.globalAlpha = .28; ctx.lineWidth = 1; ctx.beginPath();
@@ -4873,6 +4877,7 @@ function render(){
     else for (const [a,b] of E) { if (!VV(a) || !VV(b)) continue; ctx.moveTo(sx(X[a]), sy(Y[a])); ctx.lineTo(sx(X[b]), sy(Y[b])); }
     ctx.stroke();
   }
+  if (coverOn() && !showAll) coverLinks();   /* Book Cover: only the strongest links, always */
   const hl = sel >= 0 ? sel : hover;
   let lit = null;
   if (hl >= 0) {
@@ -4916,7 +4921,7 @@ function render(){
   // the rest fades to a quarter when a note is picked; on the Obsidian map half as much (to about 60%), so the graph stays visible around it
   const EMOD = emoView();
   const dim = lit && !(focus >= 0 && (sel === focus || sel < 0) && hover < 0) ? (sel >= 0 ? (GRV() ? .62 : .25) : (GRV() ? .85 : .7)) : 1;
-  if (view === "stars") starsNotes(lit, dim); else if (expOn() && EXP[view].notes) EXP[view].notes(lit, dim); else {
+  if (view === "stars") starsNotes(lit, dim); else if (expOn() && EXP[view].notes) EXP[view].notes(lit, dim); else if (coverOn()) coverNotes(lit, dim, EMOD); else {
   for (const lv of [1,2]) for (const ar of [1,0]) {   // archive notes as rings, vault notes as dots
     ctx.globalAlpha = dim; ctx.beginPath();
     for (let i=0;i<n;i++) { if (N[i].level !== lv || !VV(i) || ARCH[i] !== ar || (EMOD && emoAt(i))) continue; const x = sx(X[i]), y = sy(Y[i]); if (x<vx0||x>vx1||y<vy0||y>vy1) continue; const r = rad(i); ctx.moveTo(x+r,y); ctx.arc(x,y,r,0,6.2832); }
@@ -5130,6 +5135,45 @@ function timeGuides(){
     ctx.stroke();
   }
 }
+// ---------- Book Cover (0.9.156) ----------
+// The cover's colours are clock faces round the giant dot, from the LYT Cover Generator (v14). Notes take FIELD_CLOCK, the hand-placed field:
+// each note's colour is the time it sits at, seen from the map's centre. Twelve pastels; on a light page they are inked darker (DOT_INK), as the generator did on white.
+const CPAL = { green: "#77eda9", teal: "#77edd5", cyan: "#77e3ed", blue: "#7794ed", indigo: "#7778ed", purple: "#b277ed", violet: "#d377ed", pink: "#ed77c6", magenta: "#ed77ea", yellow: "#ede777", "yellow-green": "#c6ed77", orange: "#edbd77" };
+const FIELD_CLOCK = [["12:00", "cyan"], ["1:00", "blue"], ["1:40", "purple"], ["3:00", "yellow"], ["5:00", "yellow"], ["6:00", "green"], ["7:00", "yellow"], ["8:00", "yellow"], ["9:00", "pink"], ["10:00", "pink"], ["11:00", "teal"]];
+const RING_CLOCK = [["12:00", "green"], ["12:40", "green"], ["1:10", "purple"], ["1:40", "pink"], ["3:28", "cyan"], ["5:09", "purple"], ["6:50", "yellow"], ["8:31", "teal"], ["10:19", "purple"], ["11:00", "yellow"]];
+function clockLut(stops, ink){ const st = stops.map(([t, c]) => { const [h, m] = t.split(":").map(Number), hx = CPAL[c] || c; return [((h % 12) * 60 + m) / 720, [1, 3, 5].map(q => parseInt(hx.slice(q, q + 2), 16) * ink)]; }).sort((p, q) => p[0] - q[0]);
+  const out = []; for (let d = 0; d < 360; d++) { const f = d / 360; let a = st[st.length - 1], b = st[0], fa = a[0] - 1, fb = b[0];
+    for (let q = 0; q < st.length; q++) { const nx = st[(q + 1) % st.length], f0 = st[q][0], f1 = q + 1 < st.length ? nx[0] : nx[0] + 1; if (f >= f0 && f < f1) { a = st[q]; b = nx; fa = f0; fb = f1; break; } if (q === 0 && f < f0) { a = st[st.length - 1]; b = st[0]; fa = a[0] - 1; fb = f0; break; } }
+    const t = fb > fa ? (f - fa) / (fb - fa) : 0; out.push(`rgb(${[0, 1, 2].map(q => Math.round(a[1][q] + (b[1][q] - a[1][q]) * t)).join(",")})`); }
+  return out; }
+let COVLUT = null, COVLUTBG = "";
+function coverCol(i){ if (COVLUTBG !== css.bg) { COVLUTBG = css.bg; const m = /\d+/g, v = (css.bg.match(m) || [255, 255, 255]).slice(0, 3).map(Number), dark = (v[0] * .3 + v[1] * .59 + v[2] * .11) < 128 || css.bg.startsWith("#0") || css.bg.startsWith("#1");
+    COVLUT = clockLut(FIELD_CLOCK, dark ? 1 : .8); }
+  const a = Math.atan2(X[i] - WW / 2, -(Y[i] - (TOP + WH * .42))), d = Math.floor(((a * 180 / Math.PI) + 360) % 360); return COVLUT[d]; }
+// the strongest links, drawn as chains like the cover's web: each Level 3+ note to its nearest linked Level 3+ neighbour (two for Levels 4 and 5),
+// a two-way link counting double; no note takes more than four of these, so a hub doesn't become a starburst. Computed per layout, drawn every frame
+let COVE = null, COVEKEY = "";
+function coverEdges(){ let sxs = 0, cnt = 0; for (let i = 0; i < n; i++) if (N[i].level >= 3 && VV(i)) { sxs += X[i] * 1.7 + Y[i]; cnt++; } const key = n + ":" + cnt + ":" + Math.round(sxs); if (COVE && COVEKEY === key) return COVE; COVEKEY = key;   /* again only when the notes move or the filter changes */
+  const cand = [];
+  for (let i = 0; i < n; i++) { const lv = N[i].level; if (lv < 3 || !VV(i)) continue; const os = new Set(out[i]), is_ = new Set(inn[i]), best = [];
+    for (const j of new Set(out[i].concat(inn[i]))) { if (j === i || N[j].level < 3 || !VV(j)) continue; const d = Math.hypot(X[j] - X[i], Y[j] - Y[i]) || 1, mut = os.has(j) && is_.has(j) ? 2 : 1, w = mut / d; best.push([w, j]); }
+    best.sort((p, q) => q[0] - p[0]); for (const [w, j] of best.slice(0, lv >= 4 ? 2 : 1)) cand.push([w, i, j]); }
+  cand.sort((p, q) => q[0] - p[0]); const deg = new Int16Array(n), seen = new Set(); COVE = [];
+  for (const [, i, j] of cand) { const k_ = i < j ? i * n + j : j * n + i; if (seen.has(k_) || deg[i] >= 4 || deg[j] >= 4) continue; seen.add(k_); deg[i]++; deg[j]++; COVE.push([i, j]); }
+  return COVE; }
+function coverLinks(){ ctx.lineWidth = Math.max(1, Math.min(2.2, 1.2 * Math.pow(k, .3))); ctx.lineCap = "round"; const a_ = sel >= 0 || hover >= 0 ? .3 : .7;
+  for (const [i, j] of coverEdges()) { if (!VV(i) || !VV(j)) continue; ctx.strokeStyle = coverCol((N[i].score || 0) >= (N[j].score || 0) ? i : j); ctx.globalAlpha = a_; ctx.beginPath(); ctx.moveTo(sx(X[i]), sy(Y[i])); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); }
+  ctx.globalAlpha = 1; }
+// the notes: Levels 1 and 2 a field of small dots (some hollow, like ink that didn't fill); Level 3 and up open rings, bigger with score
+function coverNotes(lit, dim, EMOD){ const vx0 = -30, vx1 = W + 30, vy0 = -30, vy1 = H + 30;
+  for (let i = 0; i < n; i++) { if (N[i].level >= 3 || !VV(i) || (EMOD && emoAt(i))) continue; const x = sx(X[i]), y = sy(Y[i]); if (!(x >= vx0 && x <= vx1 && y >= vy0 && y <= vy1)) continue;
+    const r = Math.max(1.1, rad(i) * .85), col = coverCol(i), h1 = hash(N[i].path, 11); ctx.globalAlpha = (lit && !lit.has(i) ? dim : 1) * (.62 + .38 * hash(N[i].path, 13)); ctx.beginPath(); ctx.ellipse(x, y, r * 1.12, r * .9, h1 * 3.1416, 0, 6.2832);   /* flecks, not circles; Soft to Full */
+    if (r >= 2.1 && hash(N[i].path, 7) < .3) { ctx.strokeStyle = col; ctx.lineWidth = Math.max(.8, r * .45); ctx.stroke(); } else { ctx.fillStyle = col; ctx.fill(); } }
+  for (const lv of [3, 4, 5]) for (let i = 0; i < n; i++) { if (N[i].level !== lv || !VV(i) || (EMOD && emoAt(i))) continue; const x = sx(X[i]), y = sy(Y[i]); if (!(x >= vx0 && x <= vx1 && y >= vy0 && y <= vy1)) continue;
+    const r = rad(i) * 1.05; if (!(r > 0)) continue; const col = coverCol(i);
+    ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .3 : .75) : 1; ctx.beginPath(); ctx.ellipse(x, y, r * 1.1, r * .9, hash(N[i].path, 17) * 3.1416, 0, 6.2832);   /* gently oval, as the pen drew them */
+    ctx.fillStyle = css.bg; ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.3, r * .26); ctx.stroke(); }
+  ctx.globalAlpha = 1; }
 function shape(lv, x, y, r){
   if (COVER && lv === 5) { const h = r*.94; ctx.rect(x-h, y-h, 2*h, 2*h); return; }   // Book cover shapes (0.9.149): a crisp square, a touch narrower than the circle so it doesn't read bigger
   if (COVER && lv === 4) { const R = r*1.42; ctx.moveTo(x, y-R); ctx.lineTo(x+R*.866, y+R*.5); ctx.lineTo(x-R*.866, y+R*.5); ctx.closePath(); return; }   // an upright equilateral triangle on its centroid
@@ -6636,7 +6680,7 @@ function syncDome(){ root.dataset.dome = domeOn() ? "1" : ""; legend(); placePla
 function goEmDome(m){ closePops(); DOME.emergence = true; save("iv-dome", DOME); if (view !== "emergence") setView("emergence"); if (mode !== m) setMode(m); syncDome(); morph(true, () => fitTarget()); }
 // Emergence ▾: Main, Space-Time or Planetarium (stand inside, Level 5 overhead)
 POPS.push(['#vseg button[data-v="emergence"]', "#emerpop", "#vsegms"]);
-const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.checked = view === "spacetime" ? r.value === "spacetime" : r.value === (DOME.emergence ? "dome" : "flat"));
+const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.checked = view === "spacetime" ? r.value === "spacetime" : r.value === (DOME.emergence ? "dome" : EMCOVER ? "cover" : "flat"));
 // Emergence's gear: Show emojis, like Linear Calendar's (each note's emoji in place of its dot, bigger by level; Settings → Emoji labels says where they come from)
 { const r = $("#emerpop").createEl("label", { cls: "mini lcemo ememo" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = emoOn("emergence"); { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = emoOn("emergence"); }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
   const st = $("#emerpop").createDiv({ cls: "pn lcemost" });
@@ -6646,7 +6690,9 @@ const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.
   const r = se.createEl("label", { cls: "mini lcemo smemo" }); const cb = r.createEl("input", { type: "checkbox" }); cb.checked = emoOn("sense"); { const f0 = FUI.emosw; FUI.emosw = () => { if (f0) f0(); cb.checked = emoOn("sense"); }; } r.createEl("i", { cls: "sw" }); r.createSpan({ text: "Show emojis" });
   const st = se.createDiv({ cls: "pn lcemost" });
   cb.onchange = async () => { setEmoOn("sense", cb.checked); st.setText(""); if (cb.checked && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
-root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if (!r.checked) return; if (r.value === "spacetime") { goMap("spacetime", false); syncEmd(); return; } if (view === "spacetime") { closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); setView("emergence"); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); morph(true, () => fitTarget()); syncEmd(); });
+root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if (!r.checked) return; if (r.value !== "spacetime") { EMCOVER = r.value === "cover"; save("iv-emcover", EMCOVER); } const rv = r.value === "cover" ? "flat" : r.value;   /* Book Cover is Main, drawn as the cover */
+  if (rv !== r.value) { if (view === "spacetime") { closePops(); DOME.emergence = false; save("iv-dome", DOME); setView("emergence"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = false; save("iv-dome", DOME); syncDome(); legend(); draw(); syncEmd(); return; }
+  if (r.value === "spacetime") { goMap("spacetime", false); syncEmd(); return; } if (view === "spacetime") { closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); setView("emergence"); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); morph(true, () => fitTarget()); syncEmd(); });
 syncEmd();
 function goChord(m){ const keep = $("#tclook") && !$("#tclook").hidden && (m === "in" || m === "out");
   if (keep && view === "chord" && (CSPH === "in" || CSPH === "out") && m !== CSPH) {   /* Tesla ⇄ Corona: the same globe, so just redraw it in the other look, at once (0.8.199) */
