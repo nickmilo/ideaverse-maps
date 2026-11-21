@@ -5139,23 +5139,19 @@ function timeGuides(){
 // The cover's colours are clock faces round the giant dot, from the LYT Cover Generator (v14). Notes take FIELD_CLOCK, the hand-placed field:
 // each note's colour is the time it sits at, seen from the map's centre. Twelve pastels; on a light page they are inked darker (DOT_INK), as the generator did on white.
 const CPAL = { green: "#77eda9", teal: "#77edd5", cyan: "#77e3ed", blue: "#7794ed", indigo: "#7778ed", purple: "#b277ed", violet: "#d377ed", pink: "#ed77c6", magenta: "#ed77ea", yellow: "#ede777", "yellow-green": "#c6ed77", orange: "#edbd77" };
-const FIELD_CLOCK = [["12:00", "cyan"], ["1:00", "blue"], ["1:40", "purple"], ["3:00", "yellow"], ["3:58", "yellow"], ["4:12", "magenta"], ["4:52", "magenta"], ["5:06", "yellow"], ["6:00", "green"], ["6:18", "green"], ["7:00", "yellow"], ["8:00", "yellow"], ["9:00", "pink"], ["10:00", "pink"], ["11:00", "teal"]];
+const FIELD_CLOCK = [["12:00", "cyan"], ["1:00", "blue"], ["1:40", "purple"], ["3:00", "yellow"], ["3:44", "yellow"], ["4:14", "purple"], ["4:50", "purple"], ["5:20", "yellow"], ["6:00", "green"], ["6:18", "green"], ["7:00", "yellow"], ["8:00", "yellow"], ["9:00", "pink"], ["10:00", "pink"], ["11:00", "teal"]];
 const RING_CLOCK = [["12:00", "green"], ["12:40", "green"], ["1:10", "purple"], ["1:40", "pink"], ["3:28", "cyan"], ["5:09", "purple"], ["6:50", "yellow"], ["8:31", "teal"], ["10:19", "purple"], ["11:00", "yellow"]];
 function clockLut(stops, ink){ const st = stops.map(([t, c]) => { const [h, m] = t.split(":").map(Number), hx = CPAL[c] || c; return [((h % 12) * 60 + m) / 720, [1, 3, 5].map(q => parseInt(hx.slice(q, q + 2), 16) * ink)]; }).sort((p, q) => p[0] - q[0]);
   const out = []; for (let d = 0; d < 360; d++) { const f = d / 360; let a = st[st.length - 1], b = st[0], fa = a[0] - 1, fb = b[0];
     for (let q = 0; q < st.length; q++) { const nx = st[(q + 1) % st.length], f0 = st[q][0], f1 = q + 1 < st.length ? nx[0] : nx[0] + 1; if (f >= f0 && f < f1) { a = st[q]; b = nx; fa = f0; fb = f1; break; } if (q === 0 && f < f0) { a = st[st.length - 1]; b = st[0]; fa = a[0] - 1; fb = f0; break; } }
     const t = fb > fa ? (f - fa) / (fb - fa) : 0; out.push(`rgb(${[0, 1, 2].map(q => Math.round(a[1][q] + (b[1][q] - a[1][q]) * t)).join(",")})`); }
   return out; }
-let COVLUT = null, COVLUTP = null, COVLUTBG = ""; const COVMIX = new Map();
-const rgbOf = c => c.slice(4, -1).split(",").map(Number);
+let COVLUT = null, COVLUTBG = "";
+// the 4 o'clock wedge is one purple, no inner-to-outer gradient, with the yellow either side blending into it over ~30 minutes (0.9.164)
 function coverCol(i){ if (COVLUTBG !== css.bg) { COVLUTBG = css.bg; const m = /\d+/g, v = (css.bg.match(m) || [255, 255, 255]).slice(0, 3).map(Number), dark = (v[0] * .3 + v[1] * .59 + v[2] * .11) < 128 || css.bg.startsWith("#0") || css.bg.startsWith("#1");
-    const ink = dark ? 1 : .8; COVLUT = clockLut(FIELD_CLOCK, ink); COVLUTP = clockLut(FIELD_CLOCK.map(([t, c]) => [t, c === "magenta" ? "purple" : c]), ink); COVMIX.clear(); }
+    COVLUT = clockLut(FIELD_CLOCK, dark ? 1 : .8); }
   const B = CVB, a = Math.atan2((X[i] - B.cx) / B.hw, -(Y[i] - B.cy) / B.hh), d = Math.floor(((a * 180 / Math.PI) + 360) % 360);
-  if (COVLUT[d] === COVLUTP[d]) return COVLUT[d];
-  // the magenta wedge is purple near the centre and magenta lower down, blended gradually over its length (0.9.163)
-  const v = Math.max(0, Math.min(1, (Y[i] - B.cy) / Math.max(1, B.y1 - B.cy))), t = v < .2 ? 0 : v > .8 ? 1 : (() => { const x = (v - .2) / .6; return x * x * (3 - 2 * x); })(), q = Math.round(t * 20), key = d * 32 + q;
-  let c = COVMIX.get(key); if (c) return c; const m = rgbOf(COVLUT[d]), p = rgbOf(COVLUTP[d]), tq = q / 20;
-  c = `rgb(${[0, 1, 2].map(z => Math.round(p[z] + (m[z] - p[z]) * tq)).join(",")})`; COVMIX.set(key, c); return c; }
+  return COVLUT[d]; }
 // the clock is read in the notes' own frame (0.9.159): offsets are divided by the spread's half-width and half-height, so a wide map
 // gets the whole wheel, 3:00 at its right edge and 9:00 at its left, instead of a third of the clock (yellow, 2:30 to 5:00) across the right half
 const CVB = { cx: WW / 2, cy: TOP + WH * .42, hw: WW / 2, hh: WH / 2, y1: TOP + WH };
