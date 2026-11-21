@@ -5155,30 +5155,32 @@ function coverCol(i){ if (COVLUTBG !== css.bg) { COVLUTBG = css.bg; const m = /\
 let COVE = null, COVEKEY = "";
 // the well (0.9.157): no level bands, so nothing sits empty. Every showing note is ranked by level, then score (ties broken by a stable hash);
 // its height is that rank eased by a power of .45, so the few best-linked notes spread out across the top and the many dots pack the bottom
-const YCV = new Float32Array(n);
+const YCV = new Float32Array(n), CVU = new Float32Array(n), CVORD = [];   /* CVU: 1 for the best-ranked note, 0 for the last (0.9.158) */
 function layoutCover(){ const ids = []; for (let i = 0; i < n; i++) if (vis[i]) ids.push(i); else YCV[i] = YE[i];
   ids.sort((a, b) => (N[b].level - N[a].level) || ((N[b].score || 0) - (N[a].score || 0)) || (hash(N[a].path, 29) - hash(N[b].path, 29)));
-  const m = Math.max(1, ids.length - 1); ids.forEach((i, q) => { const f = Math.pow(q / m, .45); YCV[i] = TOP + WH * (.03 + .94 * f) + (hash(N[i].path, 31) - .5) * WH * .012; }); }
-function coverEdges(){ let sxs = 0, cnt = 0; for (let i = 0; i < n; i++) if (N[i].level >= 3 && VV(i)) { sxs += X[i] * 1.7 + Y[i]; cnt++; } const key = n + ":" + cnt + ":" + Math.round(sxs); if (COVE && COVEKEY === key) return COVE; COVEKEY = key;   /* again only when the notes move or the filter changes */
+  const m = Math.max(1, ids.length - 1); CVORD.length = 0; for (let q = ids.length - 1; q >= 0; q--) CVORD.push(ids[q]);   /* bottom first, for drawing */
+  ids.forEach((i, q) => { CVU[i] = 1 - q / m; const f = Math.pow(q / m, .45); YCV[i] = TOP + WH * (.03 + .94 * f) + (hash(N[i].path, 31) - .5) * WH * .012; }); }
+const CVLINK = .93;   /* the top 7% by rank join the web; their strongest links fade as they go down */
+function coverEdges(){ let sxs = 0, cnt = 0; for (let i = 0; i < n; i++) if (CVU[i] >= CVLINK && VV(i)) { sxs += X[i] * 1.7 + Y[i]; cnt++; } const key = n + ":" + cnt + ":" + Math.round(sxs); if (COVE && COVEKEY === key) return COVE; COVEKEY = key;   /* again only when the notes move or the filter changes */
   const cand = [];
-  for (let i = 0; i < n; i++) { const lv = N[i].level; if (lv < 3 || !VV(i)) continue; const os = new Set(out[i]), is_ = new Set(inn[i]), best = [];
-    for (const j of new Set(out[i].concat(inn[i]))) { if (j === i || N[j].level < 3 || !VV(j)) continue; const d = Math.hypot(X[j] - X[i], Y[j] - Y[i]) || 1, mut = os.has(j) && is_.has(j) ? 2 : 1, w = mut / d; best.push([w, j]); }
-    best.sort((p, q) => q[0] - p[0]); for (const [w, j] of best.slice(0, lv >= 4 ? 2 : 1)) cand.push([w, i, j]); }
+  for (let i = 0; i < n; i++) { if (CVU[i] < CVLINK || !VV(i)) continue; const os = new Set(out[i]), is_ = new Set(inn[i]), best = [];
+    for (const j of new Set(out[i].concat(inn[i]))) { if (j === i || CVU[j] < CVLINK || !VV(j)) continue; const d = Math.hypot(X[j] - X[i], Y[j] - Y[i]) || 1, mut = os.has(j) && is_.has(j) ? 2 : 1, w = mut / d; best.push([w, j]); }
+    best.sort((p, q) => q[0] - p[0]); for (const [w, j] of best.slice(0, CVU[i] >= .97 ? 2 : 1)) cand.push([w, i, j]); }
   cand.sort((p, q) => q[0] - p[0]); const deg = new Int16Array(n), seen = new Set(); COVE = [];
   for (const [, i, j] of cand) { const k_ = i < j ? i * n + j : j * n + i; if (seen.has(k_) || deg[i] >= 4 || deg[j] >= 4) continue; seen.add(k_); deg[i]++; deg[j]++; COVE.push([i, j]); }
   return COVE; }
 function coverLinks(){ ctx.lineWidth = Math.max(1, Math.min(2.2, 1.2 * Math.pow(k, .3))); ctx.lineCap = "round"; const a_ = sel >= 0 || hover >= 0 ? .3 : .7;
-  for (const [i, j] of coverEdges()) { if (!VV(i) || !VV(j)) continue; ctx.strokeStyle = coverCol((N[i].score || 0) >= (N[j].score || 0) ? i : j); ctx.globalAlpha = a_; ctx.beginPath(); ctx.moveTo(sx(X[i]), sy(Y[i])); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); }
+  for (const [i, j] of coverEdges()) { if (!VV(i) || !VV(j)) continue; const lo = Math.min(CVU[i], CVU[j]), t = (lo - CVLINK) / (1 - CVLINK); ctx.strokeStyle = coverCol(CVU[i] >= CVU[j] ? i : j); ctx.globalAlpha = a_ * (.3 + .7 * t);   /* fainter lower down */ ctx.beginPath(); ctx.moveTo(sx(X[i]), sy(Y[i])); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); }
   ctx.globalAlpha = 1; }
 // the notes: Levels 1 and 2 a field of small dots (some hollow, like ink that didn't fill); Level 3 and up open rings, bigger with score
-function coverNotes(lit, dim, EMOD){ const vx0 = -30, vx1 = W + 30, vy0 = -30, vy1 = H + 30;
-  for (let i = 0; i < n; i++) { if (N[i].level >= 3 || !VV(i) || (EMOD && emoAt(i))) continue; const x = sx(X[i]), y = sy(Y[i]); if (!(x >= vx0 && x <= vx1 && y >= vy0 && y <= vy1)) continue;
-    const r = Math.max(1.1, rad(i) * .85), col = coverCol(i), h1 = hash(N[i].path, 11); ctx.globalAlpha = (lit && !lit.has(i) ? dim : 1) * (.62 + .38 * hash(N[i].path, 13)); ctx.beginPath(); ctx.ellipse(x, y, r * 1.12, r * .9, h1 * 3.1416, 0, 6.2832);   /* flecks, not circles; Soft to Full */
-    if (r >= 2.1 && hash(N[i].path, 7) < .3) { ctx.strokeStyle = col; ctx.lineWidth = Math.max(.8, r * .45); ctx.stroke(); } else { ctx.fillStyle = col; ctx.fill(); } }
-  for (const lv of [3, 4, 5]) for (let i = 0; i < n; i++) { if (N[i].level !== lv || !VV(i) || (EMOD && emoAt(i))) continue; const x = sx(X[i]), y = sy(Y[i]); if (!(x >= vx0 && x <= vx1 && y >= vy0 && y <= vy1)) continue;
-    const r = rad(i) * 1.05; if (!(r > 0)) continue; const col = coverCol(i);
-    ctx.globalAlpha = lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .3 : .75) : 1; ctx.beginPath(); ctx.ellipse(x, y, r * 1.1, r * .9, hash(N[i].path, 17) * 3.1416, 0, 6.2832);   /* gently oval, as the pen drew them */
-    ctx.fillStyle = css.bg; ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.3, r * .26); ctx.stroke(); }
+// the notes, one continuous ramp from the bottom up (0.9.158): size grows with rank, the share of open rings grows with it
+// (solid flecks below, more and more hollow higher up, all hollow at the top), and so does the ink. No step where Level 3 starts
+function coverNotes(lit, dim, EMOD){ const vx0 = -30, vx1 = W + 30, vy0 = -30, vy1 = H + 30, zk = Math.pow(k, .55), ss = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  for (const i of CVORD) { if (!VV(i) || (EMOD && emoAt(i))) continue; const x = sx(X[i]), y = sy(Y[i]); if (!(x >= vx0 && x <= vx1 && y >= vy0 && y <= vy1)) continue;
+    const u = CVU[i], r = Math.max(1, (1.1 + 8.5 * Math.pow(u, 3.6)) * zk), col = coverCol(i), hollow = hash(N[i].path, 7) < Math.max(.08, ss(.55, .95, u));
+    ctx.globalAlpha = (lit && !lit.has(i) && dim < 1 ? (sel >= 0 ? .3 : .75) : 1) * (.5 + .5 * Math.max(u, hash(N[i].path, 13) * .6));
+    ctx.beginPath(); ctx.ellipse(x, y, r * 1.1, r * .9, hash(N[i].path, 17) * 3.1416, 0, 6.2832);   /* gently oval, as the pen drew them */
+    if (hollow) { if (r > 4) { ctx.fillStyle = css.bg; ctx.fill(); } ctx.strokeStyle = col; ctx.lineWidth = Math.max(.8, Math.min(r * .32, 1 + r * .2)); ctx.stroke(); } else { ctx.fillStyle = col; ctx.fill(); } }
   ctx.globalAlpha = 1; }
 function shape(lv, x, y, r){
   if (COVER && lv === 5) { const h = r*.94; ctx.rect(x-h, y-h, 2*h, 2*h); return; }   // Book cover shapes (0.9.149): a crisp square, a touch narrower than the circle so it doesn't read bigger
