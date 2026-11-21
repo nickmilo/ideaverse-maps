@@ -1153,7 +1153,7 @@ let morphing = false;
 let morphId = 0, hopSlow = false;
 function morph(animate, cam){
   if (view === "gravity") layoutGravity(); else if (view === "stars") layoutStars(); else if (view === "sense") layoutSense(); else if (view === "arc") layoutArc(); else if (view === "chord") layoutChord(); else if (view === "spacetime") layoutSpace(); else if (expOn()) { EHID.fill(0); EXP[view].layout(); }
-  let tX = expOn() ? EX : view === "spacetime" ? XT : view === "gravity" ? GX : view === "stars" ? (S3D ? (project3D(), P3X) : SX) : view === "sense" ? SNX : view === "arc" ? ARX : view === "chord" ? CHX : curX(), tY = view === "gravity" ? GY : view === "stars" ? (S3D ? P3Y : SY) : view === "sense" ? SNY : view === "arc" ? ARY : view === "chord" ? CHY : view === "spacetime" ? YST : YE;
+  let tX = expOn() ? EX : view === "spacetime" ? XT : view === "gravity" ? GX : view === "stars" ? (S3D ? (project3D(), P3X) : SX) : view === "sense" ? SNX : view === "arc" ? ARX : view === "chord" ? CHX : curX(), tY = view === "gravity" ? GY : view === "stars" ? (S3D ? P3Y : SY) : view === "sense" ? SNY : view === "arc" ? ARY : view === "chord" ? CHY : view === "spacetime" ? YST : coverOn() ? (layoutCover(), YCV) : YE;
   if (expOn()) tY = EY;
   if (domeOn()) { domeUse(); domeAngles(tX, tY); domeProject(); tX = DX; tY = DY; }
   if (csphOn()) { csAngles(); csProject(); tX = DX; tY = DY; }
@@ -4592,7 +4592,7 @@ function halos3D(dim){   // in 3D the cached glow can't follow the camera: each 
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
 }
 
-Y.set(YE); X.set(curX());
+Y.set(YE); X.set(curX()); if (coverOn()) win.setTimeout(() => { try { if (!dead) morph(false); } catch (_) { /* closed first */ } }, 0);   /* the Book Cover's well, not the bands (0.9.157) */
 if (view === "arc") { layoutArc(); X.set(ARX); Y.set(ARY); }
 else if (view === "chord") { layoutChord(); X.set(CHX); Y.set(CHY); }
 else if (view === "gravity") { layoutGravity(); X.set(GX); Y.set(GY); }
@@ -4829,8 +4829,8 @@ function render(){
     ctx.fillStyle = idx % 2 ? css["band-b"] : css["band-a"]; ctx.fillRect(0, y0, W, y1 - y0);
     ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, Math.round(y1 + 12*k)+.5); ctx.lineTo(W, Math.round(y1 + 12*k)+.5); ctx.stroke();
   });
-  // level bands
-  else LEVELS.forEach((L, idx) => {
+  // level bands (none on the Book Cover: one well, best notes at the top)
+  else if (!coverOn()) LEVELS.forEach((L, idx) => {
     const b = bandY[L.lv], y0 = sy(b.y0), y1 = sy(b.y1);
     ctx.fillStyle = idx % 2 ? css["band-b"] : css["band-a"]; ctx.fillRect(0, y0, W, y1 - y0);
     ctx.strokeStyle = css.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, Math.round(y1 + GAP_Y*k/2)+.5); ctx.lineTo(W, Math.round(y1 + GAP_Y*k/2)+.5); ctx.stroke();
@@ -5153,6 +5153,12 @@ function coverCol(i){ if (COVLUTBG !== css.bg) { COVLUTBG = css.bg; const m = /\
 // the strongest links, drawn as chains like the cover's web: each Level 3+ note to its nearest linked Level 3+ neighbour (two for Levels 4 and 5),
 // a two-way link counting double; no note takes more than four of these, so a hub doesn't become a starburst. Computed per layout, drawn every frame
 let COVE = null, COVEKEY = "";
+// the well (0.9.157): no level bands, so nothing sits empty. Every showing note is ranked by level, then score (ties broken by a stable hash);
+// its height is that rank eased by a power of .45, so the few best-linked notes spread out across the top and the many dots pack the bottom
+const YCV = new Float32Array(n);
+function layoutCover(){ const ids = []; for (let i = 0; i < n; i++) if (vis[i]) ids.push(i); else YCV[i] = YE[i];
+  ids.sort((a, b) => (N[b].level - N[a].level) || ((N[b].score || 0) - (N[a].score || 0)) || (hash(N[a].path, 29) - hash(N[b].path, 29)));
+  const m = Math.max(1, ids.length - 1); ids.forEach((i, q) => { const f = Math.pow(q / m, .45); YCV[i] = TOP + WH * (.03 + .94 * f) + (hash(N[i].path, 31) - .5) * WH * .012; }); }
 function coverEdges(){ let sxs = 0, cnt = 0; for (let i = 0; i < n; i++) if (N[i].level >= 3 && VV(i)) { sxs += X[i] * 1.7 + Y[i]; cnt++; } const key = n + ":" + cnt + ":" + Math.round(sxs); if (COVE && COVEKEY === key) return COVE; COVEKEY = key;   /* again only when the notes move or the filter changes */
   const cand = [];
   for (let i = 0; i < n; i++) { const lv = N[i].level; if (lv < 3 || !VV(i)) continue; const os = new Set(out[i]), is_ = new Set(inn[i]), best = [];
@@ -6691,7 +6697,7 @@ const syncEmd = () => root.querySelectorAll('input[name="emd"]').forEach(r => r.
   const st = se.createDiv({ cls: "pn lcemost" });
   cb.onchange = async () => { setEmoOn("sense", cb.checked); st.setText(""); if (cb.checked && !EMO) { const e_ = await loadEmo(); if (e_) st.setText(e_); } relayout(false); draw(); }; }
 root.querySelectorAll('input[name="emd"]').forEach(r => r.onchange = () => { if (!r.checked) return; if (r.value !== "spacetime") { EMCOVER = r.value === "cover"; save("iv-emcover", EMCOVER); } const rv = r.value === "cover" ? "flat" : r.value;   /* Book Cover is Main, drawn as the cover */
-  if (rv !== r.value) { if (view === "spacetime") { closePops(); DOME.emergence = false; save("iv-dome", DOME); setView("emergence"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = false; save("iv-dome", DOME); syncDome(); legend(); draw(); syncEmd(); return; }
+  if (rv !== r.value) { if (view === "spacetime") { closePops(); DOME.emergence = false; save("iv-dome", DOME); setView("emergence"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = false; save("iv-dome", DOME); syncDome(); legend(); morph(true, () => fitTarget()); syncEmd(); return; }
   if (r.value === "spacetime") { goMap("spacetime", false); syncEmd(); return; } if (view === "spacetime") { closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); setView("emergence"); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); syncEmd(); return; } closePops(); DOME.emergence = r.value === "dome"; save("iv-dome", DOME); if (DOME.emergence && mode !== "time") setMode("time"); syncDome(); morph(true, () => fitTarget()); syncEmd(); });
 syncEmd();
 function goChord(m){ const keep = $("#tclook") && !$("#tclook").hidden && (m === "in" || m === "out");
