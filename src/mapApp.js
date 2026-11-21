@@ -5139,7 +5139,7 @@ function timeGuides(){
 // The cover's colours are clock faces round the giant dot, from the LYT Cover Generator (v14). Notes take FIELD_CLOCK, the hand-placed field:
 // each note's colour is the time it sits at, seen from the map's centre. Twelve pastels; on a light page they are inked darker (DOT_INK), as the generator did on white.
 const CPAL = { green: "#77eda9", teal: "#77edd5", cyan: "#77e3ed", blue: "#7794ed", indigo: "#7778ed", purple: "#b277ed", violet: "#d377ed", pink: "#ed77c6", magenta: "#ed77ea", yellow: "#ede777", "yellow-green": "#c6ed77", orange: "#edbd77" };
-const FIELD_CLOCK = [["12:00", "cyan"], ["1:00", "blue"], ["1:40", "purple"], ["3:00", "yellow"], ["5:00", "yellow"], ["6:00", "green"], ["7:00", "yellow"], ["8:00", "yellow"], ["9:00", "pink"], ["10:00", "pink"], ["11:00", "teal"]];
+const FIELD_CLOCK = [["12:00", "cyan"], ["1:00", "blue"], ["1:40", "purple"], ["3:00", "yellow"], ["3:48", "yellow"], ["4:00", "magenta"], ["4:12", "yellow"], ["5:00", "yellow"], ["6:00", "green"], ["7:00", "yellow"], ["8:00", "yellow"], ["9:00", "pink"], ["10:00", "pink"], ["11:00", "teal"]];
 const RING_CLOCK = [["12:00", "green"], ["12:40", "green"], ["1:10", "purple"], ["1:40", "pink"], ["3:28", "cyan"], ["5:09", "purple"], ["6:50", "yellow"], ["8:31", "teal"], ["10:19", "purple"], ["11:00", "yellow"]];
 function clockLut(stops, ink){ const st = stops.map(([t, c]) => { const [h, m] = t.split(":").map(Number), hx = CPAL[c] || c; return [((h % 12) * 60 + m) / 720, [1, 3, 5].map(q => parseInt(hx.slice(q, q + 2), 16) * ink)]; }).sort((p, q) => p[0] - q[0]);
   const out = []; for (let d = 0; d < 360; d++) { const f = d / 360; let a = st[st.length - 1], b = st[0], fa = a[0] - 1, fb = b[0];
@@ -5165,17 +5165,18 @@ function layoutCover(){ const ids = []; for (let i = 0; i < n; i++) if (vis[i]) 
   ids.sort((a, b) => (N[b].level - N[a].level) || ((N[b].score || 0) - (N[a].score || 0)) || (hash(N[a].path, 29) - hash(N[b].path, 29)));
   const m = Math.max(1, ids.length - 1); CVORD.length = 0; for (let q = ids.length - 1; q >= 0; q--) CVORD.push(ids[q]);   /* bottom first, for drawing */
   ids.forEach((i, q) => { CVU[i] = 1 - q / m; const f = Math.pow(q / m, .45); YCV[i] = TOP + WH * (.03 + .94 * f) + (hash(N[i].path, 31) - .5) * WH * .012; }); }
-const CVLINK = .93;   /* the top 7% by rank join the web; their strongest links fade as they go down */
-function coverEdges(){ let sxs = 0, cnt = 0; for (let i = 0; i < n; i++) if (CVU[i] >= CVLINK && VV(i)) { sxs += X[i] * 1.7 + Y[i]; cnt++; } const key = n + ":" + cnt + ":" + Math.round(sxs); if (COVE && COVEKEY === key) return COVE; COVEKEY = key;   /* again only when the notes move or the filter changes */
+const CVLINK = .93, CVLOW = .72;   /* the top 7% by rank join the web, and links fade as they go down; below that, down to 28%, a few notes still keep one link (fewer the lower), so the web thins out instead of stopping (0.9.160) */
+const cvIn = i => CVU[i] >= CVLINK || (CVU[i] >= CVLOW && hash(N[i].path, 41) < .3 * Math.pow((CVU[i] - CVLOW) / (CVLINK - CVLOW), 2));
+function coverEdges(){ let sxs = 0, cnt = 0; for (let i = 0; i < n; i++) if (cvIn(i) && VV(i)) { sxs += X[i] * 1.7 + Y[i]; cnt++; } const key = n + ":" + cnt + ":" + Math.round(sxs); if (COVE && COVEKEY === key) return COVE; COVEKEY = key;   /* again only when the notes move or the filter changes */
   const cand = [];
-  for (let i = 0; i < n; i++) { if (CVU[i] < CVLINK || !VV(i)) continue; const os = new Set(out[i]), is_ = new Set(inn[i]), best = [];
-    for (const j of new Set(out[i].concat(inn[i]))) { if (j === i || CVU[j] < CVLINK || !VV(j)) continue; const d = Math.hypot(X[j] - X[i], Y[j] - Y[i]) || 1, mut = os.has(j) && is_.has(j) ? 2 : 1, w = mut / d; best.push([w, j]); }
+  for (let i = 0; i < n; i++) { if (!cvIn(i) || !VV(i)) continue; const os = new Set(out[i]), is_ = new Set(inn[i]), best = [];
+    for (const j of new Set(out[i].concat(inn[i]))) { if (j === i || CVU[j] < CVLOW || !(CVU[i] >= CVLINK ? CVU[j] >= CVLINK : true) || !VV(j)) continue; const d = Math.hypot(X[j] - X[i], Y[j] - Y[i]) || 1, mut = os.has(j) && is_.has(j) ? 2 : 1, w = mut / d; best.push([w, j]); }
     best.sort((p, q) => q[0] - p[0]); for (const [w, j] of best.slice(0, CVU[i] >= .97 ? 2 : 1)) cand.push([w, i, j]); }
   cand.sort((p, q) => q[0] - p[0]); const deg = new Int16Array(n), seen = new Set(); COVE = [];
   for (const [, i, j] of cand) { const k_ = i < j ? i * n + j : j * n + i; if (seen.has(k_) || deg[i] >= 4 || deg[j] >= 4) continue; seen.add(k_); deg[i]++; deg[j]++; COVE.push([i, j]); }
   return COVE; }
 function coverLinks(){ coverBounds(); ctx.lineWidth = Math.max(1, Math.min(2.2, 1.2 * Math.pow(k, .3))); ctx.lineCap = "round"; const a_ = sel >= 0 || hover >= 0 ? .3 : .7;
-  for (const [i, j] of coverEdges()) { if (!VV(i) || !VV(j)) continue; const lo = Math.min(CVU[i], CVU[j]), t = (lo - CVLINK) / (1 - CVLINK); ctx.strokeStyle = coverCol(CVU[i] >= CVU[j] ? i : j); ctx.globalAlpha = a_ * (.3 + .7 * t);   /* fainter lower down */ ctx.beginPath(); ctx.moveTo(sx(X[i]), sy(Y[i])); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); }
+  for (const [i, j] of coverEdges()) { if (!VV(i) || !VV(j)) continue; const lo = Math.min(CVU[i], CVU[j]), t = Math.max(0, (lo - CVLOW) / (1 - CVLOW)); ctx.strokeStyle = coverCol(CVU[i] >= CVU[j] ? i : j); ctx.globalAlpha = a_ * (.18 + .82 * t);   /* fainter lower down */ ctx.beginPath(); ctx.moveTo(sx(X[i]), sy(Y[i])); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); }
   ctx.globalAlpha = 1; }
 // the notes: Levels 1 and 2 a field of small dots (some hollow, like ink that didn't fill); Level 3 and up open rings, bigger with score
 // the notes, one continuous ramp from the bottom up (0.9.158): size grows with rank, the share of open rings grows with it
