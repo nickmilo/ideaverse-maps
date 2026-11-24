@@ -1,7 +1,8 @@
 import { PluginSettingTab, Setting, TFolder, normalizePath } from "obsidian";
 import { DEFAULTS, dateKeys } from "./scan.js";
 
-const list = v => String(v || "").split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(s => normalizePath(s)).filter(s => s && s !== "/");
+const pathsToList = v => String(v || "").split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(s => normalizePath(s)).filter(s => s && s !== "/");
+const tagsToList = v => String(v || "").split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(s => s.startsWith("#") ? s : `#${s}`).filter(s => s);
 
 /** Sensible first-run settings, read from the vault's folders and note names. */
 export function detectDefaults(app) {
@@ -22,15 +23,23 @@ export class MapsSettingTab extends PluginSettingTab {
     const save = async () => { await p.saveSettings(); p.setDirty(); p.graph = null; };
     // a line under folder fields naming any folder that isn't in the vault (capitals don't matter)
     const folders = new Set(this.app.vault.getAllLoadedFiles().filter(f => f instanceof TFolder).map(f => f.path.toLowerCase()));
-    const check = (setting, vals) => { const miss = vals.filter(v => !folders.has(v.toLowerCase()));
+    const checkFolder = (setting, vals) => { const miss = vals.filter(v => !folders.has(v.toLowerCase()));
       let el = setting.descEl.querySelector(".ivm-miss"); if (!el) el = setting.descEl.createDiv({ cls: "ivm-miss mod-warning" });
       el.setText(miss.length ? `Not found in this vault: ${miss.join(", ")}` : ""); };
     const folderList = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addTextArea(t => t
       .setPlaceholder("Folder/path, one per line").setValue((s[key] || []).join("\n"))
-      .onChange(async v => { s[key] = list(v); check(st, s[key]); await save(); })); check(st, s[key] || []); return st; };
+      .onChange(async v => { s[key] = pathsToList(v); checkFolder(st, s[key]); await save(); })); checkFolder(st, s[key] || []); return st; };
     const folderOne = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addText(t => t
       .setPlaceholder("Folder/path").setValue(s[key] || "")
-      .onChange(async v => { s[key] = list(v)[0] || ""; check(st, s[key] ? [s[key]] : []); await save(); })); check(st, s[key] ? [s[key]] : []); return st; };
+      .onChange(async v => { s[key] = pathsToList(v)[0] || ""; checkFolder(st, s[key] ? [s[key]] : []); await save(); })); checkFolder(st, s[key] ? [s[key]] : []); return st; };
+    // A line under tag fields naming any tag that isn't in the vault (capitals and lack of hashtag don't matter)
+    const tags = new Set(Object.keys(this.app.metadataCache.getTags()).map(t => t.toLowerCase())); // BUG metadataCache.getTags(...).map is not a function
+    const checkTag = (setting, vals) => { const miss = vals.filter(v => !tags.has(v.toLowerCase()));
+      let el = setting.descEl.querySelector(".ivm-miss"); if (!el) el = setting.descEl.createDiv({ cls: "ivm-miss mod-warning" });
+      el.setText(miss.length ? `Not found in this vault: ${miss.join(", ")}` : ""); };
+    const tagList = (name, desc, key) => { const st = new Setting(containerEl).setName(name).setDesc(desc); st.addTextArea(t => t
+      .setPlaceholder("Tag, one per line").setValue((s[key] || []).join("\n"))
+      .onChange(async v => { s[key] = tagsToList(v); checkTag(st, s[key]); await save(); })); checkTag(st, s[key] || []); return st; };
 
     new Setting(containerEl).setName("Rescan").setDesc("Changes here take effect on the next scan. The map also offers a rescan when notes change.")
       .addButton(b => b.setButtonText("Rescan now").setCta().onClick(() => { void p.rescan(); }));
@@ -89,14 +98,15 @@ export class MapsSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Saved views and tours").setHeading();
     new Setting(containerEl).setName("Folder").setDesc("The folder that keeps your saved views and tours (one JSON file, updated as you save). Left empty, the map asks before your first save. Use / for the vault root.").addText(t => t
       .setPlaceholder("Folder/path").setValue(s.viewsFolder || "")
-      .onChange(async v => { const x = v.trim(); s.viewsFolder = x === "/" ? "/" : list(x)[0] || ""; await p.saveSettings(); }));
+      .onChange(async v => { const x = v.trim(); s.viewsFolder = x === "/" ? "/" : pathsToList(x)[0] || ""; await p.saveSettings(); }));
 
     new Setting(containerEl).setName("Idea Emergence levels").setHeading();
     new Setting(containerEl).setName("Home notes").setDesc("Always Level 5. Note names, one per line.").addTextArea(t => t
-      .setPlaceholder("Home").setValue((s.homeNotes || []).join("\n")).onChange(async v => { s.homeNotes = list(v); await save(); }));
+      .setPlaceholder("Home").setValue((s.homeNotes || []).join("\n")).onChange(async v => { s.homeNotes = pathsToList(v); await save(); }));
     folderList("Map folders", "Every note in these folders counts as a map (Level 3 or higher). Notes with MOC in the title, or made mostly of links, count too.", "mapFolders");
     new Setting(containerEl).setName("Map collections").setDesc("Notes listed in these collections (the collections property) count as maps.").addText(t => t
-      .setPlaceholder("Maps, Views").setValue((s.mapCollections || []).join(", ")).onChange(async v => { s.mapCollections = list(v); await save(); }));
+      .setPlaceholder("Maps, Views").setValue((s.mapCollections || []).join(", ")).onChange(async v => { s.mapCollections = pathsToList(v); await save(); }));
+    tagList("Map tags", "Notes with any of these tags count as maps.", "mapTags");
     new Setting(containerEl).setName("Level 5 seats").setDesc("How many top-scoring notes join the home notes at Level 5. 0 scales with the size of the vault.").addText(t => t
       .setPlaceholder("0").setValue(String(s.l5Top || 0)).onChange(async v => { const n = parseInt(v, 10); s.l5Top = isFinite(n) && n > 0 ? n : 0; await save(); }));
   }
