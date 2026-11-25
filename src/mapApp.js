@@ -1151,7 +1151,9 @@ let morphing = false;
 // Moves notes to their new places. With cam, the camera's destination is worked out from where the
 // notes will land, and camera and notes move in the same frames (one motion, not two).
 let morphId = 0, hopSlow = false;
+const EOFF = new Map(); let EDRAG = null, eRaf = 0;   // Emergence drag offsets (0.9.165, below by the Kandinsky drag)
 function morph(animate, cam){
+  if (EOFF.size) eHome();   // dragged notes go home before the map moves
   if (view === "gravity") layoutGravity(); else if (view === "stars") layoutStars(); else if (view === "sense") layoutSense(); else if (view === "arc") layoutArc(); else if (view === "chord") layoutChord(); else if (view === "spacetime") layoutSpace(); else if (expOn()) { EHID.fill(0); EXP[view].layout(); }
   let tX = expOn() ? EX : view === "spacetime" ? XT : view === "gravity" ? GX : view === "stars" ? (S3D ? (project3D(), P3X) : SX) : view === "sense" ? SNX : view === "arc" ? ARX : view === "chord" ? CHX : curX(), tY = view === "gravity" ? GY : view === "stars" ? (S3D ? P3Y : SY) : view === "sense" ? SNY : view === "arc" ? ARY : view === "chord" ? CHY : view === "spacetime" ? YST : coverOn() ? (layoutCover(), YCV) : YE;
   if (expOn()) tY = EY;
@@ -5169,7 +5171,7 @@ function layoutCover(){ const ids = []; for (let i = 0; i < n; i++) if (vis[i]) 
   ids.forEach((i, q) => { CVU[i] = 1 - q / m; const f = Math.pow(q / m, .45); YCV[i] = TOP + WH * (.03 + .94 * f) + (hash(N[i].path, 31) - .5) * WH * .012; }); }
 const CVLINK = .93, CVLOW = .72;   /* the top 7% by rank join the web, and links fade as they go down; below that, down to 28%, a few notes still keep one link (fewer the lower), so the web thins out instead of stopping (0.9.160) */
 const cvIn = i => CVU[i] >= CVLINK || (CVU[i] >= CVLOW && hash(N[i].path, 41) < .3 * Math.pow((CVU[i] - CVLOW) / (CVLINK - CVLOW), 2));
-function coverEdges(){ let sxs = 0, cnt = 0; for (let i = 0; i < n; i++) if (cvIn(i) && VV(i)) { sxs += X[i] * 1.7 + Y[i]; cnt++; } const key = n + ":" + cnt + ":" + Math.round(sxs); if (COVE && COVEKEY === key) return COVE; COVEKEY = key;   /* again only when the notes move or the filter changes */
+function coverEdges(){ let sxs = 0, cnt = 0; for (let i = 0; i < n; i++) if (cvIn(i) && VV(i)) { sxs += X[i] * 1.7 + Y[i]; cnt++; } const key = n + ":" + cnt + ":" + Math.round(sxs); if (COVE && (COVEKEY === key || EOFF.size)) return COVE; COVEKEY = key;   /* again only when the notes move or the filter changes */
   const cand = [];
   for (let i = 0; i < n; i++) { if (!cvIn(i) || !VV(i)) continue; const os = new Set(out[i]), is_ = new Set(inn[i]), best = [];
     for (const j of new Set(out[i].concat(inn[i]))) { if (j === i || CVU[j] < CVLOW || !(CVU[i] >= CVLINK ? CVU[j] >= CVLINK : true) || !VV(j)) continue; const d = Math.hypot(X[j] - X[i], Y[j] - Y[i]) || 1, mut = os.has(j) && is_.has(j) ? 2 : 1, w = mut / d; best.push([w, j]); }
@@ -5415,6 +5417,28 @@ const kEnd = e => { if (!KDRAG) return; e.stopImmediatePropagation(); const d = 
   if (!d.moved) { if (d.i === sel) select(-1); else select(d.i); draw(); return; }   // a click without a drag picks the note
   kWake(); };   // let go: it springs home, overshooting a little
 cv.addEventListener("pointerup", kEnd, true); cv.addEventListener("pointercancel", kEnd, true);
+// Emergence: drag a note and let go, and it springs back to its place, overshooting a little; its linked neighbours lean after it (0.9.165).
+// The note's place stays its own: offsets ride on top of X/Y and a morph puts every note home first. A press without a drag is still a click.
+const eDragOn = () => view === "emergence" && !domeOn() && !csphOn();
+function eHome(){ if (eRaf) { win.cancelAnimationFrame(eRaf); eRaf = 0; } for (const [i, o] of EOFF) { X[i] = o.hx; Y[i] = o.hy; } EOFF.clear(); EDRAG = null; }
+function eTick(){ eRaf = 0; let busy = false;
+  for (const [i, o] of EOFF) { if (EDRAG && EDRAG.i === i) { X[i] = o.hx + o.x; Y[i] = o.hy + o.y; busy = true; continue; }
+    const w_ = EDRAG && EDRAG.nb.get(i), tx_ = w_ ? EDRAG.ox * .2 * w_ : 0, ty_ = w_ ? EDRAG.oy * .2 * w_ : 0;   // neighbours follow a fifth of the way
+    o.vx = (o.vx + (tx_ - o.x) * .14) * .82; o.vy = (o.vy + (ty_ - o.y) * .14) * .82; o.x += o.vx; o.y += o.vy; X[i] = o.hx + o.x; Y[i] = o.hy + o.y;
+    if (!w_ && Math.abs(o.x) + Math.abs(o.y) + Math.abs(o.vx) + Math.abs(o.vy) < .05 / k) { X[i] = o.hx; Y[i] = o.hy; EOFF.delete(i); } else busy = true; }
+  draw(); if (busy) eRaf = RAF(eTick); }
+const eWake = () => { if (!eRaf) eRaf = RAF(eTick); };
+cv.addEventListener("pointerdown", e => { if (!eDragOn() || e.button !== 0 || e.shiftKey || e.metaKey || e.ctrlKey || e.altKey || morphing) return;
+  const i = pick(e.offsetX, e.offsetY); if (i < 0) return;
+  const nb = new Map(), cand = [...new Set([...out[i], ...inn[i]])].filter(j => j !== i && VV(j) && vis[j]);
+  cand.sort((a, b) => Math.hypot(X[a] - X[i], Y[a] - Y[i]) - Math.hypot(X[b] - X[i], Y[b] - Y[i])); for (const j of cand.slice(0, 48)) nb.set(j, .6 + .4 * hash(N[j].path, 88));   // a hub tugs its nearest 48, not hundreds
+  const o0 = EOFF.get(i); EDRAG = { i, x0: e.offsetX, y0: e.offsetY, ox: o0 ? o0.x : 0, oy: o0 ? o0.y : 0, bx: o0 ? o0.x : 0, by: o0 ? o0.y : 0, moved: false, nb }; }, true);
+cv.addEventListener("pointermove", e => { if (!EDRAG) return; const dx = (e.offsetX - EDRAG.x0) / k, dy = (e.offsetY - EDRAG.y0) / k;
+  if (!EDRAG.moved) { if (Math.hypot(dx * k, dy * k) < 4) return; EDRAG.moved = true; for (const j of [EDRAG.i, ...EDRAG.nb.keys()]) if (!EOFF.has(j)) EOFF.set(j, { hx: X[j], hy: Y[j], x: 0, y: 0, vx: 0, vy: 0 }); }
+  e.stopImmediatePropagation(); moved = true; EDRAG.ox = EDRAG.bx + dx; EDRAG.oy = EDRAG.by + dy;
+  const o = EOFF.get(EDRAG.i); o.x = EDRAG.ox; o.y = EDRAG.oy; o.vx = o.vy = 0; cv.classList.add("drag"); tip.hidden = true; eWake(); }, true);
+const eEnd = () => { if (!EDRAG) return; const d = EDRAG; EDRAG = null; if (d.moved) { cv.classList.remove("drag"); eWake(); } };   // let go: it springs home. The map's own pointerup still runs, and \`moved\` keeps it from reading a click
+cv.addEventListener("pointerup", eEnd, true); cv.addEventListener("pointercancel", eEnd, true);
 cv.addEventListener("pointerdown", e => { lastDown = [e.offsetX, e.offsetY]; GPH.drag = null;
   if (GRV() && !IDV() && e.button === 0 && !e.shiftKey && GPH.F) { const i = pick(e.offsetX, e.offsetY), j = i >= 0 ? GPH.loc[i] : -1; if (j >= 0 && GPH.deg[j] > 0) GPH.drag = { i, j }; } driftStop(); cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.offsetX, y:e.offsetY}); drag = {x:e.offsetX, y:e.offsetY, tx, ty, btn:e.button, yaw: yaw3, pitch: pitch3, dyaw: domeYaw, dpitch: domePitch, cyaw: csYaw, cpitch: csPitch, gyaw: g3Yaw, gpitch: g3Pitch, orbit: (s3dOn() || domeOn() || sphOn() || geo3On()) && e.button === 0 && !e.shiftKey}; moved = false; if (e.button === 2) cv.classList.add("drag"); });
 cv.addEventListener("contextmenu", e => e.preventDefault());   // right-drag pans (as in Miro); no menu on the map
